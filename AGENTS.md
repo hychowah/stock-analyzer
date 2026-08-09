@@ -1,14 +1,26 @@
 # Autonomous Stock Research Agent — Harness Spec (v2)
 
-This file is the **single normative spec** for the research harness. It is auto-loaded into every session in this workspace. The only other normative file is `harness/agent_prompts.md` (subagent prompt templates). Everything else is reference or contract:
+This file is the **single normative spec** for the research harness. It is auto-loaded into every session in this workspace. The only other normative file is `harness/agent_prompts.md` (subagent prompt templates). Everything else is reference or contract.
 
-- `sector_*.md` — sector reference modules (advisory, see §9)
-- `region_*.md` — market/region reference modules (advisory, see §5b / §9b)
-- `harness/filing_deep_dive.md` — multi-year footnotes / strategy / management scorecard methodology (advisory)
-- `harness/region_integration.md` — decision record for region/market-context integration
-- `templates/*.schema.json` — light JSON contracts for registry files
-- `scripts/` — scaffolding, structural checking, data helpers
-- `_archive/` — retired v1 documents and scripts (history only; never follow them)
+**Product purpose:** better **investment decisions** via decision-grade fair value, risks, timing, and provenance — not token thrift. Optimize **agent → next-phase** value transfer (usable artifacts, no lost risks, no invented numbers).
+
+### Quick map (read this first)
+
+| Need | Where |
+|------|--------|
+| One-page pipeline + “if X missing don’t start Y” | `harness/HARNESS_MAP.md` |
+| Subagent prompts | `harness/agent_prompts.md` |
+| Phase preflight (evidence before valuation/reports) | `scripts/preflight_phase.py` |
+| Structural session check | `scripts/check_session.py --full` |
+| Schemas | `templates/*.schema.json` |
+| Sector / region methodology (advisory) | `sector_*.md`, `region_*.md` |
+| Filing deep-dive method | `harness/filing_deep_dive.md` |
+| Judgment exemplars | `harness/exemplars/` |
+| Industry research notes | `harness/research/` |
+
+**Orchestrator order (new sessions):** scaffold → classify sector + market_context → write `registry/research_brief.json` → Phase 0… → **preflight** before Phase 2 / 2.5 / 4 / 5 → audit → prediction snapshot + catalog.
+
+Also: `harness/region_integration.md`, `scripts/` helpers, `_archive/` (retired v1 — never follow).
 
 ## 1. Design principles
 
@@ -17,6 +29,7 @@ This file is the **single normative spec** for the research harness. It is auto-
 3. **Runtime compute scripts.** Math is done by small ad-hoc Python scripts the agent writes into `data/compute/` for that specific company, runs, and cites. Never do multi-step arithmetic in prose. Each company gets the model that fits it.
 4. **Light schemas + LLM audit.** Schemas (`templates/`) enforce structure and provenance only — they do not attempt to validate financial truth. A Phase 5 audit agent cross-checks reports against registry data.
 5. **English only** for normative text (spec, prompts, schemas, registry keys, reports).
+6. **Decision-grade handoffs.** Each phase’s primary product is on-disk evidence the next specialist can use; handoffs state gaps that must widen uncertainty. Swarm returns are signal-dense and sourced — not raw filing dumps and not hollow schema-valid shells.
 
 ## 2. Session folder convention
 
@@ -31,9 +44,9 @@ archive/
         ├── reports/   00_<TICKER>_README.md, 01_<TICKER>_fundamental.md, 02_<TICKER>_technical.md
         ├── data/      raw + processed data; valuation_model.json; compute/; raw_sec/; transcripts/
         ├── charts/    PNGs with descriptive names
-        ├── registry/  sector_config, market_context, background, sec_filings, filing_deep_dive,
-        │              news_sentiment, latest_quarter, technical, tsr_validation, risk_bridge,
-        │              audit, data_fetch_log, phase_status  (all .json);
+        ├── registry/  sector_config, market_context, research_brief, background, sec_filings,
+        │              filing_deep_dive, news_sentiment, latest_quarter, technical, tsr_validation,
+        │              risk_bridge, audit, data_fetch_log, phase_status  (all .json);
         │              raw/; handoffs/  (see §8)
         └── meta/      run_manifest.json; prediction_snapshot.json  (frozen claims for lookback)
 ```
@@ -50,6 +63,8 @@ Rules:
 ## 3. Required inputs
 
 Confirm or infer before starting: ticker, company name, market region/exchange, reporting currency, regional benchmark index, 3–5 closest peers, latest fiscal quarter/filing date. Also establish **market/region context** (§5b): accounting basis, ownership/control hints, cost-of-capital flags, and `intensity`. Document inferences in `00_<TICKER>_README.md` and write `registry/market_context.json`.
+
+**Investment research brief (new sessions):** after sector_config + market_context and **before Phase 0**, write `registry/research_brief.json` per `templates/research_brief.schema.json`: investment objective, `must_answer_questions`, peers, benchmarks, currency, `research_depth` (`standard`|`deep`) with rationale. Phase 0 maps findings to those questions; open questions feed valuation range width and/or Phase 2.5. Legacy sessions without a brief are OK (checks SKIPPED).
 
 ## 4. Data sources
 
@@ -118,15 +133,16 @@ Subagent prompt templates for every phase are in `harness/agent_prompts.md`. Tra
 1. Own `registry/phase_status.json` as the **sole resume map** for the session.
 2. After each agent finishes: update that agent row (`status`, `artifacts[]`, `handoff` path), then re-check the phase completeness gate before advancing.
 3. On re-entry: read `phase_status.json` and `resume_hint` first; set `current_phase` to the first phase that is not `complete`/`skipped`; **do not re-run agents already `complete`** unless fixing an audit FAIL (then reset that agent to `pending` with a note).
-4. Never set `phase.status = complete` if a required artifact path is missing on disk or a required handoff is missing/stub.
+4. Never set `phase.status = complete` if a required artifact path is missing on disk or a required handoff is missing/stub. For Phase 0 and 2.5, also pass merge/coverage preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 0|2_5 --mode complete`.
 5. Keep `resume_hint` as one plain-English sentence for the next shift; set `updated_at` from the `date` command (UTC ISO-8601).
+6. Before starting Phase `2_parallel`, `2_5`, `4_parallel`, or `5`, run entry preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase <id>`. FAIL → fix upstream; do not invent evidence.
 
 Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Design + agent pre-fill: `harness/design_phase_status_and_exemplars.md`, schema `templates/phase_status.schema.json`. Legacy sessions without the file are OK (`check_session` → SKIPPED).
 
 | Phase | Agents (subagent type) | Depends on | Writes (single writer) |
 |---|---|---|---|
-| Orchestrator | main agent | — | `registry/sector_config.json`, `registry/market_context.json`, maintains `registry/phase_status.json` |
-| 0 — Background | swarm × research rounds (`explore`) | sector_config, market_context | main agent merges → `registry/background.json` |
+| Orchestrator | main agent | — | `registry/sector_config.json`, `registry/market_context.json`, `registry/research_brief.json` (new sessions), maintains `registry/phase_status.json`; **MUST** run `scripts/preflight_phase.py` (or equivalent evidence check) before Phase 2 / 2.5 / 4 / 5 |
+| 0 — Background | swarm × research rounds (`explore`) | sector_config, market_context, research_brief (when present) | main agent merges → `registry/background.json`; coverage vs brief + risk_candidates in handoff |
 | 1 — Data (parallel) | 2a fundamentals, 2b SEC filings, 2c news & sentiment (`coder`) | sector_config, market_context | `data/sp_financials.csv` (+ peers), `registry/sec_filings.json` + `data/raw_sec/` (+ multi-year annuals), `registry/news_sentiment.json` |
 | 1b — Latest quarter | 2d integrator (`coder`) | 2a, 2b | `registry/latest_quarter.json` |
 | 1c — Filing deep dive | 2e deep dive (`coder`) | 2b (and 2a when actuals needed); reads market_context for ownership depth | `registry/filing_deep_dive.json`; may add `data/transcripts/*` |
@@ -223,6 +239,9 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 | `filing_deep_dive.json` present with footnotes + strategy_arc + management_scorecard; scorecard rows source-labeled; valuation hooks / report sections consume deep dive | `[machine]` + `[audit]` |
 | `market_context.json` when present: schema + rationale; valuation `market_context_hooks` non-empty; absent on legacy sessions → SKIPPED (not FAIL) | `[machine]` + `[audit]` |
 | `phase_status.json` when present: schema + designed phase coverage; absent on legacy sessions → SKIPPED (not FAIL); new sessions scaffold it | `[machine]` |
+| `research_brief.json` when present: schema + depth + ≥3 questions; absent → SKIPPED (legacy); new sessions write before Phase 0 | `[machine]` + `[audit]` |
+| Phase entry/complete preflight available (`preflight_phase.py`); orchestrator MUST use before 2/2.5/4/5 and before marking 0/2.5 complete | `[human]`/`[orchestrator]` |
+| Decision-grade returns: Phase 0 `downstream_relevance`; handoffs with downstream actions; no filing dumps in swarm JSON | `[audit]` + merge preflight |
 | ≥3 footnote/deep-dive figures verified against `data/raw_sec/`; multi-year annual text retained under session tree | `[audit]` Phase 5 agent |
 | Sector module read and model choice justified | `[audit]` Phase 5 agent |
 | Region module read when market_context present; CoC/accounting/ownership dials justified (no silent regional haircuts); intensity gate respected | `[audit]` Phase 5 agent |
@@ -236,6 +255,10 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 ```bash
 # one-shot
 kimi -p "Run the JPM research swarm for $(date +%F) in /workspace-stock-research"
+
+# evidence gates (orchestrator)
+python3 scripts/preflight_phase.py --ticker JPM --date $(date +%F) --phase 2_parallel
+python3 scripts/check_session.py --ticker JPM --date $(date +%F) --full --write-acceptance
 ```
 
-The main agent: scaffolds the session (§2, including `registry/phase_status.json`), classifies the sector (§5) and market/region context (§5b), then executes Phases 0–5 using the templates in `harness/agent_prompts.md` while updating the phase_status resume map, finishing with `check_session.py --full`.
+The main agent: scaffolds the session (§2, including `registry/phase_status.json`), classifies the sector (§5) and market/region context (§5b), writes `registry/research_brief.json`, then executes Phases 0–5 using the templates in `harness/agent_prompts.md` while updating the phase_status resume map and running preflight before Phase 2/2.5/4/5, finishing with `check_session.py --full` (optionally `--write-acceptance`). See `harness/HARNESS_MAP.md`.

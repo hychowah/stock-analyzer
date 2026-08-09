@@ -376,6 +376,117 @@ def check_market_context(session: Path) -> None:
     record("PASS", "market_context_hooks", f"{len(hooks)} hook(s)")
 
 
+def check_research_brief(session: Path) -> None:
+    """Optional research_brief: SKIPPED if absent (legacy); validate when present."""
+    rel = "registry/research_brief.json"
+    p = session / rel
+    if not p.exists():
+        record(
+            "SKIPPED",
+            "research_brief",
+            "file absent (legacy OK; new sessions write research_brief.json before Phase 0)",
+        )
+        return
+    try:
+        data = json.loads(p.read_text())
+    except Exception as e:  # noqa: BLE001
+        record("FAIL", "research_brief parse", str(e))
+        return
+
+    required = [
+        "ticker",
+        "session_date",
+        "company_name",
+        "investment_objective",
+        "must_answer_questions",
+        "peers",
+        "benchmarks",
+        "currency",
+        "research_depth",
+        "rationale",
+    ]
+    missing = [k for k in required if k not in data]
+    if missing:
+        record("FAIL", "research_brief keys", f"missing {missing}")
+        return
+
+    depth = data.get("research_depth")
+    if depth not in ("standard", "deep"):
+        record("FAIL", "research_brief research_depth", f"invalid research_depth={depth!r}")
+        return
+
+    questions = data.get("must_answer_questions")
+    if not (isinstance(questions, list) and len(questions) >= 3):
+        record("FAIL", "research_brief must_answer_questions", "need >=3 questions")
+        return
+
+    rationale = data.get("rationale")
+    if not (isinstance(rationale, str) and len(rationale.strip()) >= 20):
+        record("FAIL", "research_brief rationale", "need non-empty rationale (>=20 chars)")
+        return
+
+    schema_path = TEMPLATES / "research_brief.schema.json"
+    if jsonschema is not None and schema_path.exists():
+        schema = json.loads(schema_path.read_text())
+        errors = sorted(jsonschema.Draft7Validator(schema).iter_errors(data), key=lambda e: list(e.path))
+        if errors:
+            msgs = [f"{'/'.join(str(x) for x in e.path) or '<root>'}: {e.message}" for e in errors[:5]]
+            record("FAIL", "schema: research_brief", "; ".join(msgs))
+            return
+        record("PASS", "schema: research_brief")
+    else:
+        reason = (
+            "jsonschema not installed (run with yfinance-market-mcp/.venv/bin/python)"
+            if jsonschema is None
+            else f"no template {schema_path.name}"
+        )
+        record("SKIPPED", "schema: research_brief", reason)
+
+    record(
+        "PASS",
+        "research_brief content",
+        f"depth={depth} questions={len(questions)}",
+    )
+
+
+def write_session_acceptance(
+    session: Path,
+    ticker: str,
+    session_date: str,
+    out_path: Path | None = None,
+) -> Path:
+    """Write registry/session_acceptance.json from current check results."""
+    from datetime import datetime, timezone
+
+    checks = [
+        {
+            "id": check,
+            "description": check,
+            "status": status,
+            "detail": detail or "",
+        }
+        for status, check, detail in results
+    ]
+    n_fail = sum(1 for s, _, _ in results if s == "FAIL")
+    overall = "FAIL" if n_fail else "PASS"
+    # PARTIAL if any SKIPPED on core identity? keep simple: FAIL vs PASS
+    payload = {
+        "ticker": ticker.upper(),
+        "session_date": session_date,
+        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "overall": overall,
+        "checks": checks,
+        "notes": (
+            "Structural/provenance only — financial truth is owned by Phase 5 audit. "
+            "Investment package readiness = overall PASS plus audit verdict PASS."
+        ),
+    }
+    path = out_path or (session / "registry" / "session_acceptance.json")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return path
+
+
 def check_phase_status(session: Path) -> None:
     """Optional phase_status: SKIPPED if absent (legacy); validate when present.
 
@@ -619,6 +730,16 @@ def main() -> int:
     ap.add_argument("--date")
     ap.add_argument("--session-dir")
     ap.add_argument("--full", action="store_true", help="require all Phase 0-5 artifacts")
+    ap.add_argument(
+        "--write-acceptance",
+        nargs="?",
+        const="registry/session_acceptance.json",
+        default=None,
+        help=(
+            "After checks, write session_acceptance.json (default path under session: "
+            "registry/session_acceptance.json). Optional explicit relative/absolute path."
+        ),
+    )
     args = ap.parse_args()
 
     if args.session_dir:
@@ -654,6 +775,7 @@ def main() -> int:
     check_identity(session, ticker, session_date)
     # Optional for legacy sessions; always run so absence is SKIPPED not silent.
     check_market_context(session)
+    check_research_brief(session)
     check_phase_status(session)
     check_meta_artifacts(session)
     if args.full:
@@ -674,6 +796,14 @@ def main() -> int:
         print(line)
     print(f"\n{len(results) - n_fail - n_skip} passed, {n_fail} failed, {n_skip} skipped")
     print(f"session: {session}")
+
+    if args.write_acceptance is not None:
+        out = Path(args.write_acceptance)
+        if not out.is_absolute():
+            out = session / out
+        written = write_session_acceptance(session, ticker, session_date, out_path=out)
+        print(f"wrote acceptance: {written}")
+
     return 1 if n_fail else 0
 
 

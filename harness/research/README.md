@@ -38,6 +38,7 @@ This workspace’s stock-research system is itself a multi-phase agent harness. 
 - Fighting context bloat or flaky long sessions → `02` + `05` + Anthropic long-running section in `01`.
 - Tightening repo guidance (`AGENTS.md`, docs, schemas) → `01` + `06`.
 - Citing claims in design docs → `07`.
+- **This harness’s live map** (phases, preflight, decision-grade handoffs) → [`../HARNESS_MAP.md`](../HARNESS_MAP.md). Investment quality upgrades status → `06` §2 (2026-08-09 notes).
 
 ## Status & limitations
 

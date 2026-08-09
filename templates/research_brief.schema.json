@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "research_brief.schema.json",
+  "title": "Investment Research Brief (light contract)",
+  "description": "Written by the orchestrator after sector_config + market_context, before Phase 0 fan-out. North star for coverage of investment questions. Optional on legacy sessions (absent → SKIPPED in checks).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "session_date",
+    "company_name",
+    "investment_objective",
+    "must_answer_questions",
+    "peers",
+    "benchmarks",
+    "currency",
+    "research_depth",
+    "rationale"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string", "format": "date" },
+    "company_name": { "type": "string", "minLength": 1 },
+    "investment_objective": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Why this research run exists (initiate, update, stress governance, etc.)."
+    },
+    "must_answer_questions": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "type": "string", "minLength": 8 },
+      "description": "Investment questions Phase 0–2 must cover or explicitly leave open."
+    },
+    "peers": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "benchmarks": {
+      "type": "object",
+      "required": ["regional", "sector"],
+      "properties": {
+        "regional": { "type": "string" },
+        "sector": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "currency": { "type": "string", "minLength": 3 },
+    "listing": {
+      "type": "object",
+      "description": "Exchange / filing venue hints mirrored from market_context when useful.",
+      "additionalProperties": true
+    },
+    "out_of_scope": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Topics deliberately not pursued (prevent thrashing, not strip quality work)."
+    },
+    "research_depth": {
+      "type": "string",
+      "enum": ["standard", "deep"],
+      "description": "standard = full gates, typical intensity low; deep = extra ownership/FX/control/primary work. Never skip deep dive or stress≥5."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Why this research_depth and question set for this name."
+    },
+    "stop_criteria": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional done-when signals (e.g. scorecard graded, ≥3 annuals on disk)."
+    },
+    "must_cover_risks": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

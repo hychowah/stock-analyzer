@@ -30,6 +30,7 @@ archive/
 3. **Indexes are caches** — rebuild with `python3 scripts/rebuild_catalog.py`.
 4. **Outcomes** record whether past calls were right; they never rewrite valuation JSON.
 5. Design plan: `harness/plan_research_archive_layout.md`.
+6. **Not in git:** `archive/research/` and `archive/outcomes/` are local data only (listed in root `.gitignore`). Session trees are large (raw filings, prices, charts). Keep them on disk for the harness; commit harness code + `archive/catalog/` indexes, not full sessions.
 
 ## Common commands
 

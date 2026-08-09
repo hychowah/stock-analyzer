@@ -37,13 +37,13 @@ Align with `AGENTS.md` §8. Use these exact strings:
 
 | `phase_id` | Meaning | Completeness gate (required artifacts) |
 |------------|---------|----------------------------------------|
-| `orch` | Sector + market_context classification | `sector_config.json`, `market_context.json` |
-| `0` | Background research (swarm) | `background.json`, ≥1 `raw/phase0_*.json`, handoff |
+| `orch` | Sector + market_context classification + research brief (new sessions) | `sector_config.json`, `market_context.json`, `research_brief.json` (new sessions; legacy OK without) |
+| `0` | Background research (swarm) | `background.json`, ≥1 `raw/phase0_*.json`, handoff; preflight `--mode complete` (downstream_relevance on raws) |
 | `1_parallel` | 2a + 2b + 2c | `sp_financials.csv`, `sec_filings.json`, `news_sentiment.json`, 3 handoffs; `data_fetch_log.json` preferred |
 | `1b` | Latest quarter (2d) | `latest_quarter.json`, handoff |
 | `1c` | Filing deep dive (2e) | `filing_deep_dive.json`, handoff |
 | `2_parallel` | 4 + 5 + 12 | `technical.json`, `valuation_model.json`, `tsr_validation.json`, 3 handoffs |
-| `2_5` | Stress swarm | `risk_bridge.json`, ≥5 `raw/stress_*.json` (or equivalent), handoff |
+| `2_5` | Stress swarm | `risk_bridge.json`, ≥5 `raw/stress_*.json` (or equivalent), handoff; preflight `--mode complete` |
 | `3` | Charts | ≥3 `charts/*.png`, handoff |
 | `4_parallel` | Reports 7 + 8 + 11 | three `reports/*.md`, 3 handoffs |
 | `5` | Audit | `audit.json` with `verdict` |
@@ -65,6 +65,20 @@ orch → 1_parallel          # 0 and 1_parallel may run in parallel after orch
 ```
 
 **Note:** `3` only needs `valuation_model.json` (+ risk_bridge if tornado charts). Orchestrator may start `3` as soon as phase `2_parallel` is complete if charts don’t need stress; keep default simple: **after 2_5** unless documented deviation.
+
+**Mechanical preflight (orchestrator MUST):** before starting `2_parallel`, `2_5`, `4_parallel`, or `5`, run:
+
+```bash
+python3 scripts/preflight_phase.py --ticker T --date D --phase <phase_id>
+```
+
+Before marking phase `0` or `2_5` complete:
+
+```bash
+python3 scripts/preflight_phase.py --ticker T --date D --phase 0|2_5 --mode complete
+```
+
+Gates live in `scripts/kd_research/gates.py`. Map: `harness/HARNESS_MAP.md`.
 
 ### A.4 Status vocabulary
 

@@ -35,3 +35,16 @@ out.log
 # Nested package git metadata (track sources in monorepo, not nested repos)
 **/.git/
 **/.git.bak-nested/
+
+# Research session trees (large: filings, prices, charts, raw dumps).
+# Keep on disk under archive/research/; do not version in git.
+# Catalog indexes + archive/README.md remain tracked.
+archive/research/
+archive/outcomes/
+
+# Optional local MCP/tool caches and large binary dumps
+**/data/raw_sec/
+**/data/transcripts/
+*.pdf
+*.png
+!harness/**/*.png

@@ -31,6 +31,8 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 
 ### P0 — High leverage / low regret
 
+> **Status (2026-08-09):** P0/P1 investment-quality upgrades landed in harness code/docs. North star is **decision-grade research for the next phase**, not token thrift.
+
 #### 2.1 Keep always-on instructions short; deepen progressive disclosure
 
 **Risk:** Root `Agents.md` is a long normative mega-spec. Frontier OpenAI lesson: encyclopedia dumps crowd out tasks and rot.
@@ -41,14 +43,18 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 - For human/agent navigation, add a short **map index** (this `harness/research/` pack helps meta-level; consider a one-page `harness/HARNESS_MAP.md` pointing to phases, schemas, modules).  
 - Avoid pasting entire sector modules into valuation prompts — require “read module_file then cite hooks” (already the rule; watch for prompt bloat in practice).
 
-#### 2.2 Subagent returns must be condensed
+**Done:** `harness/HARNESS_MAP.md` + AGENTS quick map lead; prompts stay sliced per agent.
 
-**Industry:** Workers may burn tens of thousands of tokens; return 1–2k high-signal summaries + paths to raw.
+#### 2.2 Subagent returns must be decision-grade (not “shorter for thrift”)
+
+**Industry:** Workers may burn tens of thousands of tokens; return high-signal summaries + paths to raw.
 
 **Recommendations:**
 
-- In `agent_prompts.md`, standardize **return budget**: structured artifact on disk + short handoff; forbid pasting entire filings into parent chat.  
-- Phase 0 / 2.5 merge protocol already requires raw persistence before merge — keep parent merge context on **diffs and conflicts**, not full raw dumps.
+- In `agent_prompts.md`, standardize **decision-grade returns**: structured artifact on disk + handoff with downstream actions; forbid pasting entire filings into parent chat.  
+- Phase 0 / 2.5 merge protocol already requires raw persistence before merge — keep parent merge context on **coverage, diffs, and conflicts**, not full raw dumps.
+
+**Done:** Decision-grade return contract + anti-patterns in `agent_prompts.md`; handoff exemplar Pair 2; audit checks 2e/2f/11.
 
 #### 2.3 Tool-result / data hygiene for filings
 
@@ -69,19 +75,23 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 - Valuation and reports must cite **compute scripts + registry fields**, not remembered chat numbers.  
 - Audit agent already re-runs scripts and checks registry ↔ report; treat any chat-only number as a defect.
 
+**Done:** Number-integrity language in conventions + Agent 7/13 checklists.
+
 ---
 
 ### P1 — Structural improvements
 
-#### 2.5 Explicit effort scaling in swarm prompts
+#### 2.5 Explicit research-depth scaling in swarm prompts
 
-**Industry:** Agents spawn too many workers or over-research trivial queries.
+**Industry:** Agents spawn too many workers or under-research hard names.
 
 **Recommendations:**
 
-- Phase 0 background swarm: cap research rounds and sources per claim.  
-- Phase 2.5: fixed **≥5 scenarios** is good (machine-checked); add max tokens/tool-calls per scenario worker if runaway cost appears.  
-- Encode “simple vs complex company” budgets in orchestrator (e.g. US large-cap low intensity vs high-intensity VIE).
+- Scale **depth** by intensity / control complexity (more ownership/FX work on hard names).  
+- Phase 2.5: fixed **≥5 scenarios** remains machine-checked; region/gov scenario must be material on deep names.  
+- Encode standard vs deep in `research_brief.research_depth`.
+
+**Done:** Depth policy in HARNESS_MAP + brief schema + Phase 0/2.5 prompts (quality-oriented, not cost caps).
 
 #### 2.6 Stronger baseline verify at phase entry
 
@@ -93,6 +103,8 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 - Before Phase 4 reports, verify valuation_model + risk_bridge + technical present.  
 - This is the research equivalent of “start the server and click New Chat.”
 
+**Done:** `scripts/preflight_phase.py` + `scripts/kd_research/gates.py`; AGENTS orchestrator MUST.
+
 #### 2.7 Generator vs evaluator separation for valuation
 
 **Industry:** Self-grading is too generous.
@@ -103,6 +115,8 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 - Optional: lightweight “red team” pass on `risk_bridge` probabilities before reports (separate agent, skeptical rubric).  
 - Do not let Agent 5 mark its own audit PASS.
 
+**Partial:** Gen≠eval unchanged; risk red-team still optional/deferred.
+
 #### 2.8 Feature-list style checklists for session completeness
 
 **Industry:** JSON feature lists with `passes` flags beat freeform Markdown.
@@ -111,6 +125,8 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 
 - `phase_status.json` is already the session checklist — ensure every required artifact path is listed and only flipped to `complete` when files exist (spec already says this; automate with pre-complete hook script).  
 - Consider a machine-readable `session_acceptance.json` derived from quality gates §13.
+
+**Done:** `check_session.py --write-acceptance`; merge/coverage preflight `--mode complete` for Phase 0 / 2.5; optional `research_brief` check.
 
 ---
 

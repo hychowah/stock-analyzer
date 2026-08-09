@@ -17,7 +17,7 @@ Full design: `harness/design_phase_status_and_exemplars.md` Part B.
 |------|---------|----------------|
 | `rationale_quality.md` | `{value, rationale, basis}` substance | 4, 5, 2e, 12, 13 |
 | `hooks_quality.md` | `used_as` / `rejected` / `noted_only` | 5, 13 |
-| `handoff_quality.md` | Four-section handoff | all |
+| `handoff_quality.md` | Four-section handoff + downstream actions (decision-grade) | all |
 | `index.json` | Which agents load which files | orchestrator |
 
 ## Injection (when wired into prompts)

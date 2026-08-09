@@ -57,3 +57,56 @@ SEC/local filings agent got 3 annuals + 2 interims; one prior-year annual downlo
 ```
 
 **Why good:** Concrete paths, honest gaps, named downstream impacts. Softness is visible without re-dumping the filing.
+
+---
+
+## Pair 2 — Downstream actions vs hollow “looks fine”
+
+### Context (shared)
+
+Valuation agent finished; scorecard lacked transcripts; intensity medium; one peer KPI missing.
+
+### BAD
+
+```markdown
+# 5_valuation
+
+## What I did
+- Built DCF, wrote valuation_model.json
+
+## Data issues & gaps
+- none
+
+## Assumptions & deviations
+- Used standard WACC
+
+## For downstream agents & the auditor
+- Reports can use the model
+```
+
+**Why bad:** Schema-valid session may still be investment-toxic: hides missing transcripts (should widen range), empty downstream actions, no paths, “standard WACC” without basis. Next agents and auditor cannot see softness.
+
+### GOOD
+
+```markdown
+# 5_valuation
+
+## What I did
+- Wrote `data/valuation_model.json` + `data/compute/valuation.py` (rerun reproduces base FV).
+- Logged `filing_deep_dive_hooks` (12) and `market_context_hooks` (intensity medium → local Rf + FX policy used).
+- Applied two latest_quarter overrides (guidance_change; capital buyback).
+
+## Data issues & gaps
+- Scorecard `data_quality=degraded_no_transcripts` — **widened** bear/base FV range in model; do not treat guide credibility as high-precision.
+- Peer NIM for PEER_X missing from peer_comparison.csv; used filing excerpt path in hooks basis instead.
+
+## Assumptions & deviations
+- Rejected region-module family-control discount (ownership is widely held) — see market_context_hooks rejected row.
+
+## For downstream agents & the auditor
+- **Agent 7:** restate hooks that moved WACC and terminal margin; cite `data/compute/valuation_result.json` for FV grid — do not re-type chat numbers.
+- **Phase 2.5:** open risk from deep-dive contingencies note (status=partial) — add or explicitly drop.
+- **Auditor:** rerun `data/compute/valuation.py`; check MOS sign vs price in model; verify ≥3 footnote figures against raw_sec paths in hooks.
+```
+
+**Why good:** Top miss-nots, range-widen triggers, authoritative paths — next phase can act without re-researching.

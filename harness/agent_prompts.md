@@ -12,39 +12,58 @@ Copy-paste templates for each phase of the harness (see `AGENTS.md` §8). Substi
 Every template already carries the justification contract — do not strip it. Subagents see only their prompt; pass all context explicitly.
 
 **Conventions for all agents:**
+- **Product purpose**: this harness produces **investment-decision research** (fair value, risks, timing, provenance). Optimize for **valuable results the next phase can use** — not for shorter chat or token thrift. Drop noise and raw dumps; never drop material risks, ownership facts, or footnote numbers to look concise.
 - **Hermetic scripts**: compute scripts must read session-cached data (`S/data/*.csv`, `S/registry/*.json`) when present and fetch live data only when absent. A rerun on the same session must reproduce the same numbers.
-- **Scripted intermediates**: any number used inside an assumption build-up (e.g. realized beta, growth CAGR) must be computed by a script in `S/data/compute/`, not by unscripted mental math.
-- **Benchmarks**: use the regional benchmark and sector index declared by the orchestrator in the session's required inputs; deviate only with a stated rationale.
+- **Scripted intermediates / number integrity**: any number used inside an assumption build-up (e.g. realized beta, growth CAGR) must be computed by a script in `S/data/compute/`, not by unscripted mental math. Multi-step arithmetic belongs in compute scripts. Reports and later agents must **rehydrate** judgment numbers from registry/compute paths — never from chat memory.
+- **Benchmarks**: use the regional benchmark and sector index declared by the orchestrator in the session's required inputs (and `S/registry/research_brief.json` when present); deviate only with a stated rationale.
 - **Market / region context**: read `S/registry/market_context.json` when present (orchestrator writes it with sector_config). Cost of capital and governance dials are **local to listing and cash-flow currency** — do not paste US 10Y/ERP by default for non-USD models. Region modules (`region_*.md`) are advisory only; never apply hardcoded country WACC, ERP tables, or family-control discounts. Intensity `low` may no-op with explicit `noted_only` hooks; `medium`/`high` require real treatment. There is **no always-on region agent** — ownership depth is Agent 2e; CoC judgment is Agent 5.
+- **Research brief**: when `S/registry/research_brief.json` exists, treat its investment objective and `must_answer_questions` as the coverage north star. Map findings to those questions; list unanswered items in the handoff so valuation can widen range or Phase 2.5 can add stress.
+- **Research depth**: honor `research_brief.research_depth` (`standard` | `deep`) and `market_context.intensity`. **Deep** means more ownership/FX/control/primary-filing work — not skipping quality gates. Never skip filing deep dive. Stress scenarios remain ≥5.
+- **Decision-grade return contract** (every agent):
+  - **Primary product is on disk** (registry JSON, data CSVs, compute outputs, charts, reports). Chat to the parent is disposable.
+  - **Specialist agents**: finish by writing the artifact + handoff. Parent-facing summary = handoff path + 3–5 bullets of what changed for downstream — do not paste full tables or filings into chat.
+  - **Swarm workers (Phase 0 / 2.5)**: return **JSON only** with mandatory decision fields (see templates). Prefer **signal density**: 3–6 specific, sourced findings beat 20 generic industry platitudes. Put full text under `S/data/` (raw_sec, transcripts, caches); returns carry **paths + short excerpts**, not uncapped 10-K prose.
+  - **Anti-patterns (FAIL-quality even if schema-valid)**: empty or missing `downstream_relevance` on Phase 0 findings; quantitative claims without sources; inventing litigation/contingent quanta; pasting full filing/HTML into return JSON or handoff; hollow “looks fine” handoffs that hide gaps; report numbers not present in registry/compute.
+  - **Orchestrator merges**: write each raw return under `S/registry/raw/` **before** merging; merge for **coverage** (brief questions, risk candidates, stress library) and conflict notes; spot-check ≥3 headline numbers against data/raw — never invent merge numbers.
 - **Judgment exemplars (style only)**: before writing judgment-heavy outputs, match the GOOD patterns in `ROOT/harness/exemplars/` (index: `ROOT/harness/exemplars/index.json`). BAD patterns are FAIL-quality even if schema-valid. **Do not copy illustrative numbers into this session.** Agent map: valuation (5) and audit (13) → `rationale_quality.md` + `hooks_quality.md`; technical (4), TSR (12), deep dive (2e) → `rationale_quality.md`; **every agent** → `handoff_quality.md` for handoff style. Orchestrator injects the relevant paths into each subagent prompt (do not paste full exemplar banks into every template).
 - **Handoff file (required of EVERY agent)**: before finishing, write `S/registry/handoffs/<your_agent_id>.md` (e.g. `2a_fundamentals.md`, `5_valuation.md`, `13_audit.md`) with four sections:
   1. **What I did** — 3-5 bullets: inputs read, outputs written, tools used.
   2. **Data issues & gaps** — anything that failed to fetch, was truncated, stale, missing, or had to be substituted (with the fallback used). If none, say "none".
   3. **Assumptions & deviations** — every judgment call that ISN'T already recorded with rationale in your output artifact: inferred inputs, template deviations, edge cases you resolved by choice.
-  4. **For downstream agents & the auditor** — what the next agents must know: caveats, unreconciled numbers, suggested checks.
-  Keep it under one page. This file is how the audit agent and the next session understand your run — the artifact shows WHAT you produced, the handoff shows WHERE it is soft. Match `ROOT/harness/exemplars/handoff_quality.md` GOOD pattern (honest gaps, concrete paths).
+  4. **For downstream agents & the auditor** — decision-grade soft state:
+     - Top 3 things the **next** agent must not miss (with paths).
+     - Explicit gaps that should **widen** valuation range or add a stress scenario.
+     - Authoritative file paths (not restated tables).
+  Keep it under one page. The artifact shows WHAT you produced; the handoff shows WHERE it is soft and what downstream must do. Match `ROOT/harness/exemplars/handoff_quality.md` GOOD pattern (honest gaps, concrete paths, downstream actions).
 
 ---
 
 ## Phase 0 — Background research swarm
 
-`AgentSwarm`, subagent_type `explore`, one item per round. Rounds: (1) company & business model, (2) industry & competitive position, (3) moat & structural advantages, (4) TAM/SAM/SOM & growth drivers, (5) management & capital allocation, (6) regulatory & macro exposure, (7) bear case & historical failures, (8) sector-specific round (pick 2–3 questions from the sector module in `sector_config.json`). When `S/registry/market_context.json` has `intensity` medium or high, rounds (5) and (6) must also cover control/ownership (family, SOE, VIE, dual-class) and local rates / FX / capital-market access with sources — not only generic global macro.
+`AgentSwarm`, subagent_type `explore`, one item per round. Default rounds: (1) company & business model, (2) industry & competitive position, (3) moat & structural advantages, (4) TAM/SAM/SOM & growth drivers, (5) management & capital allocation, (6) regulatory & macro exposure, (7) bear case & historical failures, (8) sector-specific round (pick 2–3 questions from the sector module in `sector_config.json`). When `S/registry/market_context.json` has `intensity` medium or high **or** `research_brief.research_depth` is `deep`, rounds (5) and (6) must also cover control/ownership (family, SOE, VIE, dual-class) and local rates / FX / capital-market access with sources — not only generic global macro. Do **not** drop bear-case or regulatory coverage on deep names.
+
+If `S/registry/research_brief.json` exists, map rounds to its `must_answer_questions`; after the swarm, the merge handoff must list which questions are answered vs still open (open items → valuation range widen and/or Phase 2.5 stress).
 
 prompt_template:
 
 ```text
 You are a research analyst gathering background on {{item}} for TICKER (session S).
 
-Read S/registry/sector_config.json and S/registry/market_context.json (if present) first for sector and region/intensity context. If intensity is medium/high, prioritize local institutional facts over US-default framing.
+Read first: S/registry/sector_config.json, S/registry/market_context.json (if present), and S/registry/research_brief.json (if present). If intensity is medium/high or research_depth is deep, prioritize local institutional facts over US-default framing. Prefer primary sources (filings, IR, exchange) over SEO aggregators when both exist.
 
-Research the assigned topic using web search. Return JSON only (do not write files):
-{"topic": "...", "findings": ["3-6 specific, factual bullets with numbers where possible"],
+Research the assigned topic using web search. Return JSON only (do not write files). Decision-grade contract: 3-6 specific factual findings beat generic filler; every quantitative claim needs a source; full articles stay on the web/cache — do not paste multi-page text into the return.
+
+{"topic": "...",
+ "findings": ["3-6 specific, factual bullets with numbers where possible"],
  "sources": ["url1", "url2"],
- "downstream_relevance": "valuation_input | risk_candidate | context_only"}
-No generic filler. Every quantitative claim needs a source in "sources".
+ "downstream_relevance": "valuation_input | risk_candidate | context_only",
+ "brief_questions_touched": ["optional ids/text of research_brief.must_answer_questions this round advances"],
+ "excerpts_or_paths": ["optional short quotes or session paths if you cached text"]}
+
+downstream_relevance is REQUIRED (not empty). No inventing. No full-filing dumps.
 ```
 
-**Merge protocol (main agent):** (1) write each round's verbatim return to `S/registry/raw/phase0_round{N}.json`; (2) merge into `S/registry/background.json` (`{"ticker", "rounds": [...]}` per `templates/background.schema.json`), deduplicating and resolving conflicts (note them in the finding text); (3) after merging, spot-check 3 headline numbers in the merged file against `S/data/sp_financials.csv` or the raw returns — the merge must not introduce new numbers.
+**Merge protocol (main agent):** (1) write each round's verbatim return to `S/registry/raw/phase0_round{N}.json`; (2) merge into `S/registry/background.json` (`{"ticker", "rounds": [...]}` per `templates/background.schema.json`), deduplicating and resolving conflicts (note them in the finding text); (3) after merging, spot-check 3 headline numbers in the merged file against `S/data/sp_financials.csv` or the raw returns — the merge must not introduce new numbers; (4) coverage check: every `risk_candidate` finding must be listed for Phase 2.5 / risk_bridge attention; unanswered `must_answer_questions` from the brief go into the phase0 handoff.
 
 ---
 
@@ -97,7 +116,9 @@ Build the news & sentiment picture for TICKER as of DATE.
 
 Cover: (1) 8-15 material news items from the last ~3 months (earnings, guidance changes, regulator actions, management changes, M&A); (2) positioning: analyst consensus and dispersion, short interest, insider transactions (search for these; if a data point is unavailable, say so explicitly rather than omitting the key); (3) catalyst calendar: next earnings date, known regulatory decisions, product/event dates.
 
-Write S/registry/news_sentiment.json per ROOT/templates/news_sentiment.schema.json. Every item needs a source. Sentiment labels are your judgment — that's fine, they're labeled as such.
+Source reliability (investment quality): prefer primary sources (company IR, SEC/exchange filings, reputable newswires) over SEO farms. Every item needs a source URL when possible. After building the list, run ROOT/scripts/kd_research/url_health.py (or equivalent HEAD/GET with short timeout) on http(s) sources and set per-item source_status to ok | dead | unknown | not_url. Dead links: replace with a working primary source or keep the item with source_status=dead and disclose in the handoff — do not invent headlines. Network flakes → unknown is OK with disclosure; do not block the whole agent on one timeout.
+
+Write S/registry/news_sentiment.json per ROOT/templates/news_sentiment.schema.json. Sentiment labels are your judgment — that's fine, they're labeled as such. Optional: write S/registry/source_health.json with the URL check snapshot for audit.
 ```
 
 ---
@@ -177,7 +198,7 @@ Value TICKER as of DATE.
 
 Judgment style: read ROOT/harness/exemplars/rationale_quality.md and ROOT/harness/exemplars/hooks_quality.md (GOOD patterns; do not copy illustrative numbers).
 
-Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions — region intensity, accounting_regime, cost_of_capital_flags, ownership), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED — footnotes, strategy_arc, management_scorecard), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, the sector module file named in sector_config.json, and the region module named in market_context.module_file (both advisory; numbers are reference ranges, not mandates). Fill peer KPI gaps (e.g. NIM/CET1) from filings if the peer comparison needs them.
+Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions — region intensity, accounting_regime, cost_of_capital_flags, ownership), S/registry/research_brief.json (when present — open must_answer_questions and research_depth should inform range width / scenario posture), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED — footnotes, strategy_arc, management_scorecard), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, the sector module file named in sector_config.json, and the region module named in market_context.module_file (both advisory; numbers are reference ranges, not mandates). Fill peer KPI gaps (e.g. NIM/CET1) from filings if the peer comparison needs them.
 
 1. CHOOSE the valuation model that fits this company (sector module guidance + your judgment + strategy_arc implied_model_hooks). If the company has materially different business lines, run a SOTP or multi-method cross-check in addition to the primary model. Justify the choice in model.rationale.
 2. DECIDE every assumption yourself: discount rate (state how you build it up — cash-flow currency vs discount-rate currency must match or FX policy must be explicit; any intermediate like realized beta or local Rf series must be scripted in S/data/compute/), growth path, margin path, terminal approach, multiples. Include explicit CoC/governance dials as assumptions where relevant (e.g. risk_free_rate, country_risk_or_erp_adjustment which may be 0, accounting_basis_for_model, ownership_governance_adjustment which may be none/0) — each {value, rationale, basis}. Check terminal state for internal consistency. Use footnote findings for SBC/dilution, tax, debt/leases, segment economics when status=extracted. NEVER paste region-module reference ranges as mandated WACC/ERP/family discounts.
@@ -211,27 +232,29 @@ Write S/registry/tsr_validation.json per ROOT/templates/tsr_validation.schema.js
 
 ## Phase 2.5 — stress-test swarm
 
-`AgentSwarm`, subagent_type `coder`, 5 items: the 4 most relevant sector scenarios (from the sector module's stress library — adapt to the company) + 1 macro scenario. Also add any scenario required by a `new_risk_rule` evidence entry. When S/registry/market_context.json has intensity `high`, at least one of the five must be region/governance/FX/policy (from the region module stress seeds or company-specific); when intensity is `medium`, include one if material. (If you judge a different 5-scenario mix more decision-relevant, deviate — and record the deviation with rationale in risk_bridge.json.)
+`AgentSwarm`, subagent_type `coder`, 5 items: the 4 most relevant sector scenarios (from the sector module's stress library — adapt to the company) + 1 macro scenario. Also add any scenario required by a `new_risk_rule` evidence entry. When S/registry/market_context.json has intensity `high` **or** research_brief.research_depth is `deep` with material region/ownership flags, at least one of the five must be region/governance/FX/policy (from the region module stress seeds or company-specific) and it must be **material** (not a checkbox narrative); when intensity is `medium`, include one if material. Also fold Phase 0 findings tagged `downstream_relevance=risk_candidate` that are still open. (If you judge a different 5-scenario mix more decision-relevant, deviate — and record the deviation with rationale in risk_bridge.json.) Machine gate remains **≥5 scenarios**. One worker per scenario; no nested swarms.
 
 prompt_template:
 
 ```text
 Stress scenario for TICKER: {{item}}
 
-Inputs: S/data/valuation_model.json, S/registry/sector_config.json, S/registry/market_context.json (intensity, ownership, accounting — use for region/governance/FX scenarios; do not invent folklore EM haircuts), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (footnotes contingencies/legal, risk_factor_delta, management_scorecard credibility pattern — use filing/transcript-labeled facts before web legal dollar claims).
+Inputs: S/data/valuation_model.json, S/registry/sector_config.json, S/registry/market_context.json (intensity, ownership, accounting — use for region/governance/FX scenarios; do not invent folklore EM haircuts), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (footnotes contingencies/legal, risk_factor_delta, management_scorecard credibility pattern — use filing/transcript-labeled facts before web legal dollar claims), S/registry/background.json risk_candidate themes, S/registry/research_brief.json if present.
 
-Return JSON only (do not write files):
+Return JSON only (do not write files). Decision-grade: narrative is 2-4 sentences on transmission mechanism — not a raw data dump. Paths/refs beat pasted footnotes.
+
 {"name": "...", "type": "sector|macro|region",
  "probability": <0-1 number YOU decide>, "rationale": "<why this probability — reference history/base rates/company specifics; cite deep-dive or filings when legal/contingent>",
  "affected_parameters": ["..."], "fair_value_haircut_pct": <number, your estimate>,
  "narrative": "<2-4 sentences: transmission mechanism and impact>",
  "deep_dive_refs": ["optional paths into filing_deep_dive.json used"],
- "market_context_refs": ["optional paths into market_context.json used"]}
+ "market_context_refs": ["optional paths into market_context.json used"],
+ "background_risk_refs": ["optional phase0 risk_candidate themes this scenario covers"]}
 Probability semantics: this is a STANDALONE conditional estimate of this event occurring. Scenarios are NOT mutually exclusive and do NOT need to sum to 1.0. Check any historical anchor you cite (e.g. trough multiples in past crises) against the actual historical record before using it.
 Ground the haircut in the valuation model's sensitivities where possible. No canned numbers. Do not invent litigation quanta when the deep dive / Item 3 / contingency note is silent — say unknown. Do not apply a fixed family-control or country discount from a region module.
 ```
 
-**Merge protocol (main agent):** (1) write each verbatim return to `S/registry/raw/stress_{id}.json`; (2) merge into `S/registry/risk_bridge.json` per `templates/risk_bridge.schema.json`: `risks` (every `latest_quarter.json.risks[]` entry must map to a risk here or be explicitly dropped with a reason; fold material deep-dive legal/contingency findings into risks or explicit drops), `scenario_probabilities` (bear/base/bull ONLY — mirrors the valuation model's weights, sums to 1.0; if valuation raised bear weight from scorecard credibility, keep consistent), `stress_test.probability_semantics` (state the standalone-conditional convention), `stress_test.scenarios`.
+**Merge protocol (main agent):** (1) write each verbatim return to `S/registry/raw/stress_{id}.json`; (2) merge into `S/registry/risk_bridge.json` per `templates/risk_bridge.schema.json`: `risks` (every `latest_quarter.json.risks[]` entry must map to a risk here or be explicitly dropped with a reason; fold material deep-dive legal/contingency findings into risks or explicit drops; Phase 0 `risk_candidate` findings map or explicit drop), `scenario_probabilities` (bear/base/bull ONLY — mirrors the valuation model's weights, sums to 1.0; if valuation raised bear weight from scorecard credibility, keep consistent), `stress_test.probability_semantics` (state the standalone-conditional convention), `stress_test.scenarios`. Coverage checkpoint before marking phase complete: ≥5 raw stress files + ≥5 merged scenarios.
 
 ---
 
@@ -257,7 +280,7 @@ Labels and titles in English, descriptive file names, cite data source on each c
 ```text
 Write S/reports/01_TICKER_fundamental.md.
 
-Read: all of S/registry/ (sector_config, market_context, background, sec_filings, filing_deep_dive, news_sentiment, latest_quarter, tsr_validation, risk_bridge, data_fetch_log), S/data/valuation_model.json, S/data/peer_comparison.csv. Skim sec_filings.json sections as needed; use filing_deep_dive.json for footnotes/strategy/scorecard (do not re-hallucinate from web when deep dive has primary excerpts). Use market_context.json for listing/accounting/ownership/intensity (do not invent regional haircuts not in the valuation model).
+Read: all of S/registry/ (sector_config, market_context, research_brief when present, background, sec_filings, filing_deep_dive, news_sentiment, latest_quarter, tsr_validation, risk_bridge, data_fetch_log), S/data/valuation_model.json, S/data/peer_comparison.csv. Skim sec_filings.json sections as needed; use filing_deep_dive.json for footnotes/strategy/scorecard (do not re-hallucinate from web when deep dive has primary excerpts). Use market_context.json for listing/accounting/ownership/intensity (do not invent regional haircuts not in the valuation model).
 
 Structure:
 - executive summary & verdict
@@ -274,7 +297,7 @@ Structure:
 - bull-base-bear with probabilities and rationale
 - position-sizing input
 
-Rules: every number cites a source (registry file, filing URL, or compute script). Key judgment numbers must be restated with their rationale. No new numbers that are not in the registry. If the assumption stack leans one direction, disclose it. When two vintages of a metric exist (e.g. latest-quarter vs FY book value), use one consistently and say which. Label transcript-sourced claims as secondary.
+Rules: every number cites a source (registry file, filing URL, or compute script). Key judgment numbers must be restated with their rationale and must match registry/compute — **no chat-only or mental-math figures**. No new numbers that are not in the registry. If research_brief exists, note any still-open must_answer_questions and how uncertainty was widened. If the assumption stack leans one direction, disclose it. When two vintages of a metric exist (e.g. latest-quarter vs FY book value), use one consistently and say which. Label transcript-sourced claims as secondary.
 ```
 
 ### Agent 8 — technical report (`coder`)
@@ -292,9 +315,9 @@ Cover: trend/momentum/volatility summary, support/resistance, relative strength 
 ```text
 Write S/reports/00_TICKER_README.md — the one-page summary.
 
-Read S/registry/sector_config.json, S/registry/market_context.json (if present), S/data/valuation_model.json, S/registry/latest_quarter.json, S/registry/risk_bridge.json, S/registry/technical.json, S/registry/tsr_validation.json.
+Read S/registry/sector_config.json, S/registry/market_context.json (if present), S/registry/research_brief.json (if present), S/data/valuation_model.json, S/registry/latest_quarter.json, S/registry/risk_bridge.json, S/registry/technical.json, S/registry/tsr_validation.json.
 
-Cover: sector classification + confidence + one-line rationale; market/region + intensity + one-line rationale (or "legacy session: market_context absent"); fair value vs price + margin of safety; latest-quarter headline; key risks (top 3); verdict (bull/base/bear in one line each); required inputs AS EXECUTED (peers, benchmarks, currency, exchange actually used — not the plan); data-quality notes (fallbacks used, degraded sources, manual-review flags); pointer to the other two reports. Leave a one-line placeholder for the audit verdict — Phase 5 will fill it.
+Cover: sector classification + confidence + one-line rationale; market/region + intensity + one-line rationale (or "legacy session: market_context absent"); research_brief investment objective + research_depth when present; fair value vs price + margin of safety (numbers from valuation_model only); latest-quarter headline; key risks (top 3); verdict (bull/base/bear in one line each); required inputs AS EXECUTED (peers, benchmarks, currency, exchange actually used — not the plan); data-quality notes (fallbacks used, degraded sources, manual-review flags); pointer to the other two reports. Leave a one-line placeholder for the audit verdict — Phase 5 will fill it.
 ```
 
 ---
@@ -309,20 +332,24 @@ Judgment-quality anchors (style only): ROOT/harness/exemplars/rationale_quality.
 Read S/reports/*.md, all of S/registry/ — including registry/raw/ (diff the raw swarm returns against the merged files), registry/phase_status.json when present (resume map / completeness claims vs artifacts), and registry/handoffs/ (every agent's own account of its data issues and assumptions; cross-check them against what the artifacts actually show — an agent that hit a data problem but didn't disclose it in its artifact is a finding), and S/data/valuation_model.json, and the scripts in S/data/compute/.
 
 Checks:
-1. Number consistency: report numbers match registry/compute outputs within rounding. ALSO check registry↔data: spot-check 3-5 headline numbers in background.json and latest_quarter.json against sp_financials.csv and the raw returns.
+1. Number consistency / integrity: report numbers match registry/compute outputs within rounding. ALSO check registry↔data: spot-check 3-5 headline numbers in background.json and latest_quarter.json against sp_financials.csv and the raw returns. FAIL if a report judgment number (FV, MOS, probabilities, entry/stop, key KPIs asserted as fact) is not rehydratable from valuation_model / risk_bridge / technical / tsr / latest_quarter / compute outputs (chat-only numbers are defects).
 2. EXTERNAL VERIFICATION (required): pick >=5 filing-grade numbers (prior-quarter capital ratios, prior-year comparatives, historical anchors cited in stress narratives) and verify them against primary sources (EDGAR, IR pages, web). Consistency is not truth.
 2b. DEEP-DIVE VERIFICATION (required): registry/filing_deep_dive.json exists with footnotes + strategy_arc + management_scorecard; re-check >=3 footnote/excerpt figures against S/data/raw_sec/ primary text; scorecard actuals match sp_financials/filings where quantitative; each scorecard row has source_type; transcripts labeled secondary; multi-year annual files present under raw_sec or gaps documented.
 2c. Deep-dive consumption: valuation_model.filing_deep_dive_hooks present for material findings (or explicit rejects); fundamental report has non-stub Footnote findings / Multi-year strategy alignment / Management track record sections; stress/legal narratives do not invent quanta contradicted by deep dive.
 2d. MARKET CONTEXT (when registry/market_context.json exists): non-empty valuation_model.market_context_hooks; intensity gate coherent (low may be single noted_only; medium/high must address local CoC and ownership/accounting — not silent US defaults); region module was read (hooks or assumptions cite it); no hardcoded family/country discounts without rationale; fundamental report has Market & institutional context appropriate to intensity; if intensity=high, risk_bridge has a region/governance/FX-style scenario or an explicit drop reason.
+2e. Decision-grade returns / handoffs: Phase 0 raw returns have non-empty downstream_relevance; no raw return is a full-filing dump; handoffs include concrete downstream actions (not hollow "none" when data_fetch_log shows gaps). Flag hollow schema-valid work.
+2f. Research brief (when registry/research_brief.json exists): Phase 0 coverage vs must_answer_questions is documented in phase0 handoff or background; open questions should widen uncertainty or appear in risks — not silently vanish.
+2g. Source reliability: sample >=3 news_sentiment URLs; note dead/unknown rates; primary-source preference for catalysts. Do not FAIL the whole session solely for one flaky network check if disclosed.
 3. Reproducibility: rerun ALL compute scripts (not "if cheap"). Any rerun difference is data drift — investigate, never wave off as float noise. Scripts must read cached session data, not refetch live.
 4. Justification contract: every judgment number has a substantive rationale AND its intermediates are scripted (flag unscripted build-up numbers). "Industry standard" alone is not substantive.
-5. Citations: sourced numbers have citations; sec_filings/news items have URLs.
-6. Lost-findings sweep: every latest_quarter.json.risks[] entry maps to a risk_bridge risk or is explicitly dropped with a reason; scan background.json for findings with downstream_relevance=risk_candidate that no report used.
-7. Cross-artifact contradictions: README required-inputs (benchmarks, peers, currency/exchange) must match what technical.json/tsr_validation.json and market_context actually used; metric vintages consistent.
+5. Citations: sourced numbers have citations; sec_filings/news items have URLs or explicit non-URL source labels.
+6. Lost-findings sweep: every latest_quarter.json.risks[] entry maps to a risk_bridge risk or is explicitly dropped with a reason; scan background.json for findings with downstream_relevance=risk_candidate that no report or risk_bridge used.
+7. Cross-artifact contradictions: README required-inputs (benchmarks, peers, currency/exchange) must match what technical.json/tsr_validation.json and market_context (and research_brief when present) actually used; metric vintages consistent.
 8. Sector fit: model choice consistent with sector_config and the module was actually used; sensitivity block present.
 8b. Region fit: when market_context present, primary_region/intensity/module_file coherent with listing signals; CoC currency matches cash-flow policy stated in assumptions.
 9. Reverse-engineering present and priced_for_perfection is a real, argued conclusion.
 10. For growth/is_also_growth: SBC/dilution analysis present at critical intensity (deep-dive sbc_unrecognized should inform it when extracted).
+11. Merge integrity: registry/raw/ phase0 and stress files exist in plausible counts; merged background/risk_bridge does not introduce numbers absent from raw/data.
 
 Write S/registry/audit.json per ROOT/templates/audit.schema.json: verdict PASS only if no critical/major issues; list every issue with severity, location, and concrete fix.
 ```

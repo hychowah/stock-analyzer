@@ -26,8 +26,42 @@
         "bull": { "type": "number" },
         "probability_weighted": { "type": "number" },
         "currency": { "type": "string" },
-        "margin_of_safety_pct": { "type": "number", "description": "1 - price/fair_value, signed." }
+        "margin_of_safety": {
+          "type": "number",
+          "description": "Signed fraction: 1 - price / fair_value.base (e.g. 0.292 or -0.299). Prefer writing BOTH this and margin_of_safety_pct from the compute script."
+        },
+        "margin_of_safety_pct": {
+          "type": "number",
+          "description": "Signed percent points: 100 * (1 - price / fair_value.base) (e.g. 29.2 or -29.9). NEVER store a 0-1 fraction here. Primary MoS uses base FV; disclose vs probability_weighted if they differ materially."
+        },
+        "decision_usefulness": {
+          "type": "string",
+          "description": "high|medium|low — set when (bull-bear)/base > 100% or bear < 0.4*base. When low, do not present probability_weighted FV as a precise target."
+        },
+        "posture": {
+          "type": "string",
+          "description": "One sentence: assumption stack leans conservative|neutral|aggressive overall."
+        },
+        "scenario_probabilities": {
+          "description": "Prefer per-leg {value,rationale,basis} for bear/base/bull, or bare floats. risk_bridge mirror must be bare floats only."
+        },
+        "probability_method": {
+          "type": "string",
+          "description": "How scenario masses were sized; required when weights match a common template (e.g. 30/45/25) so the mass is not a silent default."
+        }
       }
+    },
+    "terminal_consistency": {
+      "type": "object",
+      "description": "Optional but expected when model uses Gordon/exit/residual terminal value: method, wacc_minus_g (or ke_minus_g), reinvestment/payout identity, tv_share_of_ev_base, and response if TV share is high."
+    },
+    "multi_method_reconciliation": {
+      "type": "object",
+      "description": "Optional when a material SOTP/exit-multiple/peer cross-check is run: primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary."
+    },
+    "research_brief_hooks": {
+      "type": "array",
+      "description": "Optional when research_brief exists: map open must_answer_questions to used_as or unanswered_widens_range."
     },
     "assumptions": {
       "type": "object",

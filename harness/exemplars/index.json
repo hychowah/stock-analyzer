@@ -15,6 +15,12 @@
       "max_pairs": 2
     },
     {
+      "id": "valuation_decision_quality",
+      "path": "harness/exemplars/valuation_decision_quality.md",
+      "agents": ["5", "13"],
+      "max_pairs": 3
+    },
+    {
       "id": "handoff_quality",
       "path": "harness/exemplars/handoff_quality.md",
       "agents": ["*"],

@@ -160,6 +160,161 @@ def check_reports(session: Path, ticker: str) -> list[tuple[str, str, str]]:
     return out
 
 
+SCENARIO_PROB_KEYS = ("bear", "base", "bull")
+MOS_CONSISTENCY_EPS = 0.1  # |pct - 100*frac| tolerance
+
+
+def extract_scenario_prob_mass(probs: dict[str, Any]) -> tuple[float | None, list[str]]:
+    """Sum bear/base/bull only (nested {value} allowed). Return (total, issues)."""
+    issues: list[str] = []
+    total = 0.0
+    found = 0
+    for k in SCENARIO_PROB_KEYS:
+        if k not in probs:
+            continue
+        v = probs[k]
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            total += float(v)
+            found += 1
+        elif isinstance(v, dict) and "value" in v and isinstance(v["value"], (int, float)):
+            total += float(v["value"])
+            found += 1
+        else:
+            issues.append(f"{k} is not a number (or {{value}} number)")
+    if found == 0:
+        return None, issues or ["no bear/base/bull numeric masses"]
+    return total, issues
+
+
+def check_scenario_probability_keys(
+    probs: object,
+    *,
+    extra_key_severity: str = "WARN",
+) -> list[tuple[str, str, str]]:
+    """Structural checks for risk_bridge scenario_probabilities.
+
+    - Sum only bear/base/bull (ignores _sum/_note meta that previously double-counted).
+    - Extra keys → WARN by default (promote to FAIL when archives are clean).
+    - Non-numeric values under bear/base/bull → FAIL.
+    """
+    out: list[tuple[str, str, str]] = []
+    if not isinstance(probs, dict) or not probs:
+        out.append(("FAIL", "scenario_probabilities", "missing or empty"))
+        return out
+
+    total, issues = extract_scenario_prob_mass(probs)
+    if issues and total is None:
+        out.append(("FAIL", "scenario_probabilities_sum", "; ".join(issues)))
+    elif issues:
+        out.append(("FAIL", "scenario_probabilities_values", "; ".join(issues)))
+    elif total is None:
+        out.append(("FAIL", "scenario_probabilities_sum", "missing bear/base/bull"))
+    elif abs(total - 1.0) <= 0.01:
+        out.append(("PASS", "scenario_probabilities_sum", f"{total:.3f} (bear/base/bull only)"))
+    else:
+        out.append(
+            (
+                "FAIL",
+                "scenario_probabilities_sum",
+                f"{total:.3f} != 1.0 +/- 0.01 — sum only bear/base/bull; "
+                "put notes in scenario_probabilities_rationale sibling, not inside the map",
+            )
+        )
+
+    extra = [k for k in probs if k not in SCENARIO_PROB_KEYS]
+    if extra:
+        sev = extra_key_severity if extra_key_severity in ("WARN", "FAIL", "PASS") else "WARN"
+        out.append(
+            (
+                sev,
+                "scenario_probabilities_keys",
+                f"extra keys {extra!r} — map may contain ONLY bear/base/bull "
+                f"(move rationale/_sum/_note to a sibling key)",
+            )
+        )
+    else:
+        out.append(("PASS", "scenario_probabilities_keys", "bear/base/bull only"))
+    return out
+
+
+def check_mos_units(fair_value: object) -> list[tuple[str, str, str]]:
+    """MoS unit hygiene for valuation_model.fair_value.
+
+    - If both margin_of_safety (fraction) and margin_of_safety_pct present:
+      FAIL when abs(pct - 100*frac) > eps.
+    - If only *_pct and 0 < |x| <= 1.5: WARN (likely fraction stored in pct field).
+    - Missing dual fields: no FAIL (legacy OK).
+    """
+    out: list[tuple[str, str, str]] = []
+    if not isinstance(fair_value, dict):
+        out.append(("SKIPPED", "mos_units", "fair_value missing or not object"))
+        return out
+
+    frac = fair_value.get("margin_of_safety")
+    pct = fair_value.get("margin_of_safety_pct")
+
+    if isinstance(frac, (int, float)) and isinstance(pct, (int, float)):
+        expected = 100.0 * float(frac)
+        if abs(float(pct) - expected) <= MOS_CONSISTENCY_EPS:
+            out.append(
+                (
+                    "PASS",
+                    "mos_units_dual",
+                    f"fraction={frac} pct={pct} (consistent within {MOS_CONSISTENCY_EPS})",
+                )
+            )
+        else:
+            out.append(
+                (
+                    "FAIL",
+                    "mos_units_dual",
+                    f"pct={pct} vs 100*fraction={expected:.4f} — "
+                    "write margin_of_safety as signed fraction and "
+                    "margin_of_safety_pct as 100*fraction (never put 0-1 in *_pct)",
+                )
+            )
+        return out
+
+    if isinstance(pct, (int, float)) and not isinstance(frac, (int, float)):
+        ap = abs(float(pct))
+        if 0 < ap <= 1.5:
+            out.append(
+                (
+                    "WARN",
+                    "mos_units_pct_field",
+                    f"margin_of_safety_pct={pct} looks like a fraction in a *_pct field; "
+                    "store percent points (e.g. 29.2) and optionally margin_of_safety fraction",
+                )
+            )
+        else:
+            out.append(("PASS", "mos_units_pct_field", f"margin_of_safety_pct={pct}"))
+        return out
+
+    if isinstance(frac, (int, float)) and not isinstance(pct, (int, float)):
+        out.append(
+            (
+                "WARN",
+                "mos_units_fraction_only",
+                f"margin_of_safety={frac} present without margin_of_safety_pct — "
+                "prefer both fields for cross-session comparability",
+            )
+        )
+        return out
+
+    out.append(("SKIPPED", "mos_units", "no margin_of_safety fields"))
+    return out
+
+
+def check_valuation_decision_quality(session: Path) -> list[tuple[str, str, str]]:
+    """Session-level MoS unit checks from data/valuation_model.json."""
+    data, err = load_json(session / "data" / "valuation_model.json")
+    if err:
+        return [("SKIPPED", "mos_units", f"valuation_model.json {err}")]
+    if not isinstance(data, dict):
+        return [("SKIPPED", "mos_units", "valuation_model not an object")]
+    return check_mos_units(data.get("fair_value"))
+
+
 def check_stress_coverage(session: Path) -> list[tuple[str, str, str]]:
     """Merge/coverage checks for Phase 2.5."""
     out: list[tuple[str, str, str]] = []
@@ -184,26 +339,7 @@ def check_stress_coverage(session: Path) -> list[tuple[str, str, str]]:
         out.append(("PASS", "stress_scenarios", f"{n} >= {MIN_STRESS_SCENARIOS}"))
 
     probs = data.get("scenario_probabilities") if isinstance(data, dict) else None
-    if isinstance(probs, dict):
-        try:
-            total = sum(float(probs[k]) for k in ("bear", "base", "bull") if k in probs)
-            # also allow nested value objects
-            if total == 0:
-                total = 0.0
-                for k in ("bear", "base", "bull"):
-                    v = probs.get(k)
-                    if isinstance(v, dict) and "value" in v:
-                        total += float(v["value"])
-                    elif isinstance(v, (int, float)):
-                        total += float(v)
-            if abs(total - 1.0) <= 0.01:
-                out.append(("PASS", "scenario_probabilities_sum", f"{total:.3f}"))
-            else:
-                out.append(("FAIL", "scenario_probabilities_sum", f"{total:.3f} != 1.0"))
-        except (TypeError, ValueError) as e:
-            out.append(("FAIL", "scenario_probabilities_sum", str(e)))
-    else:
-        out.append(("FAIL", "scenario_probabilities_sum", "missing"))
+    out.extend(check_scenario_probability_keys(probs, extra_key_severity="WARN"))
 
     return out
 

@@ -40,8 +40,16 @@
     },
     "scenario_probabilities": {
       "type": "object",
-      "description": "The ONLY additive probability budget: bear/base/bull fair-value outcomes; values must sum to 1.0 (+/- 0.01) and must mirror the valuation model's weights. Stress-scenario probabilities do NOT belong here.",
-      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+      "description": "The ONLY additive probability budget: keys MUST be only bear, base, bull (numeric 0-1). Values must sum to 1.0 (+/- 0.01) and mirror the valuation model's weights. Do NOT put rationale, _sum, _note, or other meta keys inside this object — use sibling scenario_probabilities_rationale (or similar). Stress-scenario probabilities do NOT belong here.",
+      "properties": {
+        "bear": { "type": "number", "minimum": 0, "maximum": 1 },
+        "base": { "type": "number", "minimum": 0, "maximum": 1 },
+        "bull": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "scenario_probabilities_rationale": {
+      "description": "Optional sibling for narrative about bear/base/bull masses — never embed strings inside scenario_probabilities."
     },
     "stress_test": {
       "type": "object",

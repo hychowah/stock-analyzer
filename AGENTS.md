@@ -18,7 +18,7 @@ This file is the **single normative spec** for the research harness. It is auto-
 | Judgment exemplars | `harness/exemplars/` |
 | Industry research notes | `harness/research/` |
 
-**Orchestrator order (new sessions):** scaffold → classify sector + market_context → write `registry/research_brief.json` → Phase 0… → **preflight** before Phase 2 / 2.5 / 4 / 5 → audit → prediction snapshot + catalog.
+**Orchestrator order (new sessions):** scaffold → classify sector + market_context → write `registry/research_brief.json` → Phase 0… → **preflight** before Phase 2 / 2.5 / 4 / 5 → audit → prediction snapshot + catalog. Checklist: `harness/orchestrator_runbook.md` (includes `data/price_snapshot.json` freeze before Phase 2).
 
 Also: `harness/region_integration.md`, `scripts/` helpers, `_archive/` (retired v1 — never follow).
 

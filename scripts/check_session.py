@@ -19,8 +19,8 @@ This validates STRUCTURE and PROVENANCE, not financial truth:
   - report files are non-trivial (> 2 KB)
   - audit verdict is PASS (--full; the audit's own verdict gates the session)
 
-Every check reports PASS / FAIL / SKIPPED(reason). Exit code is non-zero
-if any check FAILs. Financial cross-checks (report numbers vs registry,
+Every check reports PASS / FAIL / WARN / SKIPPED(reason). Exit code is non-zero
+if any check FAILs (WARN does not fail the process). Financial cross-checks (report numbers vs registry,
 external fact-checking) are the audit agent's job, not this script's.
 
 Tip: run with the yfinance venv python for full schema validation:
@@ -201,20 +201,35 @@ def check_risk_bridge(session: Path) -> None:
     except Exception:  # noqa: BLE001
         record("SKIPPED", "risk_bridge content checks", "unparseable")
         return
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import check_scenario_probability_keys  # noqa: WPS433
+
     probs = data.get("scenario_probabilities")
-    if isinstance(probs, dict) and probs:
-        total = sum(v for v in probs.values() if isinstance(v, (int, float)))
-        if abs(total - 1.0) <= 0.01:
-            record("PASS", "scenario_probabilities sum", f"{total:.3f}")
-        else:
-            record("FAIL", "scenario_probabilities sum", f"{total:.3f} != 1.0 +/- 0.01")
-    else:
-        record("FAIL", "scenario_probabilities sum", "missing or empty")
+    for status, check, detail in check_scenario_probability_keys(probs, extra_key_severity="WARN"):
+        # Map helper ids to legacy check names where useful
+        name = {
+            "scenario_probabilities_sum": "scenario_probabilities sum",
+            "scenario_probabilities_keys": "scenario_probabilities keys",
+            "scenario_probabilities_values": "scenario_probabilities values",
+            "scenario_probabilities": "scenario_probabilities sum",
+        }.get(check, check)
+        record(status, name, detail)
     scenarios = (data.get("stress_test") or {}).get("scenarios") or []
     if len(scenarios) >= 5:
         record("PASS", "stress scenario count", f"{len(scenarios)} >= 5")
     else:
         record("FAIL", "stress scenario count", f"{len(scenarios)} < 5 (need 4 sector + 1 macro)")
+
+
+def check_valuation_mos_units(session: Path) -> None:
+    """Soft/conditional MoS unit checks — WARN does not fail the process."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import check_valuation_decision_quality  # noqa: WPS433
+
+    for status, check, detail in check_valuation_decision_quality(session):
+        record(status, check, detail)
 
 
 def check_reports(session: Path, ticker: str) -> None:
@@ -781,6 +796,7 @@ def main() -> int:
     if args.full:
         check_filing_deep_dive(session)
         check_risk_bridge(session)
+        check_valuation_mos_units(session)
         check_reports(session, ticker)
         check_audit_verdict(session)
         check_handoffs(session)
@@ -788,14 +804,18 @@ def main() -> int:
         record("SKIPPED", "risk_bridge/report/audit/handoff/deep-dive checks", "run with --full after Phase 5")
 
     n_fail = sum(1 for s, _, _ in results if s == "FAIL")
+    n_warn = sum(1 for s, _, _ in results if s == "WARN")
     n_skip = sum(1 for s, _, _ in results if s == "SKIPPED")
     for status, check, detail in results:
         line = f"[{status:7s}] {check}"
         if detail:
             line += f" — {detail}"
         print(line)
-    print(f"\n{len(results) - n_fail - n_skip} passed, {n_fail} failed, {n_skip} skipped")
+    n_pass = len(results) - n_fail - n_skip - n_warn
+    print(f"\n{n_pass} passed, {n_fail} failed, {n_warn} warned, {n_skip} skipped")
     print(f"session: {session}")
+    if n_warn:
+        print("Note: WARN is signal for next runs / humans; exit code ignores WARN (FAIL only).")
 
     if args.write_acceptance is not None:
         out = Path(args.write_acceptance)

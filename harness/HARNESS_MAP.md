@@ -97,6 +97,7 @@ Details: `harness/agent_prompts.md` conventions + `harness/exemplars/`.
 | Need | Path |
 |------|------|
 | Normative spec | `AGENTS.md` |
+| Orchestrator checklist | `harness/orchestrator_runbook.md` |
 | Prompt templates | `harness/agent_prompts.md` |
 | Schemas | `templates/*.schema.json` |
 | Structural check | `scripts/check_session.py --full` |

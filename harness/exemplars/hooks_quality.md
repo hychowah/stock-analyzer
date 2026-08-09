@@ -50,7 +50,7 @@ Deep dive extracted unrecognized SBC ~$2.1B and diluted share path; scorecard hi
       "action": "used_as:scenario_probabilities",
       "old": "bear/base/bull 0.25/0.50/0.25",
       "new": "0.30/0.45/0.25",
-      "reason": "Quantitative opex/margin promises graded mixed (miss on FY opex ceiling); slightly higher bear weight. Does not auto-set WACC."
+      "reason": "Quantitative opex/margin promises graded mixed (miss on FY opex ceiling); +5pp bear vs neutral 25/50/25. Counterfactual: if opex hit-rate were clean, keep 0.25/0.50/0.25. Does not auto-set WACC. (Template-shaped masses OK only with this kind of company-specific shift + counterfactual.)"
     },
     {
       "from": "footnotes.contingencies_legal",

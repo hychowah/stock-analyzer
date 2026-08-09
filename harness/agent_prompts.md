@@ -25,7 +25,7 @@ Every template already carries the justification contract — do not strip it. S
   - **Swarm workers (Phase 0 / 2.5)**: return **JSON only** with mandatory decision fields (see templates). Prefer **signal density**: 3–6 specific, sourced findings beat 20 generic industry platitudes. Put full text under `S/data/` (raw_sec, transcripts, caches); returns carry **paths + short excerpts**, not uncapped 10-K prose.
   - **Anti-patterns (FAIL-quality even if schema-valid)**: empty or missing `downstream_relevance` on Phase 0 findings; quantitative claims without sources; inventing litigation/contingent quanta; pasting full filing/HTML into return JSON or handoff; hollow “looks fine” handoffs that hide gaps; report numbers not present in registry/compute.
   - **Orchestrator merges**: write each raw return under `S/registry/raw/` **before** merging; merge for **coverage** (brief questions, risk candidates, stress library) and conflict notes; spot-check ≥3 headline numbers against data/raw — never invent merge numbers.
-- **Judgment exemplars (style only)**: before writing judgment-heavy outputs, match the GOOD patterns in `ROOT/harness/exemplars/` (index: `ROOT/harness/exemplars/index.json`). BAD patterns are FAIL-quality even if schema-valid. **Do not copy illustrative numbers into this session.** Agent map: valuation (5) and audit (13) → `rationale_quality.md` + `hooks_quality.md`; technical (4), TSR (12), deep dive (2e) → `rationale_quality.md`; **every agent** → `handoff_quality.md` for handoff style. Orchestrator injects the relevant paths into each subagent prompt (do not paste full exemplar banks into every template).
+- **Judgment exemplars (style only)**: before writing judgment-heavy outputs, match the GOOD patterns in `ROOT/harness/exemplars/` (index: `ROOT/harness/exemplars/index.json`). BAD patterns are FAIL-quality even if schema-valid. **Do not copy illustrative numbers into this session.** Agent map: valuation (5) and audit (13) → `rationale_quality.md` + `hooks_quality.md` + `valuation_decision_quality.md`; technical (4), TSR (12), deep dive (2e) → `rationale_quality.md`; **every agent** → `handoff_quality.md` for handoff style. Orchestrator injects the relevant paths into each subagent prompt (do not paste full exemplar banks into every template).
 - **Handoff file (required of EVERY agent)**: before finishing, write `S/registry/handoffs/<your_agent_id>.md` (e.g. `2a_fundamentals.md`, `5_valuation.md`, `13_audit.md`) with four sections:
   1. **What I did** — 3-5 bullets: inputs read, outputs written, tools used.
   2. **Data issues & gaps** — anything that failed to fetch, was truncated, stale, missing, or had to be substituted (with the fallback used). If none, say "none".
@@ -35,6 +35,12 @@ Every template already carries the justification contract — do not strip it. S
      - Explicit gaps that should **widen** valuation range or add a stress scenario.
      - Authoritative file paths (not restated tables).
   Keep it under one page. The artifact shows WHAT you produced; the handoff shows WHERE it is soft and what downstream must do. Match `ROOT/harness/exemplars/handoff_quality.md` GOOD pattern (honest gaps, concrete paths, downstream actions).
+
+---
+
+## Orchestrator
+
+Main agent: follow `ROOT/harness/orchestrator_runbook.md` (phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent.
 
 ---
 
@@ -130,14 +136,20 @@ Run after 2a and 2b.
 ```text
 Integrate the latest quarter for TICKER.
 
+Role: evidence integrator only. Anti-role: do NOT change valuation assumptions (Agent 5 owns overrides).
+
 Inputs: S/registry/sec_filings.json, S/data/latest_supplement.* (the uncapped supplement from 2b — use it first), S/data/sp_financials.csv, S/registry/sector_config.json, S/registry/data_fetch_log.json (its downstream_instructions tell you which gaps to fill). Fetch the earnings-release/press summary via kimi-datasource sec_edgar or web search if not already covered.
 
-Extract per ROOT/templates/latest_quarter.schema.json: fiscal_period (must match the numbers!), currency, sources (URLs), revenue/earnings vs prior year and vs consensus if findable, guidance (company guidance only — analyst price targets are NOT guidance; verify raise/cut claims against the prior quarter's guidance, not media headlines), segments, sector KPIs per the sector module, margins, balance sheet, cash flow, capital returns, management_tone, risks. For any historical series you quote (e.g. capital ratios over 4 quarters), verify each point against the prior-quarter supplements, not memory.
+Extract per ROOT/templates/latest_quarter.schema.json: fiscal_period (must match the numbers!), currency, sources (URLs), revenue/earnings vs prior year and vs consensus if findable, guidance (company guidance only — analyst price targets are NOT guidance; verify raise/cut claims against the prior quarter's guidance, not media headlines), segments, sector KPIs per the sector module, margins, balance sheet, cash flow, capital returns, management_tone, risks. For any historical series you quote (e.g. capital ratios over 4 quarters), verify each point against the prior-quarter supplements, not memory — cite accession/URL per point.
+
+Fiscal labels: use the **company’s own FY label** in fiscal_period and guidance keys; when S&P/Yahoo fiscal_year or calendar end differs, add a parenthetical or sibling field (calendar_end / sp_fiscal_year). Never rename company FY solely because the year ends in the next calendar year.
+
+Nested objects under guidance / qualitative_outlook / capital_returns (or any structure with a `value` field that involves interpretation) should include non-empty `rationale` (how extracted/interpreted) so machine checks and audit can rehydrate — not bare value-only judgment shells.
 
 Then fill evidence_log: for each notable change vs prior trend, record metric / observation / materiality (is it >5% relative or >100bp? use YoY basis) / suggested_rule (two_quarter_rule | guidance_change_rule | inflection_rule | capital_rule | new_risk_rule | none) / source.
 
 You log EVIDENCE ONLY. Do not change valuation assumptions — that is the valuation agent's job.
-Write S/registry/latest_quarter.json.
+Write S/registry/latest_quarter.json and S/registry/handoffs/2d_latest_quarter.md.
 ```
 
 ---
@@ -182,7 +194,7 @@ Justification contract: continuity score and any decided hit-rate implications n
 ```text
 Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
 
-Fetch ~2 years of daily prices for TICKER, the regional benchmark, and the sector index declared by the orchestrator (deviate only with rationale) via the yfinance MCP (get_price_history) or yahoo_finance datasource. Cache them to S/data/prices_*.csv.
+Fetch ~2 years of daily prices for TICKER, the regional benchmark, and the sector index declared by the orchestrator (deviate only with rationale) via the yfinance MCP (get_price_history) or yahoo_finance datasource. Cache them to S/data/prices_*.csv. If S/data/price_snapshot.json exists (price-only freeze from orchestrator), use its `close` as the session “last close” / current-price anchor for levels that need a single print; still use full history for indicators.
 
 Write a runtime script S/data/compute/technical_indicators.py that READS the cached CSVs (fetches only if absent) and computes: trend (SMAs), momentum (RSI, MACD), volatility (ATR), volume profile, relative strength vs both benchmarks, support/resistance, max drawdown. Run it.
 
@@ -196,22 +208,38 @@ Write S/registry/technical.json per ROOT/templates/technical.schema.json, includ
 ```text
 Value TICKER as of DATE.
 
-Judgment style: read ROOT/harness/exemplars/rationale_quality.md and ROOT/harness/exemplars/hooks_quality.md (GOOD patterns; do not copy illustrative numbers).
+Role: model designer + assumption judge. Anti-role: not a module-default paste machine; not a self-auditor.
+Judgment style: read ROOT/harness/exemplars/rationale_quality.md, hooks_quality.md, and valuation_decision_quality.md (GOOD patterns; do not copy illustrative numbers).
 
-Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions — region intensity, accounting_regime, cost_of_capital_flags, ownership), S/registry/research_brief.json (when present — open must_answer_questions and research_depth should inform range width / scenario posture), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED — footnotes, strategy_arc, management_scorecard), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, the sector module file named in sector_config.json, and the region module named in market_context.module_file (both advisory; numbers are reference ranges, not mandates). Fill peer KPI gaps (e.g. NIM/CET1) from filings if the peer comparison needs them.
+Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from filings if needed.
 
-1. CHOOSE the valuation model that fits this company (sector module guidance + your judgment + strategy_arc implied_model_hooks). If the company has materially different business lines, run a SOTP or multi-method cross-check in addition to the primary model. Justify the choice in model.rationale.
-2. DECIDE every assumption yourself: discount rate (state how you build it up — cash-flow currency vs discount-rate currency must match or FX policy must be explicit; any intermediate like realized beta or local Rf series must be scripted in S/data/compute/), growth path, margin path, terminal approach, multiples. Include explicit CoC/governance dials as assumptions where relevant (e.g. risk_free_rate, country_risk_or_erp_adjustment which may be 0, accounting_basis_for_model, ownership_governance_adjustment which may be none/0) — each {value, rationale, basis}. Check terminal state for internal consistency. Use footnote findings for SBC/dilution, tax, debt/leases, segment economics when status=extracted. NEVER paste region-module reference ranges as mandated WACC/ERP/family discounts.
-3. Apply latest-quarter overrides you judge warranted from latest_quarter.json evidence_log (materiality: >5% relative or >100bp; symmetric — improvements count too). Log each in overrides_applied; explicitly note any evidence you reject and why.
-4. CONSUME the deep dive: write filing_deep_dive_hooks[] — for each material footnote / strategy / scorecard finding either action used_as:<assumption> with old/new or action rejected|noted_only with reason. Credibility_summary.valuation_implication may inform scenario weights or range width; it does NOT auto-set a formula. If scorecard data_quality is degraded (no transcripts / thin history), widen the valuation range and say so.
-4b. CONSUME market context: write market_context_hooks[] — for listing/intensity, accounting_regime, cost_of_capital_flags, and ownership/control either action used_as:<assumption> with old/new or rejected|noted_only with reason. intensity=low: a single noted_only no-op is enough. intensity=medium/high: local Rf/ERP framing and governance/control must be addressed (use or explicit reject). If market_context.requires_manual_review or confidence < 0.70, widen the range and say so. Avoid double-counting country risk in WACC and cash flows and stress haircuts — disclose posture.
-5. Write a runtime script S/data/compute/valuation.py implementing YOUR model, reading data from the session files (never refetch live data). Run it. Its output must match what you write in the model JSON.
-6. SENSITIVITY (required): compute base-case FV across a grid of your two most judgment-dependent assumptions (typically discount rate x terminal profitability), ~4x4 cells. Store as "sensitivity" in the model JSON and verify the base cell reproduces base FV exactly. If your stack of judgments leans one direction, say so in a "posture" note.
-7. Reverse-engineer the current price: test the full grid of implied combinations, not just extremes. Set reverse_engineering.priced_for_perfection with rationale.
-8. Compute margin of safety as 1 - price/fair_value (signed). State which book-value/anchor vintage you use and use it consistently.
+PREFLIGHT (stop → handoff status=blocked; do not invent):
+- registry/filing_deep_dive.json exists with footnotes + strategy_arc + management_scorecard.
+- Prefer S/data/price_snapshot.json for the single current_price used in MoS (if missing, document the price vintage you use and ask orchestrator to freeze next run).
 
-Write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json, including compute_script, sensitivity, filing_deep_dive_hooks, and market_context_hooks (when market_context.json exists).
-Fair value bear/base/bull plus probability_weighted (your weights, justified — these become scenario_probabilities in risk_bridge; keep them consistent).
+Hard constraints:
+- MoS = 1 − price/fair_value.base (signed). Write BOTH fair_value.margin_of_safety (fraction) AND fair_value.margin_of_safety_pct (100× fraction). Never put a 0–1 fraction in *_pct. Prefer compute script emits both. Primary MoS uses base; disclose vs probability_weighted if material.
+- Every decided number {value, rationale, basis}; any number in rationale must equal value / script input or state haircut old→new (see valuation_decision_quality congruence pair).
+- Scenario weights: no template paste (e.g. 30/45/25 or 25/50/25) without company-specific numeric argument AND a counterfactual mass; set probability_method. Template-shaped masses are allowed when justified. risk_bridge mirror = bare bear/base/bull floats only.
+- ERP / CoC: intermediates scripted + snapshotted under data/ when used; ERP rationale selects a method and rejects ≥1 competitor unfit for this currency/risk (not “mid of band” alone). No mandated ERP value. Definitions: valuation_decision_quality.md.
+- priced_for_perfection is a surface reverse-eng claim (name dials that justify price vs base/bull) — never from PW vs price×k or price>base alone.
+- Do not invent FDD/hooks if deep dive missing.
+
+1. CHOOSE the valuation model that fits (sector module + judgment + strategy_arc implied_model_hooks). Material multi-line businesses → SOTP or multi-method cross-check; if so, write multi_method_reconciliation (primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary). Justify in model.rationale.
+2. DECIDE every assumption: discount rate build-up (cash-flow currency vs discount-rate currency match or explicit FX policy; beta/Rf series scripted), growth/margin paths, terminal approach, multiples, CoC/governance dials (may be 0). Each {value, rationale, basis}. When using Gordon/exit/residual terminal, write terminal_consistency (method, wacc_minus_g or ke_minus_g, reinvestment/payout identity with quantified mismatch, tv_share_of_ev_base; if TV share >0.75 extend years / lower terminal / widen range). Footnotes for SBC/dilution, tax, debt/leases, segments when extracted. NEVER paste region-module ranges as mandated WACC/ERP/family discounts.
+3. Apply latest-quarter overrides from evidence_log when warranted (materiality >5% relative or >100bp; symmetric). Log overrides_applied; note rejects. Use company FY labels consistent with Agent 2d.
+4. CONSUME deep dive → filing_deep_dive_hooks[] (used_as with old/new | rejected | noted_only). Credibility may move weights/range width — not formulas. Degraded scorecard → widen range and say so.
+4b. CONSUME market context → market_context_hooks[]. intensity=low: single noted_only OK. medium/high: local CoC + ownership/accounting addressed (use or reject). Manual review / conf<0.70 → widen. Avoid double-counting country risk across WACC/CF/stress.
+4c. When research_brief exists: research_brief_hooks[] for open must_answer_questions (used_as:range|probs|scenario_seed | unanswered_widens_range | not_material).
+5. Write S/data/compute/valuation.py (session-relative), hermetic from session files, run it; JSON matches script output. Emit dual MoS from the script when possible.
+6. SENSITIVITY: ~4×4 on two most judgment-dependent dials; base cell = base FV. fair_value.posture one sentence (conservative|neutral|aggressive lean).
+7. Reverse-engineer current price (implied dials, full grid not only extremes). Set reverse_engineering.priced_for_perfection per valuation_decision_quality (surface claim).
+8. MoS dual fields (step constraints). Scenario probs justified + probability_method. If (bull−bear)/base >100% or bear <0.4×base: set fair_value.decision_usefulness high|medium|low + what would shrink range — do not present PW as precise when low.
+
+OUTPUT CONTRACT — write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json including: model, fair_value (bear/base/bull/PW + dual MoS), assumptions, compute_script, sensitivity, filing_deep_dive_hooks, market_context_hooks (when MC present), reverse_engineering; plus terminal_consistency / multi_method_reconciliation / research_brief_hooks / decision_usefulness / probability_method when triggered. Fair-value weights become risk_bridge scenario_probabilities (bare floats only; consistent).
+
+SELF-CHECK before handoff: (1) abs(pct − 100×frac) < 0.05; (2) ≥3 rationales rehydrate values; (3) terminal_consistency if terminal method; (4) PFP names dials or explicit FALSE with dial evidence; (5) ERP/method competitor named if CoE used.
+Write S/registry/handoffs/5_valuation.md.
 ```
 
 ### Agent 12 — TSR & dilution validation (`coder`)
@@ -219,7 +247,7 @@ Fair value bear/base/bull plus probability_weighted (your weights, justified —
 ```text
 Validate TICKER's historical shareholder returns and dilution as of DATE — this is the value-trap screen.
 
-Fetch price history (5-10y) and dividends for TICKER and the benchmarks declared by the orchestrator (deviate only with rationale) via yfinance MCP or yahoo_finance datasource; cache to S/data/prices_tsr_*.csv (or reuse prices_*.csv if the technical agent already cached the same tickers). Get share-count history, SBC, and buybacks from S/data/sp_financials.csv (fallback: yfinance, cached).
+Fetch price history (5-10y) and dividends for TICKER and the benchmarks declared by the orchestrator (deviate only with rationale) via yfinance MCP or yahoo_finance datasource; cache to S/data/prices_tsr_*.csv (or reuse prices_*.csv if the technical agent already cached the same tickers). If S/data/price_snapshot.json exists, use its `close` as the session current-price print for headlines; historical TSR still from cached series. Get share-count history, SBC, and buybacks from S/data/sp_financials.csv (fallback: yfinance, cached).
 
 Write and run S/data/compute/tsr_dilution.py (READS cached data; fetches only if absent) computing: TSR over 1/3/5/10y vs benchmarks, share-count CAGR, compound dilution/buyback effect, SBC % revenue, SBC-adjusted FCF. For growth/is_also_growth names (check S/registry/sector_config.json): also Rule of 40 and Burn Multiple — CRITICAL intensity for them; otherwise note why SBC treatment is light.
 
@@ -245,16 +273,17 @@ Return JSON only (do not write files). Decision-grade: narrative is 2-4 sentence
 
 {"name": "...", "type": "sector|macro|region",
  "probability": <0-1 number YOU decide>, "rationale": "<why this probability — reference history/base rates/company specifics; cite deep-dive or filings when legal/contingent>",
- "affected_parameters": ["..."], "fair_value_haircut_pct": <number, your estimate>,
+ "affected_parameters": ["..."], "fair_value_haircut_pct": <non-negative downside haircut % unless scenario is explicitly upside>,
  "narrative": "<2-4 sentences: transmission mechanism and impact>",
  "deep_dive_refs": ["optional paths into filing_deep_dive.json used"],
  "market_context_refs": ["optional paths into market_context.json used"],
- "background_risk_refs": ["optional phase0 risk_candidate themes this scenario covers"]}
-Probability semantics: this is a STANDALONE conditional estimate of this event occurring. Scenarios are NOT mutually exclusive and do NOT need to sum to 1.0. Check any historical anchor you cite (e.g. trough multiples in past crises) against the actual historical record before using it.
+ "background_risk_refs": ["optional phase0 risk_candidate themes this scenario covers"],
+ "historical_anchor_source": "primary path/URL or unverified_estimate"}
+Probability semantics: this is a STANDALONE conditional estimate of this event occurring. Scenarios are NOT mutually exclusive and do NOT need to sum to 1.0. Check any historical anchor you cite (e.g. trough multiples in past crises) against the actual historical record — if unverified, set historical_anchor_source=unverified_estimate and do not claim "matching actual trough".
 Ground the haircut in the valuation model's sensitivities where possible. No canned numbers. Do not invent litigation quanta when the deep dive / Item 3 / contingency note is silent — say unknown. Do not apply a fixed family-control or country discount from a region module.
 ```
 
-**Merge protocol (main agent):** (1) write each verbatim return to `S/registry/raw/stress_{id}.json`; (2) merge into `S/registry/risk_bridge.json` per `templates/risk_bridge.schema.json`: `risks` (every `latest_quarter.json.risks[]` entry must map to a risk here or be explicitly dropped with a reason; fold material deep-dive legal/contingency findings into risks or explicit drops; Phase 0 `risk_candidate` findings map or explicit drop), `scenario_probabilities` (bear/base/bull ONLY — mirrors the valuation model's weights, sums to 1.0; if valuation raised bear weight from scorecard credibility, keep consistent), `stress_test.probability_semantics` (state the standalone-conditional convention), `stress_test.scenarios`. Coverage checkpoint before marking phase complete: ≥5 raw stress files + ≥5 merged scenarios.
+**Merge protocol (main agent):** Role: risk-bridge assembler — not a co-author of new haircuts. (1) write each verbatim return to `S/registry/raw/stress_{id}.json`; (2) merge into `S/registry/risk_bridge.json` per `templates/risk_bridge.schema.json`: `risks` (every `latest_quarter.json.risks[]` entry must map to a risk here or be explicitly dropped with a reason; fold material deep-dive legal/contingency findings into risks or explicit drops; Phase 0 `risk_candidate` findings map or explicit drop), `scenario_probabilities` (**ONLY** keys `bear`, `base`, `bull` with numeric values summing to 1.0 — mirrors valuation weights; put any rationale/note/_sum in a sibling such as `scenario_probabilities_rationale`, never inside the probability map), `stress_test.probability_semantics` (standalone-conditional convention), `stress_test.scenarios`. Spot-check haircut signs and map counts. Coverage checkpoint: ≥5 raw stress files + ≥5 merged scenarios.
 
 ---
 
@@ -297,7 +326,7 @@ Structure:
 - bull-base-bear with probabilities and rationale
 - position-sizing input
 
-Rules: every number cites a source (registry file, filing URL, or compute script). Key judgment numbers must be restated with their rationale and must match registry/compute — **no chat-only or mental-math figures**. No new numbers that are not in the registry. If research_brief exists, note any still-open must_answer_questions and how uncertainty was widened. If the assumption stack leans one direction, disclose it. When two vintages of a metric exist (e.g. latest-quarter vs FY book value), use one consistently and say which. Label transcript-sourced claims as secondary.
+Rules: every number cites a source (registry file, filing URL, or compute script). Key judgment numbers must be restated with their rationale and must match registry/compute — **no chat-only or mental-math figures**. No new numbers that are not in the registry. MoS: restate dual units consistently (percent points for readers) using base FV as primary; if fair_value.decision_usefulness is low/medium, do **not** lead the valuation/verdict section with probability-weighted FV as a precise target — say the range is decision-limiting. If research_brief exists, note any still-open must_answer_questions and how uncertainty was widened. If the assumption stack leans one direction, disclose it. When two vintages of a metric exist (e.g. latest-quarter vs FY book value), use one consistently and say which. Label transcript-sourced claims as secondary.
 ```
 
 ### Agent 8 — technical report (`coder`)
@@ -331,25 +360,29 @@ Judgment-quality anchors (style only): ROOT/harness/exemplars/rationale_quality.
 
 Read S/reports/*.md, all of S/registry/ — including registry/raw/ (diff the raw swarm returns against the merged files), registry/phase_status.json when present (resume map / completeness claims vs artifacts), and registry/handoffs/ (every agent's own account of its data issues and assumptions; cross-check them against what the artifacts actually show — an agent that hit a data problem but didn't disclose it in its artifact is a finding), and S/data/valuation_model.json, and the scripts in S/data/compute/.
 
-Checks:
-1. Number consistency / integrity: report numbers match registry/compute outputs within rounding. ALSO check registry↔data: spot-check 3-5 headline numbers in background.json and latest_quarter.json against sp_financials.csv and the raw returns. FAIL if a report judgment number (FV, MOS, probabilities, entry/stop, key KPIs asserted as fact) is not rehydratable from valuation_model / risk_bridge / technical / tsr / latest_quarter / compute outputs (chat-only numbers are defects).
-2. EXTERNAL VERIFICATION (required): pick >=5 filing-grade numbers (prior-quarter capital ratios, prior-year comparatives, historical anchors cited in stress narratives) and verify them against primary sources (EDGAR, IR pages, web). Consistency is not truth.
-2b. DEEP-DIVE VERIFICATION (required): registry/filing_deep_dive.json exists with footnotes + strategy_arc + management_scorecard; re-check >=3 footnote/excerpt figures against S/data/raw_sec/ primary text; scorecard actuals match sp_financials/filings where quantitative; each scorecard row has source_type; transcripts labeled secondary; multi-year annual files present under raw_sec or gaps documented.
-2c. Deep-dive consumption: valuation_model.filing_deep_dive_hooks present for material findings (or explicit rejects); fundamental report has non-stub Footnote findings / Multi-year strategy alignment / Management track record sections; stress/legal narratives do not invent quanta contradicted by deep dive.
-2d. MARKET CONTEXT (when registry/market_context.json exists): non-empty valuation_model.market_context_hooks; intensity gate coherent (low may be single noted_only; medium/high must address local CoC and ownership/accounting — not silent US defaults); region module was read (hooks or assumptions cite it); no hardcoded family/country discounts without rationale; fundamental report has Market & institutional context appropriate to intensity; if intensity=high, risk_bridge has a region/governance/FX-style scenario or an explicit drop reason.
-2e. Decision-grade returns / handoffs: Phase 0 raw returns have non-empty downstream_relevance; no raw return is a full-filing dump; handoffs include concrete downstream actions (not hollow "none" when data_fetch_log shows gaps). Flag hollow schema-valid work.
-2f. Research brief (when registry/research_brief.json exists): Phase 0 coverage vs must_answer_questions is documented in phase0 handoff or background; open questions should widen uncertainty or appear in risks — not silently vanish.
-2g. Source reliability: sample >=3 news_sentiment URLs; note dead/unknown rates; primary-source preference for catalysts. Do not FAIL the whole session solely for one flaky network check if disclosed.
-3. Reproducibility: rerun ALL compute scripts (not "if cheap"). Any rerun difference is data drift — investigate, never wave off as float noise. Scripts must read cached session data, not refetch live.
-4. Justification contract: every judgment number has a substantive rationale AND its intermediates are scripted (flag unscripted build-up numbers). "Industry standard" alone is not substantive.
-5. Citations: sourced numbers have citations; sec_filings/news items have URLs or explicit non-URL source labels.
-6. Lost-findings sweep: every latest_quarter.json.risks[] entry maps to a risk_bridge risk or is explicitly dropped with a reason; scan background.json for findings with downstream_relevance=risk_candidate that no report or risk_bridge used.
-7. Cross-artifact contradictions: README required-inputs (benchmarks, peers, currency/exchange) must match what technical.json/tsr_validation.json and market_context (and research_brief when present) actually used; metric vintages consistent.
-8. Sector fit: model choice consistent with sector_config and the module was actually used; sensitivity block present.
-8b. Region fit: when market_context present, primary_region/intensity/module_file coherent with listing signals; CoC currency matches cash-flow policy stated in assumptions.
-9. Reverse-engineering present and priced_for_perfection is a real, argued conclusion.
-10. For growth/is_also_growth: SBC/dilution analysis present at critical intensity (deep-dive sbc_unrecognized should inform it when extracted).
-11. Merge integrity: registry/raw/ phase0 and stress files exist in plausible counts; merged background/risk_bridge does not introduce numbers absent from raw/data.
+Checks (ordered bands — do not skip later bands after early PASS items):
+
+**Band 1 — Units & identity**
+1. Number consistency / integrity: report numbers match registry/compute within rounding; registry↔data spot-check 3–5 headlines; FAIL if FV/MOS/probs/entry/stop/key KPIs not rehydratable from registry/compute (chat-only = defect).
+1b. MoS units: dual fields consistent when both present; flag fraction-in-`margin_of_safety_pct`; primary MoS uses base. Dual price: if val / technical / tsr current prices differ by >0.5%, require README disclosure of MoS anchor.
+1c. scenario_probabilities: only bear/base/bull numerics (extra keys / string rationale inside map = major until fixed). Machine check_session may WARN/FAIL — treat as structural.
+
+**Band 2 — Consumption & process integrity**
+2. EXTERNAL VERIFICATION: ≥5 filing-grade numbers vs primary sources. Consistency is not truth. ≥1 of the ≥5 must be multi-period series or historical stress anchor (not five lines from the same EX-99.1 only).
+2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality).
+2c+. If filing_deep_dive was created during Phase 5 after valuation with empty material hooks → major FAIL (backfill-without-revalue is not PASS) unless re-value or explicit README waive that FV did not consume FDD.
+2e–2g. Decision-grade handoffs; research_brief coverage; news URL sample.
+
+**Band 3 — Judgment quality sample**
+3. Reproducibility: rerun ALL compute scripts from cache.
+4. Justification contract + scripted intermediates. Sample ≥3 path assumptions: FAIL major if rationale cites a different level than value without explicit haircut. "Industry standard" / "mid of band" alone not substantive for ERP. Grade PFP/MoS/probs style against valuation_decision_quality.md GOOD vs BAD.
+9. Reverse-engineering present; priced_for_perfection is a surface dial argument — FAIL if boolean is threshold-only in compute without surface rationale.
+10. growth/is_also_growth: SBC/dilution critical intensity.
+
+**Band 4 — Fit & merge**
+7–8b. Cross-artifact inputs; sector fit; region fit.
+11. Merge integrity (raw counts; no invented merge numbers).
+12. phase_status lag (pending agents with files on disk) = minor; do not author missing FDD yourself as auditor.
 
 Write S/registry/audit.json per ROOT/templates/audit.schema.json: verdict PASS only if no critical/major issues; list every issue with severity, location, and concrete fix.
 ```

@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "yfinance": {
+      "command": "/workspace-stock-research/yfinance-market-mcp/.venv/bin/yfinance-mcp",
+      "timeout": 60000,
+      "env": {
+        "PYTHONPATH": ""
+      }
+    },
+    "sec-edgar": {
+      "command": "/workspace-stock-research/sec-edgar-mcp/.venv/bin/sec-edgar-mcp",
+      "timeout": 60000,
+      "env": {
+        "PYTHONPATH": "",
+        "SEC_USER_AGENT": "research-agent contact@example.com"
+      }
+    },
+    "web-fetch": {
+      "command": "/workspace-stock-research/web-fetch-mcp/.venv/bin/web-fetch-mcp",
+      "timeout": 60000,
+      "env": {
+        "PYTHONPATH": ""
+      }
+    }
+  }
+}

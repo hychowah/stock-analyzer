@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "technical.schema.json",
+  "title": "Technical Analysis (light contract)",
+  "description": "Written by the technical agent (Phase 2), independently of fundamentals. Indicator math via a cited runtime script; levels are judgment with rationale.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "indicators", "levels", "compute_script"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "as_of": { "type": "string", "format": "date" },
+    "compute_script": { "type": "string", "description": "Path to runtime script under data/compute/." },
+    "benchmarks": { "type": "array", "items": { "type": "string" }, "description": "Regional benchmark + sector index/ETF, chosen per market." },
+    "indicators": { "type": "object", "description": "Computed values: trend, momentum, volatility (ATR), volume, relative strength." },
+    "levels": {
+      "type": "object",
+      "required": ["entry", "stop_loss", "targets"],
+      "properties": {
+        "entry": { "type": "object", "required": ["value", "rationale"], "properties": { "value": {}, "rationale": { "type": "string" } } },
+        "stop_loss": { "type": "object", "required": ["value", "rationale"], "properties": { "value": {}, "rationale": { "type": "string" } } },
+        "targets": { "type": "array" },
+        "position_sizing": { "type": "object", "description": "Volatility/ATR-based sizing with rationale." }
+      }
+    },
+    "support_resistance": { "type": "object" }
+  }
+}

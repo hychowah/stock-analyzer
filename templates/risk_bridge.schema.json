@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "risk_bridge.schema.json",
+  "title": "Risk Bridge (light contract)",
+  "description": "Maps risks to valuation impact. Probabilities are agent-decided (numeric 0-1) and MUST carry rationale. scenario_probabilities must sum to 1.0. stress_test must contain >= 5 scenarios: 4 sector + 1 macro.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "risks", "scenario_probabilities", "stress_test"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk", "probability", "rationale", "valuation_adjustment", "monitoring_trigger"],
+        "properties": {
+          "risk": { "type": "string" },
+          "probability": { "type": "number", "minimum": 0, "maximum": 1 },
+          "rationale": { "type": "string", "minLength": 10, "description": "Why this probability." },
+          "impact": { "type": "string" },
+          "valuation_adjustment": {
+            "type": "object",
+            "required": ["direction"],
+            "properties": {
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "lower_growth", "compress_margin", "raise_wacc", "lower_terminal_growth",
+                  "haircut_book_value", "haircut_nav", "raise_cap_rate", "higher_sbc_dilution",
+                  "multiple_compression", "narrative_only"
+                ]
+              },
+              "magnitude": { "type": "string" },
+              "rationale": { "type": "string" }
+            }
+          },
+          "monitoring_trigger": { "type": "string" }
+        }
+      }
+    },
+    "scenario_probabilities": {
+      "type": "object",
+      "description": "The ONLY additive probability budget: bear/base/bull fair-value outcomes; values must sum to 1.0 (+/- 0.01) and must mirror the valuation model's weights. Stress-scenario probabilities do NOT belong here.",
+      "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "stress_test": {
+      "type": "object",
+      "required": ["scenarios"],
+      "properties": {
+        "probability_semantics": { "type": "string", "description": "Required statement that stress probabilities are standalone conditional estimates of mutually non-exclusive events, not carved from the bear/base/bull budget." },
+        "scenarios": {
+          "type": "array", "minItems": 5,
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "probability", "rationale", "fair_value_haircut_pct", "narrative"],
+            "properties": {
+              "scenario_id": { "type": "string" },
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["sector", "macro"] },
+              "probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Standalone conditional estimate of this event occurring; scenarios are NOT mutually exclusive and need not sum to 1.0." },
+              "rationale": { "type": "string", "minLength": 10 },
+              "affected_parameters": { "type": "array", "items": { "type": "string" } },
+              "fair_value_haircut_pct": { "type": "number" },
+              "narrative": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

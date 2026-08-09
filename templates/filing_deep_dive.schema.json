@@ -1,0 +1,279 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "filing_deep_dive.schema.json",
+  "title": "Filing Deep Dive (light contract)",
+  "description": "Written by Agent 2e (Phase 1c). Structured mining of multi-year annual reports, footnotes/notes, and management promises vs actuals. Filings are primary; earnings-call transcripts are secondary and must be labeled. Section text stays out of this file except short excerpts — full primary text lives under data/raw_sec/ and data/transcripts/.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "session_date",
+    "footnotes",
+    "strategy_arc",
+    "management_scorecard",
+    "sources"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string", "description": "YYYY-MM-DD session folder date." },
+    "as_of": { "type": ["string", "null"] },
+    "compute_scripts": {
+      "type": "array",
+      "description": "Optional paths to session compute helpers used for promise-vs-actual joins or note tables.",
+      "items": { "type": "string" }
+    },
+    "sources": {
+      "type": "object",
+      "description": "Primary (filings) and secondary (transcripts) inputs used.",
+      "required": ["filings"],
+      "properties": {
+        "filings": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["form", "path"],
+            "properties": {
+              "form": { "type": "string" },
+              "fiscal_period": { "type": ["string", "null"] },
+              "filing_date": { "type": ["string", "null"] },
+              "path": { "type": "string", "description": "Session-relative path under data/raw_sec/." },
+              "url": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "transcripts": {
+          "type": "array",
+          "description": "Earnings-call transcripts used. Empty array if none found (must not invent quotes).",
+          "items": {
+            "type": "object",
+            "required": ["period", "path", "status"],
+            "properties": {
+              "period": { "type": "string" },
+              "path": { "type": ["string", "null"] },
+              "status": {
+                "type": "string",
+                "enum": ["available", "missing", "partial", "substituted"]
+              },
+              "url": { "type": ["string", "null"] },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Explicit missing years, notes, or transcript windows."
+        }
+      }
+    },
+    "footnotes": {
+      "type": "object",
+      "description": "Targeted note/footnote findings. Each checklist id is extracted, missing, or not_applicable — never silent.",
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "status", "downstream_use"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "e.g. revenue_disaggregation, segment, sbc_unrecognized, debt_leases, contingencies_legal, income_taxes, capex_commitments, related_party_dual_class"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["extracted", "missing", "not_applicable", "partial"]
+              },
+              "title": { "type": "string" },
+              "value": {
+                "description": "Structured fields when extracted; null/omit when missing."
+              },
+              "excerpt": {
+                "type": ["string", "null"],
+                "description": "≤800 chars from primary text when extracted."
+              },
+              "source": {
+                "type": "object",
+                "properties": {
+                  "form": { "type": "string" },
+                  "fiscal_year": { "type": ["integer", "string", "null"] },
+                  "note": { "type": ["string", "null"] },
+                  "path": { "type": "string" },
+                  "url": { "type": ["string", "null"] }
+                }
+              },
+              "downstream_use": {
+                "type": "string",
+                "description": "dilution|tax|sotp|risk|capital_structure|context|multiple pipe-separated tags"
+              }
+            }
+          }
+        },
+        "checklist_note": {
+          "type": "string",
+          "description": "Which checklist was applied (standard/growth default)."
+        }
+      }
+    },
+    "strategy_arc": {
+      "type": "object",
+      "description": "Multi-year (typically ≥3 annual reports) strategy alignment judgment.",
+      "required": ["years_covered", "stated_priorities_by_year", "continuity", "rationale"],
+      "properties": {
+        "years_covered": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": ["integer", "string"] }
+        },
+        "stated_priorities_by_year": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["year", "priorities", "basis"],
+            "properties": {
+              "year": { "type": ["integer", "string"] },
+              "priorities": {
+                "type": "array",
+                "items": { "type": "string" },
+                "minItems": 1
+              },
+              "basis": {
+                "type": "string",
+                "description": "Filing path/section and/or transcript period; filings first."
+              },
+              "excerpt": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "capital_allocation_story": { "type": "string" },
+        "pivot_flags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "continuity": {
+          "type": "object",
+          "required": ["value", "rationale", "basis"],
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "0=full pivot/discontinuity, 1=high continuity of stated strategy."
+            },
+            "rationale": { "type": "string", "minLength": 10 },
+            "basis": { "type": "string" }
+          }
+        },
+        "implied_model_hooks": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Hints for valuation (horizon, reinvestment, segment treatment)."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Overall strategy-arc narrative for report readers."
+        }
+      }
+    },
+    "management_scorecard": {
+      "type": "object",
+      "description": "Did management keep quantitative and (soft) qualitative promises? Filings primary; transcripts secondary.",
+      "required": ["items", "credibility_summary"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "promise_id",
+              "promise_class",
+              "stated",
+              "stated_when",
+              "source_type",
+              "outcome",
+              "rationale",
+              "basis"
+            ],
+            "properties": {
+              "promise_id": { "type": "string" },
+              "promise_class": {
+                "type": "string",
+                "description": "revenue|opex|opinc|capex|margin|segment_loss|capital_returns|strategic_milestone|other"
+              },
+              "stated": { "type": "string" },
+              "stated_when": { "type": "string" },
+              "source_type": {
+                "type": "string",
+                "enum": ["filing", "transcript", "filing+transcript"],
+                "description": "Primary provenance label. Prefer filing; mark transcript when guidance only appears in calls."
+              },
+              "actual": { "type": ["string", "number", "null"] },
+              "actual_source": { "type": ["string", "null"] },
+              "outcome": {
+                "type": "string",
+                "enum": ["met", "beat", "miss", "abandoned", "too_early", "unknown"]
+              },
+              "delta": { "type": ["string", "number", "null"] },
+              "materiality": {
+                "type": "string",
+                "enum": ["high", "medium", "low"]
+              },
+              "rationale": { "type": "string", "minLength": 10 },
+              "basis": { "type": "string" }
+            }
+          }
+        },
+        "credibility_summary": {
+          "type": "object",
+          "required": ["pattern", "valuation_implication", "rationale", "basis"],
+          "properties": {
+            "hit_rate_quantitative": {
+              "type": "object",
+              "description": "Optional; only over met|beat|miss quantitative rows. Judgment number needs rationale/basis.",
+              "properties": {
+                "value": { "type": ["number", "null"] },
+                "n": { "type": ["integer", "null"] },
+                "rationale": { "type": "string" },
+                "basis": { "type": "string" }
+              }
+            },
+            "pattern": {
+              "type": "string",
+              "description": "e.g. conservative_guides|systematic_overpromise_on_capex|mixed|insufficient_history"
+            },
+            "valuation_implication": {
+              "type": "string",
+              "description": "e.g. widen_range|raise_bear_weight|trust_guides_more|no_change — LLM judges; not a formula."
+            },
+            "rationale": { "type": "string", "minLength": 20 },
+            "basis": { "type": "string" },
+            "transcript_coverage": {
+              "type": "string",
+              "description": "How transcripts were used or why missing (degraded scorecard)."
+            }
+          }
+        },
+        "data_quality": {
+          "type": "string",
+          "description": "full|degraded_no_transcripts|degraded_partial_history"
+        }
+      }
+    },
+    "risk_factor_delta": {
+      "type": "object",
+      "description": "Optional YoY Item 1A changes.",
+      "properties": {
+        "new": { "type": "array", "items": { "type": "string" } },
+        "removed": { "type": "array", "items": { "type": "string" } },
+        "elevated": { "type": "array", "items": { "type": "string" } },
+        "basis": { "type": "string" }
+      }
+    }
+  }
+}

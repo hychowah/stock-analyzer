@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "valuation_model.schema.json",
+  "title": "Valuation Model (light contract)",
+  "description": "Written by the valuation agent (Phase 2). The MODEL CHOICE and every assumption are agent judgment: each assumption is {value, rationale, basis}. Math must be produced by a cited runtime script in data/compute/, not mental arithmetic.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "model", "fair_value", "assumptions", "compute_script", "sensitivity"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "model": {
+      "type": "object",
+      "required": ["name", "rationale"],
+      "properties": {
+        "name": { "type": "string", "description": "e.g. excess_return, dcf, nav_ffo, ddm, sotp, or a hybrid" },
+        "rationale": { "type": "string", "minLength": 20, "description": "Why this model fits this company/sector." },
+        "module_reference": { "type": "string", "description": "Sector module section that guided the choice, if any." }
+      }
+    },
+    "fair_value": {
+      "type": "object",
+      "required": ["base", "bear", "bull"],
+      "properties": {
+        "base": { "type": "number" },
+        "bear": { "type": "number" },
+        "bull": { "type": "number" },
+        "probability_weighted": { "type": "number" },
+        "currency": { "type": "string" },
+        "margin_of_safety_pct": { "type": "number", "description": "1 - price/fair_value, signed." }
+      }
+    },
+    "assumptions": {
+      "type": "object",
+      "description": "Every key assumption (discount rate, growth path, margins, multiples, terminal value, probabilities).",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["value", "rationale", "basis"],
+        "properties": {
+          "value": {},
+          "rationale": { "type": "string", "minLength": 10 },
+          "basis": { "type": "string", "description": "Source, data, or reasoning the value rests on." }
+        }
+      }
+    },
+    "compute_script": { "type": "string", "description": "Path to the runtime script under data/compute/ that produced the numbers." },
+    "overrides_applied": {
+      "type": "array",
+      "description": "Latest-quarter evidence the valuation agent chose to apply (see latest_quarter.json evidence_log).",
+      "items": {
+        "type": "object",
+        "required": ["rule", "old_assumption", "new_assumption", "reason"],
+        "properties": {
+          "rule": { "type": "string" },
+          "old_assumption": { "type": "string" },
+          "new_assumption": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "filing_deep_dive_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/filing_deep_dive.json exists. How footnotes / strategy_arc / management_scorecard changed assumptions — or explicit rejects.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Path into filing_deep_dive.json (e.g. footnotes.sbc_unrecognized, management_scorecard.credibility_summary)."
+          },
+          "action": {
+            "type": "string",
+            "description": "used_as:<assumption> | rejected | noted_only"
+          },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "market_context_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/market_context.json exists. How listing/region intensity, accounting regime, local cost-of-capital flags, and ownership/control changed assumptions — or explicit rejects / noted_only no-ops. For intensity=low, a single noted_only entry is enough. Never paste region-module reference ranges as mandates without use/reject reason.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Path into market_context.json or region module theme (e.g. cost_of_capital_flags.use_local_rf, ownership.control_type, accounting_regime.basis)."
+          },
+          "action": {
+            "type": "string",
+            "description": "used_as:<assumption> | rejected | noted_only"
+          },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "reverse_engineering": {
+      "type": "object",
+      "description": "What the current price implies vs own assumptions; flag if implied > bull case.",
+      "properties": {
+        "implied": { "type": "object" },
+        "priced_for_perfection": { "type": "boolean" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "sensitivity": {
+      "type": "object",
+      "description": "REQUIRED. Base-case FV grid over the two most judgment-dependent assumptions (e.g. discount rate x terminal profitability), so readers can see how much of the verdict is dial choice. Produced by the compute script.",
+      "properties": {
+        "grid": { "type": "object" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

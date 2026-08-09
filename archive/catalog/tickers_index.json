@@ -1,0 +1,300 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-08-09T07:38:19Z",
+  "tickers": {
+    "000660.KS": {
+      "ticker": "000660.KS",
+      "latest_run_id": "research:000660.KS:2026-07-29",
+      "latest_path": "archive/research/000660.KS/2026-07-29",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-07-29",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:000660.KS:2026-07-29",
+          "path": "archive/research/000660.KS/2026-07-29",
+          "session_date": "2026-07-29",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "02618.HK": {
+      "ticker": "02618.HK",
+      "latest_run_id": "research:02618.HK:2026-08-04",
+      "latest_path": "archive/research/02618.HK/2026-08-04",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-04",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:02618.HK:2026-08-04",
+          "path": "archive/research/02618.HK/2026-08-04",
+          "session_date": "2026-08-04",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "4516.T": {
+      "ticker": "4516.T",
+      "latest_run_id": "research:4516.T:2026-08-04",
+      "latest_path": "archive/research/4516.T/2026-08-04",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-04",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:4516.T:2026-08-04",
+          "path": "archive/research/4516.T/2026-08-04",
+          "session_date": "2026-08-04",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "7203.T": {
+      "ticker": "7203.T",
+      "latest_run_id": "research:7203.T:2026-08-05",
+      "latest_path": "archive/research/7203.T/2026-08-05",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-05",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:7203.T:2026-08-05",
+          "path": "archive/research/7203.T/2026-08-05",
+          "session_date": "2026-08-05",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "AAPL": {
+      "ticker": "AAPL",
+      "latest_run_id": "research:AAPL:2026-07-25",
+      "latest_path": "archive/research/AAPL/2026-07-25",
+      "latest_audit": null,
+      "latest_session_date": "2026-07-25",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:AAPL:2026-07-25",
+          "path": "archive/research/AAPL/2026-07-25",
+          "session_date": "2026-07-25",
+          "audit_verdict": null
+        }
+      ]
+    },
+    "ADBE": {
+      "ticker": "ADBE",
+      "latest_run_id": "research:ADBE:2026-07-20",
+      "latest_path": "archive/research/ADBE/2026-07-20",
+      "latest_audit": null,
+      "latest_session_date": "2026-07-20",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:ADBE:2026-07-20",
+          "path": "archive/research/ADBE/2026-07-20",
+          "session_date": "2026-07-20",
+          "audit_verdict": null
+        }
+      ]
+    },
+    "ADYEN": {
+      "ticker": "ADYEN",
+      "latest_run_id": "research:ADYEN:2026-08-05",
+      "latest_path": "archive/research/ADYEN/2026-08-05",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-05",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:ADYEN:2026-08-05",
+          "path": "archive/research/ADYEN/2026-08-05",
+          "session_date": "2026-08-05",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "CELH": {
+      "ticker": "CELH",
+      "latest_run_id": "research:CELH:2026-08-06",
+      "latest_path": "archive/research/CELH/2026-08-06",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-06",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:CELH:2026-08-06",
+          "path": "archive/research/CELH/2026-08-06",
+          "session_date": "2026-08-06",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "CMCSA": {
+      "ticker": "CMCSA",
+      "latest_run_id": "research:CMCSA:2026-07-25",
+      "latest_path": "archive/research/CMCSA/2026-07-25",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-07-25",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:CMCSA:2026-07-25",
+          "path": "archive/research/CMCSA/2026-07-25",
+          "session_date": "2026-07-25",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "GRAB": {
+      "ticker": "GRAB",
+      "latest_run_id": "research:GRAB:2026-08-09",
+      "latest_path": "archive/research/GRAB/2026-08-09",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-09",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:GRAB:2026-08-09",
+          "path": "archive/research/GRAB/2026-08-09",
+          "session_date": "2026-08-09",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "JPM": {
+      "ticker": "JPM",
+      "latest_run_id": "research:JPM:2026-07-25",
+      "latest_path": "archive/research/JPM/2026-07-25",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-07-25",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:JPM:2026-07-25",
+          "path": "archive/research/JPM/2026-07-25",
+          "session_date": "2026-07-25",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "LULU": {
+      "ticker": "LULU",
+      "latest_run_id": "research:LULU:2026-07-26",
+      "latest_path": "archive/research/LULU/2026-07-26",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-07-26",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:LULU:2026-07-26",
+          "path": "archive/research/LULU/2026-07-26",
+          "session_date": "2026-07-26",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "MC.PA": {
+      "ticker": "MC.PA",
+      "latest_run_id": "research:MC.PA:2026-08-04",
+      "latest_path": "archive/research/MC.PA/2026-08-04",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-04",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:MC.PA:2026-08-04",
+          "path": "archive/research/MC.PA/2026-08-04",
+          "session_date": "2026-08-04",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "MELI": {
+      "ticker": "MELI",
+      "latest_run_id": "research:MELI:2026-08-06",
+      "latest_path": "archive/research/MELI/2026-08-06",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-06",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:MELI:2026-08-06",
+          "path": "archive/research/MELI/2026-08-06",
+          "session_date": "2026-08-06",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "META": {
+      "ticker": "META",
+      "latest_run_id": "research:META:2026-08-03",
+      "latest_path": "archive/research/META/2026-08-03",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-03",
+      "run_count": 2,
+      "runs": [
+        {
+          "run_id": "research:META:2026-07-30",
+          "path": "archive/research/META/2026-07-30",
+          "session_date": "2026-07-30",
+          "audit_verdict": "PASS"
+        },
+        {
+          "run_id": "research:META:2026-08-03",
+          "path": "archive/research/META/2026-08-03",
+          "session_date": "2026-08-03",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "NVT": {
+      "ticker": "NVT",
+      "latest_run_id": "research:NVT:2026-08-08",
+      "latest_path": "archive/research/NVT/2026-08-08",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-08",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:NVT:2026-08-08",
+          "path": "archive/research/NVT/2026-08-08",
+          "session_date": "2026-08-08",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "ORCL": {
+      "ticker": "ORCL",
+      "latest_run_id": "research:ORCL:2026-08-03",
+      "latest_path": "archive/research/ORCL/2026-08-03",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-03",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:ORCL:2026-08-03",
+          "path": "archive/research/ORCL/2026-08-03",
+          "session_date": "2026-08-03",
+          "audit_verdict": "PASS"
+        }
+      ]
+    },
+    "VST": {
+      "ticker": "VST",
+      "latest_run_id": "research:VST:2026-08-08",
+      "latest_path": "archive/research/VST/2026-08-08",
+      "latest_audit": "PASS",
+      "latest_session_date": "2026-08-08",
+      "run_count": 1,
+      "runs": [
+        {
+          "run_id": "research:VST:2026-08-08",
+          "path": "archive/research/VST/2026-08-08",
+          "session_date": "2026-08-08",
+          "audit_verdict": "PASS"
+        }
+      ]
+    }
+  }
+}

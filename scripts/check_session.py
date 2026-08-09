@@ -28,7 +28,9 @@ Tip: run with the yfinance venv python for full schema validation:
 
 Usage:
     python3 scripts/check_session.py --ticker JPM --date 2026-07-25 [--full]
-    python3 scripts/check_session.py --session-dir /path/to/JPM/2026-07-25 [--full]
+    python3 scripts/check_session.py --session-dir archive/research/JPM/2026-07-25 [--full]
+
+Resolves --ticker/--date via archive/research first, then legacy root/<TICKER>/<DATE>.
 """
 
 from __future__ import annotations
@@ -565,6 +567,52 @@ def check_filing_deep_dive(session: Path) -> None:
         record("PASS", "filing_deep_dive content gates")
 
 
+def check_meta_artifacts(session: Path) -> None:
+    """Optional meta/ prediction snapshot + run_manifest (archive layout).
+
+    Absence is SKIPPED for legacy sessions. When present, require basic keys.
+    """
+    meta = session / "meta"
+    if not meta.is_dir():
+        record(
+            "SKIPPED",
+            "meta/",
+            "absent (legacy OK; new sessions scaffold meta/ + post-Phase-5 snapshot)",
+        )
+        return
+    snap = meta / "prediction_snapshot.json"
+    man = meta / "run_manifest.json"
+    if not snap.exists() and not man.exists():
+        record("SKIPPED", "meta content", "meta/ empty — run build_prediction_snapshot.py after Phase 5")
+        return
+    if man.exists():
+        try:
+            data = json.loads(man.read_text())
+            for k in ("run_id", "ticker", "session_date"):
+                if k not in data:
+                    record("FAIL", "run_manifest keys", f"missing {k}")
+                    break
+            else:
+                record("PASS", "run_manifest", data.get("run_id", ""))
+        except Exception as e:  # noqa: BLE001
+            record("FAIL", "run_manifest parse", str(e))
+    else:
+        record("SKIPPED", "run_manifest", "file missing")
+    if snap.exists():
+        try:
+            data = json.loads(snap.read_text())
+            for k in ("run_id", "ticker", "session_date", "fair_value"):
+                if k not in data:
+                    record("FAIL", "prediction_snapshot keys", f"missing {k}")
+                    break
+            else:
+                record("PASS", "prediction_snapshot", data.get("run_id", ""))
+        except Exception as e:  # noqa: BLE001
+            record("FAIL", "prediction_snapshot parse", str(e))
+    else:
+        record("SKIPPED", "prediction_snapshot", "file missing")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--ticker")
@@ -574,11 +622,23 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.session_dir:
-        session = Path(args.session_dir)
+        session = Path(args.session_dir).expanduser().resolve()
+        # archive/research/TICKER/DATE → ticker is parent.name; same for legacy ROOT/TICKER/DATE
         ticker = session.parent.name
         session_date = session.name
     elif args.ticker and args.date:
-        session = PROJECT_ROOT / args.ticker.upper() / args.date
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        from scripts.kd_research.paths import resolve_session  # noqa: WPS433
+
+        resolved = resolve_session(args.ticker, args.date)
+        if resolved is None:
+            print(
+                f"Session folder not found for {args.ticker.upper()} {args.date} "
+                f"(checked archive/research/ and legacy root/)"
+            )
+            return 2
+        session = resolved
         ticker = args.ticker
         session_date = args.date
     else:
@@ -595,6 +655,7 @@ def main() -> int:
     # Optional for legacy sessions; always run so absence is SKIPPED not silent.
     check_market_context(session)
     check_phase_status(session)
+    check_meta_artifacts(session)
     if args.full:
         check_filing_deep_dive(session)
         check_risk_bridge(session)
@@ -612,6 +673,7 @@ def main() -> int:
             line += f" — {detail}"
         print(line)
     print(f"\n{len(results) - n_fail - n_skip} passed, {n_fail} failed, {n_skip} skipped")
+    print(f"session: {session}")
     return 1 if n_fail else 0
 
 

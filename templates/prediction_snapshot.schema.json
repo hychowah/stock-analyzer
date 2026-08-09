@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prediction_snapshot.schema.json",
+  "title": "Prediction Snapshot (frozen claims for lookback)",
+  "description": "Projection of key research claims for catalog/outcomes. Canonical numbers remain in data/valuation_model.json.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "run_id", "ticker", "session_date", "fair_value", "source_paths"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string" },
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "built_at": { "type": "string" },
+    "asof_price": { "type": ["number", "null"] },
+    "currency": { "type": "string" },
+    "fair_value": {
+      "type": "object",
+      "required": ["base", "bear", "bull"],
+      "properties": {
+        "base": { "type": ["number", "null"] },
+        "bear": { "type": ["number", "null"] },
+        "bull": { "type": ["number", "null"] },
+        "probability_weighted": { "type": ["number", "null"] },
+        "currency": { "type": "string" }
+      }
+    },
+    "margin_of_safety_pct": { "type": ["number", "null"] },
+    "verdict_line": { "type": "string" },
+    "primary_sector": { "type": "string" },
+    "region": { "type": "string" },
+    "intensity": { "type": "string" },
+    "key_risks": { "type": "array", "items": { "type": "string" } },
+    "peers": { "type": "array", "items": { "type": "string" } },
+    "benchmark": { "type": "string" },
+    "data_quality": { "type": "string" },
+    "audit_verdict": { "type": "string" },
+    "priced_for_perfection": { "type": ["boolean", "null"] },
+    "gaps": { "type": "array", "items": { "type": "string" } },
+    "source_paths": { "type": "object" }
+  }
+}

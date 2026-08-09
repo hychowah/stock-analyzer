@@ -1,6 +1,6 @@
 # Plan: Research Archive Layout + Historical Track Record
 
-**Status:** proposed (not implemented)  
+**Status:** Phase A+B implemented (2026-08-09) — archive layout, migration, snapshots, catalog live. Phase C outcomes grading still pending.  
 **Date:** 2026-08-09  
 **Scope:** (1) move company research off workspace root; (2) treat every research run as an immutable historical record; (3) enable later comparison and “were we right?” calibration.  
 **Out of scope for this plan:** portfolio management, live monitor, strategy simulation product code (only seams that those will need).  

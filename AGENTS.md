@@ -20,25 +20,32 @@ This file is the **single normative spec** for the research harness. It is auto-
 
 ## 2. Session folder convention
 
+Research sessions are **archived records** under `archive/research/` (not at the repo root). Layout plan: `harness/plan_research_archive_layout.md`.
+
 ```text
-<TICKER>/<YYYY-MM-DD>/          # one folder per research session, never overwritten
-├── reports/   00_<TICKER>_README.md, 01_<TICKER>_fundamental.md, 02_<TICKER>_technical.md
-├── data/      raw + processed data; valuation_model.json; compute/ (runtime scripts);
-│              raw_sec/ (multi-year annual + interim primary text); transcripts/ (earnings calls)
-├── charts/    PNGs with descriptive names
-└── registry/  sector_config, market_context, background, sec_filings, filing_deep_dive,
-               news_sentiment, latest_quarter, technical, tsr_validation, risk_bridge,
-               audit, data_fetch_log  (all .json);
-               raw/ (verbatim swarm returns, persisted before merging);
-               handoffs/ (one <agent_id>.md per agent: what it did, data issues,
-               assumptions/deviations, notes for downstream — see §8)
+archive/
+├── catalog/                 # runs_index.json, tickers_index.json (rebuildable)
+├── outcomes/                # optional later: realized marks + scorecards (never edit research)
+└── research/
+    └── <TICKER>/<YYYY-MM-DD>/   # one folder per research session, never overwritten
+        ├── reports/   00_<TICKER>_README.md, 01_<TICKER>_fundamental.md, 02_<TICKER>_technical.md
+        ├── data/      raw + processed data; valuation_model.json; compute/; raw_sec/; transcripts/
+        ├── charts/    PNGs with descriptive names
+        ├── registry/  sector_config, market_context, background, sec_filings, filing_deep_dive,
+        │              news_sentiment, latest_quarter, technical, tsr_validation, risk_bridge,
+        │              audit, data_fetch_log, phase_status  (all .json);
+        │              raw/; handoffs/  (see §8)
+        └── meta/      run_manifest.json; prediction_snapshot.json  (frozen claims for lookback)
 ```
 
 Rules:
 
 1. Ticker uppercase. Date from the `date` command (never let an agent compute it).
-2. Scaffold with: `python3 scripts/scaffold_session.py --ticker <T> --date <D>` — it refuses to overwrite an existing non-empty session.
-3. Re-research on a new date → new dated folder; reference the prior run if useful.
+2. Scaffold with: `python3 scripts/scaffold_session.py --ticker <T> --date <D>` — creates `archive/research/<T>/<D>/`; refuses to overwrite an existing non-empty session.
+3. Re-research on a new date → new dated folder; reference the prior run if useful. Never rewrite a completed session to “fix” history.
+4. After Phase 5 (audit): run `python3 scripts/build_prediction_snapshot.py --ticker <T> --date <D>` then `python3 scripts/rebuild_catalog.py` so the run is indexed for future comparison.
+5. Path resolution (`scripts/kd_research/paths.py`): prefer `archive/research/...`; fall back to legacy root `<TICKER>/<DATE>/` during migration only.
+6. Repo root holds harness code only (`harness/`, `scripts/`, `templates/`, sector/region modules, MCP packages) — not ticker session trees.
 
 ## 3. Required inputs
 

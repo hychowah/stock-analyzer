@@ -7,7 +7,7 @@ Copy-paste templates for each phase of the harness (see `AGENTS.md` §8). Substi
 | `TICKER` | `JPM` |
 | `DATE` | `2026-07-25` |
 | `ROOT` | `/workspace-stock-research` |
-| `S` | `/workspace-stock-research/JPM/2026-07-25` (session root) |
+| `S` | `/workspace-stock-research/archive/research/JPM/2026-07-25` (session root; never at repo root) |
 
 Every template already carries the justification contract — do not strip it. Subagents see only their prompt; pass all context explicitly.
 

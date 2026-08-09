@@ -34,3 +34,4 @@ out.log
 
 # Nested package git metadata (track sources in monorepo, not nested repos)
 **/.git/
+**/.git.bak-nested/

@@ -35,6 +35,7 @@ def check_eng_tree(root: Path) -> list[str]:
         root / "eng" / "HARNESS_MAP.md",
         root / "eng" / "runbook.md",
         root / "packages" / "catalog_api" / "__init__.py",
+        root / "apps" / "analysis_web" / "app.py",
     ]
     for p in required:
         if not p.is_file():
@@ -99,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         "scripts/tests/test_reserved_names.py",
         "scripts/tests/test_catalog_api.py",
         "scripts/tests/test_archive_paths.py",
+        "scripts/tests/test_analysis_web.py",
     ]
     existing = [t for t in tests if (root / t).is_file()]
     if not existing:

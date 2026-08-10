@@ -21,6 +21,14 @@ python3 scripts/eng_verify.py
 python3 -m packages.catalog_api health
 python3 -m packages.catalog_api list-runs --limit 5
 
+# Analysis UI (stdlib WSGI)
+python3 -m apps.analysis_web
+# or: bash apps/analysis_web/init.sh
+# → http://127.0.0.1:8765/
+
+# Experiment summary program
+python3 programs/experiment_summary.py
+
 # Catalog against fixtures (after sync)
 ARCHIVE_ROOT=$PWD/eng/fixtures/archive python3 -m packages.catalog_api health
 

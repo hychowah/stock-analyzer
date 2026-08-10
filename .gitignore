@@ -38,9 +38,11 @@ out.log
 
 # Research session trees (large: filings, prices, charts, raw dumps).
 # Keep on disk under archive/research/; do not version in git.
-# Catalog indexes + archive/README.md remain tracked.
+# Catalog JSON indexes + archive/README.md remain tracked; SQLite is rebuildable.
 archive/research/
 archive/outcomes/
+archive/catalog/*.sqlite
+archive/catalog/*.sqlite-*
 
 # Optional local MCP/tool caches and large binary dumps
 **/data/raw_sec/

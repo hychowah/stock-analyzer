@@ -14,10 +14,24 @@
     "created_at": { "type": "string" },
     "completed_at": { "type": "string" },
     "harness_spec": { "type": "string" },
+    "session_key": { "type": "string" },
     "paths": { "type": "object" },
     "status": { "type": "string" },
     "audit_verdict": { "type": ["string", "null"] },
     "immutable": { "type": "boolean" },
-    "layout": { "type": "string", "description": "archive | legacy" }
+    "layout": { "type": "string", "description": "archive | legacy" },
+    "experiment_id": { "type": ["string", "null"] },
+    "experiment_label": { "type": ["string", "null"] },
+    "replicate": { "type": ["integer", "null"] },
+    "harness_git_sha": { "type": ["string", "null"] },
+    "harness_dirty": { "type": ["boolean", "null"] },
+    "agents_md_sha256": { "type": ["string", "null"] },
+    "prompts_sha256": { "type": ["string", "null"] },
+    "orchestrator_model": { "type": ["string", "null"] },
+    "default_subagent_model": { "type": ["string", "null"] },
+    "model_map": { "type": ["object", "null"] },
+    "temperature": { "type": ["number", "null"] },
+    "seed": { "type": ["string", "number", "null"] },
+    "notes": { "type": ["string", "null"] }
   }
 }

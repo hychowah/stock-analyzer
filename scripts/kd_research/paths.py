@@ -2,7 +2,10 @@
 
 Canonical research sessions live under::
 
-    <project>/archive/research/<TICKER>/<YYYY-MM-DD>/
+    <project>/archive/research/<TICKER>/<SESSION_KEY>/
+
+where ``SESSION_KEY`` is ``YYYY-MM-DD`` (production) or
+``YYYY-MM-DD__<slug>`` (experiments / replicates).
 
 Legacy sessions (pre-migration) may still exist at::
 
@@ -15,7 +18,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -36,7 +39,13 @@ ROOT_RESERVED_NAMES = frozenset(
     }
 )
 
+# Production calendar folders.
 DATE_DIR_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# Production or experiment: 2026-08-10 or 2026-08-10__model-grok45_r1
+SESSION_KEY_RE = re.compile(
+    r"^(?P<date>\d{4}-\d{2}-\d{2})(?:__(?P<slug>[A-Za-z0-9][A-Za-z0-9._-]{0,80}))?$"
+)
+SLUG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$")
 
 
 def project_root() -> Path:
@@ -73,21 +82,52 @@ def outcomes_root(output_dir: Path | str | None = None) -> Path:
     return archive_root(output_dir) / "outcomes"
 
 
-def run_id(ticker: str, session_date: str) -> str:
-    """Stable run identifier: research:TICKER:YYYY-MM-DD."""
-    return f"research:{ticker.upper()}:{session_date}"
+def parse_session_key(session_key: str) -> tuple[str, str | None]:
+    """Return (session_date, slug|None) from a folder name or run suffix."""
+    m = SESSION_KEY_RE.match(session_key)
+    if not m:
+        # Best-effort: date prefix before __ even if slug is odd
+        if "__" in session_key:
+            date_part, slug = session_key.split("__", 1)
+            return date_part, slug or None
+        return session_key, None
+    return m.group("date"), m.group("slug")
+
+
+def make_session_key(session_date: str, slug: str | None = None) -> str:
+    """Build session folder name from as-of date + optional experiment slug."""
+    if not DATE_DIR_RE.match(session_date):
+        raise ValueError(f"session_date must be YYYY-MM-DD, got {session_date!r}")
+    if not slug:
+        return session_date
+    if not SLUG_RE.match(slug):
+        raise ValueError(
+            f"slug must match {SLUG_RE.pattern} (no path separators), got {slug!r}"
+        )
+    return f"{session_date}__{slug}"
+
+
+def is_production_session_key(session_key: str) -> bool:
+    """True when folder is plain YYYY-MM-DD (not an experiment slug run)."""
+    return DATE_DIR_RE.match(session_key) is not None
+
+
+def run_id(ticker: str, session_key: str) -> str:
+    """Stable run identifier: research:TICKER:SESSION_KEY."""
+    return f"research:{ticker.upper()}:{session_key}"
 
 
 def session_root(
     ticker: str,
-    session_date: str,
+    session_key: str,
     output_dir: Path | str | None = None,
     *,
     prefer: str = "archive",
 ) -> Path:
     """Return the *default write path* for a new session (archive by default).
 
-    ``prefer`` is ``\"archive\"`` (default) or ``\"legacy\"`` (root/<T>/<D>).
+    ``session_key`` is ``YYYY-MM-DD`` or ``YYYY-MM-DD__slug``.
+    ``prefer`` is ``\"archive\"`` (default) or ``\"legacy\"`` (root/<T>/<key>).
     Does not check existence — use ``resolve_session`` to find an existing run.
     """
     t = ticker.upper()
@@ -97,13 +137,13 @@ def session_root(
             root = PROJECT_ROOT
         elif root.name == "archive":
             root = PROJECT_ROOT
-        return root / t / session_date
-    return research_root(output_dir) / t / session_date
+        return root / t / session_key
+    return research_root(output_dir) / t / session_key
 
 
 def legacy_session_root(
     ticker: str,
-    session_date: str,
+    session_key: str,
     output_dir: Path | str | None = None,
 ) -> Path:
     root = Path(output_dir).expanduser().resolve() if output_dir else PROJECT_ROOT
@@ -112,22 +152,23 @@ def legacy_session_root(
         root = root.parent.parent
     elif root.name == "archive":
         root = root.parent
-    return root / ticker.upper() / session_date
+    return root / ticker.upper() / session_key
 
 
 def resolve_session(
     ticker: str,
-    session_date: str,
+    session_key: str,
     output_dir: Path | str | None = None,
 ) -> Path | None:
     """Locate an existing session: archive first, then legacy root.
 
+    ``session_key`` may be a plain date or ``date__slug``.
     Returns None if neither path exists as a directory.
     """
-    archive_path = research_root(output_dir) / ticker.upper() / session_date
+    archive_path = research_root(output_dir) / ticker.upper() / session_key
     if archive_path.is_dir():
         return archive_path
-    legacy_path = legacy_session_root(ticker, session_date, output_dir)
+    legacy_path = legacy_session_root(ticker, session_key, output_dir)
     if legacy_path.is_dir():
         return legacy_path
     return None
@@ -135,14 +176,14 @@ def resolve_session(
 
 def require_session(
     ticker: str,
-    session_date: str,
+    session_key: str,
     output_dir: Path | str | None = None,
 ) -> Path:
     """Like resolve_session but raises FileNotFoundError if missing."""
-    found = resolve_session(ticker, session_date, output_dir)
+    found = resolve_session(ticker, session_key, output_dir)
     if found is None:
         raise FileNotFoundError(
-            f"No session for {ticker.upper()} {session_date} under "
+            f"No session for {ticker.upper()} {session_key} under "
             f"{research_root(output_dir)} or legacy root"
         )
     return found
@@ -150,11 +191,11 @@ def require_session(
 
 def session_dirs(
     ticker: str,
-    session_date: str,
+    session_key: str,
     output_dir: Path | str | None = None,
 ) -> dict[str, Path]:
     """Return and create reports/data/charts/registry/meta paths for a session."""
-    root = session_root(ticker, session_date, output_dir)
+    root = session_root(ticker, session_key, output_dir)
     dirs = {
         "root": root,
         "reports": root / "reports",
@@ -182,9 +223,10 @@ def iter_research_sessions(
     *,
     include_legacy: bool = True,
 ) -> list[tuple[str, str, Path]]:
-    """Yield (ticker, session_date, path) for all discovered research sessions.
+    """Yield (ticker, session_key, path) for all discovered research sessions.
 
     Archive sessions first; legacy only if not already present in archive.
+    ``session_key`` is the folder name (date or date__slug).
     """
     found: dict[tuple[str, str], Path] = {}
 
@@ -197,15 +239,15 @@ def iter_research_sessions(
             name = ticker_dir.name
             if name in ROOT_RESERVED_NAMES or name.startswith("."):
                 continue
-            for date_dir in sorted(ticker_dir.iterdir()):
-                if not date_dir.is_dir() or not DATE_DIR_RE.match(date_dir.name):
+            for key_dir in sorted(ticker_dir.iterdir()):
+                if not key_dir.is_dir() or not SESSION_KEY_RE.match(key_dir.name):
                     continue
                 # Heuristic: must look like a session (has registry or reports).
-                if not ((date_dir / "registry").is_dir() or (date_dir / "reports").is_dir()):
+                if not ((key_dir / "registry").is_dir() or (key_dir / "reports").is_dir()):
                     continue
-                key = (name.upper(), date_dir.name)
+                key = (name.upper(), key_dir.name)
                 if key not in found:
-                    found[key] = date_dir
+                    found[key] = key_dir
 
     _scan_ticker_parent(research_root(output_dir))
     if include_legacy:

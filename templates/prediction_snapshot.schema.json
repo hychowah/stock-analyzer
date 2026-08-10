@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "prediction_snapshot.schema.json",
-  "title": "Prediction Snapshot (frozen claims for lookback)",
-  "description": "Projection of key research claims for catalog/outcomes. Canonical numbers remain in data/valuation_model.json.",
+  "title": "Prediction Snapshot (frozen claims for lookback / compare export)",
+  "description": "Projection of key research claims for catalog/outcomes/SQLite. Canonical numbers remain in data/valuation_model.json.",
   "type": "object",
   "additionalProperties": true,
   "required": ["schema_version", "run_id", "ticker", "session_date", "fair_value", "source_paths"],
@@ -11,8 +11,10 @@
     "run_id": { "type": "string" },
     "ticker": { "type": "string" },
     "session_date": { "type": "string" },
+    "session_key": { "type": "string", "description": "Folder name; equals session_date for production, or date__slug for experiments" },
     "built_at": { "type": "string" },
     "asof_price": { "type": ["number", "null"] },
+    "asof_price_source": { "type": ["string", "null"] },
     "currency": { "type": "string" },
     "fair_value": {
       "type": "object",
@@ -25,6 +27,15 @@
         "currency": { "type": "string" }
       }
     },
+    "scenario_probabilities": {
+      "type": "object",
+      "description": "Numeric 0-1 bear/base/bull masses (no rationale objects).",
+      "properties": {
+        "bear": { "type": ["number", "null"] },
+        "base": { "type": ["number", "null"] },
+        "bull": { "type": ["number", "null"] }
+      }
+    },
     "margin_of_safety_pct": { "type": ["number", "null"] },
     "verdict_line": { "type": "string" },
     "primary_sector": { "type": "string" },
@@ -34,8 +45,14 @@
     "peers": { "type": "array", "items": { "type": "string" } },
     "benchmark": { "type": "string" },
     "data_quality": { "type": "string" },
-    "audit_verdict": { "type": "string" },
-    "priced_for_perfection": { "type": ["boolean", "null"] },
+    "audit_verdict": { "type": ["string", "null"] },
+    "priced_for_perfection": { "type": ["boolean", "null", "object"] },
+    "model_name": { "type": ["string", "null"] },
+    "tech_signal": { "type": ["string", "null"] },
+    "tech_regime": { "type": ["string", "null"] },
+    "tech_summary": { "type": "object" },
+    "research_depth": { "type": ["string", "null"] },
+    "provenance": { "type": "object" },
     "gaps": { "type": "array", "items": { "type": "string" } },
     "source_paths": { "type": "object" }
   }

@@ -51,6 +51,42 @@ Use with `AGENTS.md` §8 and `harness/agent_prompts.md`. Keep this file short �
 13. Preflight `4_parallel` / `5` as in `HARNESS_MAP.md`.
 14. After audit PASS: set phase 5 complete, README audit line, `check_session.py --full`. Do not leave Phase 4 agents `pending` when reports exist.
 15. **Never** ask Agent 13 to author missing FDD as a substitute for re-running 2e + 5.
+16. **Finalize for lookback / comparison DB** (required for new sessions):
+
+```bash
+python3 scripts/finalize_session.py --ticker T --date D
+# equivalent:
+# python3 scripts/build_prediction_snapshot.py --ticker T --date D
+# python3 scripts/export_compare_db.py --ticker T --date D
+# python3 scripts/rebuild_catalog.py
+```
+
+    Disk session stays canonical; SQLite is a rebuildable projection for cross-run comparison and future UI (`harness/plan_research_compare_db.md`).
+
+---
+
+## Controlled experiments (model / harness / natural variation)
+
+Use a **slug** so same-day runs never overwrite production folders.
+
+```bash
+# Production (default)
+python3 scripts/scaffold_session.py --ticker META --date 2026-08-10
+
+# Bakeoff cell: one model × one replicate
+python3 scripts/scaffold_session.py --ticker META --date 2026-08-10 \
+  --experiment exp-model-bakeoff --slug model-grok45-r1 --replicate 1 \
+  --orchestrator-model grok-4.5 --subagent-model grok-4.5 \
+  --notes "vary model only; freeze price_snapshot from production if needed"
+
+# After Phase 5 for that folder (session_key = date__slug)
+python3 scripts/finalize_session.py --ticker META --date 2026-08-10__model-grok45-r1
+
+# Summarize experiment cells
+python3 scripts/compare_experiment.py --experiment exp-model-bakeoff --group-by orchestrator_model
+```
+
+Protocol: hold ticker + as-of date + price freeze constant; vary **one** axis; ≥3 replicates for natural LLM noise. Prefer `audit_verdict=PASS` for calibration stats. See `harness/plan_research_compare_db.md`.
 
 ---
 

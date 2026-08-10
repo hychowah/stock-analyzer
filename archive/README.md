@@ -7,9 +7,10 @@ All equity research **records** live under this tree. Harness code stays at the 
 ```text
 archive/
 ├── catalog/
-│   ├── runs_index.json       # every research run (rebuildable)
-│   ├── tickers_index.json    # per-ticker latest + history
-│   └── migration_log.jsonl   # session moves from legacy root paths
+│   ├── runs_index.json           # thin path index (rebuildable)
+│   ├── tickers_index.json        # per-ticker latest + history
+│   ├── research_compare.sqlite   # comparison warehouse (rebuildable; gitignored)
+│   └── migration_log.jsonl       # session moves from legacy root paths
 ├── research/
 │   └── <TICKER>/<YYYY-MM-DD>/   # immutable full session (same internals as harness v2)
 │       ├── reports/
@@ -18,7 +19,7 @@ archive/
 │       ├── registry/
 │       └── meta/
 │           ├── run_manifest.json
-│           └── prediction_snapshot.json   # frozen claims for lookback
+│           └── prediction_snapshot.json   # frozen claims for lookback + DB export
 └── outcomes/                 # optional; append-only grading (does not edit research)
     └── <TICKER>/<YYYY-MM-DD>/
 ```
@@ -27,10 +28,12 @@ archive/
 
 1. **Never overwrite** a completed research session. New analysis → new date folder.
 2. **Canonical path:** `archive/research/<TICKER>/<DATE>/`.
-3. **Indexes are caches** — rebuild with `python3 scripts/rebuild_catalog.py`.
-4. **Outcomes** record whether past calls were right; they never rewrite valuation JSON.
-5. Design plan: `harness/plan_research_archive_layout.md`.
-6. **Not in git:** `archive/research/` and `archive/outcomes/` are local data only (listed in root `.gitignore`). Session trees are large (raw filings, prices, charts). Keep them on disk for the harness; commit harness code + `archive/catalog/` indexes, not full sessions.
+3. **Disk is system of record.** JSON indexes + SQLite are rebuildable projections — never the only copy of numbers.
+4. **Indexes are caches** — rebuild with `python3 scripts/rebuild_catalog.py`.
+5. **Comparison DB** — after Phase 5, export with `python3 scripts/export_compare_db.py` (see below). Plan: `harness/plan_research_compare_db.md`.
+6. **Outcomes** record whether past calls were right; they never rewrite valuation JSON.
+7. Design plan (layout): `harness/plan_research_archive_layout.md`.
+8. **Not in git:** `archive/research/`, `archive/outcomes/`, and `*.sqlite` under catalog. Session trees are large. Commit harness code + thin catalog JSON, not full sessions or the SQLite binary.
 
 ## Common commands
 
@@ -38,13 +41,27 @@ archive/
 # New session
 python3 scripts/scaffold_session.py --ticker META --date $(date +%F)
 
-# After Phase 5
-python3 scripts/build_prediction_snapshot.py --ticker META --date 2026-08-03
-python3 scripts/rebuild_catalog.py
+# After Phase 5 (snapshot + comparison DB + thin catalog)
+python3 scripts/finalize_session.py --ticker META --date 2026-08-03
+
+# Rebuild comparison warehouse from all sessions
+python3 scripts/export_compare_db.py --all --rebuild
+
+# Experiment / replicate scaffold (same calendar date, distinct folder)
+python3 scripts/scaffold_session.py --ticker META --date 2026-08-10 \
+  --experiment exp-model-bakeoff --slug model-a-r1 --replicate 1 \
+  --orchestrator-model grok-4.5
+
+# Summarize variation from the compare DB
+python3 scripts/compare_experiment.py --experiment exp-model-bakeoff --group-by orchestrator_model
 
 # Resolve / check (archive first, legacy fallback)
 python3 scripts/check_session.py --ticker META --date 2026-08-03 --full
 
-# Compare two runs
+# Compare two runs (file-based helper)
 python3 scripts/compare_runs.py --ticker META --dates 2026-07-30,2026-08-03
+
+# Query comparison DB (example)
+sqlite3 archive/catalog/research_compare.sqlite \
+  "SELECT ticker, session_date, asof_price, fv_base, fv_weighted, p_bear, p_base, p_bull, tech_signal, region FROM runs ORDER BY ticker, session_date;"
 ```

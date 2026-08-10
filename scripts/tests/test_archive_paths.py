@@ -14,11 +14,17 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.kd_research.paths import (  # noqa: E402
     iter_research_sessions,
-    rel_to_project,
-    research_root,
+    make_session_key,
+    parse_session_key,
     resolve_session,
     run_id,
     session_root,
+)
+from scripts.kd_research.outcomes import (  # noqa: E402
+    direction_hit,
+    mechanical_scorecard,
+    pct_return,
+    target_date_for,
 )
 
 
@@ -34,6 +40,14 @@ def _load_scaffold():
 class PathsTests(unittest.TestCase):
     def test_run_id(self):
         self.assertEqual(run_id("meta", "2026-08-03"), "research:META:2026-08-03")
+        self.assertEqual(
+            run_id("meta", "2026-08-03__model-a"),
+            "research:META:2026-08-03__model-a",
+        )
+
+    def test_session_key_slug(self):
+        self.assertEqual(make_session_key("2026-08-03", "r1"), "2026-08-03__r1")
+        self.assertEqual(parse_session_key("2026-08-03__r1"), ("2026-08-03", "r1"))
 
     def test_session_root_default_under_archive(self):
         with tempfile.TemporaryDirectory() as td:
@@ -88,6 +102,50 @@ class ScaffoldArchiveTests(unittest.TestCase):
             self.assertTrue((root / "registry" / "phase_status.json").is_file())
             data = json.loads((root / "registry" / "phase_status.json").read_text())
             self.assertEqual(data["ticker"], "ZZARCH")
+
+
+class OutcomesHelpersTests(unittest.TestCase):
+    def test_target_and_returns(self):
+        self.assertEqual(str(target_date_for("2026-08-01", "1w")), "2026-08-08")
+        self.assertAlmostEqual(pct_return(100, 110), 10.0)
+
+    def test_direction_hit_policy(self):
+        self.assertEqual(direction_hit(20, 5), 1)
+        self.assertEqual(direction_hit(20, -5), 0)
+        self.assertEqual(direction_hit(-20, -5), 1)
+        self.assertIsNone(direction_hit(1, 10))  # MoS deadband
+        self.assertIsNone(direction_hit(20, 1))  # return deadband
+
+    def test_mechanical_scorecard(self):
+        fields = {
+            "margin_of_safety_pct": 25.0,
+            "fv_bear": 80,
+            "fv_base": 100,
+            "fv_bull": 130,
+            "asof_price": 80,
+        }
+        price_path = {
+            "marks": [
+                {
+                    "horizon": "1m",
+                    "status": "ok",
+                    "price": 90,
+                    "total_return_pct": 12.5,
+                    "excess_return_pct": 2.0,
+                }
+            ]
+        }
+        sc = mechanical_scorecard(
+            run_id="research:T:2026-01-01",
+            ticker="T",
+            session_date="2026-01-01",
+            session_key="2026-01-01",
+            fields=fields,
+            price_path=price_path,
+            horizon_primary="1m",
+        )
+        self.assertEqual(sc["metrics"]["direction_vs_price"]["1m"]["value"], "correct")
+        self.assertEqual(sc["overall_label"], "mostly_right")
 
 
 class SnapshotBuilderTests(unittest.TestCase):

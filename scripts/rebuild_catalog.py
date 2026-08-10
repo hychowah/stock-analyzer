@@ -51,7 +51,11 @@ def _row_for_session(ticker: str, session_key: str, path: Path) -> dict[str, Any
     if not outcomes_dir.is_dir():
         # also try plain date for outcomes keyed historically by date
         outcomes_dir = outcomes_root() / ticker / session_date
-    has_outcomes = outcomes_dir.is_dir() and any(outcomes_dir.iterdir())
+    has_outcomes = outcomes_dir.is_dir() and (
+        (outcomes_dir / "price_path.json").is_file()
+        or (outcomes_dir / "scorecard.json").is_file()
+        or any(outcomes_dir.iterdir())
+    )
 
     fv_base = None
     fv_weighted = None

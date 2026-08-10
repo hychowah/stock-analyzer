@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-08-10T02:36:39Z",
+  "updated_at": "2026-08-10T03:03:22Z",
   "runs": [
     {
       "run_id": "research:000660.KS:2026-07-29",
@@ -26,7 +26,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:02618.HK:2026-08-04",
@@ -52,7 +52,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:4516.T:2026-08-04",
@@ -78,7 +78,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:7203.T:2026-08-05",
@@ -104,7 +104,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:AAPL:2026-07-25",
@@ -130,7 +130,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:ADBE:2026-07-20",
@@ -156,7 +156,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:ADYEN:2026-08-05",
@@ -182,7 +182,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:CELH:2026-08-06",
@@ -208,7 +208,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:CMCSA:2026-07-25",
@@ -234,7 +234,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:GRAB:2026-08-09",
@@ -260,7 +260,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:JPM:2026-07-25",
@@ -286,7 +286,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:LULU:2026-07-26",
@@ -312,7 +312,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:MC.PA:2026-08-04",
@@ -338,7 +338,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:MELI:2026-08-06",
@@ -364,7 +364,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:META:2026-07-30",
@@ -390,7 +390,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:META:2026-08-03",
@@ -416,7 +416,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:NVT:2026-08-08",
@@ -442,7 +442,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:ORCL:2026-08-03",
@@ -468,7 +468,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:SOFI:2026-08-09",
@@ -494,7 +494,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     },
     {
       "run_id": "research:VST:2026-08-08",
@@ -520,7 +520,7 @@
       "experiment_id": null,
       "orchestrator_model": null,
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": true
     }
   ]
 }

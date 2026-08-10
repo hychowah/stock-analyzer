@@ -88,6 +88,19 @@ python3 scripts/compare_experiment.py --experiment exp-model-bakeoff --group-by 
 
 Protocol: hold ticker + as-of date + price freeze constant; vary **one** axis; ≥3 replicates for natural LLM noise. Prefer `audit_verdict=PASS` for calibration stats. See `harness/plan_research_compare_db.md`.
 
+### Outcomes grading (separate from research)
+
+Do **not** edit research folders. After enough calendar time has passed:
+
+```bash
+yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --ticker T --date D
+# or batch:
+yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --all --horizons 1d,1w,1m
+python3 scripts/compare_experiment.py --calibration --horizon 1m --pass-only
+```
+
+Writes `archive/outcomes/<T>/<session_key>/{price_path,scorecard}.json` and upserts the compare DB `outcomes` table.
+
 ---
 
 ## Pointers

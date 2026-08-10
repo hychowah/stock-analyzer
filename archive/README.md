@@ -55,6 +55,11 @@ python3 scripts/scaffold_session.py --ticker META --date 2026-08-10 \
 # Summarize variation from the compare DB
 python3 scripts/compare_experiment.py --experiment exp-model-bakeoff --group-by orchestrator_model
 
+# Outcomes (realized marks — does not edit research sessions)
+yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --ticker META --date 2026-08-03
+yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --all --horizons 1d,1w,1m
+python3 scripts/compare_experiment.py --calibration --horizon 1m --pass-only
+
 # Resolve / check (archive first, legacy fallback)
 python3 scripts/check_session.py --ticker META --date 2026-08-03 --full
 

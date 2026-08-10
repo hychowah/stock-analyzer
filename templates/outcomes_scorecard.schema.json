@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "outcomes_scorecard.schema.json",
+  "title": "Outcomes scorecard (mechanical + optional judgment grades)",
+  "description": "Policy metrics for 'were we right?'. Separate from research valuation agents.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "run_id", "ticker", "session_date", "metrics", "grader"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string" },
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "session_key": { "type": "string" },
+    "graded_at": { "type": "string" },
+    "horizon_primary": { "type": "string" },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Each metric may be {value, rule, rationale, basis} or nested by horizon."
+    },
+    "overall_label": {
+      "type": ["string", "null"],
+      "description": "mostly_right|mixed|mostly_wrong|too_early|null"
+    },
+    "grader": { "type": "string", "description": "mechanical_v1|human|agent_outcomes_v1" },
+    "notes_path": { "type": ["string", "null"] },
+    "source_paths": { "type": "object" }
+  }
+}

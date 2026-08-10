@@ -1,6 +1,6 @@
 # Plan: Research Comparison Database (post-harness export)
 
-**Status:** Phase A+B implemented (warehouse + provenance + experiment scaffold). Phase C partially (compare_experiment.py). D–E pending.  
+**Status:** Phase A–D implemented (warehouse, provenance, experiment tools, outcomes marks). Phase E (UI) pending.  
 **Date:** 2026-08-10  
 **Goal:** After each research session finishes, export decision-grade results + provenance into a queryable SQLite DB so we can compare runs across **time**, **harness instruction changes**, **LLM model differences**, and **natural LLM variation** — and later power a UI.  
 **Non-goal:** Do **not** move live research state into SQL. Full sessions under `archive/research/` remain the system of record.
@@ -93,12 +93,14 @@ Tables:
 
 ```bash
 # After Phase 5
-python3 scripts/build_prediction_snapshot.py --ticker T --date D
-python3 scripts/export_compare_db.py --ticker T --date D
-python3 scripts/rebuild_catalog.py
+python3 scripts/finalize_session.py --ticker T --date D
 
 # Full rebuild from disk
 python3 scripts/export_compare_db.py --all --rebuild
+
+# Outcomes (later, as horizons become available)
+yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --all --horizons 1d,1w,1m
+python3 scripts/compare_experiment.py --calibration --horizon 1m --pass-only
 ```
 
 ---
@@ -109,8 +111,8 @@ python3 scripts/export_compare_db.py --all --rebuild
 |-------|--------|--------|
 | **A** | **done** | Schema, export, snapshot enrich, backfill, docs |
 | **B** | **done** | Provenance capture, scaffold experiment flags, `session_key` paths, `finalize_session.py` |
-| **C** | partial | `compare_experiment.py` + richer `runs_index` v2; more polish later |
-| **D** | pending | Outcomes marks + calibration joins |
+| **C** | **done** | `compare_experiment.py` + richer `runs_index` v2 + calibration report |
+| **D** | **done** | `fetch_outcome_marks.py`, scorecards under `archive/outcomes/`, SQLite `outcomes` + calibration |
 | **E** | pending | Read-only UI over SQLite |
 
 ---

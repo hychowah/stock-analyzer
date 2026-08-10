@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eng/feature_list.schema.json",
+  "title": "EngFeatureList",
+  "type": "object",
+  "required": ["features"],
+  "properties": {
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "description", "passes"],
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "passes": { "type": "boolean" },
+          "verify": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

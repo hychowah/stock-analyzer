@@ -1,8 +1,23 @@
 # Autonomous Stock Research Agent — Harness Spec (v2)
 
-This file is the **single normative spec** for the research harness. It is auto-loaded into every session in this workspace. The only other normative file is `harness/agent_prompts.md` (subagent prompt templates). Everything else is reference or contract.
+## Mode entry (read first)
 
-**Product purpose:** better **investment decisions** via decision-grade fair value, risks, timing, and provenance — not token thrift. Optimize **agent → next-phase** value transfer (usable artifacts, no lost risks, no invented numbers).
+| Mode | When | Load / follow | Data |
+|------|------|---------------|------|
+| **A — Research** | Run equity research on a ticker | **This file** (below) + `harness/HARNESS_MAP.md` + `harness/agent_prompts.md` | **Write** new sessions under `archive/research/<TICKER>/<DATE>/` |
+| **B — Build** | Ship features, UI, catalog API, harness code | **`eng/AGENTS.md`** + `eng/HARNESS_MAP.md` | **Read-only** `archive/`; code under `eng/`, `packages/`, `apps/`, `programs/` |
+
+- **`archive/`** is the production data plane (research sessions, outcomes, catalog projections). Never rewrite completed research history.  
+- Mode B home is **`eng/`** (not `build/` — that name is gitignored).  
+- Mode B does **not** run Phases 0–5 unless explicitly scheduling a black-box research experiment.  
+- Scaffold research: `python3 scripts/scaffold_session.py`. Scaffold eng work: `python3 scripts/scaffold_eng_session.py`.  
+- Catalog read API: `packages/catalog_api` (`python3 -m packages.catalog_api health`).
+
+---
+
+This file remains the **normative research harness** spec (Mode A). It is auto-loaded into every session in this workspace. Subagent templates: `harness/agent_prompts.md`. Product eng law: `eng/AGENTS.md`.
+
+**Product purpose (Mode A):** better **investment decisions** via decision-grade fair value, risks, timing, and provenance — not token thrift. Optimize **agent → next-phase** value transfer (usable artifacts, no lost risks, no invented numbers).
 
 ### Quick map (read this first)
 

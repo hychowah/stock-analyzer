@@ -135,15 +135,23 @@ def db_path(output_dir: Path | str | None = None) -> Path:
 
 
 def connect(output_dir: Path | str | None = None, *, readonly: bool = False) -> sqlite3.Connection:
-    path = db_path(output_dir)
+    """Open compare DB. Writers use WAL + busy_timeout; readers use immutable URI."""
     if readonly:
+        # Do not mkdir via db_path/ensure_archive_tree on read path
+        path = catalog_root(output_dir) / DB_FILENAME
         if not path.is_file():
             raise FileNotFoundError(f"Compare DB not found: {path}")
         uri = f"file:{path.resolve().as_posix()}?mode=ro"
         conn = sqlite3.connect(uri, uri=True)
     else:
+        path = db_path(output_dir)
         path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(str(path))
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=10000")
+        except sqlite3.Error:
+            pass
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn

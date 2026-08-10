@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eng/eng_session.schema.json",
+  "title": "EngSessionStatus",
+  "type": "object",
+  "required": ["slug", "status", "created_at"],
+  "properties": {
+    "slug": { "type": "string" },
+    "session_key": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["scaffolded", "in_progress", "complete", "blocked"]
+    },
+    "created_at": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "work_type": { "type": "string" },
+    "resume_hint": { "type": "string" }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": false,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "implement",
+      "description": "Implement the primary change for this slug",
+      "passes": false,
+      "verify": "python3 scripts/eng_verify.py"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

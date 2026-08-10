@@ -15,10 +15,15 @@ venv/
 .env
 .env.*
 
-# Build / dist
+# Build / dist (Python packaging output — NOT eng/ Mode B harness)
 dist/
 build/
 *.egg
+
+# Mode B (eng/) work noise — keep AGENTS/templates tracked
+eng/sessions/**/verify_log.jsonl
+eng/sessions/**/.cache/
+apps/*/.local/
 
 # IDE / OS
 .vscode/

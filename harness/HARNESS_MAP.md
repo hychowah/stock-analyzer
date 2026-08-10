@@ -4,7 +4,11 @@
 **North star for agents:** leave artifacts the **next** phase can use without re-guessing numbers or missing material risks.  
 **Not the goal:** token thrift or shorter runs for their own sake.
 
-Normative rules: root `AGENTS.md`. Subagent templates: `harness/agent_prompts.md`. Pipeline design: `harness/design_phase_status_and_exemplars.md`. Industry research notes: `harness/research/`.
+**Mode A (this map):** equity research pipeline → writes `archive/research/`.  
+**Mode B (product eng):** `eng/AGENTS.md` + `eng/HARNESS_MAP.md` — features/UI/catalog API; **reads** archive only.  
+Catalog read API: `packages/catalog_api` (`python3 -m packages.catalog_api health`).
+
+Normative rules: root `AGENTS.md` (Mode A body). Subagent templates: `harness/agent_prompts.md`. Pipeline design: `harness/design_phase_status_and_exemplars.md`. Industry research notes: `harness/research/`.
 
 ---
 

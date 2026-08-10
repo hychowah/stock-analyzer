@@ -23,6 +23,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Names that are harness/code at the repo root — never treat as tickers.
+# Keep in sync when adding top-level product dirs (eng/, packages/, apps/, …).
 ROOT_RESERVED_NAMES = frozenset(
     {
         "archive",
@@ -36,6 +37,17 @@ ROOT_RESERVED_NAMES = frozenset(
         ".git",
         ".grok",
         "node_modules",
+        # Mode B / product platform (dual-mode plan)
+        "eng",
+        "packages",
+        "apps",
+        "programs",
+        "docs",
+        "build",  # setuptools output; also gitignored
+        "dist",
+        "tests",
+        "meta",
+        "research",  # reserved if research law moves to top-level folder
     }
 )
 

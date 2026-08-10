@@ -1,0 +1,34 @@
+{
+  "slug": "specialist-quality-gates",
+  "summary": "Mode A specialist-quality machine gates (W1): enforce outcomes not spawn APIs — FDD hooks (F8), Agent 4 isolation, swarm handoffs, phase_status↔disk, medium/high intensity not all-noted_only. Docs + Agent 13 process band updated. harness_version 2.3.0.",
+  "work_type": "W1",
+  "harness_version": "2.3.0",
+  "changed_paths": [
+    "scripts/kd_research/gates.py",
+    "scripts/check_session.py",
+    "scripts/tests/test_fdd_hooks_check.py",
+    "scripts/tests/test_agent4_isolation_check.py",
+    "scripts/tests/test_handoff_structure.py",
+    "scripts/tests/test_market_context_check.py",
+    "harness/VERSION",
+    "harness/RESEARCH_AGENTS.md",
+    "harness/HARNESS_MAP.md",
+    "harness/orchestrator_runbook.md",
+    "harness/agent_prompts.md",
+    "eng/eval/failure_catalog.md",
+    "eng/sessions/2026-08-10-specialist-quality-gates/"
+  ],
+  "verify": [
+    "python3 scripts/eng_verify.py → PASS",
+    "pytest specialist gate tests → PASS"
+  ],
+  "non_goals_honored": [
+    "No spawn API enforcement",
+    "No multi-valuer split",
+    "No live archive/research mutation"
+  ],
+  "follow_ups": [
+    "Optional spawn_log telemetry (plan F-E)",
+    "Fixture refresh if production sessions need green --full demos with FDD present"
+  ]
+}

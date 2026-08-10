@@ -374,9 +374,11 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 
 **Band 2 — Consumption & process integrity**
 2. EXTERNAL VERIFICATION: ≥5 filing-grade numbers vs primary sources. Consistency is not truth. ≥1 of the ≥5 must be multi-period series or historical stress anchor (not five lines from the same EX-99.1 only).
-2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality).
-2c+. If filing_deep_dive was created during Phase 5 after valuation with empty material hooks → major FAIL (backfill-without-revalue is not PASS) unless re-value or explicit README waive that FV did not consume FDD.
-2e–2g. Decision-grade handoffs; research_brief coverage; news URL sample.
+2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality). Machine check_session enforces non-empty filing_deep_dive_hooks when FDD exists (F8) and medium/high all-noted_only — still grade *substance* of use/reject.
+2c+. If filing_deep_dive was created during Phase 5 after valuation with empty material hooks → major FAIL (backfill-without-revalue is not PASS) unless re-value or explicit README waive that FV did not consume FDD. **You must not author missing FDD or rewrite valuation as auditor.**
+2e–2g. Decision-grade handoffs (four sections); research_brief coverage; news URL sample.
+2h. **Agent 4 isolation:** technical.json / handoffs/4* must not cite fundamental paths (valuation_model, filing_deep_dive, background, latest_quarter, market_context, sec_filings, sp_financials). Machine may FAIL under --full; confirm independence of TA lens.
+2i. Swarm lead handoffs present (phase0_* / phase25_*); hollow “none” gaps when artifacts show problems = finding.
 
 **Band 3 — Judgment quality sample**
 3. Reproducibility: rerun ALL compute scripts from cache.
@@ -387,7 +389,8 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 **Band 4 — Fit & merge**
 7–8b. Cross-artifact inputs; sector fit; region fit.
 11. Merge integrity (raw counts; no invented merge numbers).
-12. phase_status lag (pending agents with files on disk) = minor; do not author missing FDD yourself as auditor.
+12. phase_status lag (pending agents with files on disk) = minor (machine WARN); phase complete without primary artifact = major if not waived; do not author missing FDD yourself as auditor.
+13. Process note: multi-agent *spawn API* is not required for PASS; decision-grade specialist *artifacts* and isolation are.
 
 Write S/registry/audit.json per ROOT/templates/audit.schema.json: verdict PASS only if no critical/major issues; list every issue with severity, location, and concrete fix.
 ```

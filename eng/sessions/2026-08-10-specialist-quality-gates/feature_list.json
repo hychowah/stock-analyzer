@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "issue + success_criteria + baseline eng_verify",
+      "passes": false,
+      "verify": "issue.json filled; eng_verify green"
+    },
+    {
+      "id": "docs-specialist-gates",
+      "description": "Spec clarity + failure catalog + Agent 13 process band",
+      "passes": false,
+      "verify": "docs present; VERSION if harness prompts changed; eng_verify"
+    },
+    {
+      "id": "gate-fdd-hooks",
+      "description": "Machine-check filing_deep_dive_hooks (F8)",
+      "passes": false,
+      "verify": "pytest FDD hook tests + eng_verify + VERSION bump"
+    },
+    {
+      "id": "gate-agent4-handoffs",
+      "description": "Agent 4 isolation + swarm handoffs + header WARN",
+      "passes": false,
+      "verify": "pytest isolation/handoff + VERSION"
+    },
+    {
+      "id": "gate-phase-status-disk",
+      "description": "phase_status complete vs disk + complete_checks",
+      "passes": false,
+      "verify": "pytest phase_status/gates + VERSION"
+    },
+    {
+      "id": "ship",
+      "description": "ship_note + clean tree",
+      "passes": false,
+      "verify": "ship_note.json; eng_verify; user commit"
+    }
+  ]
+}

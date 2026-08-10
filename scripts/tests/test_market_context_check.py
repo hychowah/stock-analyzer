@@ -113,6 +113,24 @@ class MarketContextCheckTests(unittest.TestCase):
         self.assertEqual(fails, [], msg=fails)
         self.assertTrue(any(s == "PASS" and c == "market_context_hooks" for s, c, _ in self.cs.results))
 
+    def test_high_intensity_all_noted_only_fails(self):
+        hooks = [
+            {
+                "from": "intensity",
+                "action": "noted_only",
+                "reason": "Pretend high intensity needs no treatment at all.",
+            }
+        ]
+        session = self._session(
+            with_mc=_valid_market_context(primary_region="hk_china", intensity="high"),
+            with_vm=_minimal_valuation_with_hooks(hooks),
+        )
+        self.cs.check_market_context(session)
+        self.assertTrue(
+            any(s == "FAIL" and "intensity" in c for s, c, _ in self.cs.results),
+            msg=self.cs.results,
+        )
+
     def test_present_without_hooks_fails(self):
         session = self._session(
             with_mc=_valid_market_context(primary_region="hk_china", intensity="high"),
@@ -147,7 +165,8 @@ class MarketContextCheckTests(unittest.TestCase):
         self.assertIn("market_context", (ROOT / "templates" / "valuation_model.schema.json").read_text())
 
     def test_region_modules_referenced_from_normative_spec(self):
-        agents = (ROOT / "AGENTS.md").read_text()
+        # Mode A law lives in RESEARCH_AGENTS.md; root AGENTS.md is router-only.
+        agents = (ROOT / "harness" / "RESEARCH_AGENTS.md").read_text()
         self.assertIn("§5b", agents)
         self.assertIn("market_context.json", agents)
         self.assertIn("region_hk_china.md", agents)

@@ -10,9 +10,13 @@ This validates STRUCTURE and PROVENANCE, not financial truth:
   - compute_script fields point at files that exist on disk
   - sector_config consistency (confidence < 0.70 -> standard + manual review)
   - market_context.json optional (absent -> SKIPPED for legacy sessions); when present,
-    schema/keys + non-empty market_context_hooks on valuation_model
+    schema/keys + non-empty market_context_hooks on valuation_model; medium/high intensity
+    rejects all-noted_only hooks
+  - when filing_deep_dive.json + valuation exist: non-empty filing_deep_dive_hooks (F8)
   - phase_status.json optional (absent -> SKIPPED for legacy); when present, schema/keys
-    + all designed phase_ids present
+    + all designed phase_ids present; complete vs disk + lag WARN
+  - Agent 4 isolation: technical artifact/handoff must not cite fundamental paths (--full FAIL)
+  - handoffs include swarm leads (phase0/phase25 aliases); section headers WARN
   - JSON ticker/session_date match the folder
   - scenario_probabilities sums to 1.0 (+/- 0.01)
   - at least 5 stress scenarios
@@ -278,23 +282,63 @@ def check_audit_verdict(session: Path) -> None:
         record("FAIL", "audit verdict", f"{verdict!r} — session not complete until audit passes or issues are waived in the README")
 
 
-HANDOFF_AGENTS = ["2a", "2b", "2c", "2d", "2e", "4", "5", "12", "6", "7", "8", "11", "13"]
+# (agent_id, glob patterns under registry/handoffs/)
+HANDOFF_SPECS: list[tuple[str, list[str]]] = [
+    ("2a", ["2a_*.md", "2a.md"]),
+    ("2b", ["2b_*.md", "2b.md"]),
+    ("2c", ["2c_*.md", "2c.md"]),
+    ("2d", ["2d_*.md", "2d.md"]),
+    ("2e", ["2e_*.md", "2e.md"]),
+    ("4", ["4_*.md", "4.md"]),
+    ("5", ["5_*.md", "5.md"]),
+    ("12", ["12_*.md", "12.md"]),
+    ("6", ["6_*.md", "6.md"]),
+    ("7", ["7_*.md", "7.md"]),
+    ("8", ["8_*.md", "8.md"]),
+    ("11", ["11_*.md", "11.md"]),
+    ("13", ["13_*.md", "13.md"]),
+    # Swarm leads (aliases used in fixtures: phase0_background.md, phase25_stress.md)
+    ("phase0_swarm", ["phase0_swarm*.md", "phase0_*.md", "phase0.md"]),
+    ("phase25_swarm", ["phase25_swarm*.md", "phase25_*.md", "phase25.md", "2_5_*.md"]),
+]
+HANDOFF_AGENTS = [a for a, _ in HANDOFF_SPECS]
 HANDOFF_MIN_BYTES = 300
 
 
 def check_handoffs(session: Path) -> None:
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import check_handoff_headers  # noqa: WPS433
+
     d = session / "registry/handoffs"
     if not d.is_dir():
         record("FAIL", "handoffs", "registry/handoffs/ missing — every agent must write one")
         return
-    for agent in HANDOFF_AGENTS:
-        matches = [p for p in d.glob(f"{agent}_*.md")] + [p for p in d.glob(f"{agent}.md")]
+    for agent, patterns in HANDOFF_SPECS:
+        matches: list[Path] = []
+        for pat in patterns:
+            matches.extend(d.glob(pat))
+        # de-dupe
+        matches = sorted({p.resolve() for p in matches}, key=lambda p: p.name)
         if not matches:
             record("FAIL", f"handoff: agent {agent}", "file missing")
-        elif max(p.stat().st_size for p in matches) < HANDOFF_MIN_BYTES:
+            continue
+        best = max(matches, key=lambda p: p.stat().st_size)
+        if best.stat().st_size < HANDOFF_MIN_BYTES:
             record("FAIL", f"handoff: agent {agent}", f"< {HANDOFF_MIN_BYTES} bytes (stub?)")
-        else:
-            record("PASS", f"handoff: agent {agent}")
+            continue
+        record("PASS", f"handoff: agent {agent}", best.name)
+        try:
+            text = best.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        missing = check_handoff_headers(text)
+        if missing:
+            record(
+                "WARN",
+                f"handoff headers: {agent}",
+                f"missing sections: {', '.join(missing)}",
+            )
 
 
 def check_market_context(session: Path) -> None:
@@ -384,29 +428,26 @@ def check_market_context(session: Path) -> None:
     except Exception as e:  # noqa: BLE001
         record("FAIL", "market_context_hooks", f"valuation_model unparseable: {e}")
         return
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import (  # noqa: WPS433
+        check_market_context_hooks_intensity,
+        validate_hooks_list,
+    )
+
     hooks = vm.get("market_context_hooks")
-    if not (isinstance(hooks, list) and len(hooks) >= 1):
-        record(
-            "FAIL",
-            "market_context_hooks",
-            "valuation_model must have non-empty market_context_hooks[] when market_context.json exists",
-        )
-        return
-    bad = []
-    for i, h in enumerate(hooks):
-        if not isinstance(h, dict):
-            bad.append(f"[{i}] not object")
-            continue
-        for k in ("from", "action", "reason"):
-            if k not in h or (isinstance(h.get(k), str) and not str(h.get(k)).strip()):
-                bad.append(f"[{i}].{k}")
-        reason = h.get("reason")
-        if isinstance(reason, str) and len(reason.strip()) < 10:
-            bad.append(f"[{i}].reason too short")
-    if bad:
-        record("FAIL", "market_context_hooks shape", "; ".join(bad[:8]))
-        return
-    record("PASS", "market_context_hooks", f"{len(hooks)} hook(s)")
+    for status, check, detail in validate_hooks_list(
+        hooks,
+        check_id="market_context_hooks",
+        empty_detail=(
+            "valuation_model must have non-empty market_context_hooks[] when market_context.json exists"
+        ),
+    ):
+        record(status, check, detail)
+        if status == "FAIL":
+            return
+    for status, check, detail in check_market_context_hooks_intensity(hooks, intensity):
+        record(status, check, detail)
 
 
 def check_research_brief(session: Path) -> None:
@@ -631,6 +672,32 @@ def check_phase_status(session: Path) -> None:
         "phase_status content",
         f"current_phase={current} phases={len(phases)} schema_version={data['schema_version']}",
     )
+
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import check_phase_status_disk  # noqa: WPS433
+
+    for status, check, detail in check_phase_status_disk(session, data):
+        record(status, check, detail)
+
+
+def check_filing_deep_dive_hooks_session(session: Path) -> None:
+    """Machine gate for F8: valuation must consume FDD when deep dive exists."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import check_filing_deep_dive_hooks  # noqa: WPS433
+
+    for status, check, detail in check_filing_deep_dive_hooks(session):
+        record(status, check, detail)
+
+
+def check_agent4_isolation_session(session: Path, *, full: bool = False) -> None:
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.gates import check_agent4_isolation  # noqa: WPS433
+
+    for status, check, detail in check_agent4_isolation(session, full=full):
+        record(status, check, detail)
 
 
 def check_filing_deep_dive(session: Path) -> None:
@@ -947,6 +1014,9 @@ def main() -> int:
     check_phase_status(session)
     check_session_isolation(session, full=bool(args.full))
     check_meta_artifacts(session)
+    # FDD hooks / Agent 4: always evaluate when files present; severity for Agent 4 depends on --full
+    check_filing_deep_dive_hooks_session(session)
+    check_agent4_isolation_session(session, full=bool(args.full))
     if args.full:
         check_filing_deep_dive(session)
         check_risk_bridge(session)

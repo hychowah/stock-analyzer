@@ -10,6 +10,7 @@ harness/design_phase_status_and_exemplars.md §A.3.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -435,6 +436,265 @@ def check_latest_quarter_risk_mapping(session: Path) -> list[tuple[str, str, str
     return out
 
 
+# --- Specialist-quality process gates (outcomes, not spawn APIs) ---
+
+HOOK_REQUIRED_KEYS = ("from", "action", "reason")
+HOOK_REASON_MIN_LEN = 10
+
+# Path-anchored tokens: avoid bare English false positives (e.g. "background").
+AGENT4_FORBIDDEN_TOKENS = (
+    "filing_deep_dive",
+    "valuation_model",
+    "registry/background",
+    "background.json",
+    "latest_quarter",
+    "market_context.json",
+    "sec_filings",
+    "sp_financials",
+)
+
+# Primary artifacts for phase_status complete / lag checks (agent_id -> rel paths).
+PHASE_PRIMARY_ARTIFACTS: dict[str, list[str]] = {
+    "phase0_swarm": ["registry/background.json"],
+    "2a": ["data/sp_financials.csv"],
+    "2b": ["registry/sec_filings.json"],
+    "2c": ["registry/news_sentiment.json"],
+    "2d": ["registry/latest_quarter.json"],
+    "2e": ["registry/filing_deep_dive.json"],
+    "4": ["registry/technical.json"],
+    "5": ["data/valuation_model.json"],
+    "12": ["registry/tsr_validation.json"],
+    "phase25_swarm": ["registry/risk_bridge.json"],
+    "6": ["charts"],  # special: any charts dir with files
+    "7": ["reports"],  # special: fundamental report checked via glob elsewhere
+    "8": ["reports"],
+    "11": ["reports"],
+    "13": ["registry/audit.json"],
+}
+
+HANDOFF_SECTION_PATTERNS = (
+    re.compile(r"(?im)^\s*#+\s*what i did\b"),
+    re.compile(r"(?im)^\s*#+\s*data issues"),
+    re.compile(r"(?im)^\s*#+\s*assumptions"),
+    re.compile(r"(?im)^\s*#+\s*for downstream"),
+)
+
+
+def validate_hooks_list(
+    hooks: Any,
+    *,
+    check_id: str,
+    empty_detail: str,
+) -> list[tuple[str, str, str]]:
+    """Structural validation for valuation hook arrays (MC / FDD)."""
+    out: list[tuple[str, str, str]] = []
+    if not (isinstance(hooks, list) and len(hooks) >= 1):
+        out.append(("FAIL", check_id, empty_detail))
+        return out
+    bad: list[str] = []
+    for i, h in enumerate(hooks):
+        if not isinstance(h, dict):
+            bad.append(f"[{i}] not object")
+            continue
+        for k in HOOK_REQUIRED_KEYS:
+            if k not in h or (isinstance(h.get(k), str) and not str(h.get(k)).strip()):
+                bad.append(f"[{i}].{k}")
+        reason = h.get("reason")
+        if isinstance(reason, str) and len(reason.strip()) < HOOK_REASON_MIN_LEN:
+            bad.append(f"[{i}].reason too short")
+    if bad:
+        out.append(("FAIL", f"{check_id} shape", "; ".join(bad[:8])))
+        return out
+    out.append(("PASS", check_id, f"{len(hooks)} hook(s)"))
+    return out
+
+
+def check_filing_deep_dive_hooks(session: Path) -> list[tuple[str, str, str]]:
+    """When FDD + valuation exist, require non-empty filing_deep_dive_hooks (F8)."""
+    fdd = session / "registry" / "filing_deep_dive.json"
+    vm_path = session / "data" / "valuation_model.json"
+    if not fdd.exists():
+        return [("SKIPPED", "filing_deep_dive_hooks", "filing_deep_dive.json absent")]
+    if not vm_path.exists():
+        return [("SKIPPED", "filing_deep_dive_hooks", "valuation_model.json missing")]
+    data, err = load_json(vm_path)
+    if err:
+        return [("FAIL", "filing_deep_dive_hooks", f"valuation_model unparseable: {err}")]
+    assert isinstance(data, dict)
+    hooks = data.get("filing_deep_dive_hooks")
+    return validate_hooks_list(
+        hooks,
+        check_id="filing_deep_dive_hooks",
+        empty_detail=(
+            "valuation_model must have non-empty filing_deep_dive_hooks[] "
+            "when registry/filing_deep_dive.json exists"
+        ),
+    )
+
+
+def check_market_context_hooks_intensity(
+    hooks: Any,
+    intensity: str | None,
+) -> list[tuple[str, str, str]]:
+    """High/medium intensity must not be all noted_only (hollow region treatment)."""
+    if not isinstance(hooks, list) or not hooks:
+        return []
+    if intensity not in ("medium", "high"):
+        return []
+    actions = []
+    for h in hooks:
+        if isinstance(h, dict):
+            actions.append(str(h.get("action") or "").strip().lower())
+    if actions and all(a == "noted_only" for a in actions):
+        return [
+            (
+                "FAIL",
+                "market_context_hooks intensity",
+                f"intensity={intensity} but all market_context_hooks are noted_only",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "market_context_hooks intensity",
+            f"intensity={intensity}; not all noted_only",
+        )
+    ]
+
+
+def check_agent4_isolation(session: Path, *, full: bool = False) -> list[tuple[str, str, str]]:
+    """Post-hoc: technical artifact/handoff must not cite fundamental session paths."""
+    texts: list[tuple[str, str]] = []
+    tech = session / "registry" / "technical.json"
+    if tech.exists():
+        try:
+            texts.append((str(tech.relative_to(session)), tech.read_text(encoding="utf-8", errors="replace")))
+        except OSError as e:
+            return [("FAIL", "agent4_isolation", f"cannot read technical.json: {e}")]
+    handoff_dir = session / "registry" / "handoffs"
+    if handoff_dir.is_dir():
+        for p in sorted(handoff_dir.glob("4*.md")):
+            try:
+                texts.append((str(p.relative_to(session)), p.read_text(encoding="utf-8", errors="replace")))
+            except OSError:
+                continue
+    if not texts:
+        return [("SKIPPED", "agent4_isolation", "no technical.json or handoffs/4*.md")]
+
+    hits: list[str] = []
+    for rel, text in texts:
+        lower = text.lower()
+        for tok in AGENT4_FORBIDDEN_TOKENS:
+            if tok.lower() in lower:
+                hits.append(f"{rel}:{tok}")
+    if not hits:
+        return [("PASS", "agent4_isolation", f"scanned {len(texts)} file(s)")]
+    detail = "; ".join(hits[:12])
+    status = "FAIL" if full else "WARN"
+    return [(status, "agent4_isolation", detail)]
+
+
+def check_handoff_headers(text: str) -> list[str]:
+    """Return names of missing handoff section headers (empty = all present)."""
+    missing: list[str] = []
+    labels = ("What I did", "Data issues", "Assumptions", "For downstream")
+    for label, pat in zip(labels, HANDOFF_SECTION_PATTERNS):
+        if not pat.search(text):
+            missing.append(label)
+    return missing
+
+
+def primary_artifact_exists(session: Path, agent_id: str) -> bool | None:
+    """True/False if agent has a known primary artifact; None if unmapped."""
+    rels = PHASE_PRIMARY_ARTIFACTS.get(agent_id)
+    if not rels:
+        return None
+    for rel in rels:
+        if rel == "charts":
+            d = session / "charts"
+            if d.is_dir() and any(d.iterdir()):
+                return True
+            continue
+        if rel == "reports":
+            d = session / "reports"
+            if d.is_dir() and any(d.glob("*.md")):
+                return True
+            continue
+        if (session / rel).exists():
+            return True
+    return False
+
+
+def check_phase_status_disk(session: Path, data: dict[str, Any]) -> list[tuple[str, str, str]]:
+    """phase_status complete ⇒ artifacts; lag WARN when files exist but agent pending."""
+    out: list[tuple[str, str, str]] = []
+    phases = data.get("phases")
+    if not isinstance(phases, list):
+        return out
+
+    for ph in phases:
+        if not isinstance(ph, dict):
+            continue
+        phase_id = ph.get("phase_id")
+        phase_status = ph.get("status")
+        agents = ph.get("agents") or []
+        if not isinstance(agents, list):
+            continue
+
+        if phase_status == "complete":
+            for ag in agents:
+                if not isinstance(ag, dict):
+                    continue
+                aid = ag.get("agent_id")
+                if not aid or ag.get("status") == "skipped":
+                    continue
+                exists = primary_artifact_exists(session, str(aid))
+                if exists is False:
+                    out.append(
+                        (
+                            "FAIL",
+                            "phase_status complete artifact",
+                            f"phase {phase_id} complete but agent {aid} primary artifact missing",
+                        )
+                    )
+                handoff = ag.get("handoff")
+                if isinstance(handoff, str) and handoff.strip():
+                    hp = session / handoff if not Path(handoff).is_absolute() else Path(handoff)
+                    # also try relative to session
+                    if not hp.exists():
+                        hp2 = session / handoff.lstrip("./")
+                        hp = hp2 if hp2.exists() else hp
+                    if not hp.exists():
+                        out.append(
+                            (
+                                "FAIL",
+                                "phase_status complete handoff",
+                                f"phase {phase_id} agent {aid} handoff path missing: {handoff}",
+                            )
+                        )
+
+        # lag: primary on disk but agent still pending/in_progress
+        for ag in agents:
+            if not isinstance(ag, dict):
+                continue
+            aid = ag.get("agent_id")
+            st = ag.get("status")
+            if not aid or st not in ("pending", "in_progress"):
+                continue
+            if primary_artifact_exists(session, str(aid)) is True:
+                out.append(
+                    (
+                        "WARN",
+                        "phase_status lag",
+                        f"agent {aid} status={st} but primary artifact exists on disk",
+                    )
+                )
+
+    if not any(c.startswith("phase_status") for _, c, _ in out):
+        out.append(("PASS", "phase_status disk", "no complete/lag issues"))
+    return out
+
+
 def entry_checks(
     session: Path,
     phase_id: str,
@@ -474,10 +734,13 @@ def entry_checks(
         vm, err = load_json(session / "data" / "valuation_model.json")
         if err:
             results.append(("FAIL", "valuation_model_content", err))
-        elif isinstance(vm, dict) and not (vm.get("fair_value") or vm.get("model")):
-            results.append(("FAIL", "valuation_model_content", "missing fair_value/model keys"))
         elif isinstance(vm, dict):
-            results.append(("PASS", "valuation_model_content", "core keys present"))
+            if "fair_value" not in vm and "model" not in vm:
+                results.append(("FAIL", "valuation_model_content", "missing fair_value/model keys"))
+            else:
+                results.append(("PASS", "valuation_model_content", "core keys present"))
+            # FDD consumption required before stress when deep dive exists
+            results.extend(check_filing_deep_dive_hooks(session))
 
     return results
 
@@ -486,8 +749,35 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
     """Checks before marking a phase complete (merge/coverage)."""
     if phase_id == "0":
         return check_phase0_coverage(session)
+    if phase_id == "1_parallel":
+        out: list[tuple[str, str, str]] = []
+        for rel in (
+            "data/sp_financials.csv",
+            "registry/sec_filings.json",
+            "registry/news_sentiment.json",
+        ):
+            status, detail = check_path(session, rel)
+            out.append((status, rel, detail))
+        return out
+    if phase_id == "1c":
+        status, detail = check_path(session, "registry/filing_deep_dive.json")
+        return [(status, "registry/filing_deep_dive.json", detail)]
+    if phase_id == "2_parallel":
+        out = []
+        for rel in (
+            "registry/technical.json",
+            "data/valuation_model.json",
+            "registry/tsr_validation.json",
+        ):
+            status, detail = check_path(session, rel)
+            out.append((status, rel, detail))
+        out.extend(check_filing_deep_dive_hooks(session))
+        return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)
+    if phase_id == "4_parallel":
+        t = _infer_ticker(session)
+        return check_reports(session, t)
     return [("SKIPPED", "complete_checks", f"no merge gate for phase {phase_id}")]
 
 

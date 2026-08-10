@@ -243,25 +243,32 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 
 ## 13. Quality gates
 
+**Process principle:** enforce **specialist outcomes** (isolation, hooks, handoffs, phase↔disk), not Task/subagent API spawn IDs. Valuation stays **single-writer** (Agent 5). Parallel fan-out is for independent gather (Phase 0, 1 data, stress), not multi-valuer or parallel report-section authorship.
+
 | Gate | Enforced by |
 |---|---|
 | Required artifacts exist, parse, validate against `templates/*.schema.json`, have non-empty rationales | `[machine]` check_session.py |
 | `compute_script` paths exist; ticker/date match folder; confidence-gate consistency | `[machine]` check_session.py |
 | scenario_probabilities sums to 1.0; ≥5 stress scenarios | `[machine]` check_session.py |
 | audit verdict is PASS | `[machine]` check_session.py |
+| When `filing_deep_dive.json` + valuation exist: non-empty `filing_deep_dive_hooks[]` with `from`/`action`/`reason` (F8) | `[machine]` check_session + preflight `2_5` entry / `2_parallel` complete |
+| Agent 4 isolation: `technical.json` + `handoffs/4*` must not cite fundamental paths (FDD, valuation, background, latest_quarter, market_context, sec_filings, sp_financials) | `[machine]` WARN default / FAIL `--full` |
+| Handoffs ≥300B for specialists **and** swarm leads (`phase0_*`, `phase25_*` aliases); four section headers | `[machine]` size FAIL `--full`; headers **WARN** |
+| `phase_status` complete ⇒ primary artifacts on disk; pending/in_progress with artifact on disk → lag | `[machine]` FAIL complete-without-artifact; **WARN** lag |
 | Reports non-stub; report numbers match registry AND data layer; ≥5 filing-grade numbers verified externally; rationales substantive with scripted intermediates; scripts rerun deterministically; no lost findings | `[audit]` Phase 5 agent |
-| `filing_deep_dive.json` present with footnotes + strategy_arc + management_scorecard; scorecard rows source-labeled; valuation hooks / report sections consume deep dive | `[machine]` + `[audit]` |
-| `market_context.json` when present: schema + rationale; valuation `market_context_hooks` non-empty; absent on legacy sessions → SKIPPED (not FAIL) | `[machine]` + `[audit]` |
-| `phase_status.json` when present: schema + designed phase coverage; absent on legacy sessions → SKIPPED (not FAIL); new sessions scaffold it | `[machine]` |
+| `filing_deep_dive.json` structure (footnotes + strategy_arc + scorecard); hook *consumption quality* / report sections | `[machine]` structure + `[audit]` substance |
+| `market_context.json` when present: schema + rationale; valuation `market_context_hooks` non-empty; medium/high intensity not all-`noted_only`; absent → SKIPPED (legacy) | `[machine]` + `[audit]` |
+| `phase_status.json` when present: schema + designed phase coverage; absent → SKIPPED (legacy); new sessions scaffold it | `[machine]` |
 | `research_brief.json` when present: schema + depth + ≥3 questions; absent → SKIPPED (legacy); new sessions write before Phase 0 | `[machine]` + `[audit]` |
-| Phase entry/complete preflight available (`preflight_phase.py`); orchestrator MUST use before 2/2.5/4/5 and before marking 0/2.5 complete | `[human]`/`[orchestrator]` |
-| Decision-grade returns: Phase 0 `downstream_relevance`; handoffs with downstream actions; no filing dumps in swarm JSON | `[audit]` + merge preflight |
+| Phase entry/complete preflight (`preflight_phase.py`); orchestrator MUST use before 2/2.5/4/5 and before marking 0/1_parallel/1c/2_parallel/2.5 complete | `[human]`/`[orchestrator]` (script exists; not auto-CI) |
+| Decision-grade returns: Phase 0 `downstream_relevance`; handoffs with downstream actions; no filing dumps in swarm JSON | `[audit]` + merge preflight (raw counts) |
 | ≥3 footnote/deep-dive figures verified against `data/raw_sec/`; multi-year annual text retained under session tree | `[audit]` Phase 5 agent |
 | Sector module read and model choice justified | `[audit]` Phase 5 agent |
 | Region module read when market_context present; CoC/accounting/ownership dials justified (no silent regional haircuts); intensity gate respected | `[audit]` Phase 5 agent |
 | Reverse-engineering done; priced-for-perfection explicitly flagged true/false with rationale | `[audit]` Phase 5 agent |
 | SBC/dilution at critical intensity for growth / is_also_growth | `[audit]` Phase 5 agent |
 | No fabricated numbers: every number sourced or justified | `[audit]` Phase 5 agent |
+| Subagent *API* spawn proof / token counts | **Not machine-enforced** (optional process telemetry later) |
 | Manual-review flag acted on when confidence < 0.70 | `[human]` |
 
 ## 14. Quick start

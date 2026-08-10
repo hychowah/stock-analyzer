@@ -52,6 +52,8 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD`
 
 **Dependency rule of thumb:** do not start **2** without 1b+1c evidence; do not start **4** without valuation+risk_bridge+technical+tsr; do not claim **done** without audit PASS.
 
+**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`.
+
 ---
 
 ## 3. If X is missing, do not start Y

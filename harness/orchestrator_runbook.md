@@ -30,13 +30,14 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 
 ## Every agent return
 
-6. Update `registry/phase_status.json` **before** next spawn: `status`, `artifacts[]`, `handoff` path; re-check paths on disk **under current `S` only**.
-7. Subagent spawn must include: conventions header + agent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for Agent 4, exemplar paths, `agent_id`).
+6. Update `registry/phase_status.json` **before** next spawn: `status`, `artifacts[]`, `handoff` path; re-check paths on disk **under current `S` only**. Never mark phase `complete` if primary artifacts or required handoffs are missing (`check_session` FAILs complete-without-artifact).
+7. Prefer specialist **subagents** with isolated prompts for parallel gather (Phase 0, 2a∥2b∥2c, 4∥5∥12, stress, reports). Quality is enforced via **artifacts** (hooks, Agent 4 purity, handoffs), not spawn API proof. If you work inline, still write the same paths + handoffs (`orchestrator_inline` is allowed; hollow shells are not).
+8. Subagent spawn must include: conventions header + agent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for Agent 4, exemplar paths, `agent_id`).
 
 ## Before Phase 2 parallel (4 ∥ 5 ∥ 12)
 
-8. Preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel` — FAIL → fix upstream.
-9. **Freeze once:** write `data/price_snapshot.json` (price-only):
+9. Preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel` — FAIL → fix upstream.
+10. **Freeze once:** write `data/price_snapshot.json` (price-only):
 
 ```json
 {
@@ -52,20 +53,21 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
    - Inject path into Agent 4 / 5 / 12 prompts.  
    - Do **not** re-freeze mid-Phase 2. Agents use `close` for “current price” / MoS; history series still from `prices_*.csv`.
 
-10. Confirm `registry/filing_deep_dive.json` on disk before Agent 5 (preflight already requires it).
+11. Confirm `registry/filing_deep_dive.json` on disk before Agent 5 (preflight already requires it). After Agent 5: valuation must have non-empty `filing_deep_dive_hooks` before Phase 2.5 (`preflight --phase 2_5` / `2_parallel --mode complete`).
 
 ## Merges (Phase 0 / 2.5)
 
-11. Persist each raw return under `registry/raw/` **before** merge.
-12. Merge for coverage; spot-check ≥3 headline numbers; never invent merge numbers.
-13. `risk_bridge.scenario_probabilities`: **only** `bear` / `base` / `bull` floats (sibling key for rationale/`_note`).
+12. Persist each raw return under `registry/raw/` **before** merge.
+13. Merge for coverage; spot-check ≥3 headline numbers; never invent merge numbers. Write swarm lead handoffs (`phase0_*.md`, `phase25_*.md`).
+14. `risk_bridge.scenario_probabilities`: **only** `bear` / `base` / `bull` floats (sibling key for rationale/`_note`).
+15. Before flipping Phase 0 / 1_parallel / 1c / 2_parallel / 2.5 complete: `preflight_phase.py --mode complete` for that phase.
 
 ## Before Phase 4 / 5
 
-14. Preflight `4_parallel` / `5` as in `HARNESS_MAP.md`.
-15. After audit PASS: set phase 5 complete, README audit line, `check_session.py --full`. Do not leave Phase 4 agents `pending` when reports exist.
-16. **Never** ask Agent 13 to author missing FDD as a substitute for re-running 2e + 5.
-17. **Finalize for lookback / comparison DB** (required for new sessions):
+16. Preflight `4_parallel` / `5` as in `HARNESS_MAP.md`.
+17. After audit PASS: set phase 5 complete, README audit line, `check_session.py --full`. Do not leave Phase 4 agents `pending` when reports exist.
+18. **Never** ask Agent 13 to author missing FDD as a substitute for re-running 2e + 5.
+19. **Finalize for lookback / comparison DB** (required for new sessions):
 
 ```bash
 python3 scripts/finalize_session.py --ticker T --date D

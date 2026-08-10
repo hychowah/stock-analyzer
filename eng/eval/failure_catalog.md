@@ -20,5 +20,9 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F14 | New valuation barely moves prior FV | Cross-session anchoring; Agent 5 saw old snapshot | W1 |
 | F15 | Same-day re-run overwrote prior folder | Scaffold used --force / no auto __rN | W1 |
 | F16 | Agent opens yesterday’s session before new scaffold | “Check if prior is usable” orientation | W1 |
+| F17 | Technical lens cites valuation/FDD paths | Agent 4 context contamination / solo mega-context | W1 |
+| F18 | phase_status complete / pending lag vs disk | Orchestrator resume map not updated | W1 |
+| F19 | Missing phase0/phase25 swarm handoffs | Merge without decision-grade swarm lead note | W1 |
+| F20 | medium/high intensity all market_context_hooks noted_only | Hollow region treatment | W1 |
 
 Add rows when audits or production incidents recur.

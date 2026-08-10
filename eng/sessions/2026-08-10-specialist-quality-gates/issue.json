@@ -1,0 +1,33 @@
+{
+  "goal": "Selective Mode A specialist-quality machine gates: FDD hooks (F8), Agent 4 isolation, swarm handoffs, phase_status↔disk — outcomes not spawn APIs",
+  "non_goals": [
+    "Do not require Task/subagent API spawn proof",
+    "Do not split Agent 5 / multi-valuer",
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent FV/MoS in Mode B"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "Empty filing_deep_dive_hooks FAIL under check_session --full when FDD present",
+    "Contaminated Agent 4 technical handoff FAIL under --full",
+    "Swarm lead handoffs (phase0/phase25 aliases) required in --full checklist",
+    "Spec states outcomes-not-spawn; Agent 13 process band updated",
+    "eng_verify green; harness/VERSION bumped with research-runtime ships",
+    "Fixtures and unit tests only — no live archive mutation"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "templates/",
+    "harness/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest scripts/tests/test_gates_preflight.py scripts/tests/test_market_context_check.py scripts/tests/test_session_isolation_check.py scripts/tests/test_phase_status.py scripts/tests/test_fdd_hooks_check.py scripts/tests/test_agent4_isolation_check.py scripts/tests/test_handoff_structure.py -q"
+  ]
+}

@@ -16,7 +16,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 4. Run `python3 scripts/eng_verify.py` (baseline).  
 5. Implement the increment.  
 6. Re-verify; only then flip `passes: true` (verifier role).  
-7. Update `progress.md`; leave a mergeable clean tree; **commit** the verified increment (see Git discipline — agents only run `git commit` when the user asks).
+7. Update `progress.md`; leave a mergeable clean tree. **Do not `git commit` until the user explicitly agrees** (see Git discipline).
 
 ## Work types
 
@@ -38,7 +38,8 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 6. **App state** under `apps/<name>/.local/` only.  
 7. **W1 changes** must run research unit tests, not only `eng_verify`.  
 8. Gen ≠ eval: implementer does not mark `passes: true`.  
-9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `scripts/kd_research/`, research scripts, `templates/`, root `sector_*.md` / `region_*.md`), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.
+9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `scripts/kd_research/`, research scripts, `templates/`, root `sector_*.md` / `region_*.md`), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  
+10. **No commit without user agreement:** never run `git commit`, `git push`, amend, or force-push unless the user has **explicitly** asked or approved in this conversation (e.g. “commit”, “yes commit that”). Preparing a message or staging when asked is fine; silent commits are forbidden.
 
 ## Key paths
 
@@ -69,17 +70,30 @@ Mode A identity source of truth: **`harness/VERSION`** (stamped into every resea
 
 ## Git discipline (Mode B)
 
-Aligned with `harness/research/` **H9** (git as memory & recovery) and the coding-agent session loop — kept light; not Conventional Commits.
+Aligned with `harness/research/` **H9** (git as memory & recovery) — kept light; not Conventional Commits.
+
+### Hard rule: user agreement before commit
+
+| Allowed without asking | Requires explicit user agreement |
+|------------------------|----------------------------------|
+| `git status` / `git diff` / `git log` | `git commit` |
+| Edit files, run tests, update `progress.md` | `git push` / force-push |
+| Propose a commit message in chat | `git commit --amend` on published history |
+| `git add` only when user asked to commit | Any rewrite of shared history |
+
+**Explicit agreement** means a clear user turn such as: “commit”, “commit the changes”, “yes commit that”, “ship it to git”.  
+**Not** agreement: silence, “looks good”, “continue”, “next”, or finishing a feature list item.
+
+If ready to commit: summarize what will be committed and **ask**; only then run `git commit`.
 
 | Rule | Detail |
 |------|--------|
-| **When** | After each **verified** feature/increment (not only at end of a multi-day eng session). |
+| **When (after agreement)** | After each **verified** feature/increment. |
 | **Gate first** | `eng_verify` (and listed verify_commands) green **before** commit when claiming the feature done. |
-| **Message** | One descriptive subject: **what changed + why** (enough to resume from `git log` alone). Optional body for risks / follow-ups. |
+| **Message** | One descriptive subject: **what changed + why**. Optional body for risks / follow-ups. |
 | **W1** | Same commit (or same change set before ship) must include the `harness/VERSION` bump when research-runtime paths change. |
 | **Do not** | Commit broken `eng_verify`, secrets, or rewrites of completed `archive/research/**` / `archive/outcomes/**` to green tests. |
-| **Session end** | Clean tree preferred (`git status` empty or only intentional WIP). If WIP must remain, note it in `progress.md` + `status.resume_hint`. |
-| **Recovery** | Prefer reset/revert to last good commit over hand-editing a corrupted half-change. |
-| **Agents** | Prepare the tree + message; run `git commit` only when the user asks. No force-push / no amend of published history unless explicitly requested. |
+| **Session end** | Clean tree preferred. If WIP must remain, note it in `progress.md` + `status.resume_hint` — still **no** unsolicited commit. |
+| **Recovery** | Prefer reset/revert to last good commit only with user agreement (destructive). |
 
 Industry context (advisory): `harness/research/01_harness_engineering.md` §3, `08_technique_catalog.md` H6/H9/H18.

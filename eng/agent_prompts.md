@@ -17,7 +17,7 @@ Never invent fair values. Never schedule research phases unless user asks for a 
 4. Do **not** set `passes: true`.  
 5. Do **not** mutate `archive/research` or `archive/outcomes`.  
 6. If W1 / research-runtime paths change: **bump `harness/VERSION`** in the same change set.  
-7. After verify-ready work: update `progress.md`; leave a clean mergeable tree. **Commit only when the user asks** (or when session protocol explicitly requires it) — always prepare a descriptive subject (what + why). Never force-push / amend published history unless asked.
+7. After verify-ready work: update `progress.md`; leave a clean mergeable tree. **Never `git commit` without explicit user agreement in this chat** (e.g. “commit these changes”). You may propose a subject (what + why) and ask. Never force-push / amend published history unless asked.
 
 ## Verifier
 
@@ -28,4 +28,5 @@ Skeptical separate role:
 3. Reject W1 ships that touch research-runtime without `harness/VERSION` bump.  
 4. Only then flip `passes: true` and write `ship_note.json` if done.  
 5. Ship note may list the intended commit subject; do not claim shipped if verify failed.  
+6. Do **not** commit as part of verify; commit only after user agreement.
 

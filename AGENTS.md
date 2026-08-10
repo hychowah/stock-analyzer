@@ -15,7 +15,8 @@ Auto-loaded entrypoint. **Keep this file short.** Deep law lives in nested files
 2. Mode B home is **`eng/`** (never top-level `build/` — gitignored).  
 3. Mode B does **not** run research Phases 0–5 unless the user explicitly schedules a black-box research experiment.  
 4. Mode A agents **must open `harness/RESEARCH_AGENTS.md`** for the full pipeline, justification contract, and quality gates before Phase 0. Do not invent methodology from this router alone.  
-5. English only for normative keys, schemas, registry fields, and reports.
+5. English only for normative keys, schemas, registry fields, and reports.  
+6. **No git commit without user agreement** — agents must not `git commit` / push / amend until the user explicitly asks or approves in-chat. Details: `eng/AGENTS.md` Git discipline (Mode B); Mode A same bar for any harness commits.
 
 ## Quick commands
 
@@ -58,7 +59,7 @@ Details: **`harness/RESEARCH_AGENTS.md`**.
 
 ## Mode B one-line loop
 
-Scaffold eng session → baseline `eng_verify` → implement one feature → verify → ship note → **commit** (descriptive; see `eng/AGENTS.md` Git discipline).  
+Scaffold eng session → baseline `eng_verify` → implement one feature → verify → ship note → **ask user** → commit only if agreed (`eng/AGENTS.md` Git discipline).  
 Default data root: `ARCHIVE_ROOT=<project>/archive`.  
 Details: **`eng/AGENTS.md`**.
 
@@ -68,4 +69,5 @@ Details: **`eng/AGENTS.md`**.
 - Put product UI state under `archive/research/`.  
 - Invent fair values in Mode B — read catalog/snapshots only.  
 - Use multi-agent fan-out for tightly sequential valuation writes (Mode A Agent 5 stays single-writer).  
-- **Mode A new run:** open yesterday’s session “to see if it’s usable” before scaffolding — forbidden under isolation.
+- **Mode A new run:** open yesterday’s session “to see if it’s usable” before scaffolding — forbidden under isolation.  
+- **`git commit` without the user saying so** — forbidden in both modes.

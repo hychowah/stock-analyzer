@@ -75,10 +75,10 @@ python3 scripts/sync_eng_fixtures.py --tickers META,JPM --dates 2026-08-03,2026-
 
 ## Git (Mode B)
 
-- After a green verify for one feature: commit with a **descriptive** subject (what + why).  
+- **No commit without user agreement** — propose message, wait for “commit” / “yes commit that”.  
+- After agreement + green verify: descriptive subject (what + why).  
 - W1 runtime changes: include `harness/VERSION` bump in that change set.  
-- Full rules: `eng/AGENTS.md` → **Git discipline**.  
-- Agents commit only when the user asks (or session explicitly requires); always leave a mergeable tree + progress note.
+- Full rules: `eng/AGENTS.md` → **Git discipline**.
 
 ## Mode A version (W1)
 

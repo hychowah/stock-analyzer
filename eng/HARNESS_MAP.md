@@ -47,7 +47,7 @@ CI: `eng/fixtures/archive` (same shape).
 4. Implement one feature  
 5. Verify → flip passes  
 6. Ship note  
-7. **Commit** verified increment (descriptive message; see `eng/AGENTS.md` Git discipline)  
+7. Propose commit (message ready); **commit only after user agreement** (`eng/AGENTS.md` Git discipline)  
 
 **Session start:** progress + feature_list + **recent git log**.
 

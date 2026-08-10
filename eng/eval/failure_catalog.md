@@ -21,6 +21,7 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F15 | Same-day re-run overwrote prior folder | Scaffold used --force / no auto __rN | W1 |
 | F16 | Agent opens yesterday’s session before new scaffold | “Check if prior is usable” orientation | W1 |
 | F17 | Valuation subagent runs before phase 2_parallel | Phase graph / preflight skipped | W1 |
+| F18 | Agent committed without user asking | Missing user-agreement gate on git commit | W5 |
 | F17 | Technical lens cites valuation/FDD paths | Agent 4 context contamination / solo mega-context | W1 |
 | F18 | phase_status complete / pending lag vs disk | Orchestrator resume map not updated | W1 |
 | F19 | Missing phase0/phase25 swarm handoffs | Merge without decision-grade swarm lead note | W1 |

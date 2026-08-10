@@ -1,5 +1,5 @@
 {
   "harness_version": "2.3.0",
   "harness_spec": "v2",
-  "notes": "2.3.0: specialist-quality machine gates — FDD hooks (F8), Agent 4 isolation, swarm handoffs, phase_status↔disk, intensity noted_only. Outcomes not spawn APIs. 2.2.1: new-run isolation. Git SHA is exact tree fingerprint."
+  "notes": "2.3.0: phase-graph preflight with --subagent binding (orchestrator vs subagent terminology); FDD hooks, technical isolation, phase_status↔disk. 2.2.x: session isolation + same-day __rN. Git SHA is exact tree fingerprint."
 }

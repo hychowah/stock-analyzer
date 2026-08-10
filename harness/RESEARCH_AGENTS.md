@@ -155,7 +155,7 @@ Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Desig
 
 | Phase | Agents (subagent type) | Depends on | Writes (single writer) |
 |---|---|---|---|
-| Orchestrator | main agent | — | `registry/sector_config.json`, `registry/market_context.json`, `registry/research_brief.json` (new sessions), maintains `registry/phase_status.json`; **MUST** run `scripts/preflight_phase.py` (or equivalent evidence check) before Phase 2 / 2.5 / 4 / 5 |
+| Orchestrator | lead (not a phase subagent) | — | `registry/sector_config.json`, `registry/market_context.json`, `registry/research_brief.json` (new sessions), maintains `registry/phase_status.json`; **MUST** run `scripts/preflight_phase.py --phase … [--subagent …]` before entering a phase / spawning that subagent |
 | 0 — Background | swarm × research rounds (`explore`) | sector_config, market_context, research_brief (when present) | main agent merges → `registry/background.json`; coverage vs brief + risk_candidates in handoff |
 | 1 — Data (parallel) | 2a fundamentals, 2b SEC filings, 2c news & sentiment (`coder`) | sector_config, market_context | `data/sp_financials.csv` (+ peers), `registry/sec_filings.json` + `data/raw_sec/` (+ multi-year annuals), `registry/news_sentiment.json` |
 | 1b — Latest quarter | 2d integrator (`coder`) | 2a, 2b | `registry/latest_quarter.json` |
@@ -282,4 +282,4 @@ python3 scripts/preflight_phase.py --ticker JPM --date $(date +%F) --phase 2_par
 python3 scripts/check_session.py --ticker JPM --date $(date +%F) --full --write-acceptance
 ```
 
-The main agent: scaffolds the session (§2, including `registry/phase_status.json`), classifies the sector (§5) and market/region context (§5b), writes `registry/research_brief.json`, then executes Phases 0–5 using the templates in `harness/agent_prompts.md` while updating the phase_status resume map and running preflight before Phase 2/2.5/4/5, finishing with `check_session.py --full` (optionally `--write-acceptance`). See `harness/HARNESS_MAP.md`.
+The **orchestrator** (lead): scaffolds the session (§2, including `registry/phase_status.json`), classifies the sector (§5) and market/region context (§5b), writes `registry/research_brief.json`, then executes Phases 0–5 **in graph order**, spawning only the **subagents** for the current phase (templates in `harness/agent_prompts.md`). Update `phase_status` after each subagent return. **MUST** run `preflight_phase.py --phase …` (and `--subagent …` when spawning a specialist) before entering a phase — FAIL means do not spawn. Finish with `check_session.py --full` (optionally `--write-acceptance`). See `harness/HARNESS_MAP.md`.

@@ -28,15 +28,29 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 4. Write `registry/research_brief.json` (new sessions) before Phase 0.
 5. **Do not** open prior session folders (valuation, reports, handoffs, snapshots) for any phase inputs. Intra-session sharing only under current `S`.
 
-## Every agent return
+## Phase graph + subagents (mandatory)
+
+| Role | Who | Rule |
+|------|-----|------|
+| **Orchestrator** | Lead (you) | Advances phases in order; only writer of `phase_status` |
+| **Subagent** | Specialist (2a, 5, 13, swarms, …) | Belongs to **one** phase; spawn only after that phase’s preflight |
+
+```bash
+python3 scripts/preflight_phase.py --ticker T --date D --phase <phase_id>
+python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel --subagent 5
+```
+
+FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. valuation subagent `5` before `2_parallel`). Parallel subagents **within** a phase may run together after preflight.
+
+## Every subagent return
 
 6. Update `registry/phase_status.json` **before** next spawn: `status`, `artifacts[]`, `handoff` path; re-check paths on disk **under current `S` only**. Never mark phase `complete` if primary artifacts or required handoffs are missing (`check_session` FAILs complete-without-artifact).
-7. Prefer specialist **subagents** with isolated prompts for parallel gather (Phase 0, 2a∥2b∥2c, 4∥5∥12, stress, reports). Quality is enforced via **artifacts** (hooks, Agent 4 purity, handoffs), not spawn API proof. If you work inline, still write the same paths + handoffs (`orchestrator_inline` is allowed; hollow shells are not).
-8. Subagent spawn must include: conventions header + agent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for Agent 4, exemplar paths, `agent_id`).
+7. Prefer specialist **subagents** with isolated prompts for parallel gather (Phase 0, 2a∥2b∥2c, 4∥5∥12, stress, reports). Quality is enforced via **artifacts** (hooks, technical subagent purity, handoffs), not spawn API proof. If you work inline, still write the same paths + handoffs (`orchestrator_inline` is allowed; hollow shells are not).
+8. Subagent spawn must include: conventions header + subagent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for technical subagent 4, exemplar paths, subagent id). On-disk `phase_status.agents[].agent_id` stores the **subagent id**.
 
-## Before Phase 2 parallel (4 ∥ 5 ∥ 12)
+## Before Phase 2 parallel (subagents 4 ∥ 5 ∥ 12)
 
-9. Preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel` — FAIL → fix upstream.
+9. Preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel` (optionally `--subagent 5`) — FAIL → fix upstream.
 10. **Freeze once:** write `data/price_snapshot.json` (price-only):
 
 ```json

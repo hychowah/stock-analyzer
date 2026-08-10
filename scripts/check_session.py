@@ -676,8 +676,11 @@ def check_phase_status(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
     from scripts.kd_research.gates import check_phase_status_disk  # noqa: WPS433
+    from scripts.kd_research.phase_graph import check_phase_status_graph  # noqa: WPS433
 
     for status, check, detail in check_phase_status_disk(session, data):
+        record(status, check, detail)
+    for status, check, detail in check_phase_status_graph(session):
         record(status, check, detail)
 
 

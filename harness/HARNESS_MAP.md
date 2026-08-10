@@ -68,16 +68,19 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD`
 | `risk_bridge` or technical / tsr | Phase 4 reports | 2.5 / 4 / 12 |
 | Three reports | Phase 5 | Agents 7 / 8 / 11 |
 
-**Mechanical preflight:**
+**Mechanical preflight (phase graph + evidence):**
 
 ```bash
 python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel
+python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel --subagent 5
 python3 scripts/preflight_phase.py --ticker T --date D --phase 2_5
 python3 scripts/preflight_phase.py --ticker T --date D --phase 4_parallel
 python3 scripts/preflight_phase.py --ticker T --date D --phase 5
 ```
 
-Orchestrator **MUST** preflight (or equivalent evidence check) before those phases. FAIL → fix upstream; do not invent.
+- **Orchestrator** = lead; **subagent** = specialist on the phase graph (ids: 2a, 5, 13, …).  
+- Preflight checks **prior phases complete** and optional **`--subagent` belongs to `--phase`**.  
+- Orchestrator **MUST** preflight before starting a phase / spawning its subagents. FAIL → fix upstream; do not invent.
 
 ---
 

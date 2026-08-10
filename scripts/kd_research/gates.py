@@ -701,12 +701,25 @@ def entry_checks(
     *,
     ticker: str | None = None,
     strict_optional: bool = False,
+    subagent_id: str | None = None,
+    agent_id: str | None = None,  # deprecated alias for subagent_id
 ) -> list[tuple[str, str, str]]:
     """Return list of (status, check_id, detail) for entering phase_id."""
     if phase_id not in PHASE_ENTRY_REQUIRED and phase_id not in ("0",):
         return [("FAIL", "phase_id", f"unknown phase_id={phase_id!r}")]
 
     results: list[tuple[str, str, str]] = []
+    # Phase graph: order + allowed subagent (before file evidence)
+    from scripts.kd_research.phase_graph import check_phase_graph_entry  # noqa: WPS433
+
+    results.extend(
+        check_phase_graph_entry(
+            session,
+            phase_id,
+            subagent_id=subagent_id if subagent_id is not None else agent_id,
+        )
+    )
+
     required = PHASE_ENTRY_REQUIRED.get(phase_id, [])
     for rel in required:
         if rel == "reports":

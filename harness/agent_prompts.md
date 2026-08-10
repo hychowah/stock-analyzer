@@ -41,7 +41,13 @@ Every template already carries the justification contract — do not strip it. S
 
 ## Orchestrator
 
-Main agent: follow `ROOT/harness/orchestrator_runbook.md` (phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent.  
+**You are the orchestrator (lead), not a phase specialist subagent.** Follow `ROOT/harness/orchestrator_runbook.md` (phase graph order, phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent.  
+
+**Phase graph:** Spawn **subagents** only for the current phase (see HARNESS_MAP). Before each phase:
+
+`python3 scripts/preflight_phase.py --ticker T --date D --phase <phase_id> [--subagent <id>]`
+
+Do not run valuation subagent (5) before phase `2_parallel` preflight passes; do not run audit subagent (13) before phase `5`.
 
 **New-run start (mandatory):** When the user asks to research ticker T (and does not name an existing `session_key` to resume), **scaffold first** and work under that `S`. **Forbidden:** listing `archive/research/T/`, reading yesterday’s reports/registry, or deciding whether a prior run is “usable” before starting. That is cross-session contamination. Same-day re-runs get a new `session_key` (`date` or auto `date__rN`); keep `S` pointed only at the current folder. Do not inject any prior session paths into subagent prompts.
 

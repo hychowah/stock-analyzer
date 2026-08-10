@@ -7,25 +7,36 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 
 ---
 
-## Before Phase 0
+## New run vs resume (read first)
+
+| User intent | Do this | Do **not** |
+|-------------|---------|------------|
+| **New research** on T (default) | Scaffold new `S` for as-of date; work only under `S` | List/open `archive/research/T/*` “to see if yesterday is usable” |
+| **Resume** an existing folder | Open that `session_key` only; continue `phase_status` | Start a parallel new tree unless asked |
+| **Compare** to prior | After finalize of **this** run, if user asked | Pre-load prior FV/thesis into Phase 0–5 |
+
+**Anti-pattern (forbidden):** “There’s a SOFI session from yesterday — checking if complete before starting.” That anchors the run. Scaffold today and proceed.
+
+## Before Phase 0 (new run)
 
 1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D`  
    - Note printed `session_key` (may be `D__r2` if same-day re-run).  
-   - Confirm `registry/session_isolation.json` exists (`mode=isolated` default).
+   - Confirm `registry/session_isolation.json` exists (`mode=isolated` default).  
+   - Set working `S` = that path only. **Skip** browsing other session keys.
 2. Write `registry/sector_config.json` — `module_file` is a **string** (never JSON `null`; use `""` only if documented). Use as-of **date** in JSON (`YYYY-MM-DD`), not necessarily the full session_key.
 3. Write `registry/market_context.json` (intensity gate is load-bearing).
 4. Write `registry/research_brief.json` (new sessions) before Phase 0.
-5. **Do not** open prior session valuation/snapshots for Agent 5 inputs. Intra-session sharing only under current `S`.
+5. **Do not** open prior session folders (valuation, reports, handoffs, snapshots) for any phase inputs. Intra-session sharing only under current `S`.
 
 ## Every agent return
 
-5. Update `registry/phase_status.json` **before** next spawn: `status`, `artifacts[]`, `handoff` path; re-check paths on disk.
-6. Subagent spawn must include: conventions header + agent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for Agent 4, exemplar paths, `agent_id`).
+6. Update `registry/phase_status.json` **before** next spawn: `status`, `artifacts[]`, `handoff` path; re-check paths on disk **under current `S` only**.
+7. Subagent spawn must include: conventions header + agent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for Agent 4, exemplar paths, `agent_id`).
 
 ## Before Phase 2 parallel (4 ∥ 5 ∥ 12)
 
-7. Preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel` — FAIL → fix upstream.
-8. **Freeze once:** write `data/price_snapshot.json` (price-only):
+8. Preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel` — FAIL → fix upstream.
+9. **Freeze once:** write `data/price_snapshot.json` (price-only):
 
 ```json
 {
@@ -41,20 +52,20 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
    - Inject path into Agent 4 / 5 / 12 prompts.  
    - Do **not** re-freeze mid-Phase 2. Agents use `close` for “current price” / MoS; history series still from `prices_*.csv`.
 
-9. Confirm `registry/filing_deep_dive.json` on disk before Agent 5 (preflight already requires it).
+10. Confirm `registry/filing_deep_dive.json` on disk before Agent 5 (preflight already requires it).
 
 ## Merges (Phase 0 / 2.5)
 
-10. Persist each raw return under `registry/raw/` **before** merge.
-11. Merge for coverage; spot-check ≥3 headline numbers; never invent merge numbers.
-12. `risk_bridge.scenario_probabilities`: **only** `bear` / `base` / `bull` floats (sibling key for rationale/`_note`).
+11. Persist each raw return under `registry/raw/` **before** merge.
+12. Merge for coverage; spot-check ≥3 headline numbers; never invent merge numbers.
+13. `risk_bridge.scenario_probabilities`: **only** `bear` / `base` / `bull` floats (sibling key for rationale/`_note`).
 
 ## Before Phase 4 / 5
 
-13. Preflight `4_parallel` / `5` as in `HARNESS_MAP.md`.
-14. After audit PASS: set phase 5 complete, README audit line, `check_session.py --full`. Do not leave Phase 4 agents `pending` when reports exist.
-15. **Never** ask Agent 13 to author missing FDD as a substitute for re-running 2e + 5.
-16. **Finalize for lookback / comparison DB** (required for new sessions):
+14. Preflight `4_parallel` / `5` as in `HARNESS_MAP.md`.
+15. After audit PASS: set phase 5 complete, README audit line, `check_session.py --full`. Do not leave Phase 4 agents `pending` when reports exist.
+16. **Never** ask Agent 13 to author missing FDD as a substitute for re-running 2e + 5.
+17. **Finalize for lookback / comparison DB** (required for new sessions):
 
 ```bash
 python3 scripts/finalize_session.py --ticker T --date D

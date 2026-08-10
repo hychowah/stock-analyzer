@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.2.0",
+  "harness_version": "2.2.1",
   "harness_spec": "v2",
-  "notes": "2.2.0: same-day multi-run session_key auto __rN; cross-session valuation isolation (intra-session share OK). Git SHA remains exact tree fingerprint."
+  "notes": "2.2.1: new-run start must not browse prior sessions. 2.2.0: same-day __rN + isolation policy. Git SHA is exact tree fingerprint."
 }

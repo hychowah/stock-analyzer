@@ -64,9 +64,14 @@ Rules:
    - **`session_key`** = unique folder: plain `YYYY-MM-DD` for the first run that day, then auto **`YYYY-MM-DD__r2`**, `__r3`, … if that folder is taken; or explicit `--slug`.  
    - Refuses to overwrite a non-empty folder (use a free key or `--force` only for broken scaffolds).
 3. Re-research → **new `session_key`** (new date and/or `__rN` / slug). **Never rewrite** a completed session to “fix” history.
-4. **Cross-session valuation isolation (default):** agents **within the same session** share freely via `S/registry`, handoffs, and `S/data`. Prior sessions (other `session_key`s, including the same ticker 10 days ago or earlier the same day) must **not** supply FV, MoS, scenario probabilities, or WACC as inputs to Agent 5 / valuation. Optional compare to a prior run is **post-audit / post-finalize only**. Policy file: `registry/session_isolation.json` (scaffolded).
+4. **Cross-session isolation (default for a NEW research run):**  
+   - **Within the current session** agents share freely via `S/registry`, handoffs, and `S/data`.  
+   - **Prior sessions** (other `session_key`s — yesterday, last week, earlier today) are **out of scope** unless the user explicitly says **resume** that folder or **compare after** this run.  
+   - **Do not** open, list, or “check whether yesterday’s SOFI/META/… run is complete and usable” before scaffolding a new run. That is contamination and waste. Scaffold today’s `S`, then work only under `S`.  
+   - Prior sessions must **not** supply FV, MoS, scenario probabilities, WACC, thesis text, or handoffs as inputs to any phase (not only Agent 5).  
+   - Optional compare to a prior run is **post-audit / post-finalize only**, and only if the user asked. Policy: `registry/session_isolation.json` (scaffolded).  
 5. After Phase 5 (audit): run `python3 scripts/finalize_session.py --ticker <T> --date <D_or_session_key>` (snapshot + compare SQLite + thin catalog). Finalize **always** stamps `harness_version` (from `harness/VERSION`) + `harness_git_sha` (+ dirty flag) into `meta/run_manifest.json` and `prediction_snapshot.provenance` — never leave these null. Use full `session_key` when the folder is `date__rN`.
-6. Path resolution (`scripts/kd_research/paths.py`): prefer `archive/research/...`; fall back to legacy root `<TICKER>/<DATE>/` during migration only.
+6. Path resolution (`scripts/kd_research/paths.py`): prefer `archive/research/...`; fall back to legacy root `<TICKER>/<DATE>/` during migration only. **New-run orientation does not include browsing other session folders.**
 7. Repo root holds harness code only (`harness/`, `scripts/`, `templates/`, sector/region modules, MCP packages) — not ticker session trees.
 
 ## 3. Required inputs

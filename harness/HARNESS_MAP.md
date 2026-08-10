@@ -28,7 +28,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD`
 
 **Harness identity (every run):** `harness/VERSION` → `harness_version` + `harness_spec`; git → `harness_git_sha` / `harness_dirty`. Stamped at scaffold; **refreshed at finalize** into `meta/run_manifest.json` and snapshot `provenance`.  
 
-**Isolation:** same session agents share `S/`; other `session_key`s must not feed valuation (`registry/session_isolation.json`).  
+**Isolation:** same session agents share `S/`. New run: **do not** open other `session_key`s first (`registry/session_isolation.json`). Resume only if user names the folder.  
 
 **Git (Mode A, light):** Prefer a clean tree at **finalize** so stamped `harness_git_sha` is meaningful (`harness_dirty=false`). Mid-phase WIP may stay uncommitted; durable resume is `registry/phase_status.json` + handoffs, not chat. Optional: one commit of the finished session after `finalize_session` (human/orchestrator). Coding/product commits: **`eng/AGENTS.md` Git discipline**.
 

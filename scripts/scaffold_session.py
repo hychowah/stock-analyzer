@@ -138,8 +138,10 @@ def _write_session_isolation(
         },
         "notes": (
             "Agents within this session share registry/handoffs/data. "
-            "Do not use other session_keys' FV/MoS/probs/WACC as valuation inputs. "
-            "Optional compare to prior runs only after audit/finalize."
+            "Do not open or list other session_keys under archive/research/ "
+            "(including yesterday) unless the user explicitly resumes that folder "
+            "or asks for post-finalize compare. "
+            "Prior FV/MoS/probs/WACC/thesis are not inputs to any phase."
         ),
     }
     path = root / "registry" / "session_isolation.json"

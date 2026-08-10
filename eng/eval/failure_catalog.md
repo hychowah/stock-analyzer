@@ -19,5 +19,6 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F13 | Next session cannot resume; half-done mess | No commit / no progress note after increment | W5 |
 | F14 | New valuation barely moves prior FV | Cross-session anchoring; Agent 5 saw old snapshot | W1 |
 | F15 | Same-day re-run overwrote prior folder | Scaffold used --force / no auto __rN | W1 |
+| F16 | Agent opens yesterday’s session before new scaffold | “Check if prior is usable” orientation | W1 |
 
 Add rows when audits or production incidents recur.

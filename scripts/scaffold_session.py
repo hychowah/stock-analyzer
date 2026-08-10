@@ -4,14 +4,17 @@
 Usage:
     python scripts/scaffold_session.py --ticker JPM --date 2026-07-25
 
-    # Controlled experiment / replicate (same calendar date, distinct folder)
+    # Second run same as-of day (auto session_key …/YYYY-MM-DD__r2)
+    python scripts/scaffold_session.py --ticker META --date 2026-08-10
+
+    # Named run / experiment
     python scripts/scaffold_session.py --ticker META --date 2026-08-10 \\
       --experiment exp-model-bakeoff --slug model-grok45 --replicate 1 \\
       --orchestrator-model grok-4.5
 
 Creates archive/research/<TICKER>/<SESSION_KEY>/{reports,data/...,charts,registry,meta},
-writes registry/phase_status.json (resume skeleton), meta/run_manifest.json (provenance
-stub), and refuses to overwrite an existing non-empty session folder.
+writes registry/phase_status.json, registry/session_isolation.json, meta/run_manifest.json.
+Same-day re-runs auto-allocate __rN when the bare date folder is taken (unless --slug).
 
 Legacy path (root/<TICKER>/<KEY>) is only used with --legacy.
 """
@@ -27,11 +30,13 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.kd_research.paths import (  # noqa: E402
+    allocate_session_key,
     ensure_archive_tree,
     make_session_key,
     parse_session_key,
     rel_to_project,
     run_id as make_run_id,
+    session_dir_nonempty,
     session_root,
 )
 from scripts.kd_research.phase_status import write_phase_status_skeleton  # noqa: E402
@@ -109,6 +114,40 @@ def _write_manifest_stub(
     return path
 
 
+def _write_session_isolation(
+    root: Path,
+    *,
+    ticker: str,
+    session_date: str,
+    session_key: str,
+) -> Path:
+    """Default: share freely inside S/; prior sessions must not feed valuation."""
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = {
+        "schema_version": 1,
+        "mode": "isolated",
+        "ticker": ticker.upper(),
+        "session_date": session_date,
+        "session_key": session_key,
+        "created_at": now,
+        "allow_prior_session_keys": [],
+        "rules": {
+            "intra_session_share": True,
+            "prior_valuation_as_input": False,
+            "prior_for_post_audit_compare": True,
+        },
+        "notes": (
+            "Agents within this session share registry/handoffs/data. "
+            "Do not use other session_keys' FV/MoS/probs/WACC as valuation inputs. "
+            "Optional compare to prior runs only after audit/finalize."
+        ),
+    }
+    path = root / "registry" / "session_isolation.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
+
+
 def scaffold(
     ticker: str,
     session_date: str,
@@ -123,26 +162,47 @@ def scaffold(
     orchestrator_model: str | None = None,
     default_subagent_model: str | None = None,
     notes: str | None = None,
+    auto_replicate: bool = True,
 ) -> Path:
     # Allow passing full session_key as --date for convenience
     if "__" in session_date and slug is None:
         session_date, slug = parse_session_key(session_date)
 
-    session_key = make_session_key(session_date, slug)
-    date_only, _ = parse_session_key(session_key)
-
     if not legacy:
         ensure_archive_tree(output_dir)
     prefer = "legacy" if legacy else "archive"
+
+    if slug:
+        session_key = make_session_key(session_date, slug)
+    else:
+        session_key = allocate_session_key(
+            ticker,
+            session_date,
+            None,
+            output_dir=output_dir,
+            prefer=prefer,
+            auto_replicate=auto_replicate and not force,
+        )
+
+    date_only, _ = parse_session_key(session_key)
     root = session_root(ticker, session_key, output_dir, prefer=prefer)
-    if root.exists() and any(root.iterdir()) and not force:
+
+    if session_dir_nonempty(root) and not force:
         raise SystemExit(
             f"Refusing to overwrite existing session folder: {root}\n"
-            "Use a new date, a new --slug for experiments, or pass --force if you really mean it."
+            "Pass a free --slug, omit --slug for auto __rN on same day, "
+            "or --force only for broken empty scaffolds."
         )
+
     for sub in SUBDIRS:
         (root / sub).mkdir(parents=True, exist_ok=True)
     write_phase_status_skeleton(root, ticker, date_only)
+    _write_session_isolation(
+        root,
+        ticker=ticker,
+        session_date=date_only,
+        session_key=session_key,
+    )
     _write_manifest_stub(
         root,
         ticker=ticker,
@@ -170,7 +230,8 @@ def main() -> None:
     ap.add_argument(
         "--slug",
         default=None,
-        help="Optional run slug → folder date__slug (experiments / same-day replicates)",
+        help="Optional run slug → folder date__slug. If omitted and bare date "
+        "folder is taken, auto-allocates r2, r3, …",
     )
     ap.add_argument(
         "--experiment",
@@ -216,6 +277,11 @@ def main() -> None:
         action="store_true",
         help="Write to root/<TICKER>/<KEY> instead of archive/research/ (tests/compat).",
     )
+    ap.add_argument(
+        "--no-auto-replicate",
+        action="store_true",
+        help="Do not auto-allocate __rN; refuse if bare date folder exists",
+    )
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
     root = scaffold(
@@ -231,11 +297,15 @@ def main() -> None:
         orchestrator_model=args.orchestrator_model,
         default_subagent_model=args.default_subagent_model,
         notes=args.notes,
+        auto_replicate=not args.no_auto_replicate,
     )
+    sk = root.name
     print(f"Session scaffolded: {root}")
+    print(f"  session_key={sk}")
     for sub in SUBDIRS:
         print(f"  {root / sub}/")
     print(f"  {root / 'registry' / 'phase_status.json'}")
+    print(f"  {root / 'registry' / 'session_isolation.json'}")
     print(f"  {root / 'meta' / 'run_manifest.json'}")
 
 

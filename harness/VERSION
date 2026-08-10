@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.1.0",
+  "harness_version": "2.2.0",
   "harness_spec": "v2",
-  "notes": "Intentional Mode A product version. Bump on methodology/runtime changes (phases, schemas, gates, prompts, sector/region law). Git SHA is the exact tree fingerprint."
+  "notes": "2.2.0: same-day multi-run session_key auto __rN; cross-session valuation isolation (intra-session share OK). Git SHA remains exact tree fingerprint."
 }

@@ -4,8 +4,9 @@ Canonical research sessions live under::
 
     <project>/archive/research/<TICKER>/<SESSION_KEY>/
 
-where ``SESSION_KEY`` is ``YYYY-MM-DD`` (production) or
-``YYYY-MM-DD__<slug>`` (experiments / replicates).
+where ``SESSION_KEY`` is ``YYYY-MM-DD`` (first run for that as-of day),
+``YYYY-MM-DD__rN`` (same-day production re-run), or
+``YYYY-MM-DD__<slug>`` (named / experiment runs).
 
 Legacy sessions (pre-migration) may still exist at::
 
@@ -119,9 +120,74 @@ def make_session_key(session_date: str, slug: str | None = None) -> str:
     return f"{session_date}__{slug}"
 
 
+# Same-day production re-runs: YYYY-MM-DD__r2, __r3, … or __run02
+_PRODUCTION_SLUG_RE = re.compile(r"^(?:r|run)\d+$", re.IGNORECASE)
+
+
 def is_production_session_key(session_key: str) -> bool:
-    """True when folder is plain YYYY-MM-DD (not an experiment slug run)."""
-    return DATE_DIR_RE.match(session_key) is not None
+    """True for plain YYYY-MM-DD or same-day re-run slugs (rN / runN).
+
+    Named experiment slugs (e.g. model-grok45) are non-production for catalog
+    “latest production” preference; they remain full research sessions.
+    """
+    if DATE_DIR_RE.match(session_key):
+        return True
+    _date, slug = parse_session_key(session_key)
+    if slug and _PRODUCTION_SLUG_RE.match(slug):
+        return True
+    return False
+
+
+def session_dir_nonempty(path: Path) -> bool:
+    """True if path exists and contains any entry (scaffold refuses these)."""
+    try:
+        return path.is_dir() and any(path.iterdir())
+    except OSError:
+        return path.exists()
+
+
+def allocate_session_key(
+    ticker: str,
+    session_date: str,
+    slug: str | None = None,
+    *,
+    output_dir: Path | str | None = None,
+    prefer: str = "archive",
+    auto_replicate: bool = True,
+) -> str:
+    """Choose a free session_key for a new scaffold.
+
+    - Explicit ``slug`` → ``YYYY-MM-DD__slug`` (caller still refuses if taken).
+    - No slug: prefer plain ``YYYY-MM-DD``; if that folder is non-empty and
+      ``auto_replicate``, allocate ``YYYY-MM-DD__r2``, ``__r3``, … 
+    """
+    if not DATE_DIR_RE.match(session_date):
+        # Allow full key passed as date (date__slug already parsed upstream)
+        if "__" in session_date and slug is None:
+            session_date, slug = parse_session_key(session_date)
+        else:
+            raise ValueError(f"session_date must be YYYY-MM-DD, got {session_date!r}")
+
+    if slug:
+        return make_session_key(session_date, slug)
+
+    plain = make_session_key(session_date, None)
+    plain_root = session_root(ticker, plain, output_dir, prefer=prefer)
+    if not session_dir_nonempty(plain_root):
+        return plain
+
+    if not auto_replicate:
+        return plain
+
+    for n in range(2, 1000):
+        candidate = make_session_key(session_date, f"r{n}")
+        cand_root = session_root(ticker, candidate, output_dir, prefer=prefer)
+        if not session_dir_nonempty(cand_root):
+            return candidate
+    raise RuntimeError(
+        f"Could not allocate session_key for {ticker.upper()} {session_date}: "
+        "r2..r999 all occupied"
+    )
 
 
 def run_id(ticker: str, session_key: str) -> str:

@@ -9,10 +9,13 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 
 ## Before Phase 0
 
-1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D`
-2. Write `registry/sector_config.json` — `module_file` is a **string** (never JSON `null`; use `""` only if documented).
+1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D`  
+   - Note printed `session_key` (may be `D__r2` if same-day re-run).  
+   - Confirm `registry/session_isolation.json` exists (`mode=isolated` default).
+2. Write `registry/sector_config.json` — `module_file` is a **string** (never JSON `null`; use `""` only if documented). Use as-of **date** in JSON (`YYYY-MM-DD`), not necessarily the full session_key.
 3. Write `registry/market_context.json` (intensity gate is load-bearing).
 4. Write `registry/research_brief.json` (new sessions) before Phase 0.
+5. **Do not** open prior session valuation/snapshots for Agent 5 inputs. Intra-session sharing only under current `S`.
 
 ## Every agent return
 
@@ -64,6 +67,8 @@ python3 scripts/finalize_session.py --ticker T --date D
     Disk session stays canonical; SQLite is a rebuildable projection for cross-run comparison and future UI (`harness/plan_research_compare_db.md`).
     Finalize refreshes `harness_version` (from `harness/VERSION`) + `harness_git_sha` / dirty into manifest + snapshot provenance — confirm printed in CLI output.
     Prefer finalize on a **clean git tree** when practical (dirty flag otherwise). Optional post-finalize: commit the finished session so the run is recoverable from git history; do not rewrite prior completed sessions.
+    Pass full `session_key` to finalize when folder is `date__rN` (e.g. `--date 2026-08-10__r2`).
+    Optional **compare-after** prior run: only after finalize; write a separate note — never edit this session’s valuation.
 
 ---
 

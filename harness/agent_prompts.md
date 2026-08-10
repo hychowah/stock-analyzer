@@ -14,6 +14,7 @@ Every template already carries the justification contract — do not strip it. S
 **Conventions for all agents:**
 - **Product purpose**: this harness produces **investment-decision research** (fair value, risks, timing, provenance). Optimize for **valuable results the next phase can use** — not for shorter chat or token thrift. Drop noise and raw dumps; never drop material risks, ownership facts, or footnote numbers to look concise.
 - **Hermetic scripts**: compute scripts must read session-cached data (`S/data/*.csv`, `S/registry/*.json`) when present and fetch live data only when absent. A rerun on the same session must reproduce the same numbers.
+- **Session sharing vs isolation**: **Within this session** agents must use each other’s artifacts under `S/` (handoffs, registry, data). **Across sessions** (other `session_key` under the same or other tickers): do **not** use prior `valuation_model`, prediction snapshots, or report FV/MoS as valuation inputs. See `S/registry/session_isolation.json`. Post-audit compare to a prior run is orchestrator-only and must not rewrite this session’s FV.
 - **Scripted intermediates / number integrity**: any number used inside an assumption build-up (e.g. realized beta, growth CAGR) must be computed by a script in `S/data/compute/`, not by unscripted mental math. Multi-step arithmetic belongs in compute scripts. Reports and later agents must **rehydrate** judgment numbers from registry/compute paths — never from chat memory.
 - **Benchmarks**: use the regional benchmark and sector index declared by the orchestrator in the session's required inputs (and `S/registry/research_brief.json` when present); deviate only with a stated rationale.
 - **Market / region context**: read `S/registry/market_context.json` when present (orchestrator writes it with sector_config). Cost of capital and governance dials are **local to listing and cash-flow currency** — do not paste US 10Y/ERP by default for non-USD models. Region modules (`region_*.md`) are advisory only; never apply hardcoded country WACC, ERP tables, or family-control discounts. Intensity `low` may no-op with explicit `noted_only` hooks; `medium`/`high` require real treatment. There is **no always-on region agent** — ownership depth is Agent 2e; CoC judgment is Agent 5.
@@ -40,7 +41,7 @@ Every template already carries the justification contract — do not strip it. S
 
 ## Orchestrator
 
-Main agent: follow `ROOT/harness/orchestrator_runbook.md` (phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent.
+Main agent: follow `ROOT/harness/orchestrator_runbook.md` (phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent. Do **not** inject prior session FV/snapshot paths into Agent 5/7/13 prompts. Same-day re-runs use a distinct `session_key` (`date` or `date__rN`); keep `S` pointed only at the current folder.
 
 ---
 
@@ -204,6 +205,8 @@ Write S/registry/technical.json per ROOT/templates/technical.schema.json, includ
 ```
 
 ### Agent 5 — valuation (`coder`)
+
+**Anti-anchoring:** Derive FV/MoS/probs only from **this session** (`S/data`, `S/registry`, compute scripts, primary sources). Do **not** open or target other `archive/research/<TICKER>/<other_session_key>/` valuation models, snapshots, or report verdicts to “stay consistent” with a prior run. Same-session upstream agents (2a–2e, 4, 12, risk inputs) are required inputs — prior-day research is not.
 
 ```text
 Value TICKER as of DATE.

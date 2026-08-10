@@ -12,7 +12,7 @@ archive/
 │   ├── research_compare.sqlite   # comparison warehouse (rebuildable; gitignored)
 │   └── migration_log.jsonl       # session moves from legacy root paths
 ├── research/
-│   └── <TICKER>/<YYYY-MM-DD>/   # immutable full session (same internals as harness v2)
+│   └── <TICKER>/<SESSION_KEY>/  # YYYY-MM-DD or YYYY-MM-DD__rN / __slug
 │       ├── reports/
 │       ├── data/
 │       ├── charts/
@@ -27,7 +27,7 @@ archive/
 ## Rules
 
 1. **Never overwrite** a completed research session. New analysis → new date folder.
-2. **Canonical path:** `archive/research/<TICKER>/<DATE>/`.
+2. **Canonical path:** `archive/research/<TICKER>/<SESSION_KEY>/` (`SESSION_KEY` = as-of date or `date__rN` / named slug). Same-day re-runs auto-allocate `__r2`, `__r3`, ….
 3. **Disk is system of record.** JSON indexes + SQLite are rebuildable projections — never the only copy of numbers.
 4. **Indexes are caches** — rebuild with `python3 scripts/rebuild_catalog.py`.
 5. **Comparison DB** — after Phase 5, export with `python3 scripts/export_compare_db.py` (see below). Plan: `harness/plan_research_compare_db.md`.

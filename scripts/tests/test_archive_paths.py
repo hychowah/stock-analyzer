@@ -13,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from scripts.kd_research.paths import (  # noqa: E402
+    allocate_session_key,
+    is_production_session_key,
     iter_research_sessions,
     make_session_key,
     parse_session_key,
@@ -48,6 +50,28 @@ class PathsTests(unittest.TestCase):
     def test_session_key_slug(self):
         self.assertEqual(make_session_key("2026-08-03", "r1"), "2026-08-03__r1")
         self.assertEqual(parse_session_key("2026-08-03__r1"), ("2026-08-03", "r1"))
+
+    def test_is_production_includes_rn(self):
+        self.assertTrue(is_production_session_key("2026-08-03"))
+        self.assertTrue(is_production_session_key("2026-08-03__r2"))
+        self.assertTrue(is_production_session_key("2026-08-03__run03"))
+        self.assertFalse(is_production_session_key("2026-08-03__model-a"))
+
+    def test_allocate_plain_then_r2(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            key1 = allocate_session_key("META", "2026-08-10", output_dir=root)
+            self.assertEqual(key1, "2026-08-10")
+            p1 = session_root("META", key1, root)
+            p1.mkdir(parents=True)
+            (p1 / "registry").mkdir()
+            key2 = allocate_session_key("META", "2026-08-10", output_dir=root)
+            self.assertEqual(key2, "2026-08-10__r2")
+            p2 = session_root("META", key2, root)
+            p2.mkdir(parents=True)
+            (p2 / "meta").mkdir()
+            key3 = allocate_session_key("META", "2026-08-10", output_dir=root)
+            self.assertEqual(key3, "2026-08-10__r3")
 
     def test_session_root_default_under_archive(self):
         with tempfile.TemporaryDirectory() as td:
@@ -100,8 +124,25 @@ class ScaffoldArchiveTests(unittest.TestCase):
             ))
             self.assertTrue((root / "meta").is_dir())
             self.assertTrue((root / "registry" / "phase_status.json").is_file())
+            self.assertTrue((root / "registry" / "session_isolation.json").is_file())
             data = json.loads((root / "registry" / "phase_status.json").read_text())
             self.assertEqual(data["ticker"], "ZZARCH")
+            iso = json.loads((root / "registry" / "session_isolation.json").read_text())
+            self.assertEqual(iso["mode"], "isolated")
+            self.assertIs(iso["rules"]["prior_valuation_as_input"], False)
+            self.assertIs(iso["rules"]["intra_session_share"], True)
+
+    def test_scaffold_same_day_auto_r2(self):
+        sc = _load_scaffold()
+        with tempfile.TemporaryDirectory() as td:
+            r1 = sc.scaffold("ZZDUP", "2099-07-01", output_dir=td)
+            self.assertTrue(r1.name == "2099-07-01")
+            r2 = sc.scaffold("ZZDUP", "2099-07-01", output_dir=td)
+            self.assertEqual(r2.name, "2099-07-01__r2")
+            self.assertTrue((r2 / "registry" / "session_isolation.json").is_file())
+            man = json.loads((r2 / "meta" / "run_manifest.json").read_text())
+            self.assertEqual(man["session_key"], "2099-07-01__r2")
+            self.assertEqual(man["session_date"], "2099-07-01")
 
 
 class OutcomesHelpersTests(unittest.TestCase):

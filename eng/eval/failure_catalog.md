@@ -17,5 +17,7 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F11 | Catalog runs lack model/harness identity | Snapshot/finalize not stamping provenance | W1 |
 | F12 | Mode A runtime changed without version bump | Forgot `harness/VERSION` on W1 ship | W1/W5 |
 | F13 | Next session cannot resume; half-done mess | No commit / no progress note after increment | W5 |
+| F14 | New valuation barely moves prior FV | Cross-session anchoring; Agent 5 saw old snapshot | W1 |
+| F15 | Same-day re-run overwrote prior folder | Scaffold used --force / no auto __rN | W1 |
 
 Add rows when audits or production incidents recur.

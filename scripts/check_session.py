@@ -37,11 +37,19 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = PROJECT_ROOT / "templates"
+
+# Paths into other research sessions (cross-session contamination signal)
+_OTHER_SESSION_PATH_RE = re.compile(
+    r"archive[/\\]research[/\\](?P<ticker>[A-Za-z0-9][A-Za-z0-9._-]*)[/\\]"
+    r"(?P<sk>\d{4}-\d{2}-\d{2}(?:__[A-Za-z0-9][A-Za-z0-9._-]{0,80})?)",
+    re.IGNORECASE,
+)
 
 try:
     import jsonschema  # type: ignore
@@ -179,8 +187,18 @@ def check_identity(session: Path, ticker: str, session_date: str) -> None:
     if sc.get("ticker") and sc["ticker"].upper() != ticker.upper():
         record("FAIL", "identity: ticker", f"json says {sc['ticker']}, folder says {ticker}")
         ok = False
-    if sc.get("session_date") and sc["session_date"] != session_date:
-        record("FAIL", "identity: session_date", f"json says {sc['session_date']}, folder says {session_date}")
+    # session_date in JSON is as-of YYYY-MM-DD; folder may be date__slug
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.paths import parse_session_key  # noqa: WPS433
+
+    asof, _ = parse_session_key(session_date)
+    if sc.get("session_date") and sc["session_date"] != asof and sc["session_date"] != session_date:
+        record(
+            "FAIL",
+            "identity: session_date",
+            f"json says {sc['session_date']}, folder as-of/key says {asof}/{session_date}",
+        )
         ok = False
     conf = sc.get("confidence")
     if isinstance(conf, (int, float)) and conf < 0.70:
@@ -693,6 +711,103 @@ def check_filing_deep_dive(session: Path) -> None:
         record("PASS", "filing_deep_dive content gates")
 
 
+def check_session_isolation(session: Path, *, full: bool = False) -> None:
+    """Cross-session isolation: prior runs must not feed this session's valuation.
+
+    Intra-session paths under this folder are fine. Citations to
+    archive/research/<TICKER>/<other_session_key>/ in valuation-facing artifacts
+    are WARN (default) or FAIL with --full.
+    """
+    iso = session / "registry" / "session_isolation.json"
+    if iso.is_file():
+        try:
+            data = json.loads(iso.read_text(encoding="utf-8"))
+            mode = data.get("mode") or "isolated"
+            rules = data.get("rules") if isinstance(data.get("rules"), dict) else {}
+            if rules.get("prior_valuation_as_input") is True:
+                record(
+                    "WARN",
+                    "session_isolation policy",
+                    "prior_valuation_as_input=true — unusual; risk of anchoring",
+                )
+            elif rules.get("intra_session_share") is False:
+                record(
+                    "WARN",
+                    "session_isolation policy",
+                    "intra_session_share=false — breaks normal phase handoffs",
+                )
+            else:
+                record("PASS", "session_isolation policy", f"mode={mode}")
+        except Exception as e:  # noqa: BLE001
+            record("FAIL", "session_isolation parse", str(e))
+    else:
+        record(
+            "SKIPPED",
+            "session_isolation",
+            "registry/session_isolation.json absent (legacy OK; new scaffolds write it)",
+        )
+
+    session_key = session.name
+    ticker = session.parent.name.upper()
+    allow: set[str] = set()
+    if iso.is_file():
+        try:
+            data = json.loads(iso.read_text(encoding="utf-8"))
+            for k in data.get("allow_prior_session_keys") or []:
+                if isinstance(k, str) and k.strip():
+                    allow.add(k.strip())
+        except Exception:  # noqa: BLE001
+            pass
+
+    scan_rels = [
+        "data/valuation_model.json",
+        "registry/risk_bridge.json",
+        "meta/prediction_snapshot.json",
+        "registry/handoffs/5_valuation.md",
+        "registry/handoffs/7_fundamental_report.md",
+        "registry/handoffs/7_fundamental.md",
+        "registry/handoffs/13_audit.md",
+    ]
+    # Reports if present
+    for p in (session / "reports").glob("*.md") if (session / "reports").is_dir() else []:
+        scan_rels.append(str(p.relative_to(session)).replace("\\", "/"))
+
+    hits: list[str] = []
+    for rel in scan_rels:
+        path = session / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for m in _OTHER_SESSION_PATH_RE.finditer(text):
+            other_t = m.group("ticker").upper()
+            other_sk = m.group("sk")
+            if other_t != ticker:
+                continue
+            if other_sk == session_key:
+                continue
+            if other_sk in allow:
+                continue
+            hits.append(f"{rel} → {other_t}/{other_sk}")
+
+    if not hits:
+        record("PASS", "cross-session valuation isolation", "no foreign session paths in valuation-facing artifacts")
+        return
+
+    sample = "; ".join(hits[:5])
+    more = f" (+{len(hits) - 5} more)" if len(hits) > 5 else ""
+    detail = (
+        f"prior session path(s) cited (risk of FV anchoring): {sample}{more}. "
+        "Valuation must use this session only; compare-after is post-audit only."
+    )
+    if full:
+        record("FAIL", "cross-session valuation isolation", detail)
+    else:
+        record("WARN", "cross-session valuation isolation", detail)
+
+
 def check_meta_artifacts(session: Path) -> None:
     """Optional meta/ prediction snapshot + run_manifest (archive layout).
 
@@ -797,9 +912,9 @@ def main() -> int:
 
     if args.session_dir:
         session = Path(args.session_dir).expanduser().resolve()
-        # archive/research/TICKER/DATE → ticker is parent.name; same for legacy ROOT/TICKER/DATE
+        # archive/research/TICKER/SESSION_KEY → ticker is parent.name
         ticker = session.parent.name
-        session_date = session.name
+        session_date = session.name  # may be date__slug; identity uses as-of parse
     elif args.ticker and args.date:
         if str(PROJECT_ROOT) not in sys.path:
             sys.path.insert(0, str(PROJECT_ROOT))
@@ -830,6 +945,7 @@ def main() -> int:
     check_market_context(session)
     check_research_brief(session)
     check_phase_status(session)
+    check_session_isolation(session, full=bool(args.full))
     check_meta_artifacts(session)
     if args.full:
         check_filing_deep_dive(session)

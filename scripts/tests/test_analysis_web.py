@@ -124,6 +124,11 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertTrue(status.startswith("200"))
         self.assertIn(b"exp-demo", body)
 
+    def test_calibration_page(self):
+        status, body = self._call("/calibration")
+        self.assertTrue(status.startswith("200"))
+        self.assertIn(b"Calibration", body)
+
 
 if __name__ == "__main__":
     unittest.main()

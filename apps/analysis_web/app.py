@@ -102,6 +102,7 @@ def _layout(title: str, body: str, *, flash: str | None = None) -> str:
       <a href="/">Runs</a>
       <a href="/health">Health</a>
       <a href="/experiments">Experiments</a>
+      <a href="/calibration">Calibration</a>
     </div>
   </header>
   <main>
@@ -343,6 +344,62 @@ def page_artifact(api: CatalogApi, qs: dict[str, list[str]]) -> tuple[str, bytes
     return ctype, data, ""
 
 
+def page_calibration(api: CatalogApi, qs: dict[str, list[str]]) -> str:
+    horizon = (qs.get("horizon") or ["1m"])[0].strip() or "1m"
+    pass_only = (qs.get("pass_only") or ["1"])[0] != "0"
+    try:
+        report = api.calibration(horizon=horizon, pass_only=pass_only)
+    except DbMissing as e:
+        return _layout("Calibration", f'<div class="card err">{_esc(e)}</div>')
+
+    overall = report.get("overall") or {}
+    buckets = report.get("by_mos_bucket") or {}
+    trs = []
+    for name, st in buckets.items():
+        rate = st.get("direction_hit_rate")
+        rate_s = f"{100 * rate:.1f}%" if isinstance(rate, float) else "—"
+        trs.append(
+            f"<tr><td class='mono'>{_esc(name)}</td>"
+            f"<td class='num'>{st.get('n')}</td>"
+            f"<td class='num'>{st.get('n_scored')}</td>"
+            f"<td class='num'>{rate_s}</td>"
+            f"<td class='num'>{_fmt_num(st.get('mean_return_pct'), 2)}</td></tr>"
+        )
+    o_rate = overall.get("direction_hit_rate")
+    o_rate_s = f"{100 * o_rate:.1f}%" if isinstance(o_rate, float) else "—"
+    body = f"""
+    <div class="card">
+      <h1>Calibration</h1>
+      <p class="muted">MoS direction hit vs realized outcomes (sqlite join)</p>
+      <form class="filters" method="get" action="/calibration">
+        <label>Horizon
+          <select name="horizon">
+            {"".join(f'<option value="{h}" {"selected" if h==horizon else ""}>{h}</option>' for h in ("1d","1w","1m","3m"))}
+          </select>
+        </label>
+        <label>PASS only
+          <select name="pass_only">
+            <option value="1" {"selected" if pass_only else ""}>yes</option>
+            <option value="0" {"selected" if not pass_only else ""}>no</option>
+          </select>
+        </label>
+        <button type="submit">Update</button>
+      </form>
+      <p>Joined rows: <strong>{report.get("n_joined")}</strong>
+         · overall hit rate: <strong>{o_rate_s}</strong>
+         · mean return: <strong>{_fmt_num(overall.get("mean_return_pct"), 2)}%</strong></p>
+      {"<p class='err'>Error: "+_esc(report.get("error"))+"</p>" if report.get("error") else ""}
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>MoS bucket</th><th>n</th><th>scored</th><th>hit rate</th><th>mean ret %</th></tr></thead>
+        <tbody>{"".join(trs) or "<tr><td colspan='5' class='muted'>No outcomes joined for this horizon</td></tr>"}</tbody>
+      </table>
+    </div>
+    """
+    return _layout("Calibration", body)
+
+
 def page_experiments(api: CatalogApi) -> str:
     try:
         runs = api.list_runs(limit=500)
@@ -414,6 +471,10 @@ def application(environ, start_response):
             return [body] if method == "GET" else [b""]
         if path == "/experiments":
             body = page_experiments(api).encode("utf-8")
+            start_response("200 OK", [("Content-Type", "text/html; charset=utf-8")])
+            return [body] if method == "GET" else [b""]
+        if path == "/calibration":
+            body = page_calibration(api, qs).encode("utf-8")
             start_response("200 OK", [("Content-Type", "text/html; charset=utf-8")])
             return [body] if method == "GET" else [b""]
         if path == "/artifact":

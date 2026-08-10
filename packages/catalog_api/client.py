@@ -263,6 +263,78 @@ class CatalogApi:
             raise FileNotFoundError(snap)
         return json.loads(snap.read_text(encoding="utf-8"))
 
+    def calibration(
+        self,
+        *,
+        horizon: str = "1m",
+        pass_only: bool = True,
+    ) -> dict[str, Any]:
+        """MoS buckets × realized outcomes (from sqlite outcomes table)."""
+        sql = """
+        SELECT r.run_id, r.ticker, r.session_date, r.margin_of_safety_pct,
+               r.primary_sector, r.audit_verdict,
+               o.horizon, o.total_return_pct, o.direction_hit, o.realized_price
+        FROM runs r
+        JOIN outcomes o ON o.run_id = r.run_id
+        WHERE o.horizon = ?
+          AND o.realized_price IS NOT NULL
+        """
+        params: list[Any] = [horizon]
+        if pass_only:
+            sql += " AND r.audit_verdict = 'PASS'"
+        with self._connect() as conn:
+            try:
+                rows = [dict(x) for x in conn.execute(sql, params).fetchall()]
+            except sqlite3.Error as e:
+                return {
+                    "horizon": horizon,
+                    "pass_only": pass_only,
+                    "n_joined": 0,
+                    "error": str(e),
+                    "overall": {},
+                    "by_mos_bucket": {},
+                }
+
+        def bucket(mos: float | None) -> str:
+            if mos is None:
+                return "mos_unknown"
+            if mos >= 15:
+                return "cheap_mos>=15"
+            if mos <= -15:
+                return "expensive_mos<=-15"
+            return "fair_|mos|<15"
+
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for r in rows:
+            mos = r.get("margin_of_safety_pct")
+            if isinstance(mos, (int, float)):
+                b = bucket(float(mos))
+            else:
+                b = bucket(None)
+            groups.setdefault(b, []).append(r)
+
+        def stats(items: list[dict[str, Any]]) -> dict[str, Any]:
+            hits = [i["direction_hit"] for i in items if i.get("direction_hit") is not None]
+            rets = [
+                float(i["total_return_pct"])
+                for i in items
+                if isinstance(i.get("total_return_pct"), (int, float))
+            ]
+            return {
+                "n": len(items),
+                "n_scored": len(hits),
+                "direction_hit_rate": (sum(hits) / len(hits)) if hits else None,
+                "mean_return_pct": (sum(rets) / len(rets)) if rets else None,
+            }
+
+        return {
+            "horizon": horizon,
+            "pass_only": pass_only,
+            "n_joined": len(rows),
+            "overall": stats(rows),
+            "by_mos_bucket": {k: stats(v) for k, v in sorted(groups.items())},
+        }
+
     def open_artifact(
         self,
         run_id: str,

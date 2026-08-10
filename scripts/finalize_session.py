@@ -19,7 +19,7 @@ from scripts.build_prediction_snapshot import build_for_session  # noqa: E402
 from scripts.export_compare_db import export_session  # noqa: E402
 from scripts.kd_research.compare_db import open_db  # noqa: E402
 from scripts.kd_research.paths import resolve_session  # noqa: E402
-from scripts.rebuild_catalog import rebuild  # noqa: E402
+from scripts.rebuild_catalog import patch_run_into_catalog, rebuild  # noqa: E402
 
 
 def main() -> int:
@@ -27,7 +27,17 @@ def main() -> int:
     ap.add_argument("--ticker")
     ap.add_argument("--date", help="Session date or session_key")
     ap.add_argument("--session-dir")
-    ap.add_argument("--skip-catalog", action="store_true", help="Skip thin JSON catalog rebuild")
+    ap.add_argument("--skip-catalog", action="store_true", help="Skip thin JSON catalog update")
+    ap.add_argument(
+        "--full-catalog-rebuild",
+        action="store_true",
+        help="Full disk scan rebuild instead of O(1) patch (recovery / migration)",
+    )
+    ap.add_argument(
+        "--include-legacy",
+        action="store_true",
+        help="With full rebuild, also scan legacy root sessions",
+    )
     args = ap.parse_args()
 
     if args.session_dir:
@@ -54,8 +64,16 @@ def main() -> int:
     )
 
     if not args.skip_catalog:
-        result = rebuild(include_legacy=True)
-        print(f"catalog OK {result['n_runs']} runs, {result['n_tickers']} tickers")
+        ticker = str(row.get("ticker") or session.parent.name).upper()
+        session_key = str(row.get("session_key") or session.name)
+        if args.full_catalog_rebuild:
+            result = rebuild(include_legacy=bool(args.include_legacy))
+        else:
+            result = patch_run_into_catalog(ticker, session_key, session)
+        print(
+            f"catalog OK mode={result.get('mode')} "
+            f"{result['n_runs']} runs, {result['n_tickers']} tickers"
+        )
 
     return 0
 

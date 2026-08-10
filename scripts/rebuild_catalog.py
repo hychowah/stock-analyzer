@@ -25,6 +25,7 @@ from scripts.kd_research.paths import (  # noqa: E402
     rel_to_project,
     run_id as make_run_id,
 )
+from scripts.kd_research.registry_io import atomic_write_text, load_json  # noqa: E402
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -193,14 +194,116 @@ def rebuild(*, include_legacy: bool = True) -> dict[str, Any]:
     }
 
     catalog = dirs["catalog"]
-    (catalog / "runs_index.json").write_text(
-        json.dumps(runs_index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    atomic_write_text(
+        catalog / "runs_index.json",
+        json.dumps(runs_index, indent=2, ensure_ascii=False) + "\n",
     )
-    (catalog / "tickers_index.json").write_text(
-        json.dumps(tickers_index, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    atomic_write_text(
+        catalog / "tickers_index.json",
+        json.dumps(tickers_index, indent=2, ensure_ascii=False) + "\n",
     )
-    (catalog / "schema_version").write_text("2\n", encoding="utf-8")
-    return {"n_runs": len(runs), "n_tickers": len(tickers), "catalog": str(catalog)}
+    atomic_write_text(catalog / "schema_version", "2\n")
+    return {
+        "n_runs": len(runs),
+        "n_tickers": len(tickers),
+        "catalog": str(catalog),
+        "mode": "full_scan",
+        "include_legacy": include_legacy,
+    }
+
+
+def patch_run_into_catalog(
+    ticker: str,
+    session_key: str,
+    path: Path,
+    *,
+    include_legacy_on_missing: bool = False,
+) -> dict[str, Any]:
+    """O(1)-ish upsert of one session into thin JSON indexes (atomic publish).
+
+    If indexes are missing, falls back to full rebuild (archive-only by default).
+    """
+    dirs = ensure_archive_tree()
+    catalog = dirs["catalog"]
+    runs_path = catalog / "runs_index.json"
+    tickers_path = catalog / "tickers_index.json"
+
+    if not runs_path.is_file() or not tickers_path.is_file():
+        return rebuild(include_legacy=include_legacy_on_missing)
+
+    runs_index = load_json(runs_path) or {}
+    tickers_index = load_json(tickers_path) or {}
+    if not isinstance(runs_index, dict) or not isinstance(tickers_index, dict):
+        return rebuild(include_legacy=include_legacy_on_missing)
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    row = _row_for_session(ticker.upper(), session_key, path)
+    rid = row["run_id"]
+
+    runs: list[dict[str, Any]] = list(runs_index.get("runs") or [])
+    runs = [r for r in runs if r.get("run_id") != rid]
+    runs.append(row)
+    runs.sort(key=lambda r: (r.get("ticker") or "", r.get("session_date") or "", r.get("session_key") or ""))
+    runs_index = {"schema_version": 2, "updated_at": now, "runs": runs}
+
+    # Rebuild tickers slice for this ticker only from runs list
+    by_ticker: dict[str, list[dict[str, Any]]] = {}
+    for r in runs:
+        by_ticker.setdefault(str(r.get("ticker")), []).append(r)
+
+    tickers = dict(tickers_index.get("tickers") or {})
+    # Recompute all tickers present in runs (cheap for ~dozens–hundreds)
+    new_tickers: dict[str, Any] = {}
+    for t, rows in sorted(by_ticker.items()):
+        rows_sorted = sorted(rows, key=lambda x: (x.get("session_date") or "", x.get("session_key") or ""))
+        prod = [r for r in rows_sorted if r.get("is_production")]
+        prod_pass = [r for r in prod if r.get("audit_verdict") == "PASS"]
+        any_pass = [r for r in rows_sorted if r.get("audit_verdict") == "PASS"]
+        if prod_pass:
+            latest = prod_pass[-1]
+        elif prod:
+            latest = prod[-1]
+        elif any_pass:
+            latest = any_pass[-1]
+        else:
+            latest = rows_sorted[-1]
+        new_tickers[t] = {
+            "ticker": t,
+            "latest_run_id": latest["run_id"],
+            "latest_path": latest["path"],
+            "latest_audit": latest.get("audit_verdict"),
+            "latest_session_date": latest["session_date"],
+            "latest_session_key": latest["session_key"],
+            "run_count": len(rows_sorted),
+            "runs": [
+                {
+                    "run_id": r["run_id"],
+                    "path": r["path"],
+                    "session_date": r["session_date"],
+                    "session_key": r["session_key"],
+                    "is_production": r.get("is_production"),
+                    "audit_verdict": r.get("audit_verdict"),
+                    "experiment_id": r.get("experiment_id"),
+                }
+                for r in rows_sorted
+            ],
+        }
+    tickers_index = {"schema_version": 2, "updated_at": now, "tickers": new_tickers}
+
+    atomic_write_text(
+        runs_path, json.dumps(runs_index, indent=2, ensure_ascii=False) + "\n"
+    )
+    atomic_write_text(
+        tickers_path, json.dumps(tickers_index, indent=2, ensure_ascii=False) + "\n"
+    )
+    atomic_write_text(catalog / "schema_version", "2\n")
+    return {
+        "n_runs": len(runs),
+        "n_tickers": len(new_tickers),
+        "catalog": str(catalog),
+        "mode": "patch",
+        "patched_run_id": rid,
+    }
 
 
 def main() -> int:
@@ -208,19 +311,21 @@ def main() -> int:
     ap.add_argument(
         "--include-legacy",
         action="store_true",
-        default=True,
-        help="Include root/<TICKER>/<DATE> sessions not yet migrated (default: true)",
+        help="Include root/<TICKER>/<DATE> sessions not yet migrated",
     )
     ap.add_argument(
         "--archive-only",
         action="store_true",
-        help="Only index archive/research sessions",
+        default=True,
+        help="Only index archive/research (default)",
     )
     args = ap.parse_args()
-    include_legacy = not args.archive_only
+    # --include-legacy wins when set; otherwise archive-only
+    include_legacy = bool(args.include_legacy)
     result = rebuild(include_legacy=include_legacy)
     print(
-        f"Catalog rebuilt: {result['n_runs']} runs, {result['n_tickers']} tickers -> {result['catalog']}"
+        f"Catalog rebuilt ({result.get('mode')}): {result['n_runs']} runs, "
+        f"{result['n_tickers']} tickers -> {result['catalog']}"
     )
     return 0
 

@@ -43,6 +43,10 @@ def main(argv: list[str] | None = None) -> int:
     p_rep = sub.add_parser("report-paths", help="Report paths for run_id")
     p_rep.add_argument("run_id")
 
+    p_cal = sub.add_parser("calibration", help="MoS vs outcomes calibration")
+    p_cal.add_argument("--horizon", default="1m")
+    p_cal.add_argument("--all-audits", action="store_true", help="Include non-PASS audits")
+
     args = ap.parse_args(argv)
     api = _api_from_env()
     try:
@@ -66,6 +70,17 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.cmd == "report-paths":
             print(json.dumps(api.get_report_paths(args.run_id), indent=2))
+            return 0
+        if args.cmd == "calibration":
+            print(
+                json.dumps(
+                    api.calibration(
+                        horizon=args.horizon,
+                        pass_only=not args.all_audits,
+                    ),
+                    indent=2,
+                )
+            )
             return 0
     except DbMissing as e:
         print(f"DB missing: {e}", file=sys.stderr)

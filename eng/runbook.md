@@ -40,9 +40,23 @@ python3 scripts/check_session.py --ticker META --date 2026-08-03 --full
 ## Concurrency (Mode A write ‖ Mode B read)
 
 1. Mode B always opens sqlite **readonly**.  
-2. Writers (finalize/export) should use WAL + busy_timeout (see `compare_db.connect`).  
-3. Never run `export_compare_db --all --rebuild` while expecting a hot UI without staging.  
-4. Mode B must **not** call export with snapshot refresh on live `archive/research`.
+2. Writers (finalize/export) use WAL + busy_timeout (see `compare_db.connect`).  
+3. Thin JSON indexes (`runs_index.json`, `tickers_index.json`) are written **atomically** (temp + `os.replace`).  
+4. `finalize_session` **patches** one run into indexes by default (not full disk scan). Use `--full-catalog-rebuild` for recovery.  
+5. Never run `export_compare_db --all --rebuild` under a hot UI without staging.  
+6. Mode B must **not** call export with snapshot refresh on live `archive/research`.
+
+```bash
+# Default finalize (sqlite upsert + catalog patch)
+python3 scripts/finalize_session.py --ticker META --date 2026-08-03
+
+# Full catalog rebuild (archive-only)
+python3 scripts/rebuild_catalog.py --archive-only
+python3 scripts/finalize_session.py --ticker META --date 2026-08-03 --full-catalog-rebuild
+
+# Calibration
+python3 -m packages.catalog_api calibration --horizon 1m
+```
 
 ## Fixture refresh
 

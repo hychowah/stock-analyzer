@@ -52,8 +52,9 @@ python3 -m apps.analysis_web          # http://127.0.0.1:8765/
 
 ## Mode A one-line pipeline
 
-Scaffold → sector + `market_context` → `research_brief` → Phase 0… → **preflight** before 2 / 2.5 / 4 / 5 → audit → `finalize_session` (snapshot + sqlite + catalog patch).  
-Details and justification contract: **`harness/RESEARCH_AGENTS.md`**.
+Scaffold **new** `S` → sector + `market_context` → `research_brief` → Phase 0… → **preflight** before 2 / 2.5 / 4 / 5 → audit → `finalize_session`.  
+**Do not** browse prior `archive/research/<T>/` sessions before a new run (isolation). Resume only if the user names that folder.  
+Details: **`harness/RESEARCH_AGENTS.md`**.
 
 ## Mode B one-line loop
 
@@ -66,4 +67,5 @@ Details: **`eng/AGENTS.md`**.
 - Dump this router into a research mega-prompt and skip `RESEARCH_AGENTS.md`.  
 - Put product UI state under `archive/research/`.  
 - Invent fair values in Mode B — read catalog/snapshots only.  
-- Use multi-agent fan-out for tightly sequential valuation writes (Mode A Agent 5 stays single-writer).
+- Use multi-agent fan-out for tightly sequential valuation writes (Mode A Agent 5 stays single-writer).  
+- **Mode A new run:** open yesterday’s session “to see if it’s usable” before scaffolding — forbidden under isolation.

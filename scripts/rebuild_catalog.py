@@ -306,6 +306,133 @@ def patch_run_into_catalog(
     }
 
 
+def rebuild_from_sqlite(*, output_dir: Path | str | None = None) -> dict[str, Any]:
+    """Rebuild thin JSON indexes from research_compare.sqlite (no full session scan).
+
+    Faster recovery path when disk SoR is large but the warehouse is current.
+    Paths in the index come from the sqlite ``path`` column.
+    """
+    import sqlite3
+
+    from scripts.kd_research.compare_db import db_path
+    from scripts.kd_research.paths import catalog_root, is_production_session_key
+
+    path = db_path(output_dir)
+    if not path.is_file():
+        raise FileNotFoundError(f"Compare DB not found: {path}")
+
+    conn = sqlite3.connect(str(path))
+    conn.row_factory = sqlite3.Row
+    rows_db = conn.execute(
+        """
+        SELECT run_id, ticker, session_date, session_key, path,
+               audit_verdict, asof_price, fv_bear, fv_base, fv_bull, fv_weighted,
+               p_bear, p_base, p_bull, margin_of_safety_pct,
+               primary_sector, region, tech_signal, experiment_id, orchestrator_model
+        FROM runs
+        ORDER BY ticker, session_date, session_key
+        """
+    ).fetchall()
+    conn.close()
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    runs: list[dict[str, Any]] = []
+    for r in rows_db:
+        sk = r["session_key"] or r["session_date"]
+        runs.append(
+            {
+                "run_id": r["run_id"],
+                "ticker": r["ticker"],
+                "session_date": r["session_date"],
+                "session_key": sk,
+                "is_production": is_production_session_key(str(sk)),
+                "slug": None
+                if is_production_session_key(str(sk))
+                else (str(sk).split("__", 1)[1] if "__" in str(sk) else None),
+                "path": r["path"],
+                "audit_verdict": r["audit_verdict"],
+                "asof_price": r["asof_price"],
+                "fv_bear": r["fv_bear"],
+                "fv_base": r["fv_base"],
+                "fv_bull": r["fv_bull"],
+                "fv_weighted": r["fv_weighted"],
+                "p_bear": r["p_bear"],
+                "p_base": r["p_base"],
+                "p_bull": r["p_bull"],
+                "margin_of_safety_pct": r["margin_of_safety_pct"],
+                "primary_sector": r["primary_sector"],
+                "region": r["region"],
+                "tech_signal": r["tech_signal"],
+                "experiment_id": r["experiment_id"],
+                "orchestrator_model": r["orchestrator_model"],
+                "has_prediction_snapshot": None,
+                "has_outcomes": None,
+            }
+        )
+
+    by_ticker: dict[str, list[dict[str, Any]]] = {}
+    for row in runs:
+        by_ticker.setdefault(str(row["ticker"]), []).append(row)
+
+    tickers: dict[str, Any] = {}
+    for ticker, trows in sorted(by_ticker.items()):
+        rows_sorted = sorted(
+            trows, key=lambda x: (x.get("session_date") or "", x.get("session_key") or "")
+        )
+        prod = [r for r in rows_sorted if r.get("is_production")]
+        prod_pass = [r for r in prod if r.get("audit_verdict") == "PASS"]
+        any_pass = [r for r in rows_sorted if r.get("audit_verdict") == "PASS"]
+        if prod_pass:
+            latest = prod_pass[-1]
+        elif prod:
+            latest = prod[-1]
+        elif any_pass:
+            latest = any_pass[-1]
+        else:
+            latest = rows_sorted[-1]
+        tickers[ticker] = {
+            "ticker": ticker,
+            "latest_run_id": latest["run_id"],
+            "latest_path": latest["path"],
+            "latest_audit": latest.get("audit_verdict"),
+            "latest_session_date": latest["session_date"],
+            "latest_session_key": latest["session_key"],
+            "run_count": len(rows_sorted),
+            "runs": [
+                {
+                    "run_id": r["run_id"],
+                    "path": r["path"],
+                    "session_date": r["session_date"],
+                    "session_key": r["session_key"],
+                    "is_production": r.get("is_production"),
+                    "audit_verdict": r.get("audit_verdict"),
+                    "experiment_id": r.get("experiment_id"),
+                }
+                for r in rows_sorted
+            ],
+        }
+
+    catalog = catalog_root(output_dir)
+    catalog.mkdir(parents=True, exist_ok=True)
+    runs_index = {"schema_version": 2, "updated_at": now, "runs": runs}
+    tickers_index = {"schema_version": 2, "updated_at": now, "tickers": tickers}
+    atomic_write_text(
+        catalog / "runs_index.json",
+        json.dumps(runs_index, indent=2, ensure_ascii=False) + "\n",
+    )
+    atomic_write_text(
+        catalog / "tickers_index.json",
+        json.dumps(tickers_index, indent=2, ensure_ascii=False) + "\n",
+    )
+    atomic_write_text(catalog / "schema_version", "2\n")
+    return {
+        "n_runs": len(runs),
+        "n_tickers": len(tickers),
+        "catalog": str(catalog),
+        "mode": "from_sqlite",
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
@@ -317,12 +444,19 @@ def main() -> int:
         "--archive-only",
         action="store_true",
         default=True,
-        help="Only index archive/research (default)",
+        help="Only index archive/research (default for full disk scan)",
+    )
+    ap.add_argument(
+        "--from-sqlite",
+        action="store_true",
+        help="Rebuild thin JSON indexes from research_compare.sqlite (no disk walk)",
     )
     args = ap.parse_args()
-    # --include-legacy wins when set; otherwise archive-only
-    include_legacy = bool(args.include_legacy)
-    result = rebuild(include_legacy=include_legacy)
+    if args.from_sqlite:
+        result = rebuild_from_sqlite()
+    else:
+        include_legacy = bool(args.include_legacy)
+        result = rebuild(include_legacy=include_legacy)
     print(
         f"Catalog rebuilt ({result.get('mode')}): {result['n_runs']} runs, "
         f"{result['n_tickers']} tickers -> {result['catalog']}"

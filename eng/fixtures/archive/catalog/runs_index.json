@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "updated_at": "2026-08-10T10:58:35Z",
+  "runs": [
+    {
+      "run_id": "research:META:2026-08-03",
+      "ticker": "META",
+      "session_date": "2026-08-03",
+      "session_key": "2026-08-03",
+      "path": "archive/research/META/2026-08-03",
+      "is_production": true
+    },
+    {
+      "run_id": "research:JPM:2026-07-25",
+      "ticker": "JPM",
+      "session_date": "2026-07-25",
+      "session_key": "2026-07-25",
+      "path": "archive/research/JPM/2026-07-25",
+      "is_production": true
+    }
+  ]
+}

@@ -8,7 +8,7 @@
 **Mode B (product eng):** `eng/AGENTS.md` + `eng/HARNESS_MAP.md` — features/UI/catalog API; **reads** archive only.  
 Catalog read API: `packages/catalog_api` (`python3 -m packages.catalog_api health`).
 
-Normative rules: root `AGENTS.md` (Mode A body). Subagent templates: `harness/agent_prompts.md`. Pipeline design: `harness/design_phase_status_and_exemplars.md`. Industry research notes: `harness/research/`.
+Normative rules: **`harness/RESEARCH_AGENTS.md`** (Mode A full law). Root `AGENTS.md` is dual-mode **router only**. Subagent templates: `harness/agent_prompts.md`. Pipeline design: `harness/design_phase_status_and_exemplars.md`. Industry research notes: `harness/research/`.
 
 ---
 
@@ -100,7 +100,8 @@ Details: `harness/agent_prompts.md` conventions + `harness/exemplars/`.
 
 | Need | Path |
 |------|------|
-| Normative spec | `AGENTS.md` |
+| Normative research law | `harness/RESEARCH_AGENTS.md` |
+| Dual-mode router | root `AGENTS.md` |
 | Orchestrator checklist | `harness/orchestrator_runbook.md` |
 | Prompt templates | `harness/agent_prompts.md` |
 | Schemas | `templates/*.schema.json` |

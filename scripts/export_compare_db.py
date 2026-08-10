@@ -159,19 +159,29 @@ def main() -> int:
         action="store_true",
         help="With --all, only archive/research (skip legacy root sessions)",
     )
+    ap.add_argument(
+        "--output-dir",
+        type=Path,
+        default=None,
+        help="Project root whose archive/ receives the sqlite "
+        "(default: repo root). Use eng/fixtures for CI fixtures.",
+    )
     args = ap.parse_args()
 
     refresh = not args.no_refresh_snapshot
-    conn = open_db(rebuild=args.rebuild)
+    out = args.output_dir
+    conn = open_db(out, rebuild=args.rebuild)
 
     sessions: list[Path] = []
     if args.all:
-        for _t, _d, path in iter_research_sessions(include_legacy=not args.archive_only):
+        for _t, _d, path in iter_research_sessions(
+            out, include_legacy=not args.archive_only
+        ):
             sessions.append(path)
     elif args.session_dir:
         sessions.append(Path(args.session_dir))
     elif args.ticker and args.date:
-        path = resolve_session(args.ticker, args.date)
+        path = resolve_session(args.ticker, args.date, out)
         if path is None:
             print(f"Session not found: {args.ticker} {args.date}", file=sys.stderr)
             return 2
@@ -197,7 +207,7 @@ def main() -> int:
 
     n = count_runs(conn)
     conn.close()
-    print(f"Exported {len(results)} session(s); DB has {n} run(s) -> {db_path()}")
+    print(f"Exported {len(results)} session(s); DB has {n} run(s) -> {db_path(out)}")
     return 0
 
 

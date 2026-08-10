@@ -50,7 +50,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 | Verify | `python3 scripts/eng_verify.py` |
 | Catalog API | `packages/catalog_api/` |
 | Live data | `archive/` (default ARCHIVE_ROOT) |
-| Research law | root `AGENTS.md` (Mode A) + `harness/HARNESS_MAP.md` |
+| Research law (Mode A) | `harness/RESEARCH_AGENTS.md` + `harness/HARNESS_MAP.md` (root `AGENTS.md` = router) |
 
 ## Write allowlist (default)
 

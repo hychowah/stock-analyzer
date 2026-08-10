@@ -25,6 +25,12 @@ eng/sessions/**/verify_log.jsonl
 eng/sessions/**/.cache/
 apps/*/.local/
 
+# Eng fixtures: regenerate with scripts/sync_eng_fixtures.py (do not version bulk trees)
+eng/fixtures/archive/research/
+eng/fixtures/archive/outcomes/
+eng/fixtures/archive/catalog/*.sqlite
+eng/fixtures/archive/catalog/*.sqlite-*
+
 # IDE / OS
 .vscode/
 .idea/

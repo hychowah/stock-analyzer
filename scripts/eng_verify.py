@@ -36,10 +36,25 @@ def check_eng_tree(root: Path) -> list[str]:
         root / "eng" / "runbook.md",
         root / "packages" / "catalog_api" / "__init__.py",
         root / "apps" / "analysis_web" / "app.py",
+        root / "harness" / "RESEARCH_AGENTS.md",
     ]
     for p in required:
         if not p.is_file():
             errs.append(f"missing required file: {p.relative_to(root)}")
+    # Root AGENTS should stay a short router (progressive disclosure)
+    agents = root / "AGENTS.md"
+    if agents.is_file():
+        nlines = len(agents.read_text(encoding="utf-8", errors="replace").splitlines())
+        if nlines > 150:
+            errs.append(
+                f"root AGENTS.md is {nlines} lines (want ≤150 router); "
+                "full law belongs in harness/RESEARCH_AGENTS.md"
+            )
+        body = agents.read_text(encoding="utf-8", errors="replace")
+        if "harness/RESEARCH_AGENTS.md" not in body:
+            errs.append("root AGENTS.md must point Mode A at harness/RESEARCH_AGENTS.md")
+        if "eng/AGENTS.md" not in body:
+            errs.append("root AGENTS.md must point Mode B at eng/AGENTS.md")
     # Mode B must not be named build/ at top level as the harness home
     if (root / "build" / "AGENTS.md").is_file():
         errs.append(
@@ -102,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         "scripts/tests/test_archive_paths.py",
         "scripts/tests/test_analysis_web.py",
         "scripts/tests/test_catalog_atomic.py",
+        "scripts/tests/test_router_agents.py",
     ]
     existing = [t for t in tests if (root / t).is_file()]
     if not existing:

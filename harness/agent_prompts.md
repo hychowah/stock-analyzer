@@ -1,6 +1,6 @@
 # Subagent Prompt Templates
 
-Copy-paste templates for each phase of the harness (see `AGENTS.md` §8). Substitute these variables everywhere:
+Copy-paste templates for each phase of the harness (see `harness/RESEARCH_AGENTS.md` §8). Substitute these variables everywhere:
 
 | Variable | Example |
 |---|---|

@@ -3,7 +3,7 @@
 **Role:** supervisor, classifier, merger, resume owner.  
 **Anti-role:** not the valuation author; do not invent missing filings; do not contaminate Agent 4 with fundamentals (earnings **date only**).
 
-Use with `AGENTS.md` §8 and `harness/agent_prompts.md`. Keep this file short — details stay in prompts/schemas.
+Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `AGENTS.md` is only the dual-mode router. Keep this file short — details stay in prompts/schemas.
 
 ---
 

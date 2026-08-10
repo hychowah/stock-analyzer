@@ -25,6 +25,44 @@ class AtomicWriteTests(unittest.TestCase):
             self.assertEqual(json.loads(p.read_text())["ok"], False)
 
 
+class RebuildFromSqliteTests(unittest.TestCase):
+    def test_from_sqlite_writes_indexes(self):
+        from scripts.kd_research import paths as paths_mod
+        from scripts.rebuild_catalog import rebuild_from_sqlite
+        from scripts.kd_research.compare_db import open_db, upsert_run, utc_now
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            old = paths_mod.PROJECT_ROOT
+            try:
+                paths_mod.PROJECT_ROOT = root
+                conn = open_db(root, rebuild=True)
+                upsert_run(
+                    conn,
+                    {
+                        "run_id": "research:AAA:2026-01-01",
+                        "ticker": "AAA",
+                        "session_date": "2026-01-01",
+                        "session_key": "2026-01-01",
+                        "path": "archive/research/AAA/2026-01-01",
+                        "exported_at": utc_now(),
+                        "audit_verdict": "PASS",
+                        "fv_base": 1.0,
+                    },
+                )
+                conn.commit()
+                conn.close()
+                result = rebuild_from_sqlite(output_dir=root)
+                self.assertEqual(result["mode"], "from_sqlite")
+                self.assertEqual(result["n_runs"], 1)
+                idx = json.loads(
+                    (root / "archive" / "catalog" / "runs_index.json").read_text()
+                )
+                self.assertEqual(idx["runs"][0]["run_id"], "research:AAA:2026-01-01")
+            finally:
+                paths_mod.PROJECT_ROOT = old
+
+
 class CatalogPatchTests(unittest.TestCase):
     def test_patch_upserts_run(self):
         with tempfile.TemporaryDirectory() as td:

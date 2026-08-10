@@ -8,6 +8,14 @@
 
 Fixtures: set `ARCHIVE_ROOT` to the absolute path of `eng/fixtures/archive` for offline CI.
 
+```bash
+python3 scripts/sync_eng_fixtures.py   # slim copy + re-export sqlite
+export ARCHIVE_ROOT=$PWD/eng/fixtures/archive
+python3 -m packages.catalog_api health
+```
+
+Mode A full law: `harness/RESEARCH_AGENTS.md` (root `AGENTS.md` is router only).
+
 ## Common commands
 
 ```bash

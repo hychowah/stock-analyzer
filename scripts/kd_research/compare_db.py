@@ -14,7 +14,7 @@ from typing import Any
 
 from scripts.kd_research.paths import PROJECT_ROOT, catalog_root, ensure_archive_tree
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 DB_FILENAME = "research_compare.sqlite"
 
@@ -125,7 +125,11 @@ CREATE TABLE IF NOT EXISTS outcomes (
   PRIMARY KEY (run_id, horizon),
   FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
 );
-"""
+""",
+    2: """
+ALTER TABLE runs ADD COLUMN harness_version TEXT;
+CREATE INDEX IF NOT EXISTS idx_runs_harness_version ON runs(harness_version);
+""",
 }
 
 
@@ -232,6 +236,7 @@ RUN_COLUMNS = [
     "audit_verdict",
     "data_quality",
     "status",
+    "harness_version",
     "harness_spec",
     "harness_git_sha",
     "harness_dirty",
@@ -407,6 +412,7 @@ def row_from_export_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "audit_verdict": payload.get("audit_verdict"),
         "data_quality": payload.get("data_quality"),
         "status": payload.get("status"),
+        "harness_version": payload.get("harness_version"),
         "harness_spec": payload.get("harness_spec"),
         "harness_git_sha": payload.get("harness_git_sha"),
         "harness_dirty": _bool_int(payload.get("harness_dirty")),

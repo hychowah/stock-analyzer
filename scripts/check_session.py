@@ -720,6 +720,31 @@ def check_meta_artifacts(session: Path) -> None:
                     break
             else:
                 record("PASS", "run_manifest", data.get("run_id", ""))
+            # Provenance identity: new scaffolds/finalize always stamp these.
+            # Legacy manifests may lack them → WARN (does not fail process).
+            hv = data.get("harness_version")
+            hsha = data.get("harness_git_sha")
+            if not hv or not str(hv).strip():
+                record(
+                    "WARN",
+                    "run_manifest harness_version",
+                    "missing — re-run finalize_session / scaffold; source harness/VERSION",
+                )
+            else:
+                record("PASS", "run_manifest harness_version", str(hv))
+            if not hsha or not str(hsha).strip():
+                record(
+                    "WARN",
+                    "run_manifest harness_git_sha",
+                    "missing — finalize should stamp git HEAD or 'unknown'",
+                )
+            else:
+                dirty = data.get("harness_dirty")
+                record(
+                    "PASS",
+                    "run_manifest harness_git_sha",
+                    f"{hsha} dirty={dirty}",
+                )
         except Exception as e:  # noqa: BLE001
             record("FAIL", "run_manifest parse", str(e))
     else:
@@ -733,6 +758,19 @@ def check_meta_artifacts(session: Path) -> None:
                     break
             else:
                 record("PASS", "prediction_snapshot", data.get("run_id", ""))
+            prov = data.get("provenance") if isinstance(data.get("provenance"), dict) else {}
+            if not prov.get("harness_version") or not prov.get("harness_git_sha"):
+                record(
+                    "WARN",
+                    "prediction_snapshot provenance",
+                    "harness_version/git missing — re-run finalize_session to stamp identity",
+                )
+            else:
+                record(
+                    "PASS",
+                    "prediction_snapshot provenance",
+                    f"v={prov.get('harness_version')} git={prov.get('harness_git_sha')}",
+                )
         except Exception as e:  # noqa: BLE001
             record("FAIL", "prediction_snapshot parse", str(e))
     else:

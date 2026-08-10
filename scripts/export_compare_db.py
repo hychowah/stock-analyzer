@@ -70,6 +70,7 @@ def _payload_for_session(session: Path, *, refresh_snapshot: bool = True) -> dic
         "audit_verdict": bundle.get("audit_verdict"),
         "data_quality": bundle.get("data_quality"),
         "status": bundle.get("status"),
+        "harness_version": prov.get("harness_version"),
         "harness_spec": prov.get("harness_spec"),
         "harness_git_sha": prov.get("harness_git_sha"),
         "harness_dirty": prov.get("harness_dirty"),

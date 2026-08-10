@@ -54,7 +54,7 @@ def _mini_archive(base: Path) -> Path:
 
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
-        self._td = tempfile.TemporaryDirectory()
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.archive = _mini_archive(Path(self._td.name))
         import os
 
@@ -68,6 +68,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.app = app_mod.application
 
     def tearDown(self):
+        self.app = None  # type: ignore[assignment]
         self._td.cleanup()
 
     def _call(self, path: str, qs: str = "") -> tuple[str, bytes]:

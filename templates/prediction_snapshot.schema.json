@@ -52,7 +52,23 @@
     "tech_regime": { "type": ["string", "null"] },
     "tech_summary": { "type": "object" },
     "research_depth": { "type": ["string", "null"] },
-    "provenance": { "type": "object" },
+    "provenance": {
+      "type": "object",
+      "description": "Harness/model identity stamped at scaffold and refreshed at finalize",
+      "properties": {
+        "harness_version": { "type": ["string", "null"] },
+        "harness_spec": { "type": ["string", "null"] },
+        "harness_git_sha": { "type": ["string", "null"] },
+        "harness_dirty": { "type": ["boolean", "null"] },
+        "agents_md_sha256": { "type": ["string", "null"] },
+        "research_agents_sha256": { "type": ["string", "null"] },
+        "prompts_sha256": { "type": ["string", "null"] },
+        "version_file_sha256": { "type": ["string", "null"] },
+        "orchestrator_model": { "type": ["string", "null"] },
+        "default_subagent_model": { "type": ["string", "null"] },
+        "experiment_id": { "type": ["string", "null"] }
+      }
+    },
     "gaps": { "type": "array", "items": { "type": "string" } },
     "source_paths": { "type": "object" }
   }

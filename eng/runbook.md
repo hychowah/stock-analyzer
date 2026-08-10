@@ -73,6 +73,27 @@ python3 -m packages.catalog_api calibration --horizon 1m
 python3 scripts/sync_eng_fixtures.py --tickers META,JPM --dates 2026-08-03,2026-07-25
 ```
 
+## Git (Mode B)
+
+- After a green verify for one feature: commit with a **descriptive** subject (what + why).  
+- W1 runtime changes: include `harness/VERSION` bump in that change set.  
+- Full rules: `eng/AGENTS.md` → **Git discipline**.  
+- Agents commit only when the user asks (or session explicitly requires); always leave a mergeable tree + progress note.
+
+## Mode A version (W1)
+
+```bash
+# Read current intentional version
+python3 -c "from scripts.kd_research.provenance import load_harness_identity; print(load_harness_identity())"
+
+# After changing research runtime: edit harness/VERSION harness_version (semver),
+# then eng_verify must see harness/VERSION in the same change set as runtime paths.
+python3 scripts/eng_verify.py
+```
+
+Every Mode A finalize stamps `harness_version` + `harness_git_sha` into
+`meta/run_manifest.json` and `meta/prediction_snapshot.json` provenance.
+
 ## Failure → harness
 
 Record systemic fails in `eng/eval/failure_catalog.md` and open an eng session issue.

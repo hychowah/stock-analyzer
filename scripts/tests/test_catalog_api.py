@@ -112,11 +112,13 @@ class ParseRunIdTests(unittest.TestCase):
 
 class CatalogApiTests(unittest.TestCase):
     def setUp(self):
-        self._td = tempfile.TemporaryDirectory()
+        # ignore_cleanup_errors: Windows may hold SQLite URI handles briefly
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.archive = _make_mini_archive(Path(self._td.name))
         self.api = CatalogApi(archive_root=self.archive, readonly=True)
 
     def tearDown(self):
+        self.api = None  # type: ignore[assignment]
         self._td.cleanup()
 
     def test_health(self):

@@ -52,7 +52,13 @@ def main() -> int:
         ap.error("pass --session-dir or --ticker and --date")
 
     snap = build_for_session(session, force=True)
-    print(f"snapshot OK {snap['run_id']}")
+    prov = (snap.get("snapshot") or {}).get("provenance") or {}
+    print(
+        f"snapshot OK {snap['run_id']} "
+        f"harness_version={prov.get('harness_version')} "
+        f"git={prov.get('harness_git_sha')} "
+        f"dirty={prov.get('harness_dirty')}"
+    )
 
     conn = open_db(rebuild=False)
     row = export_session(session, conn, refresh_snapshot=False)

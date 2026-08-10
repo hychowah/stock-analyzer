@@ -47,9 +47,23 @@ CI: `eng/fixtures/archive` (same shape).
 4. Implement one feature  
 5. Verify → flip passes  
 6. Ship note  
+7. **Commit** verified increment (descriptive message; see `eng/AGENTS.md` Git discipline)  
+
+**Session start:** progress + feature_list + **recent git log**.
+
+## Mode A version (W1 only)
+
+| Item | Path / rule |
+|------|-------------|
+| Source of truth | `harness/VERSION` (`harness_version` semver + `harness_spec`) |
+| Exact tree | `harness_git_sha` stamped at Mode A scaffold/finalize |
+| When to bump | Research-runtime paths change (phases, schemas, gates, prompts, sector/region law, research scripts) |
+| When **not** to bump | Pure UI, catalog API display, programs over existing archive |
+| Gate | `python3 scripts/eng_verify.py` fails if runtime paths changed vs `main` without `harness/VERSION` in the diff |
 
 ## Related
 
 - Dual-mode plan audit: session plan §17  
 - Research map: `harness/HARNESS_MAP.md`  
 - Compare DB: `harness/plan_research_compare_db.md`  
+

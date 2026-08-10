@@ -11,11 +11,13 @@ Never invent fair values. Never schedule research phases unless user asks for a 
 
 ## Implementer
 
-1. Read orientation in `eng/AGENTS.md`.  
+1. Read orientation in `eng/AGENTS.md` (including **Git discipline**).  
 2. One feature at a time.  
 3. Write only allowlisted paths.  
 4. Do **not** set `passes: true`.  
 5. Do **not** mutate `archive/research` or `archive/outcomes`.  
+6. If W1 / research-runtime paths change: **bump `harness/VERSION`** in the same change set.  
+7. After verify-ready work: update `progress.md`; leave a clean mergeable tree. **Commit only when the user asks** (or when session protocol explicitly requires it) — always prepare a descriptive subject (what + why). Never force-push / amend published history unless asked.
 
 ## Verifier
 
@@ -23,4 +25,7 @@ Skeptical separate role:
 
 1. Run `python3 scripts/eng_verify.py` and listed verify_commands.  
 2. Reject test deletion, archive rewrites, hardcoded FV in UI.  
-3. Only then flip `passes: true` and write `ship_note.json` if done.  
+3. Reject W1 ships that touch research-runtime without `harness/VERSION` bump.  
+4. Only then flip `passes: true` and write `ship_note.json` if done.  
+5. Ship note may list the intended commit subject; do not claim shipped if verify failed.  
+

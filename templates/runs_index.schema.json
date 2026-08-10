@@ -37,6 +37,8 @@
           "tech_signal": { "type": ["string", "null"] },
           "experiment_id": { "type": ["string", "null"] },
           "orchestrator_model": { "type": ["string", "null"] },
+          "harness_version": { "type": ["string", "null"] },
+          "harness_git_sha": { "type": ["string", "null"] },
           "has_prediction_snapshot": { "type": "boolean" },
           "has_outcomes": { "type": "boolean" }
         }

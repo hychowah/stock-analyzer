@@ -13,7 +13,11 @@
     "session_date": { "type": "string" },
     "created_at": { "type": "string" },
     "completed_at": { "type": "string" },
-    "harness_spec": { "type": "string" },
+    "harness_version": {
+      "type": "string",
+      "description": "Intentional Mode A product version from harness/VERSION (semver)"
+    },
+    "harness_spec": { "type": "string", "description": "Major family label e.g. v2" },
     "session_key": { "type": "string" },
     "paths": { "type": "object" },
     "status": { "type": "string" },
@@ -23,10 +27,15 @@
     "experiment_id": { "type": ["string", "null"] },
     "experiment_label": { "type": ["string", "null"] },
     "replicate": { "type": ["integer", "null"] },
-    "harness_git_sha": { "type": ["string", "null"] },
+    "harness_git_sha": {
+      "type": "string",
+      "description": "git rev-parse HEAD at scaffold/finalize, or 'unknown'"
+    },
     "harness_dirty": { "type": ["boolean", "null"] },
     "agents_md_sha256": { "type": ["string", "null"] },
+    "research_agents_sha256": { "type": ["string", "null"] },
     "prompts_sha256": { "type": ["string", "null"] },
+    "version_file_sha256": { "type": ["string", "null"] },
     "orchestrator_model": { "type": ["string", "null"] },
     "default_subagent_model": { "type": ["string", "null"] },
     "model_map": { "type": ["object", "null"] },

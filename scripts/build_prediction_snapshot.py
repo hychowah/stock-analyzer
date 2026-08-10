@@ -29,37 +29,55 @@ from scripts.kd_research.provenance import capture_harness_provenance  # noqa: E
 from scripts.kd_research.session_extract import extract_session_bundle, load_json  # noqa: E402
 
 
+_PROVENANCE_IDENTITY_KEYS = (
+    "harness_version",
+    "harness_spec",
+    "harness_git_sha",
+    "harness_dirty",
+    "agents_md_sha256",
+    "research_agents_sha256",
+    "prompts_sha256",
+    "version_file_sha256",
+)
+
+_PROVENANCE_EXPERIMENT_KEYS = (
+    "experiment_id",
+    "experiment_label",
+    "replicate",
+    "orchestrator_model",
+    "default_subagent_model",
+    "model_map",
+    "temperature",
+    "seed",
+    "notes",
+)
+
+
 def _merge_provenance(
     existing: dict[str, Any],
     from_bundle: dict[str, Any],
 ) -> dict[str, Any]:
-    """Prefer scaffold/manifest experiment knobs; refresh git/file hashes at finalize."""
+    """Prefer scaffold/manifest experiment knobs; always refresh version/git at finalize."""
     live = capture_harness_provenance()
     out = dict(existing)
     # Experiment knobs: keep existing unless empty
-    for k in (
-        "experiment_id",
-        "experiment_label",
-        "replicate",
-        "orchestrator_model",
-        "default_subagent_model",
-        "model_map",
-        "temperature",
-        "seed",
-        "notes",
-    ):
+    for k in _PROVENANCE_EXPERIMENT_KEYS:
         if out.get(k) in (None, "") and from_bundle.get(k) not in (None, ""):
             out[k] = from_bundle.get(k)
-    # Always refresh instruction fingerprints at snapshot time (tracks mid-run edits)
-    out["harness_spec"] = (
-        out.get("harness_spec") or from_bundle.get("harness_spec") or live.get("harness_spec") or "v2"
-    )
-    out["harness_git_sha"] = live.get("harness_git_sha") or out.get("harness_git_sha")
-    out["harness_dirty"] = live.get("harness_dirty") if live.get("harness_dirty") is not None else out.get(
-        "harness_dirty"
-    )
-    out["agents_md_sha256"] = live.get("agents_md_sha256") or out.get("agents_md_sha256")
-    out["prompts_sha256"] = live.get("prompts_sha256") or out.get("prompts_sha256")
+    # Always refresh harness identity + fingerprints at snapshot time
+    for k in _PROVENANCE_IDENTITY_KEYS:
+        if live.get(k) is not None:
+            out[k] = live[k]
+    if not out.get("harness_version"):
+        out["harness_version"] = live.get("harness_version") or from_bundle.get("harness_version")
+    if not out.get("harness_spec"):
+        out["harness_spec"] = live.get("harness_spec") or from_bundle.get("harness_spec") or "v2"
+    if not out.get("harness_git_sha"):
+        out["harness_git_sha"] = live.get("harness_git_sha") or "unknown"
+    if out.get("harness_dirty") is None:
+        out["harness_dirty"] = live.get("harness_dirty")
+        if out["harness_dirty"] is None:
+            out["harness_dirty"] = True
     return out
 
 
@@ -133,6 +151,7 @@ def build_for_session(session: Path, *, force: bool = False) -> dict[str, Any]:
         "session_key": session_key,
         "created_at": existing_manifest.get("created_at") or now,
         "completed_at": now,
+        "harness_version": prov.get("harness_version"),
         "harness_spec": prov.get("harness_spec") or "v2",
         "paths": {
             "session_root": rel_to_project(session),
@@ -148,10 +167,12 @@ def build_for_session(session: Path, *, force: bool = False) -> dict[str, Any]:
         "experiment_id": prov.get("experiment_id"),
         "experiment_label": prov.get("experiment_label"),
         "replicate": prov.get("replicate"),
-        "harness_git_sha": prov.get("harness_git_sha"),
+        "harness_git_sha": prov.get("harness_git_sha") or "unknown",
         "harness_dirty": prov.get("harness_dirty"),
         "agents_md_sha256": prov.get("agents_md_sha256"),
+        "research_agents_sha256": prov.get("research_agents_sha256"),
         "prompts_sha256": prov.get("prompts_sha256"),
+        "version_file_sha256": prov.get("version_file_sha256"),
         "orchestrator_model": prov.get("orchestrator_model"),
         "default_subagent_model": prov.get("default_subagent_model"),
         "model_map": prov.get("model_map"),
@@ -166,11 +187,14 @@ def build_for_session(session: Path, *, force: bool = False) -> dict[str, Any]:
             "experiment_id",
             "experiment_label",
             "replicate",
+            "harness_version",
             "harness_spec",
             "harness_git_sha",
             "harness_dirty",
             "agents_md_sha256",
+            "research_agents_sha256",
             "prompts_sha256",
+            "version_file_sha256",
             "orchestrator_model",
             "default_subagent_model",
             "model_map",

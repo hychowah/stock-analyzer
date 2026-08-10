@@ -14,5 +14,8 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F8 | Empty filing_deep_dive_hooks | Valuation skipped deep dive | W1 |
 | F9 | Fixture numbers ≠ live | Path string binding / no re-export | W2 |
 | F10 | Agent invents MoS in UI | Hardcoded demo numbers | W4 |
+| F11 | Catalog runs lack model/harness identity | Snapshot/finalize not stamping provenance | W1 |
+| F12 | Mode A runtime changed without version bump | Forgot `harness/VERSION` on W1 ship | W1/W5 |
+| F13 | Next session cannot resume; half-done mess | No commit / no progress note after increment | W5 |
 
 Add rows when audits or production incidents recur.

@@ -68,6 +68,8 @@ def _row_for_session(ticker: str, session_key: str, path: Path) -> dict[str, Any
     tech_signal = None
     experiment_id = None
     orchestrator_model = None
+    harness_version = None
+    harness_git_sha = None
 
     if snap:
         fv = snap.get("fair_value") or {}
@@ -89,6 +91,8 @@ def _row_for_session(ticker: str, session_key: str, path: Path) -> dict[str, Any
         if isinstance(prov, dict):
             experiment_id = prov.get("experiment_id")
             orchestrator_model = prov.get("orchestrator_model")
+            harness_version = prov.get("harness_version")
+            harness_git_sha = prov.get("harness_git_sha")
     else:
         audit_verdict = (audit or {}).get("verdict") if audit else None
         primary_sector = (sector or {}).get("primary_sector") if sector else None
@@ -105,6 +109,8 @@ def _row_for_session(ticker: str, session_key: str, path: Path) -> dict[str, Any
     if manifest:
         experiment_id = experiment_id or manifest.get("experiment_id")
         orchestrator_model = orchestrator_model or manifest.get("orchestrator_model")
+        harness_version = harness_version or manifest.get("harness_version")
+        harness_git_sha = harness_git_sha or manifest.get("harness_git_sha")
 
     return {
         "run_id": rid,
@@ -129,6 +135,8 @@ def _row_for_session(ticker: str, session_key: str, path: Path) -> dict[str, Any
         "tech_signal": tech_signal,
         "experiment_id": experiment_id,
         "orchestrator_model": orchestrator_model,
+        "harness_version": harness_version,
+        "harness_git_sha": harness_git_sha,
         "has_prediction_snapshot": snap is not None,
         "has_outcomes": has_outcomes,
     }

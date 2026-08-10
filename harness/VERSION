@@ -1,0 +1,5 @@
+{
+  "harness_version": "2.1.0",
+  "harness_spec": "v2",
+  "notes": "Intentional Mode A product version. Bump on methodology/runtime changes (phases, schemas, gates, prompts, sector/region law). Git SHA is the exact tree fingerprint."
+}

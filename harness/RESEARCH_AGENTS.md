@@ -61,7 +61,7 @@ Rules:
 1. Ticker uppercase. Date from the `date` command (never let an agent compute it).
 2. Scaffold with: `python3 scripts/scaffold_session.py --ticker <T> --date <D>` — creates `archive/research/<T>/<D>/`; refuses to overwrite an existing non-empty session.
 3. Re-research on a new date → new dated folder; reference the prior run if useful. Never rewrite a completed session to “fix” history.
-4. After Phase 5 (audit): run `python3 scripts/finalize_session.py --ticker <T> --date <D>` (snapshot + compare SQLite + thin catalog) so the run is indexed for future comparison.
+4. After Phase 5 (audit): run `python3 scripts/finalize_session.py --ticker <T> --date <D>` (snapshot + compare SQLite + thin catalog) so the run is indexed for future comparison. Finalize **always** stamps `harness_version` (from `harness/VERSION`) + `harness_git_sha` (+ dirty flag) into `meta/run_manifest.json` and `prediction_snapshot.provenance` — never leave these null.
 5. Path resolution (`scripts/kd_research/paths.py`): prefer `archive/research/...`; fall back to legacy root `<TICKER>/<DATE>/` during migration only.
 6. Repo root holds harness code only (`harness/`, `scripts/`, `templates/`, sector/region modules, MCP packages) — not ticker session trees.
 

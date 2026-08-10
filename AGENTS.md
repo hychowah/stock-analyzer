@@ -57,7 +57,7 @@ Details and justification contract: **`harness/RESEARCH_AGENTS.md`**.
 
 ## Mode B one-line loop
 
-Scaffold eng session → baseline `eng_verify` → implement one feature → verify → ship note.  
+Scaffold eng session → baseline `eng_verify` → implement one feature → verify → ship note → **commit** (descriptive; see `eng/AGENTS.md` Git discipline).  
 Default data root: `ARCHIVE_ROOT=<project>/archive`.  
 Details: **`eng/AGENTS.md`**.
 

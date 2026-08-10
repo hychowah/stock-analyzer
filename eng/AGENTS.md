@@ -11,12 +11,12 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 ## Orientation (every session)
 
 1. Confirm mode = BUILD; cwd is project root.  
-2. Read `eng/sessions/<slug>/progress.md` + `feature_list.json` + recent git log.  
+2. Read `eng/sessions/<slug>/progress.md` + `feature_list.json` + **recent git log**.  
 3. Pick **one** feature with `passes: false`.  
 4. Run `python3 scripts/eng_verify.py` (baseline).  
 5. Implement the increment.  
 6. Re-verify; only then flip `passes: true` (verifier role).  
-7. Update progress; leave mergeable state.
+7. Update `progress.md`; leave a mergeable clean tree; **commit** the verified increment (see Git discipline — agents only run `git commit` when the user asks).
 
 ## Work types
 
@@ -37,7 +37,8 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 5. **Fixtures** live at `eng/fixtures/archive/` (same shape as `archive/`).  
 6. **App state** under `apps/<name>/.local/` only.  
 7. **W1 changes** must run research unit tests, not only `eng_verify`.  
-8. Gen ≠ eval: implementer does not mark `passes: true`.
+8. Gen ≠ eval: implementer does not mark `passes: true`.  
+9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `scripts/kd_research/`, research scripts, `templates/`, root `sector_*.md` / `region_*.md`), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.
 
 ## Key paths
 
@@ -61,5 +62,24 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 
 ```bash
 python3 scripts/eng_verify.py
-python3 -m pytest scripts/tests/test_reserved_names.py scripts/tests/test_catalog_api.py -q
+python3 -m pytest scripts/tests/test_reserved_names.py scripts/tests/test_catalog_api.py scripts/tests/test_provenance.py -q
 ```
+
+Mode A identity source of truth: **`harness/VERSION`** (stamped into every research `run_manifest` / snapshot + git SHA).
+
+## Git discipline (Mode B)
+
+Aligned with `harness/research/` **H9** (git as memory & recovery) and the coding-agent session loop — kept light; not Conventional Commits.
+
+| Rule | Detail |
+|------|--------|
+| **When** | After each **verified** feature/increment (not only at end of a multi-day eng session). |
+| **Gate first** | `eng_verify` (and listed verify_commands) green **before** commit when claiming the feature done. |
+| **Message** | One descriptive subject: **what changed + why** (enough to resume from `git log` alone). Optional body for risks / follow-ups. |
+| **W1** | Same commit (or same change set before ship) must include the `harness/VERSION` bump when research-runtime paths change. |
+| **Do not** | Commit broken `eng_verify`, secrets, or rewrites of completed `archive/research/**` / `archive/outcomes/**` to green tests. |
+| **Session end** | Clean tree preferred (`git status` empty or only intentional WIP). If WIP must remain, note it in `progress.md` + `status.resume_hint`. |
+| **Recovery** | Prefer reset/revert to last good commit over hand-editing a corrupted half-change. |
+| **Agents** | Prepare the tree + message; run `git commit` only when the user asks. No force-push / no amend of published history unless explicitly requested. |
+
+Industry context (advisory): `harness/research/01_harness_engineering.md` §3, `08_technique_catalog.md` H6/H9/H18.

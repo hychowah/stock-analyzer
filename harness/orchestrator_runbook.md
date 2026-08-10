@@ -62,6 +62,8 @@ python3 scripts/finalize_session.py --ticker T --date D
 ```
 
     Disk session stays canonical; SQLite is a rebuildable projection for cross-run comparison and future UI (`harness/plan_research_compare_db.md`).
+    Finalize refreshes `harness_version` (from `harness/VERSION`) + `harness_git_sha` / dirty into manifest + snapshot provenance — confirm printed in CLI output.
+    Prefer finalize on a **clean git tree** when practical (dirty flag otherwise). Optional post-finalize: commit the finished session so the run is recoverable from git history; do not rewrite prior completed sessions.
 
 ---
 

@@ -189,9 +189,26 @@ class CatalogApi:
             ORDER BY ticker, session_date DESC, session_key DESC
             LIMIT ? OFFSET ?
         """
+        # Prefer richer projection when harness_version column exists (schema v2+)
+        sql_v2 = f"""
+            SELECT run_id, ticker, session_date, session_key, path,
+                   experiment_id, audit_verdict, data_quality, status,
+                   asof_price, currency, primary_sector, region, intensity,
+                   fv_bear, fv_base, fv_bull, fv_weighted,
+                   p_bear, p_base, p_bull, margin_of_safety_pct,
+                   model_name, tech_signal, tech_regime,
+                   exported_at, harness_version, harness_git_sha, orchestrator_model
+            FROM runs
+            {where}
+            ORDER BY ticker, session_date DESC, session_key DESC
+            LIMIT ? OFFSET ?
+        """
         params.extend([limit, offset])
         with self._connect() as conn:
-            rows = conn.execute(sql, params).fetchall()
+            try:
+                rows = conn.execute(sql_v2, params).fetchall()
+            except sqlite3.OperationalError:
+                rows = conn.execute(sql, params).fetchall()
         return [_row_to_dict(r) for r in rows]
 
     def get_run(self, run_id: str) -> dict[str, Any]:

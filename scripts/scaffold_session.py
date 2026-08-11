@@ -2,19 +2,25 @@
 """Create the session folder structure for a research session.
 
 Usage:
-    python scripts/scaffold_session.py --ticker JPM --date 2026-07-25
+    python scripts/scaffold_session.py --ticker JPM --date 2026-07-25 \\
+      --orchestrator-model grok-4.5
 
     # Second run same as-of day (auto session_key …/YYYY-MM-DD__r2)
-    python scripts/scaffold_session.py --ticker META --date 2026-08-10
+    python scripts/scaffold_session.py --ticker META --date 2026-08-10 \\
+      --orchestrator-model grok-4.5
 
     # Named run / experiment
     python scripts/scaffold_session.py --ticker META --date 2026-08-10 \\
       --experiment exp-model-bakeoff --slug model-grok45 --replicate 1 \\
-      --orchestrator-model grok-4.5
+      --orchestrator-model grok-4.5 --subagent-model grok-4.5
 
 Creates archive/research/<TICKER>/<SESSION_KEY>/{reports,data/...,charts,registry,meta},
 writes registry/phase_status.json, registry/session_isolation.json, meta/run_manifest.json.
 Same-day re-runs auto-allocate __rN when the bare date folder is taken (unless --slug).
+
+``--orchestrator-model`` is **required** (or env RESEARCH_ORCHESTRATOR_MODEL). It is
+stamped into meta/run_manifest.json at scaffold time so the model id never has to be
+recalled after a long context. Subagent model defaults to the orchestrator model.
 
 Legacy path (root/<TICKER>/<KEY>) is only used with --legacy.
 """
@@ -40,7 +46,10 @@ from scripts.kd_research.paths import (  # noqa: E402
     session_root,
 )
 from scripts.kd_research.phase_status import write_phase_status_skeleton  # noqa: E402
-from scripts.kd_research.provenance import capture_harness_provenance  # noqa: E402
+from scripts.kd_research.provenance import (  # noqa: E402
+    capture_harness_provenance,
+    resolve_scaffold_models,
+)
 
 SUBDIRS = [
     "reports",
@@ -63,8 +72,8 @@ def _write_manifest_stub(
     experiment_id: str | None,
     experiment_label: str | None,
     replicate: int | None,
-    orchestrator_model: str | None,
-    default_subagent_model: str | None,
+    orchestrator_model: str,
+    default_subagent_model: str,
     notes: str | None,
     layout: str,
 ) -> Path:
@@ -166,6 +175,11 @@ def scaffold(
     notes: str | None = None,
     auto_replicate: bool = True,
 ) -> Path:
+    try:
+        orch_id, sub_id = resolve_scaffold_models(orchestrator_model, default_subagent_model)
+    except ValueError as e:
+        raise SystemExit(str(e)) from e
+
     # Allow passing full session_key as --date for convenience
     if "__" in session_date and slug is None:
         session_date, slug = parse_session_key(session_date)
@@ -213,8 +227,8 @@ def scaffold(
         experiment_id=experiment_id,
         experiment_label=experiment_label,
         replicate=replicate,
-        orchestrator_model=orchestrator_model,
-        default_subagent_model=default_subagent_model,
+        orchestrator_model=orch_id,
+        default_subagent_model=sub_id,
         notes=notes,
         layout="legacy" if legacy else "archive",
     )
@@ -255,13 +269,19 @@ def main() -> None:
     ap.add_argument(
         "--orchestrator-model",
         default=None,
-        help="Model id for the main/orchestrator agent (free text for now)",
+        help=(
+            "Required LLM id for the main/orchestrator agent (e.g. grok-4.5). "
+            "Or set env RESEARCH_ORCHESTRATOR_MODEL. Stamped at scaffold only."
+        ),
     )
     ap.add_argument(
         "--subagent-model",
         dest="default_subagent_model",
         default=None,
-        help="Default model id for subagents when uniform",
+        help=(
+            "Default LLM id for subagents (defaults to --orchestrator-model). "
+            "Or set env RESEARCH_SUBAGENT_MODEL."
+        ),
     )
     ap.add_argument(
         "--notes",
@@ -302,8 +322,12 @@ def main() -> None:
         auto_replicate=not args.no_auto_replicate,
     )
     sk = root.name
+    man_path = root / "meta" / "run_manifest.json"
+    man = json.loads(man_path.read_text(encoding="utf-8")) if man_path.is_file() else {}
     print(f"Session scaffolded: {root}")
     print(f"  session_key={sk}")
+    print(f"  orchestrator_model={man.get('orchestrator_model')}")
+    print(f"  default_subagent_model={man.get('default_subagent_model')}")
     for sub in SUBDIRS:
         print(f"  {root / sub}/")
     print(f"  {root / 'registry' / 'phase_status.json'}")

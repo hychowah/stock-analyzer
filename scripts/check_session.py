@@ -930,6 +930,17 @@ def check_meta_artifacts(session: Path) -> None:
                     "run_manifest harness_git_sha",
                     f"{hsha} dirty={dirty}",
                 )
+            # LLM model identity: required at scaffold for active runs; WARN for
+            # legacy completed sessions that pre-date enforcement.
+            from scripts.kd_research.gates import check_llm_model_identity  # noqa: WPS433
+
+            legacy_done = bool(data.get("immutable")) or str(data.get("status") or "") in {
+                "completed",
+                "finalized",
+                "exported",
+            }
+            for st, cid, detail in check_llm_model_identity(session, strict=not legacy_done):
+                record(st, f"run_manifest {cid}", detail)
         except Exception as e:  # noqa: BLE001
             record("FAIL", "run_manifest parse", str(e))
     else:
@@ -955,6 +966,19 @@ def check_meta_artifacts(session: Path) -> None:
                     "PASS",
                     "prediction_snapshot provenance",
                     f"v={prov.get('harness_version')} git={prov.get('harness_git_sha')}",
+                )
+            om = prov.get("orchestrator_model")
+            if not om or not str(om).strip():
+                record(
+                    "WARN",
+                    "prediction_snapshot orchestrator_model",
+                    "missing in provenance — re-scaffold new runs with --orchestrator-model",
+                )
+            else:
+                record(
+                    "PASS",
+                    "prediction_snapshot orchestrator_model",
+                    str(om),
                 )
         except Exception as e:  # noqa: BLE001
             record("FAIL", "prediction_snapshot parse", str(e))

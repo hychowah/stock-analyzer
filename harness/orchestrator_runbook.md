@@ -19,9 +19,11 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 
 ## Before Phase 0 (new run)
 
-1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D`  
+1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D --orchestrator-model <id>`  
+   - **Required:** `--orchestrator-model` (e.g. `grok-4.5`) or env `RESEARCH_ORCHESTRATOR_MODEL`. Confirm CLI prints both model fields.  
    - Note printed `session_key` (may be `D__r2` if same-day re-run).  
    - Confirm `registry/session_isolation.json` exists (`mode=isolated` default).  
+   - Confirm `meta/run_manifest.json` has non-null `orchestrator_model` **before Phase 0**. Never invent it later.  
    - Set working `S` = that path only. **Skip** browsing other session keys.
 2. Write `registry/sector_config.json` — `module_file` is a **string** (never JSON `null`; use `""` only if documented). Use as-of **date** in JSON (`YYYY-MM-DD`), not necessarily the full session_key.
 3. Write `registry/market_context.json` (intensity gate is load-bearing).
@@ -104,8 +106,8 @@ python3 scripts/finalize_session.py --ticker T --date D
 Use a **slug** so same-day runs never overwrite production folders.
 
 ```bash
-# Production (default)
-python3 scripts/scaffold_session.py --ticker META --date 2026-08-10
+# Production (default) — orchestrator-model required
+python3 scripts/scaffold_session.py --ticker META --date 2026-08-10 --orchestrator-model grok-4.5
 
 # Bakeoff cell: one model × one replicate
 python3 scripts/scaffold_session.py --ticker META --date 2026-08-10 \

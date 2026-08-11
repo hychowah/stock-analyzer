@@ -38,8 +38,8 @@ archive/
 ## Common commands
 
 ```bash
-# New session
-python3 scripts/scaffold_session.py --ticker META --date $(date +%F)
+# New session (orchestrator-model required — stamped at scaffold)
+python3 scripts/scaffold_session.py --ticker META --date $(date +%F) --orchestrator-model grok-4.5
 
 # After Phase 5 (snapshot + comparison DB + thin catalog)
 python3 scripts/finalize_session.py --ticker META --date 2026-08-03

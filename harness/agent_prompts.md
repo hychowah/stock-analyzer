@@ -49,7 +49,7 @@ Every template already carries the justification contract — do not strip it. S
 
 Do not run valuation subagent (5) before phase `2_parallel` preflight passes; do not run audit subagent (13) before phase `5`.
 
-**New-run start (mandatory):** When the user asks to research ticker T (and does not name an existing `session_key` to resume), **scaffold first** and work under that `S`. **Forbidden:** listing `archive/research/T/`, reading yesterday’s reports/registry, or deciding whether a prior run is “usable” before starting. That is cross-session contamination. Same-day re-runs get a new `session_key` (`date` or auto `date__rN`); keep `S` pointed only at the current folder. Do not inject any prior session paths into subagent prompts.
+**New-run start (mandatory):** When the user asks to research ticker T (and does not name an existing `session_key` to resume), **scaffold first** and work under that `S`. Always pass **`--orchestrator-model <id>`** (your actual model id, e.g. `grok-4.5`) so `meta/run_manifest.json` records it **before Phase 0** — never invent or guess the model id at finalize after a long context. Optional `--subagent-model` defaults to the same id. Preflight FAILs if missing. **Forbidden:** listing `archive/research/T/`, reading yesterday’s reports/registry, or deciding whether a prior run is “usable” before starting. That is cross-session contamination. Same-day re-runs get a new `session_key` (`date` or auto `date__rN`); keep `S` pointed only at the current folder. Do not inject any prior session paths into subagent prompts.
 
 ---
 

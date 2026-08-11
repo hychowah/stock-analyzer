@@ -81,7 +81,9 @@ class ScaffoldWritesPhaseStatusTests(unittest.TestCase):
     def test_scaffold_creates_valid_phase_status(self):
         sc = _load_scaffold()
         with tempfile.TemporaryDirectory() as td:
-            root = sc.scaffold("ZZTEST", "2099-01-02", output_dir=td)
+            root = sc.scaffold(
+                "ZZTEST", "2099-01-02", output_dir=td, orchestrator_model="grok-4.5"
+            )
             ps = root / "registry" / "phase_status.json"
             self.assertTrue(ps.is_file(), f"missing {ps}")
             data = json.loads(ps.read_text())

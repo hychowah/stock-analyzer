@@ -118,7 +118,9 @@ class ScaffoldArchiveTests(unittest.TestCase):
     def test_scaffold_writes_under_archive_research(self):
         sc = _load_scaffold()
         with tempfile.TemporaryDirectory() as td:
-            root = sc.scaffold("ZZARCH", "2099-06-01", output_dir=td)
+            root = sc.scaffold(
+                "ZZARCH", "2099-06-01", output_dir=td, orchestrator_model="grok-4.5"
+            )
             self.assertTrue(str(root).endswith("archive/research/ZZARCH/2099-06-01") or root.as_posix().endswith(
                 "archive/research/ZZARCH/2099-06-01"
             ))
@@ -135,9 +137,13 @@ class ScaffoldArchiveTests(unittest.TestCase):
     def test_scaffold_same_day_auto_r2(self):
         sc = _load_scaffold()
         with tempfile.TemporaryDirectory() as td:
-            r1 = sc.scaffold("ZZDUP", "2099-07-01", output_dir=td)
+            r1 = sc.scaffold(
+                "ZZDUP", "2099-07-01", output_dir=td, orchestrator_model="grok-4.5"
+            )
             self.assertTrue(r1.name == "2099-07-01")
-            r2 = sc.scaffold("ZZDUP", "2099-07-01", output_dir=td)
+            r2 = sc.scaffold(
+                "ZZDUP", "2099-07-01", output_dir=td, orchestrator_model="grok-4.5"
+            )
             self.assertEqual(r2.name, "2099-07-01__r2")
             self.assertTrue((r2 / "registry" / "session_isolation.json").is_file())
             man = json.loads((r2 / "meta" / "run_manifest.json").read_text())

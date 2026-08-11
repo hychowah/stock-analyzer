@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.3.0",
+  "harness_version": "2.4.0",
   "harness_spec": "v2",
-  "notes": "2.3.0: phase-graph preflight with --subagent binding (orchestrator vs subagent terminology); FDD hooks, technical isolation, phase_status↔disk. 2.2.x: session isolation + same-day __rN. Git SHA is exact tree fingerprint."
+  "notes": "2.4.0: require orchestrator_model at scaffold (stamp LLM id once; preflight/check_session enforce; no late invent). 2.3.0: phase-graph preflight with --subagent binding; FDD hooks, technical isolation, phase_status↔disk. 2.2.x: session isolation + same-day __rN."
 }

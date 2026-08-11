@@ -36,8 +36,14 @@
     "research_agents_sha256": { "type": ["string", "null"] },
     "prompts_sha256": { "type": ["string", "null"] },
     "version_file_sha256": { "type": ["string", "null"] },
-    "orchestrator_model": { "type": ["string", "null"] },
-    "default_subagent_model": { "type": ["string", "null"] },
+    "orchestrator_model": {
+      "type": ["string", "null"],
+      "description": "Required for new scaffolds (non-null). Stamp at scaffold via --orchestrator-model; null only for pre-2.4.0 legacy. Never invent late."
+    },
+    "default_subagent_model": {
+      "type": ["string", "null"],
+      "description": "Defaults to orchestrator_model when omitted at scaffold."
+    },
     "model_map": { "type": ["object", "null"] },
     "temperature": { "type": ["number", "null"] },
     "seed": { "type": ["string", "number", "null"] },

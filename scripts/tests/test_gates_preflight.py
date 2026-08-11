@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from scripts.kd_research.gates import (  # noqa: E402
+    check_llm_model_identity,
     check_phase0_coverage,
     check_stress_coverage,
     entry_checks,
@@ -28,10 +29,48 @@ def _write(p: Path, obj: object) -> None:
         p.write_text(str(obj), encoding="utf-8")
 
 
+def _stamp_model(session: Path, model: str = "grok-4.5") -> None:
+    _write(
+        session / "meta" / "run_manifest.json",
+        {
+            "schema_version": 2,
+            "run_id": "research:X:2026-01-01",
+            "product": "research",
+            "ticker": "X",
+            "session_date": "2026-01-01",
+            "status": "scaffolded",
+            "orchestrator_model": model,
+            "default_subagent_model": model,
+        },
+    )
+
+
 class GatesTest(unittest.TestCase):
+    def test_entry_fails_without_orchestrator_model(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            rows = entry_checks(s, "0", ticker="X")
+            fails = [r for r in rows if r[0] == "FAIL"]
+            self.assertTrue(any(r[1] == "orchestrator_model" for r in fails), fails)
+
+    def test_check_llm_model_warns_legacy_completed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _write(
+                s / "meta" / "run_manifest.json",
+                {
+                    "status": "completed",
+                    "immutable": True,
+                    "orchestrator_model": None,
+                },
+            )
+            rows = check_llm_model_identity(s, strict=False)
+            self.assertEqual(rows[0][0], "WARN")
+
     def test_entry_2_parallel_fails_without_deep_dive(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             s = Path(td)
+            _stamp_model(s)
             for rel in (
                 "registry/sector_config.json",
                 "registry/market_context.json",
@@ -47,6 +86,7 @@ class GatesTest(unittest.TestCase):
     def test_entry_2_parallel_passes_minimal(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             s = Path(td)
+            _stamp_model(s)
             for rel in (
                 "registry/sector_config.json",
                 "registry/market_context.json",

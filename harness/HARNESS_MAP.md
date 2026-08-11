@@ -23,10 +23,12 @@ archive/research/<TICKER>/<YYYY-MM-DD>/
   meta/      run_manifest, prediction_snapshot
 ```
 
-Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD`  
+Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --orchestrator-model <id>`  
 → folder `archive/research/T/<SESSION_KEY>/` where `SESSION_KEY` is `YYYY-MM-DD` or auto `YYYY-MM-DD__r2` if that day already has a run (`--slug` for named runs).
 
 **Harness identity (every run):** `harness/VERSION` → `harness_version` + `harness_spec`; git → `harness_git_sha` / `harness_dirty`. Stamped at scaffold; **refreshed at finalize** into `meta/run_manifest.json` and snapshot `provenance`.  
+
+**LLM identity (every new run):** `--orchestrator-model` (required) + optional `--subagent-model` → `run_manifest.orchestrator_model` / `default_subagent_model` at **scaffold only**. Preflight FAILs without it. Do not backfill from chat memory after Phase 0+.  
 
 **Isolation:** same session agents share `S/`. New run: **do not** open other `session_key`s first (`registry/session_isolation.json`). Resume only if user names the folder.  
 

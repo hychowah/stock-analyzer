@@ -137,11 +137,53 @@ class ScaffoldManifestTests(unittest.TestCase):
                     "version_file_sha256": "dd",
                 },
             ):
-                session = scaffold("TESTV", "2099-01-01", output_dir=str(root))
+                session = scaffold(
+                    "TESTV",
+                    "2099-01-01",
+                    output_dir=str(root),
+                    orchestrator_model="grok-4.5",
+                )
             man = json.loads((session / "meta" / "run_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(man["harness_version"], "2.1.0")
             self.assertEqual(man["harness_git_sha"], "abc123def")
             self.assertIs(man["harness_dirty"], False)
+            self.assertEqual(man["orchestrator_model"], "grok-4.5")
+            self.assertEqual(man["default_subagent_model"], "grok-4.5")
+
+    def test_scaffold_requires_orchestrator_model(self):
+        from scripts.scaffold_session import scaffold
+
+        with tempfile.TemporaryDirectory() as td:
+            with mock.patch.dict("os.environ", {}, clear=False):
+                # Ensure env fallback is not set
+                import os
+
+                os.environ.pop("RESEARCH_ORCHESTRATOR_MODEL", None)
+                with self.assertRaises(SystemExit) as cm:
+                    scaffold("NOMODEL", "2099-02-01", output_dir=td)
+                self.assertIn("orchestrator_model", str(cm.exception).lower())
+
+
+class ModelIdHelpersTests(unittest.TestCase):
+    def test_normalize_and_require(self):
+        from scripts.kd_research.provenance import normalize_model_id, require_model_id
+
+        self.assertEqual(normalize_model_id("  grok-4.5  "), "grok-4.5")
+        self.assertEqual(normalize_model_id("grok 4.5"), "grok-4.5")
+        self.assertIsNone(normalize_model_id(""))
+        self.assertIsNone(normalize_model_id("???"))
+        self.assertEqual(require_model_id("claude-sonnet-4"), "claude-sonnet-4")
+        with self.assertRaises(ValueError):
+            require_model_id(None)
+
+    def test_resolve_subagent_defaults(self):
+        from scripts.kd_research.provenance import resolve_scaffold_models
+
+        o, s = resolve_scaffold_models("grok-4.5", None)
+        self.assertEqual(o, "grok-4.5")
+        self.assertEqual(s, "grok-4.5")
+        o2, s2 = resolve_scaffold_models("grok-4.5", "gpt-4.1")
+        self.assertEqual(s2, "gpt-4.1")
 
 
 if __name__ == "__main__":

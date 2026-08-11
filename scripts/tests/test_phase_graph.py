@@ -103,6 +103,18 @@ class PhaseGraphEntryTests(unittest.TestCase):
                 p.write_text(json.dumps({"ticker": "X", "session_date": "2026-01-01"}), encoding="utf-8")
             (s / "data").mkdir(parents=True, exist_ok=True)
             (s / "data" / "sp_financials.csv").write_text("ticker,item\nX,1\n", encoding="utf-8")
+            man = s / "meta" / "run_manifest.json"
+            man.parent.mkdir(parents=True, exist_ok=True)
+            man.write_text(
+                json.dumps(
+                    {
+                        "status": "scaffolded",
+                        "orchestrator_model": "grok-4.5",
+                        "default_subagent_model": "grok-4.5",
+                    }
+                ),
+                encoding="utf-8",
+            )
             rows = entry_checks(s, "2_parallel", ticker="X", subagent_id="5")
             fails = [r for r in rows if r[0] == "FAIL"]
             self.assertEqual(fails, [], fails)

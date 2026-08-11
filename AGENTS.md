@@ -22,7 +22,7 @@ Auto-loaded entrypoint. **Keep this file short.** Deep law lives in nested files
 
 ```bash
 # Mode A — research
-python3 scripts/scaffold_session.py --ticker META --date $(date +%F)
+python3 scripts/scaffold_session.py --ticker META --date $(date +%F) --orchestrator-model grok-4.5
 python3 scripts/preflight_phase.py --ticker META --date $(date +%F) --phase 2_parallel
 python3 scripts/check_session.py --ticker META --date $(date +%F) --full
 python3 scripts/finalize_session.py --ticker META --date $(date +%F)

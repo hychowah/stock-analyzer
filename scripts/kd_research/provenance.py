@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -18,6 +20,11 @@ from scripts.kd_research.paths import PROJECT_ROOT
 VERSION_REL = Path("harness") / "VERSION"
 DEFAULT_HARNESS_SPEC = "v2"
 DEFAULT_HARNESS_VERSION = "0.0.0-unversioned"
+
+# Free-text LLM id stamped once at scaffold (never invent late in a long run).
+ENV_ORCHESTRATOR_MODEL = "RESEARCH_ORCHESTRATOR_MODEL"
+ENV_SUBAGENT_MODEL = "RESEARCH_SUBAGENT_MODEL"
+_MODEL_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+/:-]{0,127}$")
 
 # Paths that affect Mode A research outputs / gates (W1). Used by eng_verify.
 RESEARCH_RUNTIME_PREFIXES: tuple[str, ...] = (
@@ -135,6 +142,76 @@ def load_harness_identity(repo: Path | None = None) -> dict[str, str]:
     return {
         "harness_version": ver or DEFAULT_HARNESS_VERSION,
         "harness_spec": DEFAULT_HARNESS_SPEC,
+    }
+
+
+def normalize_model_id(raw: str | None) -> str | None:
+    """Return a cleaned model id or None if empty/invalid shape."""
+    if raw is None:
+        return None
+    s = str(raw).strip()
+    if not s:
+        return None
+    # Collapse internal whitespace (agents sometimes paste "grok 4.5")
+    s = re.sub(r"\s+", "-", s)
+    if not _MODEL_ID_RE.match(s):
+        return None
+    return s
+
+
+def require_model_id(raw: str | None, *, field: str = "orchestrator_model") -> str:
+    """Strict parse for scaffold CLI — raises ValueError with operator guidance."""
+    mid = normalize_model_id(raw)
+    if mid is None:
+        raise ValueError(
+            f"{field} is required (non-empty model id, e.g. grok-4.5). "
+            f"Pass --orchestrator-model at scaffold, or set {ENV_ORCHESTRATOR_MODEL}. "
+            "Stamp once at session start; do not invent the model id after a long context."
+        )
+    return mid
+
+
+def resolve_scaffold_models(
+    orchestrator_model: str | None,
+    default_subagent_model: str | None,
+) -> tuple[str, str]:
+    """Resolve LLM ids for a new session (CLI > env; subagent defaults to orchestrator)."""
+    orch = orchestrator_model or os.environ.get(ENV_ORCHESTRATOR_MODEL)
+    orch_id = require_model_id(orch, field="orchestrator_model")
+    sub = default_subagent_model or os.environ.get(ENV_SUBAGENT_MODEL) or orch_id
+    sub_id = require_model_id(sub, field="default_subagent_model")
+    return orch_id, sub_id
+
+
+def load_manifest_models(session: Path) -> dict[str, Any]:
+    """Read orchestrator/subagent model fields from meta/run_manifest.json if present."""
+    path = session / "meta" / "run_manifest.json"
+    if not path.is_file():
+        return {"present": False, "orchestrator_model": None, "default_subagent_model": None}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {
+            "present": True,
+            "parse_error": True,
+            "orchestrator_model": None,
+            "default_subagent_model": None,
+        }
+    if not isinstance(data, dict):
+        return {
+            "present": True,
+            "parse_error": True,
+            "orchestrator_model": None,
+            "default_subagent_model": None,
+        }
+    return {
+        "present": True,
+        "parse_error": False,
+        "status": data.get("status"),
+        "immutable": data.get("immutable"),
+        "orchestrator_model": normalize_model_id(data.get("orchestrator_model")),
+        "default_subagent_model": normalize_model_id(data.get("default_subagent_model")),
+        "raw": data,
     }
 
 

@@ -695,6 +695,59 @@ def check_phase_status_disk(session: Path, data: dict[str, Any]) -> list[tuple[s
     return out
 
 
+def check_llm_model_identity(
+    session: Path,
+    *,
+    strict: bool = True,
+) -> list[tuple[str, str, str]]:
+    """Require orchestrator_model stamped at scaffold (manifest), not invented late.
+
+    ``strict=True`` (preflight / active sessions): missing → FAIL.
+    ``strict=False`` (legacy completed runs in check_session): missing → WARN.
+    """
+    from scripts.kd_research.provenance import load_manifest_models  # noqa: WPS433
+
+    info = load_manifest_models(session)
+    if not info.get("present"):
+        msg = (
+            "meta/run_manifest.json missing — re-scaffold with "
+            "--orchestrator-model (stamp LLM id at session start)"
+        )
+        return [("FAIL" if strict else "WARN", "orchestrator_model", msg)]
+    if info.get("parse_error"):
+        return [("FAIL", "orchestrator_model", "run_manifest.json unreadable")]
+    orch = info.get("orchestrator_model")
+    if not orch:
+        legacy = bool(info.get("immutable")) or str(info.get("status") or "") in {
+            "completed",
+            "finalized",
+            "exported",
+        }
+        if legacy and not strict:
+            return [
+                (
+                    "WARN",
+                    "orchestrator_model",
+                    "missing (legacy completed OK); new runs must stamp at scaffold",
+                )
+            ]
+        return [
+            (
+                "FAIL",
+                "orchestrator_model",
+                "missing/empty — re-scaffold with --orchestrator-model; "
+                "do not invent the model id after a long context",
+            )
+        ]
+    sub = info.get("default_subagent_model")
+    detail = f"orchestrator={orch}"
+    if sub:
+        detail += f" subagent={sub}"
+    else:
+        detail += " subagent=(unset)"
+    return [("PASS", "orchestrator_model", detail)]
+
+
 def entry_checks(
     session: Path,
     phase_id: str,
@@ -709,6 +762,8 @@ def entry_checks(
         return [("FAIL", "phase_id", f"unknown phase_id={phase_id!r}")]
 
     results: list[tuple[str, str, str]] = []
+    # LLM identity first: must be on disk from scaffold (avoids late hallucination)
+    results.extend(check_llm_model_identity(session, strict=True))
     # Phase graph: order + allowed subagent (before file evidence)
     from scripts.kd_research.phase_graph import check_phase_graph_entry  # noqa: WPS433
 

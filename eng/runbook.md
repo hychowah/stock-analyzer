@@ -42,7 +42,7 @@ python3 programs/experiment_summary.py
 ARCHIVE_ROOT=$PWD/eng/fixtures/archive python3 -m packages.catalog_api health
 
 # Research still uses Mode A tools
-python3 scripts/scaffold_session.py --ticker META --date $(date +%F)
+python3 scripts/scaffold_session.py --ticker META --date $(date +%F) --orchestrator-model grok-4.5
 python3 scripts/check_session.py --ticker META --date 2026-08-03 --full
 ```
 

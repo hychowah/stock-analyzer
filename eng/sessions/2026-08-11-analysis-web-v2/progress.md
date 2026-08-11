@@ -13,4 +13,8 @@
   - static CSS; portfolio placeholder page + example book JSON
   - tests migrated to TestClient (9 passed)
   - README + eng/runbook updated
-- Next: Phase 2 markdown report rendering
+- Phase 2: markdown → sanitized HTML; CatalogApi.list_artifacts; run detail report index
+  - services/render_markdown.py (markdown-it-py + bleach)
+  - /artifact renders .md HTML by default; raw=1 for source
+  - eng_verify PASS (72 tests)
+- Next: Phase 3 SSE change feed

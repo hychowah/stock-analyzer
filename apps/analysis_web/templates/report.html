@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ relpath }}{% endblock %}
+{% block content %}
+<div class="card">
+  <p>
+    <a href="/runs/{{ run_id }}">← Run</a>
+    · <a href="/artifact?run_id={{ run_id | urlencode }}&amp;path={{ relpath | urlencode }}&amp;raw=1">Raw source</a>
+  </p>
+  <h1 class="mono">{{ relpath }}</h1>
+  {% if mode == 'markdown' %}
+  <div class="report-body">{{ body_html | safe }}</div>
+  {% else %}
+  <pre>{{ body_text }}</pre>
+  {% endif %}
+</div>
+{% endblock %}

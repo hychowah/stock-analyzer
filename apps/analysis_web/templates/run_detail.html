@@ -33,7 +33,7 @@
   </div>
 </div>
 <div class="card">
-  <h2>Reports (allowlisted artifacts)</h2>
+  <h2>Primary reports</h2>
   <ul>
     {% for item in report_links %}
       {% if item.href %}
@@ -45,6 +45,25 @@
       {% endif %}
     {% endfor %}
   </ul>
-  <p class="muted">Served via open_artifact — raw_sec denied by design.</p>
+</div>
+<div class="card">
+  <h2>All reports/ (allowlisted)</h2>
+  {% if artifact_index %}
+  <table>
+    <thead><tr><th>File</th><th>Path</th><th>Size</th></tr></thead>
+    <tbody>
+      {% for item in artifact_index %}
+      <tr>
+        <td><a href="{{ item.href }}">{{ item.name }}</a></td>
+        <td class="mono muted">{{ item.relpath }}</td>
+        <td class="num muted">{% if item.size_bytes is not none %}{{ item.size_bytes }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No files under reports/ (or session missing).</p>
+  {% endif %}
+  <p class="muted">Markdown is rendered as HTML; use “Raw source” on the report page for plain text. raw_sec denied by design.</p>
 </div>
 {% endblock %}

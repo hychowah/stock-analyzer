@@ -273,6 +273,78 @@ class CatalogApi:
                 out["technical"] = str(p)
         return out
 
+    def _normalize_relpath(self, relpath: str) -> str:
+        if not relpath or relpath.startswith("/") or relpath.startswith("~"):
+            raise ArtifactDenied(f"absolute or empty relpath denied: {relpath!r}")
+        if "\\" in relpath:
+            raise ArtifactDenied("backslashes not allowed in relpath")
+        norm = Path(relpath).as_posix()
+        if norm.startswith("../") or "/../" in f"/{norm}/" or norm == "..":
+            raise ArtifactDenied(f"path traversal denied: {relpath!r}")
+        return norm
+
+    def _assert_allowlisted(
+        self,
+        norm: str,
+        *,
+        allow_prefixes: Iterable[str] | None = None,
+    ) -> None:
+        allow = tuple(allow_prefixes or DEFAULT_ALLOW_PREFIXES)
+        if not any(norm == a.rstrip("/") or norm.startswith(a) for a in allow):
+            raise ArtifactDenied(f"prefix not allowlisted: {norm}")
+        for d in DEFAULT_DENY_PREFIXES:
+            if norm.startswith(d):
+                raise ArtifactDenied(f"prefix denied: {norm}")
+
+    def list_artifacts(
+        self,
+        run_id: str,
+        *,
+        prefix: str = "reports/",
+        max_files: int = 200,
+        allow_prefixes: Iterable[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """List allowlisted files under a session-relative prefix.
+
+        Returns dicts with keys: relpath, name, size_bytes.
+        Does not open file contents. Skips denied prefixes and escapes.
+        """
+        if max_files < 1 or max_files > 2000:
+            raise ValueError("max_files must be 1..2000")
+        prefix_norm = self._normalize_relpath(prefix if prefix.endswith("/") else prefix + "/")
+        # prefix itself must be allowlisted (e.g. reports/)
+        self._assert_allowlisted(prefix_norm, allow_prefixes=allow_prefixes)
+
+        session_root = self.get_session_root(run_id).resolve()
+        base = (session_root / prefix_norm).resolve()
+        try:
+            base.relative_to(session_root)
+        except ValueError as e:
+            raise ArtifactDenied(f"escapes session root: {prefix!r}") from e
+        if not base.is_dir():
+            return []
+
+        out: list[dict[str, Any]] = []
+        for path in sorted(base.rglob("*")):
+            if not path.is_file():
+                continue
+            try:
+                rel = path.resolve().relative_to(session_root).as_posix()
+            except ValueError:
+                continue
+            try:
+                self._assert_allowlisted(rel, allow_prefixes=allow_prefixes)
+            except ArtifactDenied:
+                continue
+            try:
+                size = path.stat().st_size
+            except OSError:
+                size = None
+            out.append({"relpath": rel, "name": path.name, "size_bytes": size})
+            if len(out) >= max_files:
+                break
+        return out
+
     def get_snapshot(self, run_id: str) -> dict[str, Any]:
         root = self.get_session_root(run_id)
         snap = root / "meta" / "prediction_snapshot.json"
@@ -361,21 +433,8 @@ class CatalogApi:
         max_bytes: int | None = None,
     ) -> bytes:
         """Read a file under the session root with containment + allowlist."""
-        if not relpath or relpath.startswith("/") or relpath.startswith("~"):
-            raise ArtifactDenied(f"absolute or empty relpath denied: {relpath!r}")
-        if "\\" in relpath:
-            raise ArtifactDenied("backslashes not allowed in relpath")
-        # Normalize and reject parent traversal tokens before resolve
-        norm = Path(relpath).as_posix()
-        if norm.startswith("../") or "/../" in f"/{norm}/" or norm == "..":
-            raise ArtifactDenied(f"path traversal denied: {relpath!r}")
-
-        allow = tuple(allow_prefixes or DEFAULT_ALLOW_PREFIXES)
-        if not any(norm == a.rstrip("/") or norm.startswith(a) for a in allow):
-            raise ArtifactDenied(f"prefix not allowlisted: {norm}")
-        for d in DEFAULT_DENY_PREFIXES:
-            if norm.startswith(d):
-                raise ArtifactDenied(f"prefix denied: {norm}")
+        norm = self._normalize_relpath(relpath)
+        self._assert_allowlisted(norm, allow_prefixes=allow_prefixes)
 
         session_root = self.get_session_root(run_id).resolve()
         target = (session_root / norm).resolve()

@@ -9,7 +9,12 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment
 
-from packages.catalog_api.client import CatalogApi, DbMissing, RunNotFound
+from packages.catalog_api.client import (
+    ArtifactDenied,
+    CatalogApi,
+    DbMissing,
+    RunNotFound,
+)
 
 from apps.analysis_web.deps import get_api
 from apps.analysis_web.templating import fmt_num
@@ -116,6 +121,7 @@ def page_run(
         )
         return HTMLResponse(html, status_code=503)
 
+    # Highlighted classic trio (when present) + full allowlisted reports/ index
     report_links: list[dict[str, Any]] = []
     for label, key in (
         ("README", "readme"),
@@ -140,11 +146,28 @@ def page_run(
         else:
             report_links.append({"label": label, "href": None, "missing": True})
 
+    artifact_index: list[dict[str, Any]] = []
+    try:
+        listed = api.list_artifacts(run_id, prefix="reports/")
+    except (RunNotFound, ArtifactDenied, DbMissing):
+        listed = []
+    for item in listed:
+        rel = item["relpath"]
+        artifact_index.append(
+            {
+                "name": item["name"],
+                "relpath": rel,
+                "size_bytes": item.get("size_bytes"),
+                "href": f"/artifact?run_id={quote(run_id, safe='')}&path={quote(rel, safe='')}",
+            }
+        )
+
     return _render(
         request,
         "run_detail.html",
         run=run,
         report_links=report_links,
+        artifact_index=artifact_index,
     )
 
 

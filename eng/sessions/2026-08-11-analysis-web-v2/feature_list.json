@@ -21,8 +21,8 @@
     {
       "id": "report-render",
       "description": "Markdown report render + report index (Phase 2)",
-      "passes": false,
-      "verify": "rendered HTML for .md; list reports/"
+      "passes": true,
+      "verify": "rendered HTML for .md; list reports/; eng_verify PASS"
     },
     {
       "id": "sse-realtime",

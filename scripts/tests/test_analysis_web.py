@@ -106,7 +106,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(r.status_code, (302, 307))
         self.assertIn("/runs/research:META:2026-08-03", r.headers.get("location", ""))
 
-    def test_artifact(self):
+    def test_artifact_markdown_rendered(self):
         r = self.client.get(
             "/artifact",
             params={
@@ -116,6 +116,48 @@ class AnalysisWebTests(unittest.TestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Hello META", r.content)
+        # Rendered heading, not only escaped source in a bare dump
+        self.assertIn(b"<h1>", r.content)
+        self.assertIn(b"report-body", r.content)
+
+    def test_artifact_markdown_raw(self):
+        r = self.client.get(
+            "/artifact",
+            params={
+                "run_id": "research:META:2026-08-03",
+                "path": "reports/00_META_README.md",
+                "raw": "1",
+            },
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"# Hello META", r.content)
+
+    def test_artifact_xss_stripped(self):
+        # Write a second report with raw HTML/script in markdown
+        research = self.archive / "research" / "META" / "2026-08-03" / "reports"
+        research.mkdir(parents=True, exist_ok=True)
+        (research / "evil.md").write_text(
+            "# Safe\n\n<script>alert(1)</script>\n\n<img src=x onerror=alert(1)>\n",
+            encoding="utf-8",
+        )
+        r = self.client.get(
+            "/artifact",
+            params={
+                "run_id": "research:META:2026-08-03",
+                "path": "reports/evil.md",
+            },
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"<h1>", r.content)
+        # No live HTML tags (escaped &lt;script&gt; / &lt;img…&gt; text is OK)
+        self.assertNotIn(b"<script>", r.content.lower())
+        self.assertNotIn(b"<img", r.content.lower())
+
+    def test_run_detail_lists_reports(self):
+        r = self.client.get("/runs/research:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"00_META_README.md", r.content)
+        self.assertIn(b"All reports/", r.content)
 
     def test_experiments(self):
         r = self.client.get("/experiments")

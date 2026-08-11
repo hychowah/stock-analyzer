@@ -29,7 +29,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/` | Filterable run list |
 | `/runs/{run_id}` | Run detail (FV, MoS, audit, report links) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
-| `/artifact?run_id=…&path=reports/…` | Allowlisted artifact view |
+| `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
 | `/portfolio` | Portfolio (book in `.local/`; full join later) |

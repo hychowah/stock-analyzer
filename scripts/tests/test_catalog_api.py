@@ -150,6 +150,17 @@ class CatalogApiTests(unittest.TestCase):
         data = self.api.open_artifact("research:META:2026-08-03", "reports/00_META_README.md")
         self.assertIn(b"META", data)
 
+    def test_list_artifacts(self):
+        items = self.api.list_artifacts("research:META:2026-08-03", prefix="reports/")
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["name"], "00_META_README.md")
+        self.assertEqual(items[0]["relpath"], "reports/00_META_README.md")
+        self.assertIsInstance(items[0]["size_bytes"], int)
+
+    def test_list_artifacts_denied_prefix(self):
+        with self.assertRaises(ArtifactDenied):
+            self.api.list_artifacts("research:META:2026-08-03", prefix="data/raw_sec/")
+
     def test_open_artifact_traversal_denied(self):
         with self.assertRaises(ArtifactDenied):
             self.api.open_artifact("research:META:2026-08-03", "../secret")

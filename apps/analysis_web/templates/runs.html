@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Runs{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Research runs</h1>
+  <p class="muted">{{ runs|length }} row(s) · max {{ limit }} · source: catalog sqlite</p>
+  <form class="filters" method="get" action="/">
+    <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="META"/></label>
+    <label>Sector<input name="sector" value="{{ sector or '' }}"/></label>
+    <label>Region<input name="region" value="{{ region or '' }}"/></label>
+    <label>Audit
+      <select name="audit_verdict">
+        <option value="">(any)</option>
+        <option value="PASS" {% if audit == 'PASS' %}selected{% endif %}>PASS</option>
+        <option value="FAIL" {% if audit == 'FAIL' %}selected{% endif %}>FAIL</option>
+      </select>
+    </label>
+    <label>Experiment<input name="experiment_id" value="{{ experiment_id or '' }}"/></label>
+    <label>Limit<input name="limit" value="{{ limit }}" style="min-width:4rem"/></label>
+    <button type="submit">Filter</button>
+    <a class="btn secondary" href="/">Reset</a>
+  </form>
+</div>
+{% if error %}
+<div class="card err"><p>{{ error }}</p>
+  <p>Rebuild with <code>python3 scripts/export_compare_db.py --all</code></p>
+</div>
+{% else %}
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th><th>Session</th><th>Sector</th><th>Region</th>
+        <th>Price</th><th>FV base</th><th>MoS %</th><th>Audit</th><th>Tech</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if runs %}
+        {% for r in runs %}
+        <tr>
+          <td><a class="mono" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
+          <td class="mono">{{ r.session_key }}</td>
+          <td>{{ r.primary_sector or '' }}</td>
+          <td>{{ r.region or '' }}</td>
+          <td class="num">{{ r.asof_price | fmt_num }}</td>
+          <td class="num">{{ r.fv_base | fmt_num }}</td>
+          <td class="num">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
+          <td>{{ r.audit_verdict | verdict_badge }}</td>
+          <td>{{ r.tech_signal or '' }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="9" class="muted">No runs</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

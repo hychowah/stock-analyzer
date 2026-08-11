@@ -1,0 +1,10 @@
+{
+  "name": "example-book",
+  "currency": "USD",
+  "positions": [
+    {"ticker": "META", "weight": 0.25, "notes": "example only"},
+    {"ticker": "AAPL", "weight": 0.25},
+    {"ticker": "JPM", "weight": 0.25},
+    {"ticker": "ORCL", "weight": 0.25}
+  ]
+}

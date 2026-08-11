@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ run.ticker }} {{ run.session_key }}{% endblock %}
+{% block content %}
+<div class="card">
+  <p><a href="/">← Runs</a></p>
+  <h1 class="mono">{{ run.ticker }} · {{ run.session_key }}</h1>
+  <p class="mono muted">{{ run.run_id }}</p>
+  <div class="grid2">
+    <div>
+      <h3>Valuation</h3>
+      <table>
+        <tr><th>As-of price</th><td class="num">{{ run.asof_price | fmt_num }} {{ run.currency or '' }}</td></tr>
+        <tr><th>FV bear / base / bull</th>
+            <td class="num">{{ run.fv_bear | fmt_num }} / {{ run.fv_base | fmt_num }} / {{ run.fv_bull | fmt_num }}</td></tr>
+        <tr><th>FV weighted</th><td class="num">{{ run.fv_weighted | fmt_num }}</td></tr>
+        <tr><th>p bear / base / bull</th>
+            <td class="num">{{ run.p_bear | fmt_num }} / {{ run.p_base | fmt_num }} / {{ run.p_bull | fmt_num }}</td></tr>
+        <tr><th>MoS %</th><td class="num">{{ run.margin_of_safety_pct | fmt_num(1) }}</td></tr>
+        <tr><th>Model</th><td>{{ run.model_name or '' }}</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Context</h3>
+      <table>
+        <tr><th>Sector / region</th><td>{{ run.primary_sector or '' }} / {{ run.region or '' }}</td></tr>
+        <tr><th>Intensity</th><td>{{ run.intensity or '' }}</td></tr>
+        <tr><th>Audit</th><td>{{ run.audit_verdict | verdict_badge }}</td></tr>
+        <tr><th>Tech</th><td>{{ run.tech_signal or '' }} · {{ run.tech_regime or '' }}</td></tr>
+        <tr><th>Experiment</th><td class="mono">{{ run.experiment_id or '' }}</td></tr>
+        <tr><th>Exported</th><td class="mono">{{ run.exported_at or '' }}</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <h2>Reports (allowlisted artifacts)</h2>
+  <ul>
+    {% for item in report_links %}
+      {% if item.href %}
+        <li><a href="{{ item.href }}">{{ item.label }}</a> <span class="mono muted">{{ item.rel }}</span></li>
+      {% elif item.missing %}
+        <li class="muted">{{ item.label }}: missing</li>
+      {% else %}
+        <li>{{ item.label }} <span class="muted">(path unavailable)</span></li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+  <p class="muted">Served via open_artifact — raw_sec denied by design.</p>
+</div>
+{% endblock %}

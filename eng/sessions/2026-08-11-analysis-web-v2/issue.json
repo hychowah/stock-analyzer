@@ -1,0 +1,33 @@
+{
+  "goal": "Migrate analysis_web to FastAPI foundation ready for realtime, portfolio, and rendered reports",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not start React SPA in this session",
+    "Do not invent fair values in UI"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "FastAPI app boots via python -m apps.analysis_web",
+    "Parity pages: runs, run detail, artifact, experiments, calibration, health",
+    "JSON API: /api/health, /api/runs",
+    "Legacy /run?run_id= redirects to /runs/{id}",
+    "scripts/eng_verify.py passes",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest scripts/tests/test_analysis_web.py -q"
+  ]
+}

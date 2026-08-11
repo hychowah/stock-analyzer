@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Calibration{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Calibration</h1>
+  <p class="muted">MoS direction hit vs realized outcomes (sqlite join)</p>
+  <form class="filters" method="get" action="/calibration">
+    <label>Horizon
+      <select name="horizon">
+        {% for h in ['1d','1w','1m','3m'] %}
+        <option value="{{ h }}" {% if h == horizon %}selected{% endif %}>{{ h }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>PASS only
+      <select name="pass_only">
+        <option value="1" {% if pass_only %}selected{% endif %}>yes</option>
+        <option value="0" {% if not pass_only %}selected{% endif %}>no</option>
+      </select>
+    </label>
+    <button type="submit">Update</button>
+  </form>
+  <p>Joined rows: <strong>{{ report.n_joined }}</strong>
+     · overall hit rate: <strong>{{ overall_hit }}</strong>
+     · mean return: <strong>{{ overall_mean }}%</strong></p>
+  {% if report.error %}<p class="err">Error: {{ report.error }}</p>{% endif %}
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>MoS bucket</th><th>n</th><th>scored</th><th>hit rate</th><th>mean ret %</th></tr></thead>
+    <tbody>
+      {% if buckets %}
+        {% for row in buckets %}
+        <tr>
+          <td class="mono">{{ row.name }}</td>
+          <td class="num">{{ row.n }}</td>
+          <td class="num">{{ row.n_scored }}</td>
+          <td class="num">{{ row.rate_s }}</td>
+          <td class="num">{{ row.mean_s }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="5" class="muted">No outcomes joined for this horizon</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

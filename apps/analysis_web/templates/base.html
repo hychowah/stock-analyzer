@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{% block title %}Archive{% endblock %} · Stock Research Archive</title>
+  <link rel="stylesheet" href="/static/app.css"/>
+</head>
+<body>
+  <header>
+    <strong>Archive Analysis</strong>
+    <span class="muted" style="margin-left:0.75rem;color:#94a3b8;font-size:0.85rem">read-only · Mode B</span>
+    <div style="margin-top:0.4rem">
+      <a href="/">Runs</a>
+      <a href="/health">Health</a>
+      <a href="/experiments">Experiments</a>
+      <a href="/calibration">Calibration</a>
+      <a href="/portfolio">Portfolio</a>
+    </div>
+  </header>
+  <main>
+    {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "id": "deps-skeleton",
+      "description": "UI requirements.txt + FastAPI create_app skeleton with static/templates",
+      "passes": true,
+      "verify": "apps/analysis_web/requirements.txt exists; create_app importable"
+    },
+    {
+      "id": "parity-pages",
+      "description": "Parity: runs list, run detail, experiments, calibration, health + redirects",
+      "passes": true,
+      "verify": "pytest scripts/tests/test_analysis_web.py"
+    },
+    {
+      "id": "parity-api-artifacts",
+      "description": "JSON /api/runs + /api/health; artifact serve; rewrite tests for TestClient",
+      "passes": true,
+      "verify": "pytest scripts/tests/test_analysis_web.py"
+    },
+    {
+      "id": "report-render",
+      "description": "Markdown report render + report index (Phase 2)",
+      "passes": false,
+      "verify": "rendered HTML for .md; list reports/"
+    },
+    {
+      "id": "sse-realtime",
+      "description": "SSE change feed + runs auto-refresh (Phase 3)",
+      "passes": false,
+      "verify": "GET /api/events streams catalog_changed"
+    },
+    {
+      "id": "portfolio-v1",
+      "description": "Portfolio book join + page/API (Phase 4)",
+      "passes": false,
+      "verify": "GET /portfolio joins .local/portfolio.json to catalog"
+    },
+    {
+      "id": "docs-ship",
+      "description": "README + runbook updated for FastAPI stack",
+      "passes": true,
+      "verify": "README documents FastAPI; runbook no longer says stdlib WSGI only"
+    }
+  ]
+}

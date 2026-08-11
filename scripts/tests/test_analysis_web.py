@@ -1,8 +1,8 @@
-"""WSGI smoke tests for apps.analysis_web (no network server required)."""
+"""FastAPI smoke tests for apps.analysis_web (TestClient; no network bind)."""
 
 from __future__ import annotations
 
-import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -56,79 +56,83 @@ class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.archive = _mini_archive(Path(self._td.name))
-        import os
-
         os.environ["ARCHIVE_ROOT"] = str(self.archive)
-        # Re-import app after env set
+
         import importlib
 
         import apps.analysis_web.app as app_mod
 
         importlib.reload(app_mod)
-        self.app = app_mod.application
+        # Recreate app so deps pick up new ARCHIVE_ROOT
+        self._app = app_mod.create_app()
+        from fastapi.testclient import TestClient
+
+        self.client = TestClient(self._app)
 
     def tearDown(self):
-        self.app = None  # type: ignore[assignment]
+        self.client.close()
         self._td.cleanup()
 
-    def _call(self, path: str, qs: str = "") -> tuple[str, bytes]:
-        status_headers: list = []
-
-        def start_response(status, headers):
-            status_headers.append(status)
-            status_headers.append(headers)
-
-        environ = {
-            "REQUEST_METHOD": "GET",
-            "PATH_INFO": path,
-            "QUERY_STRING": qs,
-            "wsgi.input": None,
-            "wsgi.errors": sys.stderr,
-            "wsgi.version": (1, 0),
-            "wsgi.multithread": False,
-            "wsgi.multiprocess": False,
-            "wsgi.run_once": False,
-            "wsgi.url_scheme": "http",
-            "SERVER_NAME": "test",
-            "SERVER_PORT": "80",
-        }
-        body = b"".join(self.app(environ, start_response))
-        return status_headers[0], body
-
     def test_home_lists_run(self):
-        status, body = self._call("/")
-        self.assertTrue(status.startswith("200"))
-        self.assertIn(b"META", body)
-        self.assertIn(b"500", body)
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+        self.assertIn(b"500", r.content)
 
     def test_health(self):
-        status, body = self._call("/health")
-        self.assertTrue(status.startswith("200"))
-        self.assertIn(b"run_count", body)
+        r = self.client.get("/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"run_count", r.content)
+
+    def test_api_health(self):
+        r = self.client.get("/api/health")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertTrue(body.get("db_exists"))
+        self.assertEqual(body.get("run_count"), 1)
 
     def test_run_detail(self):
-        status, body = self._call("/run", "run_id=research:META:2026-08-03")
-        self.assertTrue(status.startswith("200"))
-        self.assertIn(b"FV", body)
-        self.assertIn(b"12.5", body)
+        r = self.client.get("/runs/research:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"FV", r.content)
+        self.assertIn(b"12.5", r.content)
+
+    def test_legacy_run_redirect(self):
+        r = self.client.get(
+            "/run",
+            params={"run_id": "research:META:2026-08-03"},
+            follow_redirects=False,
+        )
+        self.assertIn(r.status_code, (302, 307))
+        self.assertIn("/runs/research:META:2026-08-03", r.headers.get("location", ""))
 
     def test_artifact(self):
-        status, body = self._call(
+        r = self.client.get(
             "/artifact",
-            "run_id=research:META:2026-08-03&path=reports/00_META_README.md",
+            params={
+                "run_id": "research:META:2026-08-03",
+                "path": "reports/00_META_README.md",
+            },
         )
-        self.assertTrue(status.startswith("200"))
-        self.assertIn(b"Hello META", body)
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"Hello META", r.content)
 
     def test_experiments(self):
-        status, body = self._call("/experiments")
-        self.assertTrue(status.startswith("200"))
-        self.assertIn(b"exp-demo", body)
+        r = self.client.get("/experiments")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"exp-demo", r.content)
 
     def test_calibration_page(self):
-        status, body = self._call("/calibration")
-        self.assertTrue(status.startswith("200"))
-        self.assertIn(b"Calibration", body)
+        r = self.client.get("/calibration")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"Calibration", r.content)
+
+    def test_api_list_runs(self):
+        r = self.client.get("/api/runs", params={"ticker": "META"})
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["count"], 1)
+        self.assertEqual(data["runs"][0]["ticker"], "META")
 
 
 if __name__ == "__main__":

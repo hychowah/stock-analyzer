@@ -29,7 +29,8 @@ python3 scripts/eng_verify.py
 python3 -m packages.catalog_api health
 python3 -m packages.catalog_api list-runs --limit 5
 
-# Analysis UI (stdlib WSGI)
+# Analysis UI (FastAPI + Jinja; install deps once)
+# pip install -r apps/analysis_web/requirements.txt
 python3 -m apps.analysis_web
 # or: bash apps/analysis_web/init.sh
 # → http://127.0.0.1:8765/

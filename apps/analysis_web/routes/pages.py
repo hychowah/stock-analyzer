@@ -271,5 +271,19 @@ def page_experiments(
 
 
 @router.get("/portfolio", response_class=HTMLResponse)
-def page_portfolio(request: Request) -> HTMLResponse:
-    return _render(request, "portfolio.html")
+def page_portfolio(
+    request: Request,
+    pass_only: str = "0",
+    api: CatalogApi = Depends(get_api),
+) -> HTMLResponse:
+    from apps.analysis_web.services.portfolio import build_portfolio_view, load_book
+
+    po = pass_only not in ("", "0", "false", "False")
+    book = load_book()
+    view = build_portfolio_view(api, book, pass_only=po)
+    return _render(
+        request,
+        "portfolio.html",
+        view=view,
+        pass_only=po,
+    )

@@ -20,4 +20,8 @@
 - Phase 3: SSE `/api/events` + `/api/fingerprint` poll fallback + runs live reload
   - services/change_feed.py, routes/events.py, static/live.js
   - eng_verify includes test_change_feed.py
-- Next: Phase 4 portfolio v1
+- Phase 4: portfolio v1 — services/portfolio.py, /portfolio + /api/portfolio
+  - book at apps/analysis_web/.local/portfolio.json (example committed)
+  - join latest catalog run; weighted MoS; PASS-only toggle; live reload opt-in
+  - eng_verify PASS (81 tests)
+- Foundation Phases 1–4 complete; Phase 5 backlog remains (charts, compare, etc.)

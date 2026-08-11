@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Archive Analysis",
         description="Read-only Mode B UI over research catalog",
-        version="2.1.0",
+        version="2.2.0",
     )
     app.state.templates = create_templates()
 

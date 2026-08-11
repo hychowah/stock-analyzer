@@ -1,12 +1,82 @@
 {% extends "base.html" %}
 {% block title %}Portfolio{% endblock %}
+{% block body_attrs %}data-live-reload="1"{% endblock %}
 {% block content %}
 <div class="card">
-  <h1>Portfolio</h1>
-  <p class="muted">Book + catalog join (Phase 4). Place holdings in
-    <span class="mono">apps/analysis_web/.local/portfolio.json</span>
-    (see <span class="mono">portfolio.example.json</span>).
+  <h1>Portfolio{% if view.name %} · {{ view.name }}{% endif %}</h1>
+  <p class="muted">
+    Book + latest catalog join ·
+    {% if view.path %}<span class="mono">{{ view.path }}</span>{% endif %}
+    · live
   </p>
-  <p class="muted">Not implemented in Phase 1 — foundation only.</p>
+  <form class="filters" method="get" action="/portfolio">
+    <label>PASS only (latest)
+      <select name="pass_only">
+        <option value="0" {% if not pass_only %}selected{% endif %}>no</option>
+        <option value="1" {% if pass_only %}selected{% endif %}>yes</option>
+      </select>
+    </label>
+    <button type="submit">Update</button>
+  </form>
+  {% if view.error %}
+  <p class="err">{{ view.error }}</p>
+  <p class="muted">Example: copy <span class="mono">apps/analysis_web/portfolio.example.json</span>
+    to <span class="mono">apps/analysis_web/.local/portfolio.json</span></p>
+  {% endif %}
+  {% if view.summary and not view.error %}
+  <div class="grid2" style="margin-top:0.75rem">
+    <table>
+      <tr><th>Positions</th><td class="num">{{ view.summary.n_positions }}</td></tr>
+      <tr><th>Covered / missing</th>
+          <td class="num">{{ view.summary.n_covered }} / {{ view.summary.n_missing }}</td></tr>
+      <tr><th>PASS count</th><td class="num">{{ view.summary.n_pass }}</td></tr>
+      <tr><th>Weight mode</th><td>{{ view.summary.weight_mode }}</td></tr>
+    </table>
+    <table>
+      <tr><th>Coverage</th>
+          <td class="num">{% if view.summary.coverage_pct is not none %}{{ '%.0f'|format(view.summary.coverage_pct) }}%{% else %}—{% endif %}</td></tr>
+      <tr><th>Mean MoS %</th>
+          <td class="num">{{ view.summary.mean_mos_pct | fmt_num(1) }}</td></tr>
+      <tr><th>Weighted mean MoS %</th>
+          <td class="num">{{ view.summary.weighted_mean_mos_pct | fmt_num(1) }}</td></tr>
+      <tr><th>Currency</th><td>{{ view.currency }}</td></tr>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:0.75rem">{{ view.note }}</p>
+  {% endif %}
 </div>
+
+{% if view.positions %}
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th><th>Weight</th><th>Price</th><th>FV base</th><th>MoS %</th>
+        <th>Audit</th><th>Tech</th><th>Session</th><th>Sector</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in view.positions %}
+      <tr>
+        <td class="mono">
+          {% if p.run_id %}
+            <a href="/runs/{{ p.run_id }}">{{ p.ticker }}</a>
+          {% else %}
+            {{ p.ticker }}
+          {% endif %}
+        </td>
+        <td class="num">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
+        <td class="num">{{ p.asof_price | fmt_num }}</td>
+        <td class="num">{{ p.fv_base | fmt_num }}</td>
+        <td class="num">{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
+        <td>{{ p.audit_verdict | verdict_badge }}</td>
+        <td>{{ p.tech_signal or '' }}</td>
+        <td class="mono muted">{{ p.session_key or '—' }}</td>
+        <td>{{ p.primary_sector or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

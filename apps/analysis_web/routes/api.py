@@ -52,3 +52,16 @@ def api_get_run(run_id: str, api: CatalogApi = Depends(get_api)) -> dict[str, An
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}") from e
     except DbMissing as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
+
+
+@router.get("/portfolio")
+def api_portfolio(
+    pass_only: str = "0",
+    api: CatalogApi = Depends(get_api),
+) -> dict[str, Any]:
+    """JSON portfolio view: local book joined to latest catalog runs."""
+    from apps.analysis_web.services.portfolio import build_portfolio_view, load_book
+
+    po = pass_only not in ("", "0", "false", "False")
+    book = load_book()
+    return build_portfolio_view(api, book, pass_only=po)

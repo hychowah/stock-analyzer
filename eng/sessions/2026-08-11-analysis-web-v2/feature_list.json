@@ -33,8 +33,8 @@
     {
       "id": "portfolio-v1",
       "description": "Portfolio book join + page/API (Phase 4)",
-      "passes": false,
-      "verify": "GET /portfolio joins .local/portfolio.json to catalog"
+      "passes": true,
+      "verify": "GET /portfolio + /api/portfolio; eng_verify PASS"
     },
     {
       "id": "docs-ship",

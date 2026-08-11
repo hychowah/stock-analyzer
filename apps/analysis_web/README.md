@@ -32,7 +32,8 @@ Or: `bash apps/analysis_web/init.sh`
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
-| `/portfolio` | Portfolio (book in `.local/`; full join later) |
+| `/portfolio` | Portfolio: `.local/portfolio.json` joined to latest catalog runs |
+| `/api/portfolio` | JSON portfolio summary + positions |
 | `/health` | Catalog health probe |
 | `/api/health`, `/api/runs` | JSON API for clients / HTMX |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |

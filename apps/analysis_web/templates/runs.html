@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Runs{% endblock %}
+{% block body_attrs %}data-live-reload="1"{% endblock %}
 {% block content %}
 <div class="card">
   <h1>Research runs</h1>
-  <p class="muted">{{ runs|length }} row(s) · max {{ limit }} · source: catalog sqlite</p>
+  <p class="muted">{{ runs|length }} row(s) · max {{ limit }} · source: catalog sqlite
+    · <span title="SSE /api/events with 5s poll fallback">live</span></p>
   <form class="filters" method="get" action="/">
     <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="META"/></label>
     <label>Sector<input name="sector" value="{{ sector or '' }}"/></label>

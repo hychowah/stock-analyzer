@@ -24,7 +24,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from apps.analysis_web.config import archive_root, static_dir
-from apps.analysis_web.routes import api, artifacts, pages
+from apps.analysis_web.routes import api, artifacts, events, pages
 from apps.analysis_web.templating import create_templates
 
 
@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Archive Analysis",
         description="Read-only Mode B UI over research catalog",
-        version="2.0.0",
+        version="2.1.0",
     )
     app.state.templates = create_templates()
 
@@ -42,6 +42,7 @@ def create_app() -> FastAPI:
 
     app.include_router(pages.router)
     app.include_router(api.router)
+    app.include_router(events.router)
     app.include_router(artifacts.router)
 
     @app.exception_handler(Exception)

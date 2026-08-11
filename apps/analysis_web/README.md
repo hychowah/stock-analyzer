@@ -35,6 +35,11 @@ Or: `bash apps/analysis_web/init.sh`
 | `/portfolio` | Portfolio (book in `.local/`; full join later) |
 | `/health` | Catalog health probe |
 | `/api/health`, `/api/runs` | JSON API for clients / HTMX |
+| `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
+| `/api/fingerprint` | Poll fallback token for live reload |
+
+Runs list page opts into live reload (`data-live-reload="1"` + `static/live.js`):
+SSE first, 5s fingerprint poll if SSE is unhealthy.
 
 ## App-local state
 

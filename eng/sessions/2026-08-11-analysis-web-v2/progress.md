@@ -17,4 +17,7 @@
   - services/render_markdown.py (markdown-it-py + bleach)
   - /artifact renders .md HTML by default; raw=1 for source
   - eng_verify PASS (72 tests)
-- Next: Phase 3 SSE change feed
+- Phase 3: SSE `/api/events` + `/api/fingerprint` poll fallback + runs live reload
+  - services/change_feed.py, routes/events.py, static/live.js
+  - eng_verify includes test_change_feed.py
+- Next: Phase 4 portfolio v1

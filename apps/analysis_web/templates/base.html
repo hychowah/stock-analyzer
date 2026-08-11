@@ -6,7 +6,7 @@
   <title>{% block title %}Archive{% endblock %} · Stock Research Archive</title>
   <link rel="stylesheet" href="/static/app.css"/>
 </head>
-<body>
+<body {% block body_attrs %}{% endblock %}>
   <header>
     <strong>Archive Analysis</strong>
     <span class="muted" style="margin-left:0.75rem;color:#94a3b8;font-size:0.85rem">read-only · Mode B</span>
@@ -22,5 +22,7 @@
     {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>
+  <script src="/static/live.js" defer></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

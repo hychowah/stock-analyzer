@@ -27,8 +27,8 @@
     {
       "id": "sse-realtime",
       "description": "SSE change feed + runs auto-refresh (Phase 3)",
-      "passes": false,
-      "verify": "GET /api/events streams catalog_changed"
+      "passes": true,
+      "verify": "GET /api/events hello; fingerprint poll; runs data-live-reload; eng_verify"
     },
     {
       "id": "portfolio-v1",

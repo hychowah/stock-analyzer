@@ -41,7 +41,7 @@ Align with `AGENTS.md` §8. Use these exact strings:
 | `0` | Background research (swarm) | `background.json`, ≥1 `raw/phase0_*.json`, handoff; preflight `--mode complete` (downstream_relevance on raws) |
 | `1_parallel` | 2a + 2b + 2c | `sp_financials.csv`, `sec_filings.json`, `news_sentiment.json`, 3 handoffs; `data_fetch_log.json` preferred |
 | `1b` | Latest quarter (2d) | `latest_quarter.json`, handoff |
-| `1c` | Filing deep dive (2e) | `filing_deep_dive.json`, handoff |
+| `1c` | Filing deep dive (year-readers + 2e merger) | `filing_deep_dive.json`, handoff; **new runtime:** `raw/fdd_year_*.json` + excerpt check + `verify_rechecks`. Legacy without year-files: FDD only |
 | `2_parallel` | 4 + 5 + 12 | `technical.json`, `valuation_model.json`, `tsr_validation.json`, 3 handoffs |
 | `2_5` | Stress swarm | `risk_bridge.json`, ≥5 `raw/stress_*.json` (or equivalent), handoff; preflight `--mode complete` |
 | `3` | Charts | ≥3 `charts/*.png`, handoff |

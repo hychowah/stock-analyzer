@@ -64,6 +64,11 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Explicit missing years, notes, or transcript windows."
+        },
+        "year_dives": {
+          "type": "array",
+          "description": "Optional paths to registry/raw/fdd_year_*.json (Phase 1c year-readers).",
+          "items": { "type": "string" }
         }
       }
     },
@@ -262,6 +267,21 @@
         "data_quality": {
           "type": "string",
           "description": "full|degraded_no_transcripts|degraded_partial_history"
+        }
+      }
+    },
+    "verify_rechecks": {
+      "type": "array",
+      "description": "2e numeric rehydration: ≥3 path+value re-reads against data/raw_sec/ (new-runtime 1c complete).",
+      "items": {
+        "type": "object",
+        "required": ["path", "value"],
+        "properties": {
+          "path": { "type": "string" },
+          "value": { "type": ["string", "number"] },
+          "fiscal_year": { "type": ["integer", "string", "null"] },
+          "id": { "type": "string" },
+          "note": { "type": "string" }
         }
       }
     },

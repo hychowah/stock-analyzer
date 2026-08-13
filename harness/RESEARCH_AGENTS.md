@@ -160,7 +160,7 @@ Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Desig
 | 0 — Background | swarm × research rounds (`explore`) | sector_config, market_context, research_brief (when present) | main agent merges → `registry/background.json`; coverage vs brief + risk_candidates in handoff |
 | 1 — Data (parallel) | 2a fundamentals, 2b SEC filings, 2c news & sentiment (`coder`) | sector_config, market_context | `data/sp_financials.csv` (+ peers), `registry/sec_filings.json` + `data/raw_sec/` (+ multi-year annuals), `registry/news_sentiment.json` |
 | 1b — Latest quarter | 2d integrator (`coder`) | 2a, 2b | `registry/latest_quarter.json` |
-| 1c — Filing deep dive | 2e deep dive (`coder`) | 2b (and 2a when actuals needed); reads market_context for ownership depth | `registry/filing_deep_dive.json`; may add `data/transcripts/*` |
+| 1c — Filing deep dive | year-readers (`coder`) then 2e merger (`coder`) | 2b (and 2a when actuals needed); reads market_context for ownership depth | `registry/raw/fdd_year_*.json` (new runtime) + excerpt-in-source; `registry/filing_deep_dive.json`; may add `data/transcripts/*` |
 | 2 — Modeling (parallel) | 4 technical, 5 valuation, 12 TSR (`coder`) | 1, 1b, **1c** (valuation/TSR read deep dive + market_context; technical does not) | `registry/technical.json`, `data/valuation_model.json`, `registry/tsr_validation.json` |
 | 2.5 — Stress | swarm × 5 scenarios (`coder`) | valuation model + deep dive + market_context | main agent merges → `registry/risk_bridge.json` |
 | 3 — Charts | 6 charts (`coder`) | valuation model | `charts/*.png` |
@@ -170,7 +170,7 @@ Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Desig
 Dependency rules (do not violate — v1 shipped a broken graph):
 
 - Phase 1 agents 2a/2b/2c are genuinely parallel. 2d must run **after** 2a and 2b — it reads their outputs.
-- **2e (filing deep dive) runs after 2b** (needs multi-year `data/raw_sec/`) and should use 2a actuals when grading promises; it may run **in parallel with 2d**. When `market_context.ownership.complexity` is medium/high (or intensity is high), 2e must deepen related-party / control / dual-class / VIE-relevant notes — not leave silence.
+- **1c runs after 2b** (needs multi-year `data/raw_sec/`). Spawn **one year-reader per annual on disk** (isolated window; section-walk the cleaned `.txt` via line-range/search — never paste a full 10-K). Year-readers may run **in parallel with 2d**. After excerpt-in-source passes, **2e is the single merger** of `filing_deep_dive.json` (cross-year scorecard via `promise_vs_actual.py`, transcripts secondary). When `market_context.ownership.complexity` is medium/high (or intensity is high), 2e must deepen related-party / control / dual-class / VIE-relevant notes — not leave silence. Extra annuals are not a substitute for that depth. New-runtime 1c complete: `preflight --phase 1c --mode complete` (year-files + excerpts + `verify_rechecks`). Legacy sessions without year-files stay valid on FDD alone.
 - Phase 2 agents are parallel with each other but need Phase 1/1b/**1c** complete for valuation. Agent 4 must not read any fundamental artifact (including `filing_deep_dive.json` or `market_context.json`).
 - Agent 5 **must** read `registry/filing_deep_dive.json` and log `filing_deep_dive_hooks` (use or explicit reject-with-reason). Agent 5 **must** read `registry/market_context.json` and the region module in `module_file`, and log `market_context_hooks` (use / reject / noted_only). Phase 2.5 must ground legal/contingency and credibility-driven bear weight in the deep dive when present, and include ≥1 region/governance/FX scenario when `market_context.intensity` is `high` (expected when `medium` if material). Agent 7 must cover footnotes, multi-year strategy arc, management scorecard, and **market & institutional context** (one-paragraph no-op OK when intensity is `low`) in non-stub sections.
 - Phase 2.5 needs `data/valuation_model.json`. Phase 4 needs everything. Phase 5 is last.
@@ -182,7 +182,7 @@ Every agent — including swarm leads and the audit agent — writes `registry/h
 
 ### Merge protocol (Phases 0 and 2.5)
 
-When the main agent merges swarm returns: (1) write each verbatim return to `registry/raw/` **before** merging; (2) merge, deduplicating and resolving conflicts in-line; (3) spot-check 3 headline numbers of the merged file against the raw returns or data — a merge must never introduce a new number. The persisted raw returns make the merge auditable.
+When the main agent merges swarm returns: (1) write each verbatim return to `registry/raw/` **before** merging; (2) merge, deduplicating and resolving conflicts in-line; (3) spot-check 3 headline numbers of the merged file against the raw returns or data — a merge must never introduce a new number. The persisted raw returns make the merge auditable. Phase **1c** uses the same rule: persist `fdd_year_*.json`, run excerpt-in-source, then 2e merges (no new numbers; `verify_rechecks` records the re-reads).
 
 ### Phase 5 — audit and fix loop
 
@@ -213,7 +213,7 @@ Read the module named in `market_context.module_file` before valuation: `region_
 
 ## 10b. Filing deep dive (multi-year notes, strategy, credibility)
 
-Agent **2e** writes `registry/filing_deep_dive.json` per `templates/filing_deep_dive.schema.json` (methodology note: `harness/filing_deep_dive.md`). Required blocks:
+Phase **1c** is a gather/merge: **N year-readers** write `registry/raw/fdd_year_FY{yyyy}.json` (one annual each; schema `templates/filing_year_dive.schema.json`); a machine **excerpt-in-source** check; then Agent **2e** is the **single writer** of `registry/filing_deep_dive.json` per `templates/filing_deep_dive.schema.json` (methodology: `harness/filing_deep_dive.md`). Year-readers must not call `promise_vs_actual.py` or see other years. 2e merges, rehydrates numbers, fetches transcripts, and fail-closes on silent ownership at medium/high intensity. Agent 13 still evaluates FDD substance. Required FDD blocks:
 
 1. **Footnotes** — targeted note extractions (revenue disaggregation, segments, SBC unrecognized, debt/leases, contingencies/legal, tax, commitments, related-party/dual-class) with status `extracted|missing|not_applicable|partial` and short excerpts. Prefer code helpers in `scripts/kd_research/note_extract.py`. Full note text stays in `data/raw_sec/`; do **not** dump uncapped 10-K prose into `sec_filings.json`.
 2. **Strategy arc** — typically **≥3 annual reports** (Item 1 + MD&A priorities): stated priorities by year, continuity score `{value, rationale, basis}`, pivot flags, capital-allocation story, implied model hooks.
@@ -258,6 +258,7 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 | `phase_status` complete ⇒ primary artifacts on disk; pending/in_progress with artifact on disk → lag | `[machine]` FAIL complete-without-artifact; **WARN** lag |
 | Reports non-stub; report numbers match registry AND data layer; ≥5 filing-grade numbers verified externally; rationales substantive with scripted intermediates; scripts rerun deterministically; no lost findings | `[audit]` Phase 5 agent |
 | `filing_deep_dive.json` structure (footnotes + strategy_arc + scorecard); hook *consumption quality* / report sections | `[machine]` structure + `[audit]` substance |
+| New-runtime `registry/raw/fdd_year_*.json`: required sections walked, non-empty `key_figures`, excerpt-in-source; FDD `verify_rechecks` ≥3; `years_covered` matches year-files. Absent on legacy/slim → SKIPPED | `[machine]` 1c `--mode complete` + `check_session --full` |
 | `market_context.json` when present: schema + rationale; valuation `market_context_hooks` non-empty; medium/high intensity not all-`noted_only`; absent → SKIPPED (legacy) | `[machine]` + `[audit]` |
 | `phase_status.json` when present: schema + designed phase coverage; absent → SKIPPED (legacy); new sessions scaffold it | `[machine]` |
 | `research_brief.json` when present: schema + depth + ≥3 questions; absent → SKIPPED (legacy); new sessions write before Phase 0 | `[machine]` + `[audit]` |

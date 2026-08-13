@@ -1,6 +1,6 @@
 # Filing deep dive — methodology (advisory)
 
-Agent **2e** produces `registry/filing_deep_dive.json`. This note is advisory methodology (like sector modules): follow the schema and AGENTS.md §10b; adapt checklist items when a sector needs extra notes.
+Phase **1c**: one **year-reader** per annual on disk, then Agent **2e** merges into `registry/filing_deep_dive.json`. Follow the schemas and `RESEARCH_AGENTS.md` §10b; adapt checklist items when a sector needs extra notes.
 
 ## Goals
 
@@ -8,11 +8,26 @@ Agent **2e** produces `registry/filing_deep_dive.json`. This note is advisory me
 2. Track **strategy alignment over multiple years** (typically ≥3 annual reports).
 3. Score **whether management kept their word** using **SEC filings first** and **earnings-call transcripts second**.
 
+## Shape
+
+```text
+2b stores N annuals (cleaned .txt)
+  → N year-readers (isolated; section-walk on disk)
+  → excerpt-in-source machine check
+  → 2e merger (single FDD writer) + transcripts
+```
+
+Year-readers write `registry/raw/fdd_year_FY{yyyy}.json`. They see **one year only**. They do **not** call `promise_vs_actual.py`. They do **not** ingest the full file into the prompt — line-range read + search. Required `sections_walked`: business, risk_factors, legal, md_and_a, notes, related_party.
+
+2e is **merger + numeric rehydration**, not the evaluator. Agent 13 grades FDD quality. 2e fail-closes if intensity / ownership.complexity is medium/high and related-party / VIE / control is a bare silent status.
+
 ## What not to do
 
 - Do not raise `sec_filings.json` caps to dump full 10-Ks into every agent.
+- Do not paste a full 10-K into the parent **or** a year-reader prompt.
 - Do not invent transcript quotes when IR/transcript hosts fail — mark `missing` and degrade scorecard quality.
 - Do not auto-map hit-rate → WACC or probabilities. Valuation **reads** the deep dive and judges.
+- Do not treat extra fiscal years as a substitute for ownership/control depth.
 
 ## Footnotes
 

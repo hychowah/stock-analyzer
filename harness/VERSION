@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.4.0",
+  "harness_version": "2.5.0",
   "harness_spec": "v2",
-  "notes": "2.4.0: require orchestrator_model at scaffold (stamp LLM id once; preflight/check_session enforce; no late invent). 2.3.0: phase-graph preflight with --subagent binding; FDD hooks, technical isolation, phase_status↔disk. 2.2.x: session isolation + same-day __rN."
+  "notes": "2.5.0: Phase 1c year-readers (one isolated annual each, on-disk section walk) + excerpt-in-source check + 2e merger; new-runtime only (legacy FDD-only SKIPPED). 2.4.0: require orchestrator_model at scaffold. 2.3.0: phase-graph preflight; FDD hooks; technical isolation."
 }

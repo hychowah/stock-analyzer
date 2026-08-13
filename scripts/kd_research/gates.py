@@ -444,6 +444,7 @@ HOOK_REASON_MIN_LEN = 10
 # Path-anchored tokens: avoid bare English false positives (e.g. "background").
 AGENT4_FORBIDDEN_TOKENS = (
     "filing_deep_dive",
+    "fdd_year",
     "valuation_model",
     "registry/background",
     "background.json",
@@ -813,6 +814,111 @@ def entry_checks(
     return results
 
 
+def check_1c_year_dive_complete(session: Path) -> list[tuple[str, str, str]]:
+    """1c complete: FDD always; year-dives + excerpts only on new runtime."""
+    from scripts.kd_research.annuals import (  # noqa: WPS433
+        fiscal_year_from_year_dive_path,
+        list_annuals,
+        normalize_fiscal_year,
+        session_enforces_year_dives,
+        year_dive_files,
+    )
+    from scripts.kd_research.excerpt_check import (  # noqa: WPS433
+        check_year_dive_document,
+        load_year_dive,
+    )
+
+    out: list[tuple[str, str, str]] = []
+    status, detail = check_path(session, "registry/filing_deep_dive.json")
+    out.append((status, "registry/filing_deep_dive.json", detail))
+
+    files = year_dive_files(session)
+    enforce = session_enforces_year_dives(session)
+    if not enforce and not files:
+        out.append(
+            (
+                "SKIPPED",
+                "1c_year_dives",
+                "legacy/slim session (no fdd_year_*.json; harness_version < 2.5.0)",
+            )
+        )
+        return out
+
+    annuals = list_annuals(session)
+    if not annuals:
+        out.append(("FAIL", "1c_year_dives", "no annuals listed in sec_filings/raw_sec"))
+        return out
+
+    if not files:
+        out.append(
+            (
+                "FAIL",
+                "1c_year_dives",
+                f"need registry/raw/fdd_year_*.json for {len(annuals)} annual(s)",
+            )
+        )
+        return out
+
+    years_have: set[int] = set()
+    for yp in files:
+        doc, err = load_year_dive(yp)
+        rel = f"registry/raw/{yp.name}"
+        if err or doc is None:
+            out.append(("FAIL", rel, err or "unparseable"))
+            continue
+        out.extend(check_year_dive_document(session, doc, rel=rel))
+        y = normalize_fiscal_year(doc.get("fiscal_year")) or fiscal_year_from_year_dive_path(yp)
+        if y is not None:
+            years_have.add(y)
+
+    years_need = {a["fiscal_year"] for a in annuals if a.get("fiscal_year") is not None}
+    missing_years = sorted(years_need - years_have)
+    if missing_years:
+        out.append(("FAIL", "1c_year_dives", f"missing year-dives for FY {missing_years}"))
+    elif years_need:
+        out.append(("PASS", "1c_year_dives", f"{len(files)} year-dive(s) cover {sorted(years_need)}"))
+
+    fdd, fdd_err = load_json(session / "registry" / "filing_deep_dive.json")
+    if fdd_err or not isinstance(fdd, dict):
+        return out
+
+    rechecks = fdd.get("verify_rechecks")
+    if not isinstance(rechecks, list) or len(rechecks) < 3:
+        out.append(
+            (
+                "FAIL",
+                "1c_verify_rechecks",
+                "need ≥3 verify_rechecks[] {path,value} on filing_deep_dive.json",
+            )
+        )
+    else:
+        bad = [
+            i
+            for i, r in enumerate(rechecks)
+            if not (isinstance(r, dict) and r.get("path") and r.get("value") is not None)
+        ]
+        if bad:
+            out.append(("FAIL", "1c_verify_rechecks", f"entries missing path/value: {bad}"))
+        else:
+            out.append(("PASS", "1c_verify_rechecks", f"{len(rechecks)} re-read(s)"))
+
+    arc = fdd.get("strategy_arc") if isinstance(fdd.get("strategy_arc"), dict) else {}
+    covered = {normalize_fiscal_year(y) for y in (arc.get("years_covered") or [])}
+    covered.discard(None)
+    if years_have and covered and covered != years_have:
+        out.append(
+            (
+                "FAIL",
+                "1c_years_covered",
+                f"strategy_arc.years_covered={sorted(covered)} != year-dives {sorted(years_have)}",
+            )
+        )
+    elif years_have and covered:
+        out.append(("PASS", "1c_years_covered", f"{sorted(covered)}"))
+
+    return out
+
+
 def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
     """Checks before marking a phase complete (merge/coverage)."""
     if phase_id == "0":
@@ -828,8 +934,7 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
             out.append((status, rel, detail))
         return out
     if phase_id == "1c":
-        status, detail = check_path(session, "registry/filing_deep_dive.json")
-        return [(status, "registry/filing_deep_dive.json", detail)]
+        return check_1c_year_dive_complete(session)
     if phase_id == "2_parallel":
         out = []
         for rel in (

@@ -69,7 +69,7 @@ FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. val
    - Inject path into Agent 4 / 5 / 12 prompts.  
    - Do **not** re-freeze mid-Phase 2. Agents use `close` for “current price” / MoS; history series still from `prices_*.csv`.
 
-11. Confirm `registry/filing_deep_dive.json` on disk before Agent 5 (preflight already requires it). After Agent 5: valuation must have non-empty `filing_deep_dive_hooks` before Phase 2.5 (`preflight --phase 2_5` / `2_parallel --mode complete`).
+11. **Phase 1c (after 2b; may overlap 2d):** list annuals (`scripts/kd_research/annuals.py`). Spawn **one year-reader per annual** (isolated prompt; cleaned `.txt` path only — do not paste the filing). After `registry/raw/fdd_year_*.json` exist, run excerpt-in-source (`excerpt_check.py`) — **do not** run `--mode complete` yet (that gate needs FDD + `verify_rechecks`). Then spawn **2e merger** only. Then `preflight --phase 1c --mode complete`. Confirm `registry/filing_deep_dive.json` (plus `verify_rechecks`) before Agent 5. After Agent 5: valuation must have non-empty `filing_deep_dive_hooks` before Phase 2.5 (`preflight --phase 2_5` / `2_parallel --mode complete`). Legacy sessions without year-files: FDD alone still completes 1c.
 
 ## Merges (Phase 0 / 2.5)
 

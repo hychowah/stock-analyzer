@@ -64,7 +64,7 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 
 - Full note text stays in `data/raw_sec/` (already required). Never expand uncapped 10-K prose into `sec_filings.json` (already forbidden — keep enforced).  
 - Prefer extractors (`scripts/kd_research/note_extract.py`) that write short excerpts + offsets.  
-- When agents read raw_sec, use line-limited reads / search, not full-file loads into the lead.
+- When agents read raw_sec, use line-limited reads / search, not full-file loads into the lead **or** into a year-reader. Phase 1c year-readers section-walk one cleaned `.txt` each; they do not ingest the whole filing.
 
 #### 2.4 Numeric rehydration after any summary
 
@@ -168,7 +168,7 @@ Already specified: transcripts secondary to filings; missing transcripts → deg
 | 0 Background | Parallel research swarm | Isolate search; merge from raw/ |
 | 1 Data 2a/2b/2c | Parallel workers | Each writes own artifacts; no shared chat bloat |
 | 1b 2d | Integrator workflow | Read 2a+2b outputs only |
-| 1c 2e | Deep specialist | Heavy raw_sec isolation; write structured deep dive |
+| 1c year-readers + 2e | Orchestrator–workers then single merger | Isolated per-year section-walk on disk (no full 10-K paste); excerpt-in-source; 2e merges FDD + transcripts. Agent 13 still evals |
 | 2 Tech/Val/TSR | Parallel specialists | Agent 4 context-isolated from fundamentals |
 | 2.5 Stress | Parallel scenarios | Condensed returns → risk_bridge |
 | 3 Charts | Tool-heavy single agent | Deterministic compute preferred |

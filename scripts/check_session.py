@@ -13,6 +13,7 @@ This validates STRUCTURE and PROVENANCE, not financial truth:
     schema/keys + non-empty market_context_hooks on valuation_model; medium/high intensity
     rejects all-noted_only hooks
   - when filing_deep_dive.json + valuation exist: non-empty filing_deep_dive_hooks (F8)
+  - new-runtime year-dives (`registry/raw/fdd_year_*.json`): section walk + excerpt-in-source; SKIPPED on legacy/slim
   - phase_status.json optional (absent -> SKIPPED for legacy); when present, schema/keys
     + all designed phase_ids present; complete vs disk + lag WARN
   - Agent 4 isolation: technical artifact/handoff must not cite fundamental paths (--full FAIL)
@@ -703,6 +704,24 @@ def check_agent4_isolation_session(session: Path, *, full: bool = False) -> None
         record(status, check, detail)
 
 
+def check_year_dives(session: Path) -> None:
+    """New-runtime year-reader files + excerpt-in-source; SKIPPED on legacy/slim."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.annuals import session_enforces_year_dives, year_dive_files
+    from scripts.kd_research.gates import check_1c_year_dive_complete
+
+    files = year_dive_files(session)
+    if not session_enforces_year_dives(session) and not files:
+        record("SKIPPED", "year_dives", "legacy/slim (no fdd_year_*.json; harness_version < 2.5.0)")
+        return
+    for status, check, detail in check_1c_year_dive_complete(session):
+        # FDD existence is already covered by --full file list
+        if check == "registry/filing_deep_dive.json":
+            continue
+        record(status, check, detail)
+
+
 def check_filing_deep_dive(session: Path) -> None:
     """Extra structural gates for deep-dive content (beyond schema keys)."""
     rel = "registry/filing_deep_dive.json"
@@ -1046,6 +1065,7 @@ def main() -> int:
     check_agent4_isolation_session(session, full=bool(args.full))
     if args.full:
         check_filing_deep_dive(session)
+        check_year_dives(session)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

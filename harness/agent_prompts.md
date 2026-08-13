@@ -105,9 +105,10 @@ Numbers must come from the sources above — do not estimate. State units and cu
 Fetch SEC (or local-jurisdiction) primary filings for TICKER and store them under the session tree for deep mining. Read S/registry/market_context.json when present and honor listing.primary_filing_source / filing_forms_expected — do not pretend EDGAR is primary if the annual is HKEX, DART, or another local venue.
 
 REQUIRED fetch set:
-1. At least the **three most recent annual reports** (US: 10-K; non-US: 20-F / annual report equivalents) — multi-year text is mandatory for Agent 2e's strategy arc.
+1. At least the **three most recent annual reports** (US: 10-K; non-US: 20-F / annual report equivalents). When `research_brief.research_depth` is `deep` **or** `market_context.intensity` is `high`, fetch **five** annuals when they exist. Extra years are not a substitute for ownership/control depth in 1c.
 2. The two most recent interim reports (10-Q / half-year / etc.).
 3. The latest earnings 8-K exhibit (EX-99.1 and financial supplement EX-99.2 if any).
+Store a cleaned `.txt` sidecar next to HTML/PDF so year-readers can section-walk without pasting HTML.
 
 Primary: kimi-datasource plugin (get_data_source_desc("sec_edgar")). Fallback: local sec-edgar MCP (search_company_by_ticker, get_latest_filings, then get_filing_text — it returns only a 20k-char preview in the MCP response; read the COMPLETE filing from the `full_text_path` it returns). Note any substitution.
 
@@ -163,35 +164,64 @@ Write S/registry/latest_quarter.json and S/registry/handoffs/2d_latest_quarter.m
 
 ---
 
-## Phase 1c — Agent 2e filing deep dive (`coder`)
+## Phase 1c — year-readers + Agent 2e merger
 
-Run after 2b (needs `S/data/raw_sec/`). May run **in parallel with 2d**. Prefer 2a `sp_financials.csv` for actuals when grading promises.
+Run after 2b (needs `S/data/raw_sec/`). Year-readers may run **in parallel with 2d**. 2e merge runs after all year-files pass excerpt-in-source. Prefer 2a `sp_financials.csv` for actuals when 2e grades promises.
+
+Orchestrator: list annuals with `python3 -c "from scripts.kd_research.annuals import list_annuals; ..."` (or equivalent). Spawn **one year-reader per annual** (N on disk; typically 3, 5 when depth/intensity warrants and 2b stored them). Do **not** paste any 10-K into the parent or into a year-reader prompt.
+
+### Agent 2e-year — single annual (`coder`)
 
 ```text
-Deep-mine multi-year filings and earnings-call transcripts for TICKER (session S). You produce STRUCTURED decision inputs — not a second background essay.
+You extract ONE fiscal year's annual report for TICKER (session S). You do not write filing_deep_dive.json.
 
-Read first: S/registry/sector_config.json, S/registry/sec_filings.json, S/registry/data_fetch_log.json, S/data/sp_financials.csv (if present), and ALL primary text under S/data/raw_sec/. Methodology: ROOT/harness/filing_deep_dive.md. Helpers (use them; do not re-implement mental joins):
-- ROOT/scripts/kd_research/note_extract.py (split_notes, build_footnote_items, parse_guidance_outlook_block)
-- ROOT/scripts/kd_research/promise_vs_actual.py (join_promises_to_actuals, hit_rate, scorecard_summary)
+Anti-role: no other years, no valuation, no transcripts, no promise_vs_actual.py, no multi-year narrative, no WACC/FV. Cross-year joins are Agent 2e's job.
 
-TRANSCRIPTS (secondary source):
-- Obtain recent earnings-call transcripts (last 4–8 quarters when possible) via web-fetch / IR / reputable transcript hosts. Snapshot full text to S/data/transcripts/ with period in the filename.
-- If transcripts cannot be obtained: write explicit missing entries under sources.transcripts (status=missing) and sources.gaps; set management_scorecard.data_quality to degraded_no_transcripts (or partial); do NOT invent quotes or paraphrases presented as quotes.
-- Every scorecard row must set source_type to filing | transcript | filing+transcript. Filings win on conflicts unless the transcript is the only place a promise was stated.
+Read first: S/registry/sector_config.json, S/registry/market_context.json (ownership depth for THIS filing), ROOT/harness/filing_deep_dive.md checklist, ROOT/templates/filing_year_dive.schema.json.
 
-Build and write S/registry/filing_deep_dive.json per ROOT/templates/filing_deep_dive.schema.json with ALL of:
+HOW TO READ (mandatory):
+- Open only the cleaned .txt for YOUR year under S/data/raw_sec/ (path injected by orchestrator). Never feed .htm. Never paste the whole file into chat.
+- Section-walk with line-range reads and search only. Recite unread required sections as you go.
+- Required sections_walked ids: business, risk_factors, legal, md_and_a, notes, related_party.
+- Helpers allowed on THIS file only: ROOT/scripts/kd_research/note_extract.py.
 
-1) footnotes.items — standard/growth checklist at minimum: revenue_disaggregation, segment, sbc_unrecognized, debt_leases, contingencies_legal, income_taxes, capex_commitments, related_party_dual_class. Each item status extracted|missing|not_applicable|partial with short excerpt (≤800 chars) and source path under data/raw_sec/. Prefer build_footnote_items() then enrich value{} with numbers you parse. Missing is allowed; silence is not. Read S/registry/market_context.json when present: if ownership.complexity is medium/high or intensity is high, related_party_dual_class (and any VIE/control/SOE/family facts in the filings) MUST be enriched with concrete stakes/structures when disclosed — not a bare status with empty value. Note accounting-regime differences that affect model inputs (leases, SBC, impairment, associates) when accounting_regime is non-US-GAAP.
+Extract:
+1) footnotes.items — same checklist as FDD (revenue_disaggregation, segment, sbc_unrecognized, debt_leases, contingencies_legal, income_taxes, capex_commitments, related_party_dual_class). Status extracted|missing|not_applicable|partial. Excerpt ≤800 chars MUST be a real substring of the source path. Missing is allowed; silence is not.
+2) priorities[] and outlook_promises[] for THIS year only (do not grade vs later actuals).
+3) risk_factor_themes[] from Item 1A (or local equivalent).
+4) key_figures[] — at least one; each needs value + excerpt + source_path inside this year's file.
+5) Related-party / control / dual-class / VIE: required extract attempt; status=missing if absent.
 
-2) strategy_arc — cover ≥3 annual report years when raw_sec has them (fewer only if fetch gaps, documented). stated_priorities_by_year with basis paths; continuity {value, rationale, basis}; pivot_flags; capital_allocation_story; implied_model_hooks; overall rationale (≥20 chars of real analysis).
+Write S/registry/raw/fdd_year_FY{yyyy}.json per the year-dive schema and S/registry/handoffs/2e_fy{yyyy}.md.
+Return to parent: path + 5–8 bullets. No filing dump.
+```
 
-3) management_scorecard — grade promises vs actuals for revenue, opex/opinc, capex, margins, capital returns, material segment paths, plus soft strategic milestones (too_early / abandoned as appropriate). Prefer quantitative rows with low/high/target joined via promise_vs_actual.join_promises_to_actuals against actuals from sp_financials / filings. Include credibility_summary with pattern, valuation_implication, rationale, basis, transcript_coverage; hit_rate_quantitative when n≥1 quantitative met|beat|miss rows (scripted).
+### Agent 2e — merger (`coder`)
 
-4) sources.filings (required) + sources.transcripts (required key; may be empty with gaps) + sources.gaps.
+```text
+Merge year-dives into filing_deep_dive.json for TICKER (session S). You are the SINGLE writer of that file.
 
-5) Optional risk_factor_delta (new/removed/elevated Item 1A themes YoY).
+Role: merge + numeric rehydration + transcripts + ownership fail-closed.
+Anti-role: do not re-read five full 10-Ks; do not invent numbers; do not mark FDD quality PASS (Agent 13); do not paste filings into chat.
 
-Justification contract: continuity score and any decided hit-rate implications need rationale/basis. Never fabricate footnote numbers. Write S/registry/handoffs/2e_filing_deep_dive.md.
+Read first: all S/registry/raw/fdd_year_*.json, S/registry/sector_config.json, S/registry/market_context.json, S/registry/data_fetch_log.json, S/data/sp_financials.csv (if present). Methodology: ROOT/harness/filing_deep_dive.md.
+Helpers: ROOT/scripts/kd_research/excerpt_check.py (must pass or gap+drop); ROOT/scripts/kd_research/promise_vs_actual.py (YOU only — year-readers must not have used it); note_extract.py for targeted re-reads.
+
+Before merge: every year-file must pass excerpt-in-source (excerpts/key_figures are substrings of their path). If a figure fails, put it in sources.gaps and do not copy it into FDD.
+
+Build S/registry/filing_deep_dive.json per ROOT/templates/filing_deep_dive.schema.json:
+1) footnotes.items from the LATEST year; attach YoY deltas when year-files disagree. Same checklist. If market_context.ownership.complexity or intensity is medium/high, related_party_dual_class (and VIE/control/SOE/family) MUST be enriched from year-files + targeted raw_sec re-read — not a bare status with empty value. Note non-US-GAAP accounting-regime traps when relevant.
+2) strategy_arc from per-year priorities. years_covered MUST match the year-dive fiscal years. continuity {value, rationale, basis}; pivot_flags; capital_allocation_story; implied_model_hooks.
+3) management_scorecard — join this-year outlook_promises to later actuals via promise_vs_actual.join_promises_to_actuals. source_type filing|transcript|filing+transcript. credibility_summary + hit_rate_quantitative when n≥1 quantitative met|beat|miss.
+4) sources.filings + sources.transcripts (required key) + sources.gaps + sources.year_dives (paths).
+5) verify_rechecks[] — ≥3 {path, value} re-reads against data/raw_sec/ (prefer ≥3 per year when N is small). Merge must not introduce a new number.
+6) Optional risk_factor_delta from year-file themes.
+
+TRANSCRIPTS (secondary; after year merge):
+- Last 4–8 quarters via web-fetch / IR when possible → S/data/transcripts/.
+- If none: sources.transcripts status=missing, scorecard data_quality degraded_no_transcripts or partial; never invent quotes.
+
+Write S/registry/handoffs/2e_filing_deep_dive.md (verify re-checks, dropped worker figures, ownership treatment).
 ```
 
 ---

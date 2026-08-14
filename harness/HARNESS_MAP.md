@@ -45,6 +45,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 | **1_parallel** | 2a, 2b, 2c | financials CSV, `sec_filings` + `raw_sec/`, `news_sentiment`, fetch log, handoffs | Actuals, primary text, catalysts |
 | **1b** | 2d | `latest_quarter.json` + evidence_log | Overrides input for Agent 5; risks for 2.5 |
 | **1c** | year-readers + 2e merger | `raw/fdd_year_*.json` (new runtime) + excerpt check + `filing_deep_dive.json` (+ transcripts if any) | Footnotes, strategy_arc, scorecard for valuation hooks |
+| **1d** | 1d_rev ∥ 1d_ind ∥ 1d_ol then 1d_merge | `raw/oppath_*.json` + `operating_path_brief.json` (new runtime ≥ 2.6.0) | Growth/industry/leverage facts + conflict map for Agent 5 |
 | **2_parallel** | 4, 5, 12 | `technical.json`, `valuation_model.json`, `tsr_validation.json` | FV/MOS for reports & stress; levels for technical report |
 | **2_5** | stress swarm | `risk_bridge.json`, ≥5 `raw/stress_*.json` | Risk lens, scenario probs, sizing input |
 | **3** | 6 | `charts/*.png` | Visuals for reports |
@@ -52,9 +53,9 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 | **5** | 13 | `audit.json` verdict | Gate for “complete” |
 | **done** | — | audit PASS (or waived in README) | Catalog snapshot |
 
-**Dependency rule of thumb:** do not start **2** without 1b+1c evidence; do not start **4** without valuation+risk_bridge+technical+tsr; do not claim **done** without audit PASS.
+**Dependency rule of thumb:** do not start **2** without 1b+1c evidence (and **1d** on harness ≥ 2.6.0); do not start **4** without valuation+risk_bridge+technical+tsr; do not claim **done** without audit PASS.
 
-**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`.
+**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`).
 
 ---
 
@@ -66,6 +67,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 | `research_brief` (new sessions) | Phase 0 fan-out | Write brief after classification |
 | `sp_financials.csv` or `sec_filings` / raw_sec | 1b / 1c / 2 | Agents 2a / 2b |
 | `latest_quarter` or `filing_deep_dive` | Phase 2 valuation | 2d / 1c (year-readers + 2e) |
+| `operating_path_brief` (new runtime) | Agent 5 | 1d workers + 1d_merge |
 | `valuation_model.json` | 2.5, 3, 4 | Agent 5 |
 | `risk_bridge` or technical / tsr | Phase 4 reports | 2.5 / 4 / 12 |
 | Three reports | Phase 5 | Agents 7 / 8 / 11 |
@@ -76,6 +78,8 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel
 python3 scripts/preflight_phase.py --ticker T --date D --phase 2_parallel --subagent 5
 python3 scripts/preflight_phase.py --ticker T --date D --phase 1c --mode complete
+python3 scripts/preflight_phase.py --ticker T --date D --phase 1d
+python3 scripts/preflight_phase.py --ticker T --date D --phase 1d --mode complete
 python3 scripts/preflight_phase.py --ticker T --date D --phase 2_5
 python3 scripts/preflight_phase.py --ticker T --date D --phase 4_parallel
 python3 scripts/preflight_phase.py --ticker T --date D --phase 5

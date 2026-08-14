@@ -1,0 +1,30 @@
+{
+  "goal": "Phase 1d operating-path evidence: gather-only specialists + merger brief before Agent 5",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent a new official COHR FV",
+    "Workers must not write valuation_model.json or adopted 8-year forecasts"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "pytest phase_graph, phase_status, gates_preflight, handoff, fdd_hooks, year_dive, operating_path_1d pass",
+    "Legacy sessions without 1d SKIPPED; new runtime (harness >= 2.6.0) requires brief before Agent 5",
+    "Agent 4 isolation includes 1d paths"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "templates/",
+    "harness/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_phase_graph.py scripts/tests/test_phase_status.py scripts/tests/test_gates_preflight.py scripts/tests/test_handoff_structure.py scripts/tests/test_fdd_hooks_check.py scripts/tests/test_year_dive.py scripts/tests/test_operating_path_1d.py -q"
+  ]
+}

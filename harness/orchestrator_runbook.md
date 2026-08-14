@@ -71,12 +71,14 @@ FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. val
 
 11. **Phase 1c (after 2b; may overlap 2d):** list annuals (`scripts/kd_research/annuals.py`). Spawn **one year-reader per annual** (isolated prompt; cleaned `.txt` path only — do not paste the filing). After `registry/raw/fdd_year_*.json` exist, run excerpt-in-source (`excerpt_check.py`) — **do not** run `--mode complete` yet (that gate needs FDD + `verify_rechecks`). Then spawn **2e merger** only. Then `preflight --phase 1c --mode complete`. Confirm `registry/filing_deep_dive.json` (plus `verify_rechecks`) before Agent 5. After Agent 5: valuation must have non-empty `filing_deep_dive_hooks` before Phase 2.5 (`preflight --phase 2_5` / `2_parallel --mode complete`). Legacy sessions without year-files: FDD alone still completes 1c.
 
+11b. **Phase 1d (after 1b+1c; new runtime ≥ 2.6.0):** spawn `1d_rev` ∥ `1d_ind` ∥ `1d_ol` (gather only). Persist `registry/raw/oppath_*.json`. Then spawn `1d_merge` only. `preflight --phase 1d --mode complete`. Confirm `registry/operating_path_brief.json` before Agent 5. Workers must not write FV or 8-year paths. Do not average flatten vs destock. Legacy sessions without 1d: skip.
+
 ## Merges (Phase 0 / 2.5)
 
 12. Persist each raw return under `registry/raw/` **before** merge.
 13. Merge for coverage; spot-check ≥3 headline numbers; never invent merge numbers. Write swarm lead handoffs (`phase0_*.md`, `phase25_*.md`).
 14. `risk_bridge.scenario_probabilities`: **only** `bear` / `base` / `bull` floats (sibling key for rationale/`_note`).
-15. Before flipping Phase 0 / 1_parallel / 1c / 2_parallel / 2.5 complete: `preflight_phase.py --mode complete` for that phase.
+15. Before flipping Phase 0 / 1_parallel / 1c / 1d / 2_parallel / 2.5 complete: `preflight_phase.py --mode complete` for that phase.
 
 ## Before Phase 4 / 5
 

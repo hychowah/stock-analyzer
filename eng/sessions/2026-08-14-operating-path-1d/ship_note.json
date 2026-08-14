@@ -1,0 +1,16 @@
+{
+  "session_key": "2026-08-14-operating-path-1d",
+  "work_type": "W1",
+  "harness_version": "2.6.0",
+  "summary": "Added Phase 1d operating-path evidence (1d_rev / 1d_ind / 1d_ol gather-only + 1d_merge brief) so Agent 5 judges growth, industry, and leverage from a pre-valuation artifact. Version-gated; Agent 5 remains sole FV writer.",
+  "verify": [
+    "eng_verify.py PASS",
+    "61 unit tests PASS (graph/status/gates/handoff/fdd/year_dive/1d)",
+    "COHR 2026-08-13 check_session --full: 1d SKIPPED as legacy 2.5.0"
+  ],
+  "did_not": [
+    "No archive/research rewrite",
+    "No git commit",
+    "No new official COHR FV"
+  ]
+}

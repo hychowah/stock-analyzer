@@ -34,6 +34,11 @@ PHASE_ENTRY_REQUIRED: dict[str, list[str]] = {
     "1c": [
         "registry/sec_filings.json",
     ],
+    "1d": [
+        "data/sp_financials.csv",
+        "registry/latest_quarter.json",
+        "registry/filing_deep_dive.json",
+    ],
     "2_parallel": [
         "registry/sector_config.json",
         "registry/market_context.json",
@@ -77,6 +82,10 @@ PHASE_COMPLETE_GLOBS: dict[str, list[str]] = {
     "0": [
         "registry/background.json",
         "registry/raw/phase0_*.json",
+    ],
+    "1d": [
+        "registry/operating_path_brief.json",
+        "registry/raw/oppath_*.json",
     ],
     "2_5": [
         "registry/risk_bridge.json",
@@ -452,6 +461,11 @@ AGENT4_FORBIDDEN_TOKENS = (
     "market_context.json",
     "sec_filings",
     "sp_financials",
+    "operating_path_brief",
+    "oppath_",
+    "revenue_growth.json",
+    "industry_trend.json",
+    "operating_leverage.json",
 )
 
 # Primary artifacts for phase_status complete / lag checks (agent_id -> rel paths).
@@ -462,6 +476,10 @@ PHASE_PRIMARY_ARTIFACTS: dict[str, list[str]] = {
     "2c": ["registry/news_sentiment.json"],
     "2d": ["registry/latest_quarter.json"],
     "2e": ["registry/filing_deep_dive.json"],
+    "1d_rev": ["registry/raw/oppath_rev.json"],
+    "1d_ind": ["registry/raw/oppath_ind.json"],
+    "1d_ol": ["registry/raw/oppath_ol.json"],
+    "1d_merge": ["registry/operating_path_brief.json"],
     "4": ["registry/technical.json"],
     "5": ["data/valuation_model.json"],
     "12": ["registry/tsr_validation.json"],
@@ -798,6 +816,20 @@ def entry_checks(
     if phase_id == "4_parallel":
         results.extend(check_stress_coverage(session))
         results.extend(check_latest_quarter_risk_mapping(session))
+    if phase_id == "2_parallel":
+        from scripts.kd_research.operating_path import (  # noqa: WPS433
+            BRIEF_REL,
+            session_enforces_1d,
+        )
+
+        if session_enforces_1d(session):
+            status, detail = check_path(session, BRIEF_REL)
+            results.append((status, BRIEF_REL, detail))
+            from scripts.kd_research.operating_path import check_operating_path_hooks
+
+            vm = session / "data" / "valuation_model.json"
+            if vm.is_file():
+                results.extend(check_operating_path_hooks(session))
     if phase_id == "2_5":
         # valuation must parse with fair_value-ish keys soft-check
         vm, err = load_json(session / "data" / "valuation_model.json")
@@ -935,6 +967,10 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
         return out
     if phase_id == "1c":
         return check_1c_year_dive_complete(session)
+    if phase_id == "1d":
+        from scripts.kd_research.operating_path import check_1d_complete  # noqa: WPS433
+
+        return check_1d_complete(session)
     if phase_id == "2_parallel":
         out = []
         for rel in (
@@ -945,6 +981,9 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
             status, detail = check_path(session, rel)
             out.append((status, rel, detail))
         out.extend(check_filing_deep_dive_hooks(session))
+        from scripts.kd_research.operating_path import check_operating_path_hooks  # noqa: WPS433
+
+        out.extend(check_operating_path_hooks(session))
         return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)

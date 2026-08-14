@@ -42,6 +42,7 @@ Align with `AGENTS.md` §8. Use these exact strings:
 | `1_parallel` | 2a + 2b + 2c | `sp_financials.csv`, `sec_filings.json`, `news_sentiment.json`, 3 handoffs; `data_fetch_log.json` preferred |
 | `1b` | Latest quarter (2d) | `latest_quarter.json`, handoff |
 | `1c` | Filing deep dive (year-readers + 2e merger) | `filing_deep_dive.json`, handoff; **new runtime:** `raw/fdd_year_*.json` + excerpt check + `verify_rechecks`. Legacy without year-files: FDD only |
+| `1d` | Operating-path evidence (1d_rev ∥ 1d_ind ∥ 1d_ol + 1d_merge) | **new runtime ≥ 2.6.0:** `raw/oppath_*.json` + `operating_path_brief.json` + `verify_rechecks`. Legacy: SKIPPED |
 | `2_parallel` | 4 + 5 + 12 | `technical.json`, `valuation_model.json`, `tsr_validation.json`, 3 handoffs |
 | `2_5` | Stress swarm | `risk_bridge.json`, ≥5 `raw/stress_*.json` (or equivalent), handoff; preflight `--mode complete` |
 | `3` | Charts | ≥3 `charts/*.png`, handoff |
@@ -56,7 +57,8 @@ orch → 0
 orch → 1_parallel          # 0 and 1_parallel may run in parallel after orch
 1_parallel → 1b
 1_parallel → 1c            # 1b ‖ 1c after 2a+2b ready; 1c needs 2b raw_sec
-1b + 1c → 2_parallel
+1b + 1c → 1d
+1d → 2_parallel   # new runtime ≥ 2.6.0; legacy sessions skip 1d
 2_parallel → 2_5
 2_5 → 3
 2_5 → 4_parallel           # 3 ‖ 4 after 2_5 (charts only need valuation; reports need all)

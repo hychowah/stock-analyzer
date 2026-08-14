@@ -226,12 +226,62 @@ Write S/registry/handoffs/2e_filing_deep_dive.md (verify re-checks, dropped work
 
 ---
 
+## Phase 1d — operating-path evidence (after 1b+1c; before Agent 5)
+
+New runtime (`harness_version` ≥ 2.6.0). Workers are **gather-only**. They must **not** write `valuation_model.json` or an adopted 8-year forecast. `1d_merge` is the single writer of `registry/operating_path_brief.json`. Agent 5 still writes growth/OM paths.
+
+Sector-adaptive: remaps for banks (NII/fees/efficiency), REITs (NOI/FFO), insurers (premium/combined), utilities (rate base). A lens may be `not_applicable` with rationale.
+
+### Agent 1d_rev — company growth facts (`coder`)
+
+```text
+Gather COMPANY growth facts for TICKER (session S). Anti-role: do not emit an FY+1…FY+8 YoY path; do not value the stock.
+
+Read: S/data/sp_financials.csv, S/registry/latest_quarter.json, S/registry/sector_config.json, S/registry/filing_deep_dive.json (scorecard/strategy only).
+
+Write and run S/data/compute/revenue_growth.py (hermetic; historical CAGRs from the CSV). Persist S/registry/raw/oppath_rev.json per ROOT/templates/oppath_worker.schema.json (lens=revenue_growth): findings, sources, destock analog years, guide vs run-rate, mix/organic vs M&A. Handoff S/registry/handoffs/1d_rev.md.
+```
+
+### Agent 1d_ind — industry / cycle facts (`coder`)
+
+```text
+Gather INDUSTRY/cycle facts for TICKER vs this print. Anti-role: do not emit a company growth path; do not restart a Phase 0 TAM essay from zero.
+
+Read: S/registry/background.json, S/registry/latest_quarter.json, S/registry/research_brief.json, sector module. Re-read Phase 0 + primary industry sources (dated TAM/units, node ramp vs destock, architecture vs dollars, share).
+
+Write S/registry/raw/oppath_ind.json (lens=industry_trend). Handoff S/registry/handoffs/1d_ind.md.
+```
+
+### Agent 1d_ol — operating-leverage facts (`coder`)
+
+```text
+Gather HISTORICAL operating-leverage facts for TICKER. Anti-role: do not read 1d_rev’s forecast; do not emit an OM path for the explicit forecast.
+
+Read: S/data/sp_financials.csv, S/registry/latest_quarter.json. Script ΔOI/Δrev, GM/OM vs revenue, opex%/R&D floor, GM−opex identity, management GM vs OM targets.
+
+Write and run S/data/compute/operating_leverage.py. Persist S/registry/raw/oppath_ol.json (lens=operating_leverage). Handoff S/registry/handoffs/1d_ol.md.
+```
+
+### Agent 1d_merge — brief writer (`coder`)
+
+```text
+Merge 1d workers into S/registry/operating_path_brief.json (SINGLE writer). Anti-role: do not invent numbers; do not bind Agent 5 paths; do not average two growth or OM series.
+
+Read all S/registry/raw/oppath_*.json. Persist they already exist. Build per ROOT/templates/operating_path_brief.schema.json: sources.workers (3 paths), conflicts[] (flatten vs destock stays unresolved if both evidenced), scenario_hints (propose destock-fade in bear, duration in base/bull — Agent 5 decides), rejected_shapes[], recommended_for_agent5 (qualitative; any illustrative path labeled non-binding), verify_rechecks[] ≥3 against CSV/LQ/raw.
+
+Handoff S/registry/handoffs/1d_merge.md.
+```
+
+Orchestrator: `preflight --phase 1d` before workers; `preflight --phase 1d --mode complete` before flipping 1d complete / spawning Agent 5.
+
+---
+
 ## Phase 2 — Modeling (launch 4, 5, 12 in parallel)
 
 ### Agent 4 — technical analysis (`coder`)
 
 ```text
-Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
+Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news, no operating_path_brief / oppath_* / revenue_growth / industry_trend / operating_leverage). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
 
 Fetch ~2 years of daily prices for TICKER, the regional benchmark, and the sector index declared by the orchestrator (deviate only with rationale) via the yfinance MCP (get_price_history) or yahoo_finance datasource. Cache them to S/data/prices_*.csv. If S/data/price_snapshot.json exists (price-only freeze from orchestrator), use its `close` as the session “last close” / current-price anchor for levels that need a single print; still use full history for indicators.
 
@@ -252,7 +302,7 @@ Value TICKER as of DATE.
 Role: model designer + assumption judge. Anti-role: not a module-default paste machine; not a self-auditor.
 Judgment style: read ROOT/harness/exemplars/rationale_quality.md, hooks_quality.md, and valuation_decision_quality.md (GOOD patterns; do not copy illustrative numbers).
 
-Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from filings if needed.
+Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED), S/registry/operating_path_brief.json (REQUIRED on harness ≥ 2.6.0), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from filings if needed. 1d workers are evidence only — YOU write growth/OM paths. Do not average unresolved flatten-vs-destock conflicts; encode them in bear/base/bull.
 
 PREFLIGHT (stop → handoff status=blocked; do not invent):
 - registry/filing_deep_dive.json exists with footnotes + strategy_arc + management_scorecard.
@@ -272,12 +322,13 @@ Hard constraints:
 4. CONSUME deep dive → filing_deep_dive_hooks[] (used_as with old/new | rejected | noted_only). Credibility may move weights/range width — not formulas. Degraded scorecard → widen range and say so.
 4b. CONSUME market context → market_context_hooks[]. intensity=low: single noted_only OK. medium/high: local CoC + ownership/accounting addressed (use or reject). Manual review / conf<0.70 → widen. Avoid double-counting country risk across WACC/CF/stress.
 4c. When research_brief exists: research_brief_hooks[] for open must_answer_questions (used_as:range|probs|scenario_seed | unanswered_widens_range | not_material).
+4d. When operating_path_brief.json exists: operating_path_hooks[] (used_as with old/new | rejected | noted_only). Material 1d recommendations may not be all noted_only. You may reject the brief; you may not skip consumption.
 5. Write S/data/compute/valuation.py (session-relative), hermetic from session files, run it; JSON matches script output. Emit dual MoS from the script when possible.
 6. SENSITIVITY: ~4×4 on two most judgment-dependent dials; base cell = base FV. fair_value.posture one sentence (conservative|neutral|aggressive lean).
 7. Reverse-engineer current price (implied dials, full grid not only extremes). Set reverse_engineering.priced_for_perfection per valuation_decision_quality (surface claim).
 8. MoS dual fields (step constraints). Scenario probs justified + probability_method. If (bull−bear)/base >100% or bear <0.4×base: set fair_value.decision_usefulness high|medium|low + what would shrink range — do not present PW as precise when low.
 
-OUTPUT CONTRACT — write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json including: model, fair_value (bear/base/bull/PW + dual MoS), assumptions, compute_script, sensitivity, filing_deep_dive_hooks, market_context_hooks (when MC present), reverse_engineering; plus terminal_consistency / multi_method_reconciliation / research_brief_hooks / decision_usefulness / probability_method when triggered. Fair-value weights become risk_bridge scenario_probabilities (bare floats only; consistent).
+OUTPUT CONTRACT — write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json including: model, fair_value (bear/base/bull/PW + dual MoS), assumptions, compute_script, sensitivity, filing_deep_dive_hooks, market_context_hooks (when MC present), operating_path_hooks (when 1d brief present), reverse_engineering; plus terminal_consistency / multi_method_reconciliation / research_brief_hooks / decision_usefulness / probability_method when triggered. Fair-value weights become risk_bridge scenario_probabilities (bare floats only; consistent).
 
 SELF-CHECK before handoff: (1) abs(pct − 100×frac) < 0.05; (2) ≥3 rationales rehydrate values; (3) terminal_consistency if terminal method; (4) PFP names dials or explicit FALSE with dial evidence; (5) ERP/method competitor named if CoE used.
 Write S/registry/handoffs/5_valuation.md.
@@ -360,6 +411,7 @@ Structure:
 - **Footnote findings** (non-stub): 3–8 bullets from filing_deep_dive.footnotes with sources — what changes dilution, tax, net debt, legal risk, segments
 - **Multi-year strategy alignment** (non-stub): strategy_arc priorities by year, continuity, pivots, capital-allocation story
 - **Management track record** (non-stub): scorecard table or bullets (promise → actual → outcome → source_type filing/transcript); credibility_summary implication for trusting current guides
+- **Operating-path evidence** (non-stub when `operating_path_brief.json` exists): 1d recommended vs modeled growth/OM; flatten-vs-destock conflict; no averaged paths
 - valuation (model choice + key assumptions WITH their rationales — restate them; INCLUDE sensitivity grid; restate filing_deep_dive_hooks and market_context_hooks that moved dials)
 - five lenses (value, growth, contrarian, risk, technical-cross-reference)
 - stress tests & risk bridge
@@ -410,7 +462,7 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 
 **Band 2 — Consumption & process integrity**
 2. EXTERNAL VERIFICATION: ≥5 filing-grade numbers vs primary sources. Consistency is not truth. ≥1 of the ≥5 must be multi-period series or historical stress anchor (not five lines from the same EX-99.1 only).
-2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality). Machine check_session enforces non-empty filing_deep_dive_hooks when FDD exists (F8) and medium/high all-noted_only — still grade *substance* of use/reject.
+2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality). When `operating_path_brief.json` exists: non-empty `operating_path_hooks` that are not all-`noted_only`. Machine check_session enforces non-empty filing_deep_dive_hooks when FDD exists (F8) and medium/high all-noted_only — still grade *substance* of use/reject.
 2c+. If filing_deep_dive was created during Phase 5 after valuation with empty material hooks → major FAIL (backfill-without-revalue is not PASS) unless re-value or explicit README waive that FV did not consume FDD. **You must not author missing FDD or rewrite valuation as auditor.**
 2e–2g. Decision-grade handoffs (four sections); research_brief coverage; news URL sample.
 2h. **Agent 4 isolation:** technical.json / handoffs/4* must not cite fundamental paths (valuation_model, filing_deep_dive, background, latest_quarter, market_context, sec_filings, sp_financials). Machine may FAIL under --full; confirm independence of TA lens.

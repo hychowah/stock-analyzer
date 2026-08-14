@@ -140,6 +140,15 @@ def normalize_subagent_id(subagent_id: str) -> str:
         "phase25": "phase25_swarm",
         "phase25_swarm": "phase25_swarm",
         "stress": "phase25_swarm",
+        "1d_rev": "1d_rev",
+        "revenue_growth": "1d_rev",
+        "1d_ind": "1d_ind",
+        "industry_trend": "1d_ind",
+        "1d_ol": "1d_ol",
+        "operating_leverage": "1d_ol",
+        "1d_merge": "1d_merge",
+        "oppath": "1d_merge",
+        "operating_path": "1d_merge",
     }
     if raw in SUBAGENT_TO_PHASE:
         return raw
@@ -177,12 +186,22 @@ def subagent_allowed_in_phase(subagent_id: str, phase_id: str) -> tuple[bool, st
 agent_allowed_in_phase = subagent_allowed_in_phase
 
 
-def prerequisites_for(phase_id: str) -> list[str]:
+def designed_phase_ids(session: Path | None = None) -> list[str]:
+    """Phase ids that this session must cover. Legacy omits 1d."""
+    from scripts.kd_research.operating_path import designed_phase_ids as _designed
+
+    return _designed(session)
+
+
+def prerequisites_for(phase_id: str, session: Path | None = None) -> list[str]:
     """Phases that must be complete|skipped before entering phase_id."""
-    if phase_id not in PHASE_ORDER:
+    order = designed_phase_ids(session)
+    if phase_id not in order:
+        if phase_id == "1d":
+            return [p for p in PHASE_ORDER if p != "1d" and PHASE_ORDER.index(p) < PHASE_ORDER.index("1d")]
         return []
-    idx = PHASE_ORDER.index(phase_id)
-    return PHASE_ORDER[:idx]
+    idx = order.index(phase_id)
+    return order[:idx]
 
 
 def check_phase_graph_entry(
@@ -227,7 +246,7 @@ def check_phase_graph_entry(
     smap = phase_status_map(data)
     results.extend(check_phase_status_order_integrity(smap))
 
-    for prior in prerequisites_for(phase_id):
+    for prior in prerequisites_for(phase_id, session):
         st = smap.get(prior)
         if st is None:
             results.append(
@@ -331,7 +350,8 @@ def check_phase_status_graph(session: Path) -> list[tuple[str, str, str]]:
     smap = phase_status_map(data)
     results = check_phase_status_order_integrity(smap)
 
-    missing = [p for p in PHASE_ORDER if p not in smap]
+    designed = designed_phase_ids(session)
+    missing = [p for p in designed if p not in smap]
     if missing:
         results.append(
             (
@@ -342,7 +362,7 @@ def check_phase_status_graph(session: Path) -> list[tuple[str, str, str]]:
         )
     else:
         results.append(
-            ("PASS", "phase_graph.coverage", f"{len(PHASE_ORDER)} phases present")
+            ("PASS", "phase_graph.coverage", f"{len(designed)} phases present")
         )
 
     for sid, (pid, _st) in subagent_status_map(data).items():

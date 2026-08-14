@@ -6,6 +6,45 @@ Used by: Agent 5 (write), Agent 13 (grade).
 
 ---
 
+## Pair 0 — Operating-path brief (1d)
+
+### BAD
+
+```json
+{
+  "operating_path_hooks": [
+    {"from": "operating_path_brief", "action": "noted_only", "reason": "Noted growth and leverage."}
+  ]
+}
+```
+
+**Why bad:** The brief exists so Agent 5 cannot invent a fade or OM path. A single `noted_only` is checkbox theater. Machine FAIL if all hooks are `noted_only`.
+
+### GOOD
+
+```json
+{
+  "operating_path_hooks": [
+    {
+      "from": "registry/operating_path_brief.json#conflicts.fade_vs_flatten",
+      "action": "used_as:dnc_growth_path",
+      "old": "fade to 4% by Y8 as default",
+      "new": "Y1–Y2 keep printed duration; mid-horizon held in high-teens; destock analog lives in bear only",
+      "reason": "Unresolved flatten-vs-destock is encoded in scenarios, not averaged into one CAGR."
+    },
+    {
+      "from": "registry/operating_path_brief.json#rejected_shapes.om_28_35",
+      "action": "rejected",
+      "reason": "GM-minus-opex identity and incremental OM on session actuals do not support a 28–35% OM path."
+    }
+  ]
+}
+```
+
+**Why good:** Material recommendations are `used_as` or `rejected`. Conflict is split across scenarios, not averaged. Illustrative numbers are style only.
+
+---
+
 ## Pair 1 — Filing deep dive → assumption
 
 ### Context (shared)

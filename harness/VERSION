@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.5.0",
+  "harness_version": "2.6.0",
   "harness_spec": "v2",
-  "notes": "2.5.0: Phase 1c year-readers (one isolated annual each, on-disk section walk) + excerpt-in-source check + 2e merger; new-runtime only (legacy FDD-only SKIPPED). 2.4.0: require orchestrator_model at scaffold. 2.3.0: phase-graph preflight; FDD hooks; technical isolation."
+  "notes": "2.6.0: Phase 1d operating-path evidence (1d_rev/1d_ind/1d_ol gather + 1d_merge brief) before Agent 5; version-gated like year-dives. 2.5.0: Phase 1c year-readers. 2.4.0: require orchestrator_model at scaffold. 2.3.0: phase-graph preflight; FDD hooks; technical isolation."
 }

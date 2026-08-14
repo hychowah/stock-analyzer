@@ -302,6 +302,12 @@ HANDOFF_SPECS: list[tuple[str, list[str]]] = [
     ("phase0_swarm", ["phase0_swarm*.md", "phase0_*.md", "phase0.md"]),
     ("phase25_swarm", ["phase25_swarm*.md", "phase25_*.md", "phase25.md", "2_5_*.md"]),
 ]
+HANDOFF_SPECS_1D: list[tuple[str, list[str]]] = [
+    ("1d_rev", ["1d_rev*.md"]),
+    ("1d_ind", ["1d_ind*.md"]),
+    ("1d_ol", ["1d_ol*.md"]),
+    ("1d_merge", ["1d_merge*.md", "1d_operating_path*.md"]),
+]
 HANDOFF_AGENTS = [a for a, _ in HANDOFF_SPECS]
 HANDOFF_MIN_BYTES = 300
 
@@ -310,12 +316,16 @@ def check_handoffs(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
     from scripts.kd_research.gates import check_handoff_headers  # noqa: WPS433
+    from scripts.kd_research.operating_path import session_enforces_1d  # noqa: WPS433
 
     d = session / "registry/handoffs"
     if not d.is_dir():
         record("FAIL", "handoffs", "registry/handoffs/ missing — every agent must write one")
         return
-    for agent, patterns in HANDOFF_SPECS:
+    specs = list(HANDOFF_SPECS)
+    if session_enforces_1d(session):
+        specs.extend(HANDOFF_SPECS_1D)
+    for agent, patterns in specs:
         matches: list[Path] = []
         for pat in patterns:
             matches.extend(d.glob(pat))
@@ -571,7 +581,10 @@ def check_phase_status(session: Path) -> None:
     """
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.operating_path import designed_phase_ids  # noqa: WPS433
     from scripts.kd_research.phase_status import PHASE_IDS  # noqa: WPS433
+
+    designed = designed_phase_ids(session)
 
     rel = "registry/phase_status.json"
     p = session / rel
@@ -646,7 +659,7 @@ def check_phase_status(session: Path) -> None:
                 )
                 return
 
-    missing_phases = [pid for pid in PHASE_IDS if pid not in seen_ids]
+    missing_phases = [pid for pid in designed if pid not in seen_ids]
     if missing_phases:
         record("FAIL", "phase_status phase coverage", f"missing phase_id(s): {missing_phases}")
         return
@@ -702,6 +715,29 @@ def check_agent4_isolation_session(session: Path, *, full: bool = False) -> None
 
     for status, check, detail in check_agent4_isolation(session, full=full):
         record(status, check, detail)
+
+
+def check_operating_path(session: Path) -> None:
+    """New-runtime 1d brief + hooks; SKIPPED on legacy/slim."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.operating_path import (  # noqa: WPS433
+        check_1d_complete,
+        check_operating_path_hooks,
+        session_enforces_1d,
+        worker_files,
+        brief_path,
+    )
+
+    if not session_enforces_1d(session) and not worker_files(session) and not brief_path(session).is_file():
+        record("SKIPPED", "operating_path_1d", "legacy/slim (no oppath files; harness_version < 2.6.0)")
+        return
+    for status, check, detail in check_1d_complete(session):
+        record(status, check, detail)
+    vm = session / "data" / "valuation_model.json"
+    if vm.is_file():
+        for status, check, detail in check_operating_path_hooks(session):
+            record(status, check, detail)
 
 
 def check_year_dives(session: Path) -> None:
@@ -1066,6 +1102,7 @@ def main() -> int:
     if args.full:
         check_filing_deep_dive(session)
         check_year_dives(session)
+        check_operating_path(session)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

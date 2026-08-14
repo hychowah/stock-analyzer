@@ -18,6 +18,7 @@ PHASE_AGENTS: list[tuple[str, list[str]]] = [
     ("1_parallel", ["2a", "2b", "2c"]),
     ("1b", ["2d"]),
     ("1c", ["2e"]),
+    ("1d", ["1d_rev", "1d_ind", "1d_ol", "1d_merge"]),
     ("2_parallel", ["4", "5", "12"]),
     ("2_5", ["phase25_swarm"]),
     ("3", ["6"]),
@@ -27,7 +28,7 @@ PHASE_AGENTS: list[tuple[str, list[str]]] = [
 ]
 
 PHASE_IDS: list[str] = [pid for pid, _ in PHASE_AGENTS]
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def _agent_row(agent_id: str) -> dict[str, Any]:

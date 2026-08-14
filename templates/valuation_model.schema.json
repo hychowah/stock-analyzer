@@ -112,6 +112,21 @@
         }
       }
     },
+    "operating_path_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/operating_path_brief.json exists (harness >= 2.6.0). How the 1d brief changed growth/OM assumptions — used_as with old/new or rejected. noted_only only for immaterial slices; all-noted_only FAILs.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": { "type": "string" },
+          "action": { "type": "string" },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
     "market_context_hooks": {
       "type": "array",
       "description": "REQUIRED when registry/market_context.json exists. How listing/region intensity, accounting regime, local cost-of-capital flags, and ownership/control changed assumptions — or explicit rejects / noted_only no-ops. For intensity=low, a single noted_only entry is enough. Never paste region-module reference ranges as mandates without use/reject reason.",

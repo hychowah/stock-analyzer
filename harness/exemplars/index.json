@@ -11,7 +11,7 @@
     {
       "id": "hooks_quality",
       "path": "harness/exemplars/hooks_quality.md",
-      "agents": ["5", "13"],
+      "agents": ["5", "13", "1d_merge"],
       "max_pairs": 2
     },
     {

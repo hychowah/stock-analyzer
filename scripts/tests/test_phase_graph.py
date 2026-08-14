@@ -43,6 +43,8 @@ class SubagentNamingTests(unittest.TestCase):
         self.assertEqual(normalize_subagent_id("valuation"), "5")
         self.assertEqual(normalize_subagent_id("Agent 5"), "5")
         self.assertEqual(normalize_subagent_id("subagent_2e"), "2e")
+        self.assertEqual(normalize_subagent_id("revenue_growth"), "1d_rev")
+        self.assertEqual(normalize_subagent_id("oppath"), "1d_merge")
 
     def test_subagent_phase_binding(self):
         ok, _ = subagent_allowed_in_phase("5", "2_parallel")

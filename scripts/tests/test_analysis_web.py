@@ -52,6 +52,44 @@ def _mini_archive(base: Path) -> Path:
     return archive
 
 
+def _insert_run(
+    archive: Path,
+    *,
+    ticker: str,
+    session_key: str,
+    fv_base: float,
+    mos: float,
+    sector: str = "growth",
+    audit: str = "PASS",
+) -> None:
+    db = archive / "catalog" / "research_compare.sqlite"
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        """
+        INSERT INTO runs (
+          run_id, ticker, session_date, session_key, path, experiment_id,
+          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct, exported_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"research:{ticker}:{session_key}",
+            ticker,
+            session_key,
+            session_key,
+            f"archive/research/{ticker}/{session_key}",
+            "exp-demo",
+            audit,
+            sector,
+            "us",
+            fv_base,
+            mos,
+            "2026-08-10T00:00:00Z",
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -174,7 +212,152 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         data = r.json()
         self.assertEqual(data["count"], 1)
+        self.assertEqual(data["total"], 1)
         self.assertEqual(data["runs"][0]["ticker"], "META")
+
+    def test_home_ticker_prefix_field(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'name="ticker_prefix"', r.content)
+        self.assertIn(b'name="session_date_from"', r.content)
+        self.assertIn(b'name="mos_min"', r.content)
+        self.assertIn(b'name="sector"', r.content)
+        self.assertIn(b"<select name=\"sector\"", r.content)
+        self.assertIn(b"/static/runs.js", r.content)
+        self.assertIn(b'data-live-partial="1"', r.content)
+
+    def test_exact_ticker_query_still_exact(self):
+        r = self.client.get("/", params={"ticker": "META"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+
+    def test_api_ticker_m_still_exact_empty(self):
+        r = self.client.get("/api/runs", params={"ticker": "M"})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()["count"], 0)
+
+    def test_invalid_sort_http_400(self):
+        r = self.client.get("/", params={"sort": "1;DROP TABLE runs"})
+        self.assertEqual(r.status_code, 400)
+        api = self.client.get("/api/runs", params={"sort": "not_a_column"})
+        self.assertEqual(api.status_code, 400)
+
+
+class AnalysisWebQueryTests(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.archive = _mini_archive(Path(self._td.name))
+        _insert_run(self.archive, ticker="JPM", session_key="2026-07-25", fv_base=200.0, mos=-5.0, sector="bank")
+        _insert_run(self.archive, ticker="MSFT", session_key="2026-08-01", fv_base=400.0, mos=20.0)
+        _insert_run(self.archive, ticker="MELI", session_key="2026-08-16", fv_base=1800.0, mos=8.0)
+        os.environ["ARCHIVE_ROOT"] = str(self.archive)
+
+        import importlib
+
+        import apps.analysis_web.app as app_mod
+
+        importlib.reload(app_mod)
+        self._app = app_mod.create_app()
+        from fastapi.testclient import TestClient
+
+        self.client = TestClient(self._app)
+
+    def tearDown(self):
+        self.client.close()
+        self._td.cleanup()
+
+    def test_html_ticker_prefix_m(self):
+        r = self.client.get("/", params={"ticker_prefix": "M"})
+        self.assertEqual(r.status_code, 200)
+        body = r.content
+        self.assertIn(b"META", body)
+        self.assertIn(b"MELI", body)
+        self.assertIn(b"MSFT", body)
+        self.assertNotIn(b"JPM", body)
+        self.assertIn(b"ticker_prefix", body)
+
+    def test_fragment_is_table_only(self):
+        r = self.client.get("/fragments/runs", params={"ticker_prefix": "M"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+        self.assertNotIn(b"JPM", r.content)
+        self.assertNotIn(b"<header>", r.content)
+        self.assertNotIn(b"Archive Analysis", r.content)
+        self.assertIn(b"runs-table", r.content)
+
+    def test_api_ticker_prefix(self):
+        r = self.client.get("/api/runs", params={"ticker_prefix": "M"})
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        tickers = {row["ticker"] for row in data["runs"]}
+        self.assertEqual(tickers, {"MELI", "META", "MSFT"})
+        self.assertEqual(data["total"], 3)
+        self.assertEqual(data["count"], 3)
+
+    def test_sort_mos_desc(self):
+        r = self.client.get(
+            "/",
+            params={"sort": "margin_of_safety_pct", "dir": "desc"},
+        )
+        self.assertEqual(r.status_code, 200)
+        text = r.text
+        i_msft = text.find("MSFT")
+        i_meta = text.find(">META<")
+        if i_meta < 0:
+            i_meta = text.find("META")
+        i_jpm = text.find("JPM")
+        self.assertGreater(i_msft, 0)
+        self.assertGreater(i_meta, i_msft)
+        self.assertGreater(i_jpm, i_meta)
+
+    def test_legacy_ticker_exact_excludes_msft(self):
+        r = self.client.get("/", params={"ticker": "META"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+        self.assertNotIn(b"MSFT", r.content)
+        self.assertNotIn(b"JPM", r.content)
+
+    def test_html_session_date_range(self):
+        r = self.client.get(
+            "/",
+            params={"session_date_from": "2026-08-01", "session_date_to": "2026-08-10"},
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+        self.assertIn(b"MSFT", r.content)
+        self.assertNotIn(b"JPM", r.content)
+        self.assertNotIn(b"MELI", r.content)
+
+    def test_html_mos_min(self):
+        r = self.client.get("/", params={"mos_min": "10"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+        self.assertIn(b"MSFT", r.content)
+        self.assertNotIn(b"JPM", r.content)
+        self.assertNotIn(b"MELI", r.content)
+
+    def test_html_sector_bank(self):
+        r = self.client.get("/", params={"sector": "bank"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"JPM", r.content)
+        self.assertNotIn(b"MSFT", r.content)
+        self.assertIn(b'<option value="bank" selected>', r.content)
+        self.assertIn(b'<option value="growth"', r.content)
+
+    def test_api_combined_filters(self):
+        r = self.client.get(
+            "/api/runs",
+            params={"ticker_prefix": "M", "mos_min": "10", "session_date_from": "2026-08-01"},
+        )
+        self.assertEqual(r.status_code, 200)
+        tickers = {row["ticker"] for row in r.json()["runs"]}
+        self.assertEqual(tickers, {"META", "MSFT"})
+
+    def test_invalid_date_http_400(self):
+        r = self.client.get("/", params={"session_date_from": "08-01-2026"})
+        self.assertEqual(r.status_code, 400)
+        api = self.client.get("/api/runs", params={"mos_min": "nope"})
+        self.assertEqual(api.status_code, 400)
 
 
 if __name__ == "__main__":

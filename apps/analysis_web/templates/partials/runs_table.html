@@ -1,0 +1,50 @@
+{% macro sort_th(col, label, extra_class='') %}
+<th class="{{ extra_class }}">
+  <a class="sort{% if sort == col %} is-active{% endif %}"
+     href="{{ sort_links[col] }}"
+     data-sort="{{ col }}">{{ label }}{% if sort == col %} <span class="sort-ind" aria-hidden="true">{% if dir == 'desc' %}▼{% else %}▲{% endif %}</span>{% endif %}</a>
+</th>
+{% endmacro %}
+{% if error %}
+<div class="card err"><p>{{ error }}</p>
+  <p>Rebuild with <code>python3 scripts/export_compare_db.py --all</code></p>
+</div>
+{% else %}
+<div class="card">
+  <p class="muted" aria-live="polite">{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }}</p>
+  <table class="runs-table">
+    <thead>
+      <tr>
+        {{ sort_th('ticker', 'Ticker') }}
+        {{ sort_th('session_date', 'Session') }}
+        {{ sort_th('primary_sector', 'Sector') }}
+        {{ sort_th('region', 'Region') }}
+        {{ sort_th('asof_price', 'Price', 'num') }}
+        {{ sort_th('fv_base', 'FV base', 'num') }}
+        {{ sort_th('margin_of_safety_pct', 'MoS %', 'num') }}
+        {{ sort_th('audit_verdict', 'Audit') }}
+        {{ sort_th('tech_signal', 'Tech') }}
+      </tr>
+    </thead>
+    <tbody>
+      {% if runs %}
+        {% for r in runs %}
+        <tr>
+          <td><a class="mono" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
+          <td class="mono">{{ r.session_key }}</td>
+          <td>{{ r.primary_sector or '' }}</td>
+          <td>{{ r.region or '' }}</td>
+          <td class="num">{{ r.asof_price | fmt_num }}</td>
+          <td class="num">{{ r.fv_base | fmt_num }}</td>
+          <td class="num">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
+          <td>{{ r.audit_verdict | verdict_badge }}</td>
+          <td>{{ r.tech_signal or '' }}</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="9" class="muted">No runs</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

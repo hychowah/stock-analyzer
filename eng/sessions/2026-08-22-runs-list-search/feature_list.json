@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md, fill issue.json, baseline eng_verify, record git log",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria; progress.md notes baseline verify"
+    },
+    {
+      "id": "catalog-query",
+      "description": "CatalogApi ticker_prefix + allowlisted sort/dir + count_runs + CLI; list_runs still returns a list",
+      "passes": true,
+      "verify": "python -m pytest scripts/tests/test_catalog_api.py -q"
+    },
+    {
+      "id": "runs-instant-search",
+      "description": "Fragment route + runs.js live prefix/filters + live.js coexistence + no-JS GET",
+      "passes": true,
+      "verify": "python -m pytest scripts/tests/test_analysis_web.py -q"
+    },
+    {
+      "id": "runs-column-sort",
+      "description": "Clickable headers wired to allowlisted sort/dir; 400 on invalid",
+      "passes": true,
+      "verify": "GET /?sort=margin_of_safety_pct&dir=desc orders rows; invalid sort → 400"
+    },
+    {
+      "id": "docs-verify",
+      "description": "README drops HTMX promise; runbook one-liner; fragment + runs.js documented",
+      "passes": true,
+      "verify": "README documents ticker_prefix and /fragments/runs, not HTMX"
+    },
+    {
+      "id": "range-filters",
+      "description": "Session date / MoS / price / FV ranges; sector/region/tech catalog dropdowns; shared runs_list_q",
+      "passes": true,
+      "verify": "pytest test_catalog_api + test_analysis_web; GET /?mos_min=10 and /?session_date_from=… filter rows"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

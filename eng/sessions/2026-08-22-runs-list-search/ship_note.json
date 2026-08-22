@@ -1,0 +1,17 @@
+{
+  "summary": "Runs list has instant ticker starts-with search, live filters (session date, MoS, price, FV ranges; sector/region/tech dropdowns), and column sort. CatalogApi list_runs still returns a list; HTML/JSON/CLI share one query contract via runs_query.py.",
+  "verify_commands_run": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_catalog_api.py scripts/tests/test_analysis_web.py -q"
+  ],
+  "follow_ups": [
+    "Pagination UI (offset) still out of scope",
+    "Unique/latest-per-ticker view still out of scope",
+    "No Playwright browser driver in this environment; TestClient + HTTP smoke only"
+  ],
+  "risks": [
+    "LIKE prefix uses ESCAPE '\\'; covered by unit tests for % and _ literals",
+    "archive/catalog JSON indexes were already dirty before this session — do not include them in the UI commit"
+  ],
+  "intended_commit_subject": "Add instant ticker prefix search, live filters, and column sort on the runs list"
+}

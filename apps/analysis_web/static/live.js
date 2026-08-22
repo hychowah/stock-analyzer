@@ -29,6 +29,10 @@
 
   function reloadSoon() {
     if (!wantsReload()) return;
+    if (document.body && document.body.getAttribute("data-live-partial") === "1") {
+      document.dispatchEvent(new CustomEvent("catalog-changed"));
+      return;
+    }
     flash("Catalog updated — refreshing…");
     setTimeout(function () {
       window.location.reload();

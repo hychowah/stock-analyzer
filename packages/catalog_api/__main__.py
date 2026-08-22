@@ -29,11 +29,23 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("health", help="Catalog health probe")
 
     p_list = sub.add_parser("list-runs", help="List runs")
-    p_list.add_argument("--ticker")
+    p_list.add_argument("--ticker", help="Exact ticker match")
+    p_list.add_argument("--ticker-prefix", help="Ticker starts-with (case-insensitive)")
     p_list.add_argument("--sector")
     p_list.add_argument("--region")
     p_list.add_argument("--experiment-id")
     p_list.add_argument("--audit-verdict")
+    p_list.add_argument("--tech-signal")
+    p_list.add_argument("--session-date-from", help="Inclusive YYYY-MM-DD")
+    p_list.add_argument("--session-date-to", help="Inclusive YYYY-MM-DD")
+    p_list.add_argument("--mos-min", type=float)
+    p_list.add_argument("--mos-max", type=float)
+    p_list.add_argument("--price-min", type=float)
+    p_list.add_argument("--price-max", type=float)
+    p_list.add_argument("--fv-base-min", type=float)
+    p_list.add_argument("--fv-base-max", type=float)
+    p_list.add_argument("--sort", help="Allowlisted runs column")
+    p_list.add_argument("--dir", choices=["asc", "desc"], help="Sort direction")
     p_list.add_argument("--limit", type=int, default=20)
     p_list.add_argument("--offset", type=int, default=0)
 
@@ -56,10 +68,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "list-runs":
             rows = api.list_runs(
                 ticker=args.ticker,
+                ticker_prefix=args.ticker_prefix,
                 sector=args.sector,
                 region=args.region,
                 experiment_id=args.experiment_id,
                 audit_verdict=args.audit_verdict,
+                tech_signal=args.tech_signal,
+                session_date_from=args.session_date_from,
+                session_date_to=args.session_date_to,
+                mos_min=args.mos_min,
+                mos_max=args.mos_max,
+                price_min=args.price_min,
+                price_max=args.price_max,
+                fv_base_min=args.fv_base_min,
+                fv_base_max=args.fv_base_max,
+                sort=args.sort,
+                dir=args.dir,
                 limit=args.limit,
                 offset=args.offset,
             )

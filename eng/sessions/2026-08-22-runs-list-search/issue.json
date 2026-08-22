@@ -1,0 +1,39 @@
+{
+  "goal": "Instant prefix ticker search, live filters, and column sort on the Research runs list",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent fair values in the UI",
+    "Do not start a React SPA or add an HTMX library",
+    "Do not collapse to unique/latest ticker",
+    "Do not implement contains-match or pagination UI",
+    "Do not change portfolio, experiments, or calibration pages",
+    "Do not change list_runs return type",
+    "Do not bump harness/VERSION"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Typing M in Ticker (no Filter click) shows only tickers starting with M",
+    "ticker remains exact on HTML, JSON, and CLI; ticker_prefix is starts-with on every surface",
+    "Clickable column sort uses an allowlisted sqlite column; invalid sort/dir is HTTP 400",
+    "list_runs still returns list[dict]; count_runs provides total; JSON count stays page length",
+    "No-JS GET form still works; shareable URL uses ticker_prefix/sort/dir",
+    "eng_verify.py passes",
+    "pytest scripts/tests/test_catalog_api.py scripts/tests/test_analysis_web.py pass",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/catalog_api/",
+    "apps/analysis_web/",
+    "scripts/tests/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_catalog_api.py scripts/tests/test_analysis_web.py -q"
+  ]
+}

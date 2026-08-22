@@ -2,7 +2,7 @@
 
 Read-only UI over `packages.catalog_api` and the **live `archive/`** data plane.
 
-**Stack:** FastAPI + Jinja2 + static CSS (HTMX/SSE/markdown rendering phased in).
+**Stack:** FastAPI + Jinja2 + static CSS (`runs.js` list search, SSE live reload, markdown reports).
 
 ## Install
 
@@ -26,7 +26,7 @@ Or: `bash apps/analysis_web/init.sh`
 
 | Path | Purpose |
 |------|---------|
-| `/` | Filterable run list |
+| `/` | Run list: live prefix search, filters, column sort |
 | `/runs/{run_id}` | Run detail (FV, MoS, audit, report links) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
@@ -35,12 +35,29 @@ Or: `bash apps/analysis_web/init.sh`
 | `/portfolio` | Portfolio: `.local/portfolio.json` joined to latest catalog runs |
 | `/api/portfolio` | JSON portfolio summary + positions |
 | `/health` | Catalog health probe |
-| `/api/health`, `/api/runs` | JSON API for clients / HTMX |
+| `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
+| `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `sort`/`dir`) |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
 | `/api/fingerprint` | Poll fallback token for live reload |
 
-Runs list page opts into live reload (`data-live-reload="1"` + `static/live.js`):
-SSE first, 5s fingerprint poll if SSE is unhealthy.
+Runs list (`/`): type in Ticker to filter **starts-with** (`ticker_prefix`). Sector / region / tech are dropdowns of catalog values. Session date, MoS %, price, and FV base take **inclusive ranges**. All of that updates live; click headers to sort.
+
+Shareable query example: `/?ticker_prefix=M&sector=growth&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`.
+
+| Param | Meaning |
+|-------|---------|
+| `ticker` | Exact ticker (legacy bookmarks) |
+| `ticker_prefix` | Ticker starts-with |
+| `sector`, `region`, `audit_verdict`, `tech_signal`, `experiment_id` | Exact |
+| `session_date_from`, `session_date_to` | Inclusive `YYYY-MM-DD` |
+| `mos_min`, `mos_max` | Inclusive MoS % |
+| `price_min`, `price_max` | Inclusive as-of price |
+| `fv_base_min`, `fv_base_max` | Inclusive FV base |
+| `sort`, `dir` | Allowlisted column + `asc`/`desc` |
+
+No-JS: the GET form still submits. Invalid ranges (min > max, bad date) return HTTP 400.
+
+Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s fingerprint poll if SSE is unhealthy. On the runs page (`data-live-partial="1"`) a catalog change refetches `/fragments/runs` instead of a full reload, so an in-progress ticker search is not wiped.
 
 ## App-local state
 

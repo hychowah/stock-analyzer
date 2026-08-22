@@ -99,6 +99,54 @@ def _make_mini_archive(base: Path) -> Path:
     return archive
 
 
+def _insert_run(
+    db: Path,
+    *,
+    ticker: str,
+    session_key: str,
+    fv_base: float = 100.0,
+    mos: float = 0.0,
+    sector: str = "growth",
+    region: str = "us",
+    audit: str = "PASS",
+) -> None:
+    session_date = session_key.split("__", 1)[0]
+    conn = sqlite3.connect(str(db))
+    conn.execute(
+        """
+        INSERT INTO runs (
+          run_id, ticker, session_date, session_key, path,
+          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
+          exported_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            f"research:{ticker}:{session_key}",
+            ticker,
+            session_date,
+            session_key,
+            f"archive/research/{ticker}/{session_key}",
+            audit,
+            sector,
+            region,
+            fv_base,
+            mos,
+            "2026-08-10T00:00:00Z",
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _make_multi_archive(base: Path) -> Path:
+    archive = _make_mini_archive(base)
+    db = archive / "catalog" / "research_compare.sqlite"
+    _insert_run(db, ticker="JPM", session_key="2026-07-25", fv_base=200.0, mos=-5.0, sector="bank")
+    _insert_run(db, ticker="MSFT", session_key="2026-08-01", fv_base=400.0, mos=20.0, sector="growth")
+    _insert_run(db, ticker="MELI", session_key="2026-08-16", fv_base=1800.0, mos=8.0, sector="growth")
+    return archive
+
+
 class ParseRunIdTests(unittest.TestCase):
     def test_parse(self):
         t, k = parse_run_id("research:META:2026-08-03")
@@ -188,6 +236,123 @@ class CatalogApiTests(unittest.TestCase):
     def test_rejects_writable_flag(self):
         with self.assertRaises(ValueError):
             CatalogApi(archive_root=self.archive, readonly=False)
+
+    def test_list_runs_returns_list(self):
+        rows = self.api.list_runs(limit=10)
+        self.assertIsInstance(rows, list)
+
+
+class CatalogQueryTests(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.archive = _make_multi_archive(Path(self._td.name))
+        self.api = CatalogApi(archive_root=self.archive, readonly=True)
+
+    def tearDown(self):
+        self.api = None  # type: ignore[assignment]
+        self._td.cleanup()
+
+    def test_exact_ticker_unchanged(self):
+        self.assertEqual(self.api.list_runs(ticker="meta"), self.api.list_runs(ticker="META"))
+        self.assertEqual(self.api.list_runs(ticker="M"), [])
+        self.assertEqual(len(self.api.list_runs(ticker="META")), 1)
+
+    def test_ticker_prefix_starts_with(self):
+        rows = self.api.list_runs(ticker_prefix="M", limit=50)
+        tickers = {r["ticker"] for r in rows}
+        self.assertEqual(tickers, {"MELI", "META", "MSFT"})
+        self.assertNotIn("JPM", tickers)
+
+    def test_ticker_prefix_case_insensitive(self):
+        upper = {r["ticker"] for r in self.api.list_runs(ticker_prefix="m")}
+        self.assertEqual(upper, {"MELI", "META", "MSFT"})
+
+    def test_ticker_prefix_empty_is_all(self):
+        self.assertEqual(len(self.api.list_runs(ticker_prefix="")), 4)
+        self.assertEqual(len(self.api.list_runs(ticker_prefix="   ")), 4)
+
+    def test_like_wildcards_are_literals(self):
+        self.assertEqual(self.api.list_runs(ticker_prefix="ME%"), [])
+        self.assertEqual(self.api.list_runs(ticker_prefix="M_"), [])
+        self.assertEqual(self.api.list_runs(ticker_prefix="%"), [])
+
+    def test_count_runs_matches_prefix(self):
+        n = self.api.count_runs(ticker_prefix="M")
+        rows = self.api.list_runs(ticker_prefix="M", limit=50)
+        self.assertEqual(n, 3)
+        self.assertEqual(n, len(rows))
+        self.assertGreaterEqual(self.api.count_runs(), len(self.api.list_runs(limit=50)))
+
+    def test_sort_mos_desc(self):
+        rows = self.api.list_runs(sort="margin_of_safety_pct", dir="desc", limit=50)
+        mos = [r["margin_of_safety_pct"] for r in rows]
+        self.assertEqual(mos, sorted(mos, reverse=True))
+        self.assertEqual(rows[0]["ticker"], "MSFT")
+
+    def test_default_order_unchanged(self):
+        rows = self.api.list_runs(limit=50)
+        self.assertEqual([r["ticker"] for r in rows], ["JPM", "MELI", "META", "MSFT"])
+
+    def test_invalid_sort_raises(self):
+        with self.assertRaises(ValueError):
+            self.api.list_runs(sort="1;DROP TABLE runs")
+        with self.assertRaises(ValueError):
+            self.api.list_runs(sort="fv_base", dir="sideways")
+        with self.assertRaises(ValueError):
+            self.api.list_runs(dir="desc")
+
+    def test_exact_and_prefix_and(self):
+        rows = self.api.list_runs(ticker="META", ticker_prefix="M")
+        self.assertEqual([r["ticker"] for r in rows], ["META"])
+        self.assertEqual(self.api.list_runs(ticker="JPM", ticker_prefix="M"), [])
+
+    def test_session_date_range(self):
+        rows = self.api.list_runs(
+            session_date_from="2026-08-01",
+            session_date_to="2026-08-10",
+            limit=50,
+        )
+        self.assertEqual({r["ticker"] for r in rows}, {"META", "MSFT"})
+
+    def test_session_date_from_only(self):
+        rows = self.api.list_runs(session_date_from="2026-08-16", limit=50)
+        self.assertEqual({r["ticker"] for r in rows}, {"MELI"})
+
+    def test_mos_range(self):
+        rows = self.api.list_runs(mos_min=8, mos_max=12, limit=50)
+        self.assertEqual({r["ticker"] for r in rows}, {"META", "MELI"})
+        high = self.api.list_runs(mos_min=15, limit=50)
+        self.assertEqual({r["ticker"] for r in high}, {"MSFT"})
+
+    def test_sector_exact(self):
+        rows = self.api.list_runs(sector="bank", limit=50)
+        self.assertEqual([r["ticker"] for r in rows], ["JPM"])
+
+    def test_fv_base_min(self):
+        rows = self.api.list_runs(fv_base_min=450, limit=50)
+        self.assertEqual({r["ticker"] for r in rows}, {"META", "MELI"})
+
+    def test_invalid_date_raises(self):
+        with self.assertRaises(ValueError):
+            self.api.list_runs(session_date_from="08-01-2026")
+        with self.assertRaises(ValueError):
+            self.api.list_runs(session_date_from="2026-08-10", session_date_to="2026-08-01")
+
+    def test_invalid_mos_range_raises(self):
+        with self.assertRaises(ValueError):
+            self.api.list_runs(mos_min=20, mos_max=0)
+        with self.assertRaises(ValueError):
+            self.api.list_runs(mos_min="abc")
+
+    def test_count_runs_honors_range(self):
+        self.assertEqual(self.api.count_runs(mos_min=15), 1)
+        self.assertEqual(self.api.count_runs(sector="growth"), 3)
+
+    def test_list_run_facets(self):
+        facets = self.api.list_run_facets()
+        self.assertEqual(set(facets["sector"]), {"bank", "growth"})
+        self.assertIn("us", facets["region"])
+        self.assertEqual(facets["tech_signal"], [])
 
 
 class LiveArchiveSmokeTests(unittest.TestCase):

@@ -1,61 +1,80 @@
 {% extends "base.html" %}
 {% block title %}Runs{% endblock %}
-{% block body_attrs %}data-live-reload="1"{% endblock %}
+{% block body_attrs %}data-live-reload="1" data-live-partial="1"{% endblock %}
 {% block content %}
+{% macro facet_select(name, current, options) %}
+<select name="{{ name }}">
+  <option value="">(any)</option>
+  {% if current and current not in options %}
+  <option value="{{ current }}" selected>{{ current }}</option>
+  {% endif %}
+  {% for opt in options %}
+  <option value="{{ opt }}" {% if current == opt %}selected{% endif %}>{{ opt }}</option>
+  {% endfor %}
+</select>
+{% endmacro %}
 <div class="card">
   <h1>Research runs</h1>
-  <p class="muted">{{ runs|length }} row(s) · max {{ limit }} · source: catalog sqlite
+  <p class="muted">source: catalog sqlite
     · <span title="SSE /api/events with 5s poll fallback">live</span></p>
-  <form class="filters" method="get" action="/">
-    <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="META"/></label>
-    <label>Sector<input name="sector" value="{{ sector or '' }}"/></label>
-    <label>Region<input name="region" value="{{ region or '' }}"/></label>
-    <label>Audit
-      <select name="audit_verdict">
-        <option value="">(any)</option>
-        <option value="PASS" {% if audit == 'PASS' %}selected{% endif %}>PASS</option>
-        <option value="FAIL" {% if audit == 'FAIL' %}selected{% endif %}>FAIL</option>
-      </select>
-    </label>
-    <label>Experiment<input name="experiment_id" value="{{ experiment_id or '' }}"/></label>
-    <label>Limit<input name="limit" value="{{ limit }}" style="min-width:4rem"/></label>
-    <button type="submit">Filter</button>
-    <a class="btn secondary" href="/">Reset</a>
+  <form id="runs-filters" class="filters" method="get" action="/" data-runs-live="1">
+    <div class="filters-row">
+      <label>Ticker<input name="ticker_prefix" value="{{ ticker_prefix or '' }}" placeholder="M…" autocomplete="off" spellcheck="false"/></label>
+      <label>Sector{{ facet_select('sector', sector, facets.sector) }}</label>
+      <label>Region{{ facet_select('region', region, facets.region) }}</label>
+      <label>Audit
+        <select name="audit_verdict">
+          <option value="">(any)</option>
+          <option value="PASS" {% if audit == 'PASS' %}selected{% endif %}>PASS</option>
+          <option value="FAIL" {% if audit == 'FAIL' %}selected{% endif %}>FAIL</option>
+        </select>
+      </label>
+      <label>Tech{{ facet_select('tech_signal', tech_signal, facets.tech_signal) }}</label>
+      <label>Experiment<input name="experiment_id" value="{{ experiment_id or '' }}"/></label>
+      <label>Limit<input name="limit" type="number" min="1" max="200" value="{{ limit }}" style="min-width:4rem"/></label>
+    </div>
+    <div class="filters-row">
+      <label class="range">Session
+        <span class="range-pair">
+          <input type="date" name="session_date_from" value="{{ session_date_from or '' }}" aria-label="Session from"/>
+          <span class="muted">–</span>
+          <input type="date" name="session_date_to" value="{{ session_date_to or '' }}" aria-label="Session to"/>
+        </span>
+      </label>
+      <label class="range">MoS %
+        <span class="range-pair">
+          <input type="number" step="any" name="mos_min" value="{{ mos_min or '' }}" placeholder="min" aria-label="MoS min"/>
+          <span class="muted">–</span>
+          <input type="number" step="any" name="mos_max" value="{{ mos_max or '' }}" placeholder="max" aria-label="MoS max"/>
+        </span>
+      </label>
+      <label class="range">Price
+        <span class="range-pair">
+          <input type="number" step="any" name="price_min" value="{{ price_min or '' }}" placeholder="min" aria-label="Price min"/>
+          <span class="muted">–</span>
+          <input type="number" step="any" name="price_max" value="{{ price_max or '' }}" placeholder="max" aria-label="Price max"/>
+        </span>
+      </label>
+      <label class="range">FV base
+        <span class="range-pair">
+          <input type="number" step="any" name="fv_base_min" value="{{ fv_base_min or '' }}" placeholder="min" aria-label="FV min"/>
+          <span class="muted">–</span>
+          <input type="number" step="any" name="fv_base_max" value="{{ fv_base_max or '' }}" placeholder="max" aria-label="FV max"/>
+        </span>
+      </label>
+    </div>
+    <div class="filters-row">
+      <input type="hidden" name="sort" value="{{ sort or '' }}"/>
+      <input type="hidden" name="dir" value="{{ dir or '' }}"/>
+      <button type="submit">Filter</button>
+      <a class="btn secondary" href="/">Reset</a>
+    </div>
   </form>
 </div>
-{% if error %}
-<div class="card err"><p>{{ error }}</p>
-  <p>Rebuild with <code>python3 scripts/export_compare_db.py --all</code></p>
+<div id="runs-results">
+  {% include "partials/runs_table.html" %}
 </div>
-{% else %}
-<div class="card">
-  <table>
-    <thead>
-      <tr>
-        <th>Ticker</th><th>Session</th><th>Sector</th><th>Region</th>
-        <th>Price</th><th>FV base</th><th>MoS %</th><th>Audit</th><th>Tech</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if runs %}
-        {% for r in runs %}
-        <tr>
-          <td><a class="mono" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
-          <td class="mono">{{ r.session_key }}</td>
-          <td>{{ r.primary_sector or '' }}</td>
-          <td>{{ r.region or '' }}</td>
-          <td class="num">{{ r.asof_price | fmt_num }}</td>
-          <td class="num">{{ r.fv_base | fmt_num }}</td>
-          <td class="num">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
-          <td>{{ r.audit_verdict | verdict_badge }}</td>
-          <td>{{ r.tech_signal or '' }}</td>
-        </tr>
-        {% endfor %}
-      {% else %}
-        <tr><td colspan="9" class="muted">No runs</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
-</div>
-{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/runs.js" defer></script>
 {% endblock %}

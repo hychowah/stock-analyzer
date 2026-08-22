@@ -1,4 +1,4 @@
-"""JSON API routes (HTMX / future clients)."""
+"""JSON API routes for the analysis UI and other catalog clients."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from packages.catalog_api.client import CatalogApi, DbMissing, RunNotFound
 
 from apps.analysis_web.deps import get_api
+from apps.analysis_web.services.runs_query import catalog_filters, runs_list_q
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -20,28 +21,33 @@ def api_health(api: CatalogApi = Depends(get_api)) -> dict[str, Any]:
 
 @router.get("/runs")
 def api_list_runs(
-    ticker: str | None = None,
-    sector: str | None = None,
-    region: str | None = None,
-    audit_verdict: str | None = None,
-    experiment_id: str | None = None,
-    limit: int = Query(50, ge=1, le=200),
+    q: dict[str, Any] = Depends(runs_list_q),
     offset: int = Query(0, ge=0),
     api: CatalogApi = Depends(get_api),
 ) -> dict[str, Any]:
+    filters = catalog_filters(q)
     try:
         rows = api.list_runs(
-            ticker=(ticker or "").strip() or None,
-            sector=(sector or "").strip() or None,
-            region=(region or "").strip() or None,
-            audit_verdict=(audit_verdict or "").strip() or None,
-            experiment_id=(experiment_id or "").strip() or None,
-            limit=limit,
+            sort=q["sort"],
+            dir=q["dir"],
+            limit=q["limit"],
             offset=offset,
+            **filters,
         )
+        total = api.count_runs(**filters)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DbMissing as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
-    return {"runs": rows, "limit": limit, "offset": offset, "count": len(rows)}
+    return {
+        "runs": rows,
+        "limit": q["limit"],
+        "offset": offset,
+        "count": len(rows),
+        "total": total,
+        "sort": q["sort"],
+        "dir": q["dir"],
+    }
 
 
 @router.get("/runs/{run_id:path}")

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jinja2 import Environment
 
@@ -17,9 +17,25 @@ from packages.catalog_api.client import (
 )
 
 from apps.analysis_web.deps import get_api
+from apps.analysis_web.services.runs_query import catalog_filters, runs_list_q
 from apps.analysis_web.templating import fmt_num
 
 router = APIRouter(tags=["pages"])
+
+_NUMERIC_SORT = frozenset(
+    {"session_date", "asof_price", "fv_base", "margin_of_safety_pct"}
+)
+_SORT_HEADERS = (
+    "ticker",
+    "session_date",
+    "primary_sector",
+    "region",
+    "asof_price",
+    "fv_base",
+    "margin_of_safety_pct",
+    "audit_verdict",
+    "tech_signal",
+)
 
 
 def _templates(request: Request) -> Environment:
@@ -31,71 +47,132 @@ def _render(request: Request, name: str, **ctx: Any) -> HTMLResponse:
     return HTMLResponse(html)
 
 
+def _first_dir(col: str) -> str:
+    return "desc" if col in _NUMERIC_SORT else "asc"
+
+
+def _next_dir(col: str, current_sort: str | None, current_dir: str | None) -> str:
+    if current_sort == col:
+        return "asc" if (current_dir or "asc") == "desc" else "desc"
+    return _first_dir(col)
+
+
+_FILTER_HREF_KEYS = (
+    "ticker",
+    "ticker_prefix",
+    "sector",
+    "region",
+    "experiment_id",
+    "tech_signal",
+    "session_date_from",
+    "session_date_to",
+    "mos_min",
+    "mos_max",
+    "price_min",
+    "price_max",
+    "fv_base_min",
+    "fv_base_max",
+    "sort",
+    "dir",
+)
+
+
+def _filter_href(q: dict[str, Any], **overrides: Any) -> str:
+    merged = dict(q)
+    merged.update(overrides)
+    params: dict[str, str] = {}
+    for key in _FILTER_HREF_KEYS:
+        val = merged.get(key)
+        if val not in (None, ""):
+            params[key] = str(val)
+    audit = merged.get("audit")
+    if audit:
+        params["audit_verdict"] = str(audit)
+    limit = merged.get("limit")
+    if limit not in (None, 50):
+        params["limit"] = str(limit)
+    if not params:
+        return "/"
+    return "/?" + urlencode(params)
+
+
+def _sort_links(q: dict[str, Any]) -> dict[str, str]:
+    return {
+        col: _filter_href(
+            q, sort=col, dir=_next_dir(col, q.get("sort"), q.get("dir"))
+        )
+        for col in _SORT_HEADERS
+    }
+
+
+def _load_facets(api: CatalogApi) -> dict[str, list[str]]:
+    empty = {"sector": [], "region": [], "tech_signal": []}
+    try:
+        return api.list_run_facets()
+    except DbMissing:
+        return empty
+
+
+def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    error = None
+    runs: list[dict[str, Any]] = []
+    total: int | None = None
+    status = 200
+    filters = catalog_filters(q)
+    try:
+        runs = api.list_runs(
+            sort=q["sort"],
+            dir=q["dir"],
+            limit=q["limit"],
+            offset=0,
+            **filters,
+        )
+        total = api.count_runs(**filters)
+    except ValueError as e:
+        error = str(e)
+        status = 400
+    except DbMissing as e:
+        error = f"Database missing: {e}"
+    ctx = {
+        **q,
+        "runs": runs,
+        "total": total,
+        "sort_links": _sort_links(q),
+        "facets": _load_facets(api),
+        "error": error,
+    }
+    return ctx, status
+
+
 @router.get("/", response_class=HTMLResponse)
 def page_runs(
     request: Request,
-    ticker: str | None = None,
-    sector: str | None = None,
-    region: str | None = None,
-    audit_verdict: str | None = None,
-    experiment_id: str | None = None,
-    limit: int = Query(50, ge=1, le=200),
+    q: dict[str, Any] = Depends(runs_list_q),
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
-    ticker = (ticker or "").strip() or None
-    sector = (sector or "").strip() or None
-    region = (region or "").strip() or None
-    audit = (audit_verdict or "").strip() or None
-    experiment_id = (experiment_id or "").strip() or None
-    error = None
-    runs: list[dict[str, Any]] = []
-    try:
-        runs = api.list_runs(
-            ticker=ticker,
-            sector=sector,
-            region=region,
-            audit_verdict=audit,
-            experiment_id=experiment_id,
-            limit=limit,
-            offset=0,
-        )
-    except DbMissing as e:
-        error = f"Database missing: {e}"
-    return _render(
-        request,
-        "runs.html",
-        runs=runs,
-        limit=limit,
-        ticker=ticker,
-        sector=sector,
-        region=region,
-        audit=audit,
-        experiment_id=experiment_id,
-        error=error,
-    )
+    ctx, status = _runs_context(api, q)
+    html = _templates(request).get_template("runs.html").render(**ctx)
+    return HTMLResponse(html, status_code=status)
 
 
 @router.get("/runs", response_class=HTMLResponse)
 def page_runs_alias(
     request: Request,
-    ticker: str | None = None,
-    sector: str | None = None,
-    region: str | None = None,
-    audit_verdict: str | None = None,
-    experiment_id: str | None = None,
-    limit: int = Query(50, ge=1, le=200),
+    q: dict[str, Any] = Depends(runs_list_q),
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
-    return page_runs(
-        request,
-        ticker=ticker,
-        sector=sector,
-        region=region,
-        audit_verdict=audit_verdict,
-        experiment_id=experiment_id,
-        limit=limit,
-        api=api,
-    )
+    return page_runs(request, q=q, api=api)
+
+
+@router.get("/fragments/runs", response_class=HTMLResponse)
+def fragment_runs(
+    request: Request,
+    q: dict[str, Any] = Depends(runs_list_q),
+    api: CatalogApi = Depends(get_api),
+) -> HTMLResponse:
+    ctx, status = _runs_context(api, q)
+    html = _templates(request).get_template("partials/runs_table.html").render(**ctx)
+    return HTMLResponse(html, status_code=status)
 
 
 @router.get("/runs/{run_id:path}", response_class=HTMLResponse)

@@ -57,6 +57,205 @@ def parse_run_id(run_id: str) -> tuple[str, str]:
     return m.group("ticker").upper(), m.group("session_key")
 
 
+# Allowlisted ORDER BY identifiers (never interpolate untrusted text).
+RUN_SORT_COLUMNS: frozenset[str] = frozenset(
+    {
+        "ticker",
+        "session_key",
+        "session_date",
+        "primary_sector",
+        "region",
+        "asof_price",
+        "fv_base",
+        "margin_of_safety_pct",
+        "audit_verdict",
+        "tech_signal",
+    }
+)
+
+_DEFAULT_ORDER_SQL = "ORDER BY ticker, session_date DESC, session_key DESC"
+_TIEBREAK = (("ticker", "ASC"), ("session_date", "DESC"), ("session_key", "DESC"))
+
+_RUN_COLUMNS_V1 = """
+            run_id, ticker, session_date, session_key, path,
+            experiment_id, audit_verdict, data_quality, status,
+            asof_price, currency, primary_sector, region, intensity,
+            fv_bear, fv_base, fv_bull, fv_weighted,
+            p_bear, p_base, p_bull, margin_of_safety_pct,
+            model_name, tech_signal, tech_regime,
+            exported_at, harness_git_sha, orchestrator_model
+"""
+
+_RUN_COLUMNS_V2 = """
+            run_id, ticker, session_date, session_key, path,
+            experiment_id, audit_verdict, data_quality, status,
+            asof_price, currency, primary_sector, region, intensity,
+            fv_bear, fv_base, fv_bull, fv_weighted,
+            p_bear, p_base, p_bull, margin_of_safety_pct,
+            model_name, tech_signal, tech_regime,
+            exported_at, harness_version, harness_git_sha, orchestrator_model
+"""
+
+
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+# Distinct-value columns for filter dropdowns (identifiers only; never user text).
+_FACET_COLUMNS: tuple[tuple[str, str], ...] = (
+    ("sector", "primary_sector"),
+    ("region", "region"),
+    ("tech_signal", "tech_signal"),
+)
+
+
+def _blank(value: str | None) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def escape_like_prefix(prefix: str) -> str:
+    """Uppercase prefix for LIKE, with %, _, and \\ as literals, plus trailing %."""
+    out = prefix.upper().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return out + "%"
+
+
+def _parse_float(name: str, value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"invalid {name}: {value!r}")
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return float(text)
+    except ValueError as e:
+        raise ValueError(f"invalid {name}: {value!r}") from e
+
+
+def _parse_date(name: str, value: Any) -> str | None:
+    text = _blank(None if value is None else str(value))
+    if text is None:
+        return None
+    if not _DATE_RE.match(text):
+        raise ValueError(f"invalid {name}: {text!r} (want YYYY-MM-DD)")
+    return text
+
+
+def _append_numeric_range(
+    clauses: list[str],
+    params: list[Any],
+    column: str,
+    lo_name: str,
+    hi_name: str,
+    lo: Any,
+    hi: Any,
+) -> None:
+    lo_v = _parse_float(lo_name, lo)
+    hi_v = _parse_float(hi_name, hi)
+    if lo_v is not None and hi_v is not None and lo_v > hi_v:
+        raise ValueError(f"{lo_name} must be <= {hi_name}")
+    if lo_v is not None:
+        clauses.append(f"{column} >= ?")
+        params.append(lo_v)
+    if hi_v is not None:
+        clauses.append(f"{column} <= ?")
+        params.append(hi_v)
+
+
+def _runs_filter_sql(
+    *,
+    ticker: str | None = None,
+    ticker_prefix: str | None = None,
+    sector: str | None = None,
+    region: str | None = None,
+    experiment_id: str | None = None,
+    audit_verdict: str | None = None,
+    tech_signal: str | None = None,
+    session_date_from: str | None = None,
+    session_date_to: str | None = None,
+    mos_min: Any = None,
+    mos_max: Any = None,
+    price_min: Any = None,
+    price_max: Any = None,
+    fv_base_min: Any = None,
+    fv_base_max: Any = None,
+) -> tuple[str, list[Any]]:
+    clauses: list[str] = []
+    params: list[Any] = []
+    ticker = _blank(ticker)
+    ticker_prefix = _blank(ticker_prefix)
+    sector = _blank(sector)
+    region = _blank(region)
+    experiment_id = _blank(experiment_id)
+    audit_verdict = _blank(audit_verdict)
+    tech_signal = _blank(tech_signal)
+    date_from = _parse_date("session_date_from", session_date_from)
+    date_to = _parse_date("session_date_to", session_date_to)
+    if ticker:
+        clauses.append("ticker = ?")
+        params.append(ticker.upper())
+    if ticker_prefix:
+        clauses.append("UPPER(ticker) LIKE ? ESCAPE '\\'")
+        params.append(escape_like_prefix(ticker_prefix))
+    if sector:
+        clauses.append("primary_sector = ?")
+        params.append(sector)
+    if region:
+        clauses.append("region = ?")
+        params.append(region)
+    if experiment_id:
+        clauses.append("experiment_id = ?")
+        params.append(experiment_id)
+    if audit_verdict:
+        clauses.append("audit_verdict = ?")
+        params.append(audit_verdict)
+    if tech_signal:
+        clauses.append("tech_signal = ?")
+        params.append(tech_signal)
+    if date_from is not None and date_to is not None and date_from > date_to:
+        raise ValueError("session_date_from must be <= session_date_to")
+    if date_from is not None:
+        clauses.append("session_date >= ?")
+        params.append(date_from)
+    if date_to is not None:
+        clauses.append("session_date <= ?")
+        params.append(date_to)
+    _append_numeric_range(
+        clauses, params, "margin_of_safety_pct", "mos_min", "mos_max", mos_min, mos_max
+    )
+    _append_numeric_range(
+        clauses, params, "asof_price", "price_min", "price_max", price_min, price_max
+    )
+    _append_numeric_range(
+        clauses, params, "fv_base", "fv_base_min", "fv_base_max", fv_base_min, fv_base_max
+    )
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    return where, params
+
+
+def _runs_order_sql(sort: str | None, direction: str | None) -> str:
+    sort = _blank(sort)
+    direction = _blank(direction)
+    if direction is not None and sort is None:
+        raise ValueError("sort is required when dir is set")
+    if direction is not None and direction.lower() not in ("asc", "desc"):
+        raise ValueError("dir must be asc or desc")
+    if sort is None:
+        return _DEFAULT_ORDER_SQL
+    if sort not in RUN_SORT_COLUMNS:
+        raise ValueError(f"invalid sort: {sort!r}")
+    dir_sql = "DESC" if (direction or "asc").lower() == "desc" else "ASC"
+    parts = [f"{sort} {dir_sql}"]
+    for col, tie_dir in _TIEBREAK:
+        if col != sort:
+            parts.append(f"{col} {tie_dir}")
+    return "ORDER BY " + ", ".join(parts)
+
+
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     return {k: row[k] for k in row.keys()}
 
@@ -147,10 +346,22 @@ class CatalogApi:
         self,
         *,
         ticker: str | None = None,
+        ticker_prefix: str | None = None,
         sector: str | None = None,
         region: str | None = None,
         experiment_id: str | None = None,
         audit_verdict: str | None = None,
+        tech_signal: str | None = None,
+        session_date_from: str | None = None,
+        session_date_to: str | None = None,
+        mos_min: Any = None,
+        mos_max: Any = None,
+        price_min: Any = None,
+        price_max: Any = None,
+        fv_base_min: Any = None,
+        fv_base_max: Any = None,
+        sort: str | None = None,
+        dir: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -158,49 +369,36 @@ class CatalogApi:
             raise ValueError("limit must be 1..1000")
         if offset < 0:
             raise ValueError("offset must be >= 0")
-        clauses: list[str] = []
-        params: list[Any] = []
-        if ticker:
-            clauses.append("ticker = ?")
-            params.append(ticker.upper())
-        if sector:
-            clauses.append("primary_sector = ?")
-            params.append(sector)
-        if region:
-            clauses.append("region = ?")
-            params.append(region)
-        if experiment_id:
-            clauses.append("experiment_id = ?")
-            params.append(experiment_id)
-        if audit_verdict:
-            clauses.append("audit_verdict = ?")
-            params.append(audit_verdict)
-        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        where, params = _runs_filter_sql(
+            ticker=ticker,
+            ticker_prefix=ticker_prefix,
+            sector=sector,
+            region=region,
+            experiment_id=experiment_id,
+            audit_verdict=audit_verdict,
+            tech_signal=tech_signal,
+            session_date_from=session_date_from,
+            session_date_to=session_date_to,
+            mos_min=mos_min,
+            mos_max=mos_max,
+            price_min=price_min,
+            price_max=price_max,
+            fv_base_min=fv_base_min,
+            fv_base_max=fv_base_max,
+        )
+        order = _runs_order_sql(sort, dir)
         sql = f"""
-            SELECT run_id, ticker, session_date, session_key, path,
-                   experiment_id, audit_verdict, data_quality, status,
-                   asof_price, currency, primary_sector, region, intensity,
-                   fv_bear, fv_base, fv_bull, fv_weighted,
-                   p_bear, p_base, p_bull, margin_of_safety_pct,
-                   model_name, tech_signal, tech_regime,
-                   exported_at, harness_git_sha, orchestrator_model
+            SELECT {_RUN_COLUMNS_V1}
             FROM runs
             {where}
-            ORDER BY ticker, session_date DESC, session_key DESC
+            {order}
             LIMIT ? OFFSET ?
         """
-        # Prefer richer projection when harness_version column exists (schema v2+)
         sql_v2 = f"""
-            SELECT run_id, ticker, session_date, session_key, path,
-                   experiment_id, audit_verdict, data_quality, status,
-                   asof_price, currency, primary_sector, region, intensity,
-                   fv_bear, fv_base, fv_bull, fv_weighted,
-                   p_bear, p_base, p_bull, margin_of_safety_pct,
-                   model_name, tech_signal, tech_regime,
-                   exported_at, harness_version, harness_git_sha, orchestrator_model
+            SELECT {_RUN_COLUMNS_V2}
             FROM runs
             {where}
-            ORDER BY ticker, session_date DESC, session_key DESC
+            {order}
             LIMIT ? OFFSET ?
         """
         params.extend([limit, offset])
@@ -210,6 +408,60 @@ class CatalogApi:
             except sqlite3.OperationalError:
                 rows = conn.execute(sql, params).fetchall()
         return [_row_to_dict(r) for r in rows]
+
+    def count_runs(
+        self,
+        *,
+        ticker: str | None = None,
+        ticker_prefix: str | None = None,
+        sector: str | None = None,
+        region: str | None = None,
+        experiment_id: str | None = None,
+        audit_verdict: str | None = None,
+        tech_signal: str | None = None,
+        session_date_from: str | None = None,
+        session_date_to: str | None = None,
+        mos_min: Any = None,
+        mos_max: Any = None,
+        price_min: Any = None,
+        price_max: Any = None,
+        fv_base_min: Any = None,
+        fv_base_max: Any = None,
+    ) -> int:
+        where, params = _runs_filter_sql(
+            ticker=ticker,
+            ticker_prefix=ticker_prefix,
+            sector=sector,
+            region=region,
+            experiment_id=experiment_id,
+            audit_verdict=audit_verdict,
+            tech_signal=tech_signal,
+            session_date_from=session_date_from,
+            session_date_to=session_date_to,
+            mos_min=mos_min,
+            mos_max=mos_max,
+            price_min=price_min,
+            price_max=price_max,
+            fv_base_min=fv_base_min,
+            fv_base_max=fv_base_max,
+        )
+        sql = f"SELECT COUNT(*) FROM runs {where}"
+        with self._connect() as conn:
+            row = conn.execute(sql, params).fetchone()
+        return int(row[0] if row is not None else 0)
+
+    def list_run_facets(self) -> dict[str, list[str]]:
+        """Distinct non-empty values for filter dropdowns (sqlite projection)."""
+        out: dict[str, list[str]] = {key: [] for key, _col in _FACET_COLUMNS}
+        with self._connect() as conn:
+            for key, col in _FACET_COLUMNS:
+                rows = conn.execute(
+                    f"SELECT DISTINCT {col} FROM runs "
+                    f"WHERE {col} IS NOT NULL AND TRIM({col}) != '' "
+                    f"ORDER BY {col}"
+                ).fetchall()
+                out[key] = [str(r[0]) for r in rows]
+        return out
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         with self._connect() as conn:

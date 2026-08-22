@@ -6,6 +6,7 @@ Technical may emit pass. Legacy / missing version SKIPPED.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from scripts.kd_research.gates import load_json
 
 WAVE2_SINCE = (2, 10, 0)
 WAVE6_SINCE = (2, 14, 0)
+WAVE8_SINCE = (2, 16, 0)
 DURATION_ACTIONS = frozenset(
     {"initiate", "add", "hold", "trim", "sell", "short", "pass", "too_hard"}
 )
@@ -27,6 +29,13 @@ def session_is_wave2_runtime(session: Path) -> bool:
     if parsed is None:
         return False
     return parsed >= WAVE2_SINCE
+
+
+def session_is_wave8_runtime(session: Path) -> bool:
+    parsed = parse_semver(load_run_manifest_version(session))
+    if parsed is None:
+        return False
+    return parsed >= WAVE8_SINCE
 
 
 def session_is_wave6_runtime(session: Path) -> bool:
@@ -259,6 +268,28 @@ def check_duration_vs_ta_long(session: Path) -> list[tuple[str, str, str]]:
     ]
 
 
+def _readme_action_index(text: str, action: str) -> int | None:
+    """First word-boundary match of duration.action; skip 'audit pass'."""
+    if not action:
+        return None
+    needle = action.strip().lower()
+    for match in re.finditer(r"\b" + re.escape(needle) + r"\b", text):
+        prefix = text[max(0, match.start() - 12) : match.start()]
+        if needle == "pass" and prefix.rstrip().endswith("audit"):
+            continue
+        return match.start()
+    return None
+
+
+def _first_bid_index(text: str) -> int | None:
+    hits = []
+    for marker in ("fair value vs price", "margin of safety"):
+        i = text.find(marker)
+        if i >= 0:
+            hits.append(i)
+    return min(hits) if hits else None
+
+
 def check_readme_quotes_decision(session: Path) -> list[tuple[str, str, str]]:
     dec, err = load_json(session / "registry" / "decision.json")
     if err or not isinstance(dec, dict):
@@ -271,24 +302,37 @@ def check_readme_quotes_decision(session: Path) -> list[tuple[str, str, str]]:
     if not matches:
         return [("SKIPPED", "readme_quotes_decision", "README missing")]
     text = matches[0].read_text(encoding="utf-8", errors="replace").lower()
-    if action and action in text:
-        atr_shares = ("atr" in text and "shares" in text)
-        if atr_shares and "position size" in text:
+    wave8 = session_is_wave8_runtime(session)
+    idx = _readme_action_index(text, action)
+    if idx is None:
+        msg = (
+            f"README does not quote duration.action={action} "
+            "(Agent 11 must not invent a second verdict)"
+        )
+        if wave8:
+            return [("FAIL", "readme_quotes_decision", msg)]
+        return [("WARN", "readme_quotes_decision", msg)]
+    if wave8:
+        bid = _first_bid_index(text)
+        if bid is not None and idx > bid:
             return [
                 (
-                    "WARN",
-                    "readme_quotes_decision",
-                    "README quotes the decision action but still leads ATR share-count as a size",
+                    "FAIL",
+                    "readme_cio_lead",
+                    "duration.action must appear before fair value vs price / "
+                    "margin of safety (CIO cover, not a bid poster)",
                 )
             ]
-        return [("PASS", "readme_quotes_decision", f"README quotes duration.action={action}")]
-    return [
-        (
-            "WARN",
-            "readme_quotes_decision",
-            f"README does not quote duration.action={action} (Agent 11 must not invent a second verdict)",
-        )
-    ]
+    atr_shares = "atr" in text and "shares" in text
+    if atr_shares and "position size" in text:
+        return [
+            (
+                "WARN",
+                "readme_quotes_decision",
+                "README quotes the decision action but still leads ATR share-count as a size",
+            )
+        ]
+    return [("PASS", "readme_quotes_decision", f"README quotes duration.action={action}")]
 
 
 def extract_kill_triggers(session: Path) -> list[str]:

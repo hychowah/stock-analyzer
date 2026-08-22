@@ -39,7 +39,8 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 7. **W1 changes** must run research unit tests, not only `eng_verify`.  
 8. Gen ≠ eval: implementer does not mark `passes: true`.  
 9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `scripts/kd_research/`, research scripts, `templates/`, root `sector_*.md` / `region_*.md`), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  
-10. **No commit without user agreement:** never run `git commit`, `git push`, amend, or force-push unless the user has **explicitly** asked or approved in this conversation (e.g. “commit”, “yes commit that”). Preparing a message or staging when asked is fine; silent commits are forbidden.
+10. **No commit without user agreement:** never run `git commit`, `git push`, amend, or force-push unless the user has **explicitly** asked or approved in this conversation (e.g. “commit”, “yes commit that”). Preparing a message or staging when asked is fine; silent commits are forbidden.  
+11. **Refactor when it pays — do not fear it.** Agentic coding makes refactors cheap; duplication, leaky workarounds, and unscalable structure are what compound. If a cleaner shape has clear long-term benefit (one home for a fact, a boundary that will scale, deleting a workaround), **do that refactor** rather than a local patch — even if the user only named the feature. Do **not** skip it to keep the diff small. Guardrails: write allowlist only; never rewrite `archive/research/**` or `archive/outcomes/**`; leave **one coherent, verify-green increment** (a large boundary move may be its own `feature_list` item, not a half-finished rewrite). Record what you refactored and why in `progress.md`.
 
 ## Key paths
 

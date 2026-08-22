@@ -1197,6 +1197,10 @@ def main() -> int:
         check_roic_identity_session(session)
         check_decision_quality_session(session)
         check_wave2_decision_session(session)
+        from scripts.kd_research.decision import check_wave6_reopen  # noqa: WPS433
+
+        for status, check, detail in check_wave6_reopen(session):
+            record(status, check, detail)
         check_wave3_epistemology_session(session)
         check_wave4_destock_session(session)
         check_risk_bridge(session)

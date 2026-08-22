@@ -1054,11 +1054,13 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
         out = check_reports(session, t)
         from scripts.kd_research.decision import (  # noqa: WPS433
             check_decision_packet,
+            check_wave6_reopen,
             session_is_wave2_runtime,
         )
 
         if session_is_wave2_runtime(session):
             out.extend(check_decision_packet(session))
+        out.extend(check_wave6_reopen(session))
         return out
     return [("SKIPPED", "complete_checks", f"no merge gate for phase {phase_id}")]
 

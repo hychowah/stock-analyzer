@@ -13,6 +13,7 @@ from scripts.kd_research.annuals import load_run_manifest_version, parse_semver
 from scripts.kd_research.gates import load_json
 
 WAVE2_SINCE = (2, 10, 0)
+WAVE6_SINCE = (2, 14, 0)
 DURATION_ACTIONS = frozenset(
     {"initiate", "add", "hold", "trim", "sell", "short", "pass", "too_hard"}
 )
@@ -26,6 +27,83 @@ def session_is_wave2_runtime(session: Path) -> bool:
     if parsed is None:
         return False
     return parsed >= WAVE2_SINCE
+
+
+def session_is_wave6_runtime(session: Path) -> bool:
+    parsed = parse_semver(load_run_manifest_version(session))
+    if parsed is None:
+        return False
+    return parsed >= WAVE6_SINCE
+
+
+def _truthy_flag(data: dict[str, Any], key: str) -> bool:
+    val = data.get(key)
+    if isinstance(val, dict):
+        val = val.get("value")
+    if val is True:
+        return True
+    if isinstance(val, str) and val.strip().lower() in {"true", "yes", "1"}:
+        return True
+    return False
+
+
+def check_wave6_reopen(session: Path) -> list[tuple[str, str, str]]:
+    """Duration verb is final only after risk_bridge exists (Phase 2.5 done)."""
+    if not session_is_wave6_runtime(session):
+        return [
+            (
+                "SKIPPED",
+                "decision_reopen",
+                "legacy/slim (harness_version < 2.14.0)",
+            )
+        ]
+    rb, rerr = load_json(session / "registry" / "risk_bridge.json")
+    if rerr or not isinstance(rb, dict):
+        return [
+            (
+                "SKIPPED",
+                "decision_reopen",
+                "risk_bridge.json missing (Phase 2 provisional decision is legal)",
+            )
+        ]
+    data, err = load_json(session / "registry" / "decision.json")
+    if err or not isinstance(data, dict):
+        return [
+            (
+                "FAIL",
+                "decision_reopen",
+                "risk_bridge exists so decision.json must be reopened after 2.5 "
+                "(reopened_after_stress=true; Agent 5 single writer, no second valuer)",
+            )
+        ]
+    if not _truthy_flag(data, "reopened_after_stress"):
+        return [
+            (
+                "FAIL",
+                "decision_reopen",
+                "reopened_after_stress must be true after Phase 2.5 "
+                "(orchestrator 5b; do not spawn subagent 5 in 2_5)",
+            )
+        ]
+    tsr, terr = load_json(session / "registry" / "tsr_validation.json")
+    tsr_present = not terr and isinstance(tsr, dict)
+    if tsr_present and not _truthy_flag(data, "tsr_seen"):
+        return [
+            (
+                "FAIL",
+                "decision_reopen.tsr",
+                "tsr_validation.json exists so tsr_seen must be true "
+                "(tsr_missing is not a substitute)",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "decision_reopen",
+            f"reopened_after_stress tsr_seen={_truthy_flag(data, 'tsr_seen')} "
+            f"tsr_present={tsr_present}",
+        )
+    ]
 
 
 def _as_float(val: Any) -> float | None:

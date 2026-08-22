@@ -21,6 +21,14 @@
       },
       "additionalProperties": true
     },
+    "reopened_after_stress": {
+      "type": "boolean",
+      "description": "REQUIRED true on harness >= 2.14.0 once risk_bridge.json exists (Python gate). Phase 2 write is provisional (false). Orchestrator 5b after 2.5 sets true. Agent 5 single writer."
+    },
+    "tsr_seen": {
+      "type": "boolean",
+      "description": "REQUIRED true on harness >= 2.14.0 once tsr_validation.json exists (Python gate). tsr_missing is illegal when that file exists."
+    },
     "tactical": {
       "type": "object",
       "description": "Optional overlay. Isolated TA long next to duration pass is legal; README must quote duration.action.",

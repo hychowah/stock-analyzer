@@ -79,6 +79,7 @@ FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. val
 13. Merge for coverage; spot-check ≥3 headline numbers; never invent merge numbers. Write swarm lead handoffs (`phase0_*.md`, `phase25_*.md`).
 14. `risk_bridge.scenario_probabilities`: **only** `bear` / `base` / `bull` floats (sibling key for rationale/`_note`).
 15. Before flipping Phase 0 / 1_parallel / 1c / 1d / 2_parallel / 2.5 complete: `preflight_phase.py --mode complete` for that phase.
+15b. **After Phase 2.5 is complete** (harness ≥ 2.14.0): run the Agent 5 **5b** block yourself (lead). Reopen `registry/decision.json` only — do not rewrite FV, do not spawn subagent `5` in `2_5`, do not mark `2_parallel` pending. Then preflight `4_parallel`.
 
 ## Before Phase 4 / 5
 

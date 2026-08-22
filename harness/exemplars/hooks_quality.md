@@ -20,7 +20,7 @@ Used by: Agent 5 (write), Agent 13 (grade).
 
 **Why bad:** The brief exists so Agent 5 cannot invent a fade or OM path. A single `noted_only` is checkbox theater. Machine FAIL if all hooks are `noted_only`.
 
-### GOOD
+### BAD — destock analog lives in bear only (Wave 3/4 FAIL)
 
 ```json
 {
@@ -28,9 +28,29 @@ Used by: Agent 5 (write), Agent 13 (grade).
     {
       "from": "registry/operating_path_brief.json#conflicts.fade_vs_flatten",
       "action": "used_as:dnc_growth_path",
+      "applies_in": "bear_only",
       "old": "fade to 4% by Y8 as default",
       "new": "Y1–Y2 keep printed duration; mid-horizon held in high-teens; destock analog lives in bear only",
       "reason": "Unresolved flatten-vs-destock is encoded in scenarios, not averaged into one CAGR."
+    }
+  ]
+}
+```
+
+**Why bad:** Parking destock in bear while duration stays in base is the promoter path. Wave 3 FAILs it when the conflict is unresolved; Wave 4 FAILs it even if status=`resolved`. `fair_value.base` existing as a key is not destock-in-base.
+
+### GOOD
+
+```json
+{
+  "operating_path_hooks": [
+    {
+      "from": "registry/operating_path_brief.json#conflicts.fade_vs_flatten",
+      "action": "used_as:base",
+      "applies_in": "base",
+      "old": "Y1–Y2 keep printed duration; destock analog lives in bear only",
+      "new": "Y1 destock/quality-reset on the base path (run-rate ex destock); duration only in bull",
+      "reason": "Destock default is base until cash/channel prove demand. Conflict not averaged; not parked in bear."
     },
     {
       "from": "registry/operating_path_brief.json#rejected_shapes.om_28_35",
@@ -41,7 +61,7 @@ Used by: Agent 5 (write), Agent 13 (grade).
 }
 ```
 
-**Why good:** Material recommendations are `used_as` or `rejected`. Conflict is split across scenarios, not averaged. Illustrative numbers are style only.
+**Why good:** Destock/quality-reset is on the **base** path (`applies_in: base` / `used_as:base` so `_destock_in_base` is true). Duration is bull-only. Material OM recommendation is `rejected`. Illustrative numbers are style only.
 
 ---
 

@@ -25,6 +25,42 @@
       "verify": "python -m pytest scripts/tests/test_wave3_epistemology.py -q; python scripts/eng_verify.py"
     },
     {
+      "id": "wave4_destock_default",
+      "description": "Destock/quality-reset is base until cash/channel prove demand (2.12.0); Pair 0 + 1d_merge stop destock-in-bear",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_wave4_destock_default.py scripts/tests/test_wave3_epistemology.py -q; python scripts/eng_verify.py"
+    },
+    {
+      "id": "wave5_midcycle",
+      "description": "Mid-cycle construction required; peak/last-year SOI cannot license franchise_mos (2.13.0)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_wave5_midcycle.py -q; python scripts/eng_verify.py"
+    },
+    {
+      "id": "wave6_decision_reopen",
+      "description": "Duration verb provisional in Phase 2; Agent 5 reopens after 2.5 + Agent 12 (2.14.0)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_wave6_decision_reopen.py -q; python scripts/eng_verify.py"
+    },
+    {
+      "id": "wave7_gather",
+      "description": "Phase 0 / 1d gather: moat, cash quality, industry, capital-allocation evidence (2.15.0)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_wave7_gather.py -q; python scripts/eng_verify.py"
+    },
+    {
+      "id": "wave8_readme_cio",
+      "description": "README CIO page: cover leads with duration.action not FV/MoS bid (2.16.0)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_wave8_readme_cio.py -q; python scripts/eng_verify.py"
+    },
+    {
+      "id": "wave9_stop_plug",
+      "description": "Stop teaching the plug in sector_growth.md and §5 standard fallback (2.17.0)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_wave9_stop_plug.py -q; python scripts/eng_verify.py"
+    },
+    {
       "id": "implement",
       "description": "Implement the primary change for this slug",
       "passes": false,

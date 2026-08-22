@@ -1036,12 +1036,16 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
             out.extend(check_decision_packet(session))
             out.extend(check_technical_pass_allowed(session))
         from scripts.kd_research.epistemology import (  # noqa: WPS433
+            check_destock_default,
             check_destock_not_silent_duration,
             session_is_wave3_runtime,
+            session_is_wave4_runtime,
         )
 
         if session_is_wave3_runtime(session):
             out.extend(check_destock_not_silent_duration(session))
+        if session_is_wave4_runtime(session):
+            out.extend(check_destock_default(session))
         return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)

@@ -15,6 +15,13 @@ from scripts.kd_research.annuals import load_run_manifest_version, parse_semver
 from scripts.kd_research.gates import load_json
 
 WAVE3_SINCE = (2, 11, 0)
+WAVE4_SINCE = (2, 12, 0)
+OLD_DESTOCK_IN_BEAR_PHRASES = (
+    "destock-fade in bear",
+    "destock analog lives in bear",
+    "destock analog in bear",
+    "destock analog lives in bear only",
+)
 FORBIDDEN_CHANGELOG_KEYS = frozenset(
     {
         "fair_value",
@@ -40,6 +47,13 @@ def session_is_wave3_runtime(session: Path) -> bool:
     if parsed is None:
         return False
     return parsed >= WAVE3_SINCE
+
+
+def session_is_wave4_runtime(session: Path) -> bool:
+    parsed = parse_semver(load_run_manifest_version(session))
+    if parsed is None:
+        return False
+    return parsed >= WAVE4_SINCE
 
 
 def _as_float(val: Any) -> float | None:
@@ -402,6 +416,225 @@ def check_two_quarter_wc(session: Path) -> list[tuple[str, str, str]]:
             f"two_quarter raise present; fcf={fcf} wc_deteriorating={wc}",
         )
     ]
+
+
+def _destock_conflict(brief: dict[str, Any]) -> bool:
+    """Any destock conflict, resolved or unresolved. Does not change Wave 3."""
+    conflicts = brief.get("conflicts")
+    if not isinstance(conflicts, list):
+        return False
+    for item in conflicts:
+        if not isinstance(item, dict):
+            continue
+        text = _blob(item.get("id")) + " " + _blob(item.get("claim_a")) + " " + _blob(item.get("claim_b"))
+        if "destock" in text:
+            return True
+    return False
+
+
+def _destock_only_in_bear(vm: dict[str, Any]) -> bool:
+    if _destock_in_base(vm):
+        return False
+    hooks = vm.get("operating_path_hooks")
+    if not isinstance(hooks, list):
+        return False
+    saw_bear = False
+    for h in hooks:
+        if not isinstance(h, dict):
+            continue
+        if "destock" not in _blob(h):
+            continue
+        applies = str(h.get("applies_in") or h.get("applies") or "").strip().lower()
+        action = str(h.get("action") or h.get("used_as") or "").strip().lower()
+        if "bear" in applies or "bear_only" in action or "bear" in action:
+            saw_bear = True
+    return saw_bear
+
+
+def _hints_teach_destock_in_bear(brief: dict[str, Any]) -> bool:
+    blob = _blob(brief.get("scenario_hints")) + " " + _blob(brief.get("recommended_for_agent5"))
+    return any(p in blob for p in OLD_DESTOCK_IN_BEAR_PHRASES)
+
+
+def _duration_legal_fields(session: Path, vm: dict[str, Any]) -> tuple[str, str]:
+    fv = vm.get("fair_value") if isinstance(vm.get("fair_value"), dict) else {}
+    du = fv.get("decision_usefulness")
+    if isinstance(du, dict):
+        du = du.get("value")
+    du_s = str(du or "").strip().lower()
+    dec, _ = load_json(session / "registry" / "decision.json")
+    action = ""
+    if isinstance(dec, dict):
+        dur = dec.get("duration") if isinstance(dec.get("duration"), dict) else {}
+        action = str(dur.get("action") or "").strip().lower()
+    return du_s, action
+
+
+def check_destock_default(session: Path) -> list[tuple[str, str, str]]:
+    """Wave 4: destock conflict of any status cannot park destock in bear."""
+    if not session_is_wave4_runtime(session):
+        return [
+            (
+                "SKIPPED",
+                "destock_default",
+                "legacy/slim (harness_version < 2.12.0)",
+            )
+        ]
+    brief, err = load_json(session / "registry" / "operating_path_brief.json")
+    if err or not isinstance(brief, dict):
+        return [("SKIPPED", "destock_default", "operating_path_brief.json missing")]
+    if not _destock_conflict(brief):
+        return [("PASS", "destock_default", "no destock conflict")]
+    vm, verr = load_json(session / "data" / "valuation_model.json")
+    if verr or not isinstance(vm, dict):
+        return [("SKIPPED", "destock_default", "valuation_model.json missing")]
+    du_s, action = _duration_legal_fields(session, vm)
+    if du_s == "low" or action in {"pass", "too_hard"}:
+        return [
+            (
+                "PASS",
+                "destock_default",
+                f"destock conflict with DU={du_s or 'unset'} action={action or 'unset'}",
+            )
+        ]
+    if _destock_in_base(vm):
+        return [("PASS", "destock_default", "destock encoded in base hooks")]
+    if _destock_only_in_bear(vm) or _hints_teach_destock_in_bear(brief):
+        return [
+            (
+                "FAIL",
+                "destock_default",
+                "destock conflict cannot park destock in bear while duration stays "
+                "in base (resolved-to-bear is not an escape); put destock in base, "
+                "or decision_usefulness=low, or duration.action=pass/too_hard",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "destock_default",
+            "destock conflict without destock-in-bear encoding",
+        )
+    ]
+
+
+def _wc_releasing(lq: dict[str, Any]) -> bool:
+    """Inventory/AR down (WC release) — inverse of _wc_deteriorating."""
+    blob = _blob(lq.get("evidence_log") or "") + " " + _blob(lq.get("balance_sheet") or "")
+    log = lq.get("evidence_log")
+    if isinstance(log, list):
+        for row in log:
+            if not isinstance(row, dict):
+                continue
+            metric = str(row.get("metric") or "").lower()
+            obs = str(row.get("observation") or "").lower()
+            if any(t in metric or t in obs for t in ("inventory", "receivable", " ar", "dso")):
+                if any(
+                    t in obs
+                    for t in ("-", "down", "decrease", "fell", "drop", "destock", "release")
+                ):
+                    return True
+    return any(
+        t in blob
+        for t in (
+            "inventory -",
+            "inventories -",
+            "ar -",
+            "receivable -",
+            "inventory down",
+            "inventory fell",
+            "destock",
+        )
+    )
+
+
+def check_two_quarter_destock_inverse(session: Path) -> list[tuple[str, str, str]]:
+    """Wave 4: raise + destock conflict + FCF≥0 + inventory down → WARN."""
+    if not session_is_wave4_runtime(session):
+        return [
+            (
+                "SKIPPED",
+                "two_quarter_destock_inverse",
+                "legacy/slim (harness_version < 2.12.0)",
+            )
+        ]
+    brief, err = load_json(session / "registry" / "operating_path_brief.json")
+    if err or not isinstance(brief, dict) or not _destock_conflict(brief):
+        return [
+            (
+                "PASS",
+                "two_quarter_destock_inverse",
+                "no destock conflict",
+            )
+        ]
+    vm, verr = load_json(session / "data" / "valuation_model.json")
+    if verr or not isinstance(vm, dict):
+        return [("SKIPPED", "two_quarter_destock_inverse", "valuation_model.json missing")]
+    overrides = vm.get("overrides_applied")
+    if not isinstance(overrides, list) or not overrides:
+        return [("PASS", "two_quarter_destock_inverse", "no overrides_applied")]
+    raises = [
+        o
+        for o in overrides
+        if isinstance(o, dict)
+        and "two_quarter" in str(o.get("rule") or "").lower()
+        and _override_raises(o)
+    ]
+    if not raises:
+        return [("PASS", "two_quarter_destock_inverse", "no two_quarter_rule raise")]
+    lq, lerr = load_json(session / "registry" / "latest_quarter.json")
+    if lerr or not isinstance(lq, dict):
+        return [
+            (
+                "WARN",
+                "two_quarter_destock_inverse",
+                "two_quarter raise with destock conflict but latest_quarter missing "
+                "— cannot bless the raise without FCF/WC",
+            )
+        ]
+    fcf = _walk_fcf(lq.get("cash_flow") or lq)
+    releasing = _wc_releasing(lq)
+    if fcf is None and not releasing:
+        return [
+            (
+                "WARN",
+                "two_quarter_destock_inverse",
+                "two_quarter raise with destock conflict but FCF/inventory not in "
+                "latest_quarter — cannot bless the raise",
+            )
+        ]
+    if fcf is not None and fcf >= 0 and releasing:
+        return [
+            (
+                "WARN",
+                "two_quarter_destock_inverse",
+                "two_quarter_rule raised volume/growth while destock conflict is "
+                "live, FCF ≥ 0, and inventory/AR down (WC release) — force "
+                "bear_only or reject the raise",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "two_quarter_destock_inverse",
+            f"two_quarter raise with destock; fcf={fcf} wc_releasing={releasing}",
+        )
+    ]
+
+
+def check_wave4_destock_default(session: Path) -> list[tuple[str, str, str]]:
+    if not session_is_wave4_runtime(session):
+        return [
+            (
+                "SKIPPED",
+                "wave4_destock_default",
+                "legacy/slim (harness_version < 2.12.0)",
+            )
+        ]
+    out: list[tuple[str, str, str]] = []
+    out.extend(check_destock_default(session))
+    out.extend(check_two_quarter_destock_inverse(session))
+    return out
 
 
 def check_wave3_epistemology(session: Path) -> list[tuple[str, str, str]]:

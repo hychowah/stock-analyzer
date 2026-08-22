@@ -749,6 +749,15 @@ def check_wave3_epistemology_session(session: Path) -> None:
         record(status, check, detail)
 
 
+def check_wave4_destock_session(session: Path) -> None:
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.epistemology import check_wave4_destock_default  # noqa: WPS433
+
+    for status, check, detail in check_wave4_destock_default(session):
+        record(status, check, detail)
+
+
 def check_wave2_decision_session(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
@@ -1189,6 +1198,7 @@ def main() -> int:
         check_decision_quality_session(session)
         check_wave2_decision_session(session)
         check_wave3_epistemology_session(session)
+        check_wave4_destock_session(session)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

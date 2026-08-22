@@ -1,16 +1,22 @@
 {
-  "goal": "Ship investment-quality Waves 1-3 on harness/investment-quality-waves (enforce law, then decision object, then epistemology).",
+  "goal": "Ship remaining prompt-law waves 4-9 after 2.11.0 (destock default, mid-cycle, decision-after-2.5, gather, README CIO, stop-the-plug). Waves 1-3 already on branch.",
   "non_goals": [
     "Do not run research Phases 0-5",
     "Do not mutate archive/research or archive/outcomes history",
-    "Wave 4 mandate pack (quality-only, forensic library, cycle clock, GARP unit-econ, PM Kelly sizing)",
+    "Old Wave 4 mandate pack (quality-only, forensic library, cycle clock, GARP unit-econ, PM Kelly sizing) — distinct from prompt-law waves 4-9",
     "git push / amend published history"
   ],
   "work_type": "W1",
   "success_criteria": [
     "Wave 1: new-runtime cheap_claim/ROIC, template masses, PFP dials, DU on wide cones, F21/A7 identity, snapshot PFP/DU/cheap_claim, outcomes overall not 1d/1w, ineligible wide band, calibration not pass_only default, null FV quarantined; harness 2.9.0; eng_verify + pytest green",
     "Wave 2: duration action including pass; initiate illegal on low DU/wide cone; technical may pass; catalog surfaces action + kill triggers; VERSION bump",
-    "Wave 3: unresolved destock not base duration; beat not trust_guides_more; two-quarter+WC; Street 20% calibration note; TV>60% and Y8 g>=8% extend/switch; RP>20% not intensity=low; changelog+update without prior FV copy; VERSION bump"
+    "Wave 3: unresolved destock not base duration; beat not trust_guides_more; two-quarter+WC; Street 20% calibration note; TV>60% and Y8 g>=8% extend/switch; RP>20% not intensity=low; changelog+update without prior FV copy; VERSION bump",
+    "Wave 4 destock default 2.12.0: destock-in-base (or pass/too_hard/DU=low); 1d_merge+Pair 0 do not teach destock-in-bear; resolved-to-bear escape FAILs; destock-inverse two-quarter WARN",
+    "Wave 5 mid-cycle 2.13.0: construction required; peak/last-year SOI cannot franchise_mos",
+    "Wave 6 decision-after-2.5 2.14.0: Agent 5 single-writer reopens duration after risk_bridge+TSR",
+    "Wave 7 gather 2.15.0: moat/cash/industry/allocation evidence required",
+    "Wave 8 README CIO 2.16.0: cover leads with duration.action",
+    "Wave 9 stop-the-plug 2.17.0: no TAM-decay primary path; no shrug-to-standard DCF"
   ],
   "write_allowlist": [
     "eng/",

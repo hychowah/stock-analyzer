@@ -4,7 +4,7 @@
 Three W1 waves on `harness/investment-quality-waves`: (1) enforce existing law 2.9.0, (2) decision object, (3) epistemology. No archive mutation. No Wave 4 mandate pack.
 
 ## Status
-Waves 1–3 implemented on `harness/investment-quality-waves` (2.9.0 / 2.10.0 / 2.11.0). Implementer does not flip `passes`.
+Waves 1–3 implemented on `harness/investment-quality-waves` (2.9.0 / 2.10.0 / 2.11.0). Wave 3.1: destock-in-base no longer matches `fair_value.base` key; template `bear=0.30` is not a counterfactual; changelog isolation recurses nested keys; E2/E3 WARNs shipped. Implementer does not flip `passes`.
 
 ## Verify (implementer-run)
 - pytest Wave 1 related: 134 passed

@@ -218,7 +218,7 @@ Read the module named in `market_context.module_file` before valuation: `region_
 - Agent 2d extracts the latest quarter per `templates/latest_quarter.schema.json` and logs notable changes in `evidence_log` (metric, observation, materiality, suggested rule). **2d logs evidence only.**
 - The **valuation agent** decides whether evidence changes assumptions and logs each applied change in `valuation_model.json.overrides_applied` (rule, old, new, reason).
 - Rules (symmetric, with materiality):
-  - **Two-quarter rule**: a key metric moves >5% relative (or >100bp) in the same direction for two consecutive quarters → adjust the assumption that way. Seasonal metrics compare YoY, not QoQ.
+  - **Two-quarter rule**: a key metric moves >5% relative (or >100bp) in the same direction for two consecutive quarters → adjust the assumption that way. Seasonal metrics compare YoY, not QoQ. A raise that coincides with deteriorating FCF and AR/inventory belongs in **bear_only** (or is rejected) — machine WARN on harness ≥ 2.11.0.
   - **Guidance-change rule**: company guidance (not analyst targets) materially raised/lowered → update trajectory, widen/narrow range. Analyst **price targets** and Street **FY+1/+2 estimates** are not company guidance — never apply this rule to a consensus revision; bind Street separately (§10c).
   - **Inflection rule**: margin inflection → adjust operating-leverage path.
   - **Capital rule**: major buyback/dividend/capex/raise → update capital structure and cash flows.

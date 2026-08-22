@@ -76,17 +76,29 @@ def _unresolved_destock(brief: dict[str, Any]) -> bool:
 
 
 def _destock_in_base(vm: dict[str, Any]) -> bool:
+    """True only when a hook encodes destock on the *base* path.
+
+    Do not scan fair_value: that object always contains the key ``base``.
+    Bear-only destock (applies_in=bear / used_as bear) is not destock-in-base.
+    """
     hooks = vm.get("operating_path_hooks")
-    if isinstance(hooks, list):
-        for h in hooks:
-            if not isinstance(h, dict):
-                continue
-            blob = _blob(h)
-            if "destock" in blob and ("base" in blob or "used_as" in blob):
-                action = str(h.get("action") or h.get("used_as") or "").lower()
-                if "base" in action or "destock" in action:
-                    return True
-    return "destock" in _blob(vm.get("fair_value")) and "base" in _blob(vm.get("fair_value"))
+    if not isinstance(hooks, list):
+        return False
+    for h in hooks:
+        if not isinstance(h, dict):
+            continue
+        blob = _blob(h)
+        if "destock" not in blob:
+            continue
+        applies = str(h.get("applies_in") or h.get("applies") or "").strip().lower()
+        action = str(h.get("action") or h.get("used_as") or "").strip().lower()
+        if "bear" in applies or "bear_only" in action or "bear" in action:
+            continue
+        if applies in {"base", "base_path"} or "base" in applies:
+            return True
+        if "used_as:base" in action or action.endswith(":base") or "base_path" in action:
+            return True
+    return False
 
 
 def check_destock_not_silent_duration(session: Path) -> list[tuple[str, str, str]]:
@@ -196,6 +208,18 @@ def check_related_party_intensity(session: Path) -> list[tuple[str, str, str]]:
     return [("PASS", "rp_intensity", "intensity=low without ≥20% RP / board rights")]
 
 
+def _collect_keys(obj: Any, acc: set[str] | None = None) -> set[str]:
+    acc = acc if acc is not None else set()
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            acc.add(str(k).lower())
+            _collect_keys(v, acc)
+    elif isinstance(obj, list):
+        for item in obj[:80]:
+            _collect_keys(item, acc)
+    return acc
+
+
 def check_changelog_isolation(session: Path) -> list[tuple[str, str, str]]:
     brief, err = load_json(session / "registry" / "research_brief.json")
     if err or not isinstance(brief, dict):
@@ -215,10 +239,7 @@ def check_changelog_isolation(session: Path) -> list[tuple[str, str, str]]:
                 "(earning-power facts, not prior FV/MoS/WACC)",
             )
         ]
-    blob_keys = {str(k).lower() for k in data.keys()}
-    bad = blob_keys & FORBIDDEN_CHANGELOG_KEYS
-    nested = data.get("prior") if isinstance(data.get("prior"), dict) else {}
-    bad |= {str(k).lower() for k in nested.keys()} & FORBIDDEN_CHANGELOG_KEYS
+    bad = _collect_keys(data) & FORBIDDEN_CHANGELOG_KEYS
     if bad:
         return [
             (
@@ -239,6 +260,150 @@ def check_changelog_isolation(session: Path) -> list[tuple[str, str, str]]:
     return [("PASS", "changelog", "facts-only changelog; prior FV not copied")]
 
 
+def _mentions_trust_guides(obj: Any) -> bool:
+    blob = _blob(obj)
+    return "trust_guides_more" in blob or "trust_guides" in blob
+
+
+def _has_met_only_or_cash_split(scorecard: Any) -> bool:
+    if not isinstance(scorecard, dict):
+        return False
+    for k in ("met_only_hit_rate", "met_only", "cash_quality", "cash_organic_quality"):
+        if scorecard.get(k) is not None:
+            return True
+    blob = _blob(scorecard)
+    return "met_only" in blob or "met-only" in blob or (
+        "cash" in blob and "quality" in blob
+    )
+
+
+def check_trust_guides_more(session: Path) -> list[tuple[str, str, str]]:
+    """E2: beat must not imply trust_guides_more without a met-only / cash split."""
+    vm, _ = load_json(session / "data" / "valuation_model.json")
+    fdd, _ = load_json(session / "registry" / "filing_deep_dive.json")
+    if not isinstance(vm, dict) and not isinstance(fdd, dict):
+        return [("SKIPPED", "trust_guides_more", "valuation and FDD missing")]
+    mentioned = _mentions_trust_guides(vm) or _mentions_trust_guides(fdd)
+    if not mentioned:
+        return [("PASS", "trust_guides_more", "no trust_guides_more claim")]
+    scorecard = None
+    if isinstance(fdd, dict):
+        scorecard = fdd.get("management_scorecard")
+    if _has_met_only_or_cash_split(scorecard):
+        return [
+            (
+                "PASS",
+                "trust_guides_more",
+                "trust_guides_more with met_only / cash-quality split",
+            )
+        ]
+    return [
+        (
+            "WARN",
+            "trust_guides_more",
+            "trust_guides_more without met_only or cash/organic quality split "
+            "(beat is not a hit for trusting guides)",
+        )
+    ]
+
+
+def _first_floats(text: Any) -> list[float]:
+    return [float(x) for x in re.findall(r"-?\d+(?:\.\d+)?", str(text or ""))]
+
+
+def _override_raises(item: dict[str, Any]) -> bool:
+    old = item.get("old")
+    new = item.get("new")
+    if old is None:
+        old = item.get("old_assumption")
+    if new is None:
+        new = item.get("new_assumption")
+    o_n, n_n = _as_float(old), _as_float(new)
+    if o_n is None:
+        fo = _first_floats(old)
+        o_n = fo[-1] if fo else None
+    if n_n is None:
+        fn = _first_floats(new)
+        n_n = fn[-1] if fn else None
+    if o_n is not None and n_n is not None and n_n > o_n:
+        return True
+    reason = _blob(item.get("reason"))
+    return any(w in reason for w in ("raise", "raised", "increase", "increased", "up from"))
+
+
+def _walk_fcf(obj: Any) -> float | None:
+    found: list[float] = []
+
+    def walk(x: Any, key: str = "") -> None:
+        if isinstance(x, dict):
+            for k, v in x.items():
+                walk(v, str(k))
+        elif _as_float(x) is not None and any(
+            t in key.lower() for t in ("fcf", "free_cash", "free cash")
+        ):
+            found.append(float(_as_float(x)))  # type: ignore[arg-type]
+
+    walk(obj)
+    return found[0] if found else None
+
+
+def _wc_deteriorating(lq: dict[str, Any]) -> bool:
+    blob = _blob(lq.get("evidence_log") or "") + " " + _blob(lq.get("balance_sheet") or "")
+    log = lq.get("evidence_log")
+    if isinstance(log, list):
+        for row in log:
+            if not isinstance(row, dict):
+                continue
+            metric = str(row.get("metric") or "").lower()
+            obs = str(row.get("observation") or "").lower()
+            if any(t in metric or t in obs for t in ("inventory", "receivable", " ar", "dso")):
+                if any(t in obs for t in ("+", "up", "increase", "rose", "build")):
+                    return True
+    return any(
+        t in blob for t in ("inventory +", "inventories +", "ar +", "receivable +")
+    )
+
+
+def check_two_quarter_wc(session: Path) -> list[tuple[str, str, str]]:
+    """E3: two-quarter raise while FCF/AR/inventory deteriorate → WARN."""
+    vm, err = load_json(session / "data" / "valuation_model.json")
+    if err or not isinstance(vm, dict):
+        return [("SKIPPED", "two_quarter_wc", "valuation_model.json missing")]
+    overrides = vm.get("overrides_applied")
+    if not isinstance(overrides, list) or not overrides:
+        return [("PASS", "two_quarter_wc", "no overrides_applied")]
+    raises = [
+        o
+        for o in overrides
+        if isinstance(o, dict)
+        and "two_quarter" in str(o.get("rule") or "").lower()
+        and _override_raises(o)
+    ]
+    if not raises:
+        return [("PASS", "two_quarter_wc", "no two_quarter_rule raise")]
+    lq, lerr = load_json(session / "registry" / "latest_quarter.json")
+    if lerr or not isinstance(lq, dict):
+        return [("SKIPPED", "two_quarter_wc", "latest_quarter.json missing")]
+    fcf = _walk_fcf(lq.get("cash_flow") or lq)
+    wc = _wc_deteriorating(lq)
+    if fcf is not None and fcf < 0 and wc:
+        return [
+            (
+                "WARN",
+                "two_quarter_wc",
+                "two_quarter_rule raised volume/growth while FCF is negative and "
+                "AR/inventory deteriorated — force bear_only or reject the raise",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "two_quarter_wc",
+            f"two_quarter raise present; fcf={fcf} wc_deteriorating={wc}",
+        )
+    ]
+
+
 def check_wave3_epistemology(session: Path) -> list[tuple[str, str, str]]:
     if not session_is_wave3_runtime(session):
         return [
@@ -253,4 +418,6 @@ def check_wave3_epistemology(session: Path) -> list[tuple[str, str, str]]:
     out.extend(check_tv_share_duration(session))
     out.extend(check_related_party_intensity(session))
     out.extend(check_changelog_isolation(session))
+    out.extend(check_trust_guides_more(session))
+    out.extend(check_two_quarter_wc(session))
     return out

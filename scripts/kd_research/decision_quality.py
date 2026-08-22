@@ -185,7 +185,20 @@ def _has_numeric_counterfactual(text: str, template: tuple[float, float, float])
             continue
         if len(trip) == 3 and trip != template:
             return True
-    return bool(re.search(r"bear\s*[=:]\s*0\.\d+", text, re.I))
+    bear_m = re.search(r"bear\s*[=:]\s*(0\.\d+)", text, re.I)
+    if not bear_m:
+        return False
+    bear = round(float(bear_m.group(1)), 2)
+    base_m = re.search(r"base\s*[=:]\s*(0\.\d+)", text, re.I)
+    bull_m = re.search(r"bull\s*[=:]\s*(0\.\d+)", text, re.I)
+    if base_m and bull_m:
+        trip = (
+            bear,
+            round(float(base_m.group(1)), 2),
+            round(float(bull_m.group(1)), 2),
+        )
+        return trip != template
+    return bear != round(float(template[0]), 2)
 
 
 def check_template_masses(session: Path) -> list[tuple[str, str, str]]:

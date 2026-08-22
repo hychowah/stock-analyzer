@@ -23,10 +23,10 @@ If `operating_path_brief.conflicts[]` has unresolved flatten/destock (id or clai
 Else FAIL.
 
 ### E2 beat ≠ trust_guides_more
-Prompt: scorecard `beat` is not a hit for trusting guides. Machine WARN if valuation/hooks contain `trust_guides_more` without a `met_only` or cash-quality split on the scorecard.
+Prompt: scorecard `beat` is not a hit for trusting guides. Machine **WARN** if valuation/hooks/FDD contain `trust_guides_more` without a `met_only` or cash-quality split on the scorecard.
 
 ### E3 two-quarter raise + WC
-Prompt + WARN if `overrides_applied` two_quarter_rule raises volume/growth while LQ cash_flow FCF is negative and AR/inventory up. Too heuristic for FAIL.
+Machine **WARN** if `overrides_applied` two_quarter_rule raises volume/growth while LQ FCF is negative and AR/inventory deteriorated.
 
 ### E4 Street |delta|>20%
 `street_bind`: missing response/divergence on |delta|>20% is **WARN** (calibration note), not FAIL. Copying Street into the path remains FAIL.

@@ -129,6 +129,19 @@ class TemplateMassTests(unittest.TestCase):
         rows = check_template_masses(self._sess(vm))
         self.assertEqual(rows[0][0], "FAIL")
 
+    def test_304525_restating_bear_is_not_a_counterfactual(self) -> None:
+        vm = _vm(
+            fair_value={
+                "scenario_probabilities": {"bear": 0.30, "base": 0.45, "bull": 0.25},
+                "probability_method": (
+                    "Company-specific late-cycle DC book is 60% of sales so "
+                    "bear=0.30 remains the modal downside mass."
+                ),
+            }
+        )
+        rows = check_template_masses(self._sess(vm))
+        self.assertEqual(rows[0][0], "FAIL", rows)
+
     def test_304525_with_counterfactual_passes(self) -> None:
         vm = _vm(
             fair_value={

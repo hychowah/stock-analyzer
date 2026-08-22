@@ -8,7 +8,7 @@ This validates STRUCTURE and PROVENANCE, not financial truth:
     key checks run and schema validation reports SKIPPED)
   - judgment numbers carry a non-empty `rationale`
   - compute_script fields point at files that exist on disk
-  - sector_config consistency (confidence < 0.70 -> standard + manual review)
+  - sector_config consistency (confidence < 0.70 -> manual review; ≥2.17.0 does not force standard)
   - market_context.json optional (absent -> SKIPPED for legacy sessions); when present,
     schema/keys + non-empty market_context_hooks on valuation_model; medium/high intensity
     rejects all-noted_only hooks
@@ -207,8 +207,29 @@ def check_identity(session: Path, ticker: str, session_date: str) -> None:
         ok = False
     conf = sc.get("confidence")
     if isinstance(conf, (int, float)) and conf < 0.70:
-        if sc.get("primary_sector") != "standard" or sc.get("requires_manual_review") is not True:
-            record("FAIL", "confidence gate", f"confidence {conf} < 0.70 requires primary_sector=standard and requires_manual_review=true")
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        from scripts.kd_research.annuals import (  # noqa: WPS433
+            load_run_manifest_version,
+            parse_semver,
+        )
+
+        parsed = parse_semver(load_run_manifest_version(session))
+        wave9 = parsed is not None and parsed >= (2, 17, 0)
+        if sc.get("requires_manual_review") is not True:
+            record(
+                "FAIL",
+                "confidence gate",
+                f"confidence {conf} < 0.70 requires requires_manual_review=true",
+            )
+            ok = False
+        elif not wave9 and sc.get("primary_sector") != "standard":
+            record(
+                "FAIL",
+                "confidence gate",
+                f"confidence {conf} < 0.70 requires primary_sector=standard and "
+                "requires_manual_review=true (harness < 2.17.0)",
+            )
             ok = False
     if ok:
         record("PASS", "identity + confidence gate")

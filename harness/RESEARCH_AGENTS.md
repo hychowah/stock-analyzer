@@ -108,7 +108,7 @@ Run **once**, by the main agent, before anything else. There is **no scoring alg
 4. Illustrative (no ticker exceptions): branded retail carton / list-promo eggs → `standard` + shock overlay; unbranded posted-price shell eggs → `cyclical`; cruise capacity / berth-days ≈ airlines/shipping → `cyclical` (a defensive GICS label is not “never cyclical”).
 5. Classify from these meanings **first**. If you consult a module detection list, treat it as hints. If considering `cyclical` and no sub-type **or cousin** fits and revenue is not majority spot-realized, that is a strong veto. Then set `module_file` (`""` is valid for `standard`).
 6. Write `registry/sector_config.json` per `templates/sector_config.schema.json`: `primary_sector`, self-assessed `confidence`, `signals` (the evidence), `rationale` (why this sector, why this confidence), `is_also_growth`, `module_file`, plus `runner_up` (second-best hypothesis + why rejected) and `disconfirming_signals` (evidence against the choice that was weighed). For genuinely borderline cases, run two independent classification passes and reconcile.
-7. Confidence < 0.70 → use `standard`, set `requires_manual_review: true`, and say so prominently in the README. That fallback is for **uncertain** names, not for branded staples (those are `standard` on the merits).
+7. Confidence < 0.70 → set `requires_manual_review: true`, say so in the README, and **widen** range or `duration.action=too_hard`. Do **not** auto-fallback to ordinary DCF / `primary_sector=standard` (harness ≥ 2.17.0). Uncertain identity may keep the judged sector or run two-model (`multi_method_reconciliation`) — Agent 5 does not reclassify. That fallback is for **uncertain** names, not for branded staples (those are `standard` on the merits).
 8. If `is_also_growth`: primary sector's model still leads; add growth-module SBC/dilution analysis at critical intensity; extend the explicit forecast to 7–10 years.
 9. Material commodity-input or protein-supply beta on a `standard` name **must** appear in `research_brief.must_cover_risks` / `must_answer_questions` so Agent 5 does not freeze a peak-year margin as mid-cycle.
 
@@ -283,7 +283,7 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 ## 12. Fallbacks & escalation
 
 - Missing/partial data → document the gap, use the closest proxy with rationale, **widen** the valuation range.
-- Sector confidence < 0.70 → `standard` + manual-review flag.
+- Sector confidence < 0.70 → `requires_manual_review` + widen range or `too_hard` (do **not** shrug to ordinary DCF / `primary_sector=standard` on harness ≥ 2.17.0).
 - Market-context confidence < 0.70 or intensity `high` with thin local filings → `requires_manual_review` + **widen** the valuation range (do not fake a US no-op).
 - Conflicting lenses → do not force one verdict; present bull/base/bear and state which perspective dominates under which assumption.
 - Pre-revenue/binary companies → milestone-based scenarios per `sector_growth.md`.
@@ -312,6 +312,7 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 | Harness ≥ 2.14.0: after `risk_bridge.json` exists, `decision.reopened_after_stress` must be true; if `tsr_validation.json` exists `tsr_seen` must be true. Gate is `4_parallel` entry / `--full`, not `2_parallel` complete. Agent 5 stays single-writer. Legacy → SKIPPED | `[machine]` `check_session --full` + `4_parallel` preflight |
 | Harness ≥ 2.15.0: `latest_quarter.cash_quality` requires ≥1 numeric (fcf/cfo/ni/dso/dio/inventory). Missing LQ → SKIPPED. Phase 0 moat mechanism + 1d_ind units are prompt. Legacy → SKIPPED | `[machine]` `check_session --full` + `1d`/`2_parallel` entry |
 | Harness ≥ 2.16.0: README must quote duration.action (FAIL if missing) before fair value vs price / margin of safety. Legacy quote-miss is WARN. | `[machine]` `check_session --full` + `4_parallel` complete |
+| Harness ≥ 2.17.0: confidence <0.70 still requires manual review but does **not** force `primary_sector=standard`; growth module has no canned decay/TAM-penetration path. Legacy confidence gate still requires standard. | `[machine]` `check_session` identity gate |
 | Agent 4 isolation: `technical.json` + `handoffs/4*` must not cite fundamental paths (FDD, valuation, background, latest_quarter, market_context, sec_filings, sp_financials, street_estimates) | `[machine]` WARN default / FAIL `--full` |
 | Handoffs ≥300B for specialists **and** swarm leads (`phase0_*`, `phase25_*` aliases); four section headers | `[machine]` size FAIL `--full`; headers **WARN** |
 | `phase_status` complete ⇒ primary artifacts on disk; pending/in_progress with artifact on disk → lag | `[machine]` FAIL complete-without-artifact; **WARN** lag |

@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.16.0",
+  "harness_version": "2.17.0",
   "harness_spec": "v2",
-  "notes": "2.16.0: Wave 8 README CIO page — duration.action before FV/MoS. 2.15.0: cash_quality gather. 2.14.0: decision reopen. 2.13.0: mid-cycle. 2.12.0: destock default."
+  "notes": "2.17.0: Wave 9 stop-the-plug — no canned growth decay/TAM path; confidence<0.70 does not force standard DCF. 2.16.0: README CIO. 2.15.0: cash_quality. 2.14.0: decision reopen."
 }

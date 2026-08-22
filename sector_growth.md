@@ -35,7 +35,7 @@ Signals if §5 already set `primary_sector=growth` or `is_also_growth` (do **not
 
 | Stage | Revenue | Growth Rate | FCF Margin | Primary Valuation | Key Metrics |
 |-------|---------|-------------|------------|-------------------|-------------|
-| **Pre-revenue** | $0 | N/A | Deeply negative | TAM-based, VC comps | TAM, SAM, pipeline, management |
+| **Pre-revenue** | $0 | N/A | Deeply negative | Milestone / unit demand (TAM $ is a check), VC comps | units, SAM, pipeline, management |
 | **Early Revenue** | $1–50M | 50–200% | Deeply negative | EV/Revenue, unit economics | ARR growth, CAC, LTV, NRR |
 | **Scaling** | $50–500M | 30–80% | Negative to -20% | Path-to-profitability DCF, EV/Revenue | Rule of 40, operating leverage, burn multiple |
 | **Approaching Profitability** | $200M–2B | 20–40% | -10% to +5% | Extended DCF, EV/Revenue, EV/EBITDA | FCF inflection, margin expansion, SBC |
@@ -81,9 +81,10 @@ Signals if §5 already set `primary_sector=growth` or `is_also_growth` (do **not
 **Step-by-Step Construction:**
 
 #### Step 1: Revenue Forecast (Years 1–10)
-- Project revenue using growth rate decay curve
-- Early-stage: 60% → 45% → 35% → 30% → 25% → 22% → 20% → 18% → 16% → 15%
-- Base growth on: TAM penetration, historical deceleration, cohort expansion
+- Advisory construction, not a paste path. Do **not** copy a canned decay curve (there is no 60→15 house path).
+- Base growth on **unit demand × share × price** (sourced units, vintage). Dollar TAM is a **check**, not the path.
+- Historical deceleration and cohort expansion may inform the unit path; they do not replace it.
+- If invested capital is positive, `harness/RESEARCH_AGENTS.md` §10d applies (`applies:false` is banks/REITs/negative-IC pre-profit — not “we prefer ARR”).
 
 #### Step 2: Gross Margin Expansion
 - SaaS: starts at 60–70%, matures to 75–85%
@@ -1228,7 +1229,7 @@ STEP 1: Is this a growth company? (Section 1 Detection Rules)
 
 STEP 2: What maturity stage? (Section 1.2)
     |
-    |-- Pre-revenue --> TAM-based valuation + milestone analysis
+    |-- Pre-revenue --> unit-demand/milestone analysis (TAM $ is a check)
     |-- Early revenue --> EV/Revenue + unit economics focus
     |-- Scaling --> Path-to-profitability DCF + ARR multiple
     |-- Approaching profitability --> Extended DCF + hybrid metrics

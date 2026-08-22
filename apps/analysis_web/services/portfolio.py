@@ -114,6 +114,7 @@ def latest_run(
         rows = api.list_runs(
             ticker=ticker,
             audit_verdict="PASS" if pass_only else None,
+            comparable_only=False,
             limit=1,
             offset=0,
         )

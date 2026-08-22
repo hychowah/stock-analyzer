@@ -177,8 +177,6 @@ def mechanical_scorecard(
         "total_return_pct": {},
         "excess_return_pct": {},
     }
-    labels: list[str] = []
-
     for h, m in by_h.items():
         if m.get("status") != "ok":
             metrics["direction_vs_price"][h] = {
@@ -194,7 +192,6 @@ def mechanical_scorecard(
             dval = "too_early"
         else:
             dval = "correct" if dh == 1 else "incorrect"
-            labels.append(dval)
         metrics["direction_vs_price"][h] = {
             "value": dval,
             "direction_hit": dh,
@@ -202,11 +199,30 @@ def mechanical_scorecard(
             "rationale": f"MoS={mos}% vs total_return={tr}% at {h}",
             "basis": "prediction_snapshot.margin_of_safety_pct + price_path mark",
         }
-        band = fv_band_status(m.get("price"), fields.get("fv_bear"), fields.get("fv_bull"))
+        bear = fields.get("fv_bear")
+        base = fields.get("fv_base")
+        bull = fields.get("fv_bull")
+        span_ineligible = (
+            isinstance(base, (int, float))
+            and not isinstance(base, bool)
+            and float(base) > 0
+            and isinstance(bear, (int, float))
+            and isinstance(bull, (int, float))
+            and (float(bull) - float(bear)) / float(base) > 1.0
+        )
+        if span_ineligible:
+            band = "ineligible"
+            band_rule = (
+                "mechanical_v1: inside [fv_bear, fv_bull] ineligible when "
+                "(bull-bear)/base > 100%"
+            )
+        else:
+            band = fv_band_status(m.get("price"), bear, bull)
+            band_rule = "mechanical_v1: mark price inside [fv_bear, fv_bull]"
         metrics["fv_band_at_mark"][h] = {
             "value": band,
-            "rule": "mechanical_v1: mark price inside [fv_bear, fv_bull]",
-            "rationale": f"price={m.get('price')} band=[{fields.get('fv_bear')}, {fields.get('fv_bull')}]",
+            "rule": band_rule,
+            "rationale": f"price={m.get('price')} band=[{bear}, {bull}] base={base}",
             "basis": "valuation fair_value + price_path",
         }
         metrics["total_return_pct"][h] = {
@@ -232,17 +248,9 @@ def mechanical_scorecard(
             overall = "too_early"
         else:
             overall = "mixed"
-    elif any((by_h.get(h) or {}).get("status") == "pending" for h in DEFAULT_HORIZONS):
+    else:
+        # 1d/1w sign(MoS)×return is tape hygiene, never the overall skill label.
         overall = "too_early"
-    elif labels:
-        correct = labels.count("correct")
-        incorrect = labels.count("incorrect")
-        if correct > incorrect:
-            overall = "mostly_right"
-        elif incorrect > correct:
-            overall = "mostly_wrong"
-        else:
-            overall = "mixed"
 
     return {
         "schema_version": 1,

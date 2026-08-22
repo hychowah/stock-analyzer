@@ -26,7 +26,11 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F18 | phase_status complete / pending lag vs disk | Orchestrator resume map not updated | W1 |
 | F19 | Missing phase0/phase25 swarm handoffs | Merge without decision-grade swarm lead note | W1 |
 | F20 | medium/high intensity all market_context_hooks noted_only | Hollow region treatment | W1 |
-| F21 | Branded CPG/eggs labeled cyclical | Module ANY-of Rule 3 (“linked to” commodity) overrode §5; audit rubber-stamped sector_fit | W1 |
-| F22 | MoS vs residual-claim DCF narrated as franchise cheap while mid-cycle ROIC ≤ WACC / EV≈IC | Agent 5 DCF and Agent 12 ROC screen never had to agree; Gordon `g` with capex≤D&A; `terminal_consistency` disclosure instead of identity | W1 |
+| F21 | Branded CPG/eggs labeled cyclical | Module ANY-of Rule 3 (“linked to” commodity) overrode §5; audit rubber-stamped sector_fit | W1 — **machine FAIL** on harness ≥ 2.9.0 (`sector_identity_tripwire`); Agent 13 tripwire is **major** |
+| F22 | MoS vs residual-claim DCF narrated as franchise cheap while mid-cycle ROIC ≤ WACC / EV≈IC | Agent 5 DCF and Agent 12 ROC screen never had to agree; Gordon `g` with capex≤D&A; `terminal_consistency` disclosure instead of identity | W1 — 2.8.0 `roic_identity` + 2.9.0 `roc_vs_cheap_claim` (TSR fail + franchise_mos without above_wacc) |
+| F23 | Template 30/45/25 scenario masses with a fig-leaf rationale | Machine only checked sum=1.0 | W1 — FAIL on ≥ 2.9.0 without `probability_method` + numeric counterfactual |
+| F24 | `priced_for_perfection` from price≷base/PW; catalog PFP null | Extracted only top-level `valuation.priced_for_perfection`, not `reverse_engineering` | W1 — named-dial gate + extract from reverse_engineering |
+| F25 | Wide FV cone still presented as a target; `inside` band on 6× span | `decision_usefulness` prompt-only; outcomes scored `inside` | W1 — DU required on width trigger; `fv_band_at_mark=ineligible` when span>100% |
+| F26 | Audit PASS used as buy-list / calibration default | `CatalogApi.calibration(pass_only=True)`; `/calibration` default yes | W1 — defaults false; UI label says completeness not a buy list |
 
 Add rows when audits or production incidents recur.

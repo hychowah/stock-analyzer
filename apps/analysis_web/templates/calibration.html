@@ -12,10 +12,10 @@
         {% endfor %}
       </select>
     </label>
-    <label>PASS only
+    <label>Audit PASS filter (process completeness, not a buy list)
       <select name="pass_only">
-        <option value="1" {% if pass_only %}selected{% endif %}>yes</option>
         <option value="0" {% if not pass_only %}selected{% endif %}>no</option>
+        <option value="1" {% if pass_only %}selected{% endif %}>yes</option>
       </select>
     </label>
     <button type="submit">Update</button>

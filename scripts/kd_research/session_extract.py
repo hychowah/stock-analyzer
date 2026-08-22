@@ -430,7 +430,9 @@ def extract_key_risks(session: Path) -> list[str]:
             if isinstance(r, str):
                 risks.append(r)
             elif isinstance(r, dict):
-                risks.append(str(r.get("risk") or r.get("description") or r.get("name") or r))
+                label = r.get("risk") or r.get("description") or r.get("name") or r.get("id")
+                if isinstance(label, str) and label.strip():
+                    risks.append(label.strip())
     seen: set[str] = set()
     out: list[str] = []
     for r in risks:
@@ -560,12 +562,19 @@ def extract_session_bundle(session: Path) -> dict[str, Any]:
             model_name = m.get("name") or m.get("type") or m.get("id")
 
     priced = None
+    decision_usefulness = None
     if valuation is not None:
-        pfp = valuation.get("priced_for_perfection")
-        if isinstance(pfp, dict):
-            priced = pfp.get("value") if "value" in pfp else pfp.get("flag")
-        else:
-            priced = pfp
+        from scripts.kd_research.decision_quality import (  # noqa: WPS433
+            extract_priced_for_perfection,
+        )
+
+        priced, _pfp_rationale = extract_priced_for_perfection(valuation)
+        fv_block = valuation.get("fair_value") if isinstance(valuation.get("fair_value"), dict) else {}
+        du = fv_block.get("decision_usefulness")
+        if isinstance(du, dict):
+            du = du.get("value") or du.get("class")
+        if isinstance(du, str) and du.strip():
+            decision_usefulness = du.strip().lower()
 
     provenance = {
         "experiment_id": (manifest or {}).get("experiment_id"),
@@ -638,6 +647,7 @@ def extract_session_bundle(session: Path) -> dict[str, Any]:
         or ("degraded" if gaps else "ok"),
         "audit_verdict": audit_verdict,
         "priced_for_perfection": priced,
+        "decision_usefulness": decision_usefulness,
         "roic_identity": thin_roic_from_valuation(valuation),
         "model_name": model_name,
         "tech_signal": tech.get("tech_signal"),

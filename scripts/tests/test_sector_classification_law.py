@@ -68,6 +68,7 @@ class SectorClassificationLawTests(unittest.TestCase):
         text = _read("harness/agent_prompts.md")
         self.assertIn("lead module vs identity", text)
         self.assertIn("Do not PASS on schema-valid `sector_fit`", text)
+        self.assertIn("major", text.lower())
         self.assertIn("when `sector_config.module_file` is empty", text.lower())
 
     def test_phase25_empty_module_stress(self):

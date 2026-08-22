@@ -354,6 +354,22 @@ class CatalogQueryTests(unittest.TestCase):
         self.assertIn("us", facets["region"])
         self.assertEqual(facets["tech_signal"], [])
 
+    def test_null_fv_quarantined_from_comparable_list(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        _insert_run(db, ticker="AAPL", session_key="2026-07-20", fv_base=None, mos=0.0)
+        comparable = self.api.list_runs(limit=50)
+        self.assertNotIn("AAPL", {r["ticker"] for r in comparable})
+        self.assertEqual(self.api.count_runs(), 4)
+        all_rows = self.api.list_runs(comparable_only=False, limit=50)
+        self.assertIn("AAPL", {r["ticker"] for r in all_rows})
+        self.assertEqual(self.api.count_runs(comparable_only=False), 5)
+
+    def test_calibration_pass_only_defaults_false(self):
+        import inspect
+
+        params = inspect.signature(CatalogApi.calibration).parameters
+        self.assertFalse(params["pass_only"].default)
+
 
 class LiveArchiveSmokeTests(unittest.TestCase):
     """Optional: skip if project archive DB missing."""

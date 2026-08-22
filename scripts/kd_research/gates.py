@@ -1007,8 +1007,12 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
         out.extend(check_operating_path_hooks(session))
         out.extend(check_street_bind(session))
         from scripts.kd_research.roic_identity import check_roic_identity  # noqa: WPS433
+        from scripts.kd_research.decision_quality import (  # noqa: WPS433
+            check_wave1_decision_quality,
+        )
 
         out.extend(check_roic_identity(session))
+        out.extend(check_wave1_decision_quality(session, include_reports=False))
         return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)

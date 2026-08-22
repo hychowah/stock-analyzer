@@ -1,0 +1,33 @@
+{
+  "goal": "Ship investment-quality Waves 1-3 on harness/investment-quality-waves (enforce law, then decision object, then epistemology).",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Wave 4 mandate pack (quality-only, forensic library, cycle clock, GARP unit-econ, PM Kelly sizing)",
+    "git push / amend published history"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "Wave 1: new-runtime cheap_claim/ROIC, template masses, PFP dials, DU on wide cones, F21/A7 identity, snapshot PFP/DU/cheap_claim, outcomes overall not 1d/1w, ineligible wide band, calibration not pass_only default, null FV quarantined; harness 2.9.0; eng_verify + pytest green",
+    "Wave 2: duration action including pass; initiate illegal on low DU/wide cone; technical may pass; catalog surfaces action + kill triggers; VERSION bump",
+    "Wave 3: unresolved destock not base duration; beat not trust_guides_more; two-quarter+WC; Street 20% calibration note; TV>60% and Y8 g>=8% extend/switch; RP>20% not intensity=low; changelog+update without prior FV copy; VERSION bump"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "templates/",
+    "sector_*.md",
+    "region_*.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

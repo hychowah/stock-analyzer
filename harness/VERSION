@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.8.0",
+  "harness_version": "2.9.0",
   "harness_spec": "v2",
-  "notes": "2.8.0: Agent 5 same-script owner-earnings ROIC identity (dual-column FCFF vs residual income; legal exits when ROIC ≤ WACC; cheap_claim gated). Thin lookback into prediction_snapshot + run_metrics. Legacy / missing harness_version SKIPPED. 2.7.1: Sector identity is §5 judgment; cyclical module no longer ANY-of classifies branded staples; protein/ag shock stays Phase 2.5. 2.7.0: Agent 2a street_estimates.json + Agent 5 independent FY+1 forecast with Street as calibration (not copy); street_bind/hooks; conservatism stacking; SOTP-DCF 40% reopen. 2.6.0: Phase 1d operating-path. 2.5.0: Phase 1c year-readers. 2.4.0: orchestrator_model at scaffold. 2.3.0: preflight; FDD hooks; technical isolation."
+  "notes": "2.9.0: Wave 1 decision-quality machine gates — template masses need method+counterfactual; PFP is named-dial reverse-eng (extracted from reverse_engineering); wide cone requires decision_usefulness; Agent 12 ROC fail cannot sit with franchise_mos unless above_wacc; F21 branded-staple cyclical FAIL; cash-generative names cannot be primary_sector=growth; snapshot projects PFP/DU/cheap_claim; outcomes overall is not 1d/1w MoS-sign; wide-band inside is ineligible; catalog comparable_only (null FV quarantined); calibration pass_only default false. Legacy / harness < 2.9.0 SKIPPED. 2.8.0: Agent 5 same-script owner-earnings ROIC identity. 2.7.1: Sector identity is §5 judgment. 2.7.0: Street bind. 2.6.0: Phase 1d. 2.5.0: Phase 1c year-readers."
 }

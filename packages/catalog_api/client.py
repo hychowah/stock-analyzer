@@ -183,6 +183,7 @@ def _runs_filter_sql(
     price_max: Any = None,
     fv_base_min: Any = None,
     fv_base_max: Any = None,
+    comparable_only: bool = True,
 ) -> tuple[str, list[Any]]:
     clauses: list[str] = []
     params: list[Any] = []
@@ -233,6 +234,8 @@ def _runs_filter_sql(
     _append_numeric_range(
         clauses, params, "fv_base", "fv_base_min", "fv_base_max", fv_base_min, fv_base_max
     )
+    if comparable_only:
+        clauses.append("fv_base IS NOT NULL")
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     return where, params
 
@@ -360,6 +363,7 @@ class CatalogApi:
         price_max: Any = None,
         fv_base_min: Any = None,
         fv_base_max: Any = None,
+        comparable_only: bool = True,
         sort: str | None = None,
         dir: str | None = None,
         limit: int = 50,
@@ -385,6 +389,7 @@ class CatalogApi:
             price_max=price_max,
             fv_base_min=fv_base_min,
             fv_base_max=fv_base_max,
+            comparable_only=comparable_only,
         )
         order = _runs_order_sql(sort, dir)
         sql = f"""
@@ -427,6 +432,7 @@ class CatalogApi:
         price_max: Any = None,
         fv_base_min: Any = None,
         fv_base_max: Any = None,
+        comparable_only: bool = True,
     ) -> int:
         where, params = _runs_filter_sql(
             ticker=ticker,
@@ -444,6 +450,7 @@ class CatalogApi:
             price_max=price_max,
             fv_base_min=fv_base_min,
             fv_base_max=fv_base_max,
+            comparable_only=comparable_only,
         )
         sql = f"SELECT COUNT(*) FROM runs {where}"
         with self._connect() as conn:
@@ -608,7 +615,7 @@ class CatalogApi:
         self,
         *,
         horizon: str = "1m",
-        pass_only: bool = True,
+        pass_only: bool = False,
     ) -> dict[str, Any]:
         """MoS buckets × realized outcomes (from sqlite outcomes table)."""
         sql = """

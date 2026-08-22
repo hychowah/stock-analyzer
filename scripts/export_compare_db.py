@@ -65,6 +65,10 @@ def _payload_for_session(session: Path, *, refresh_snapshot: bool = True) -> dic
             extras["roic_cheap_claim"] = ident.get("cheap_claim")
         if ident.get("quality_bucket"):
             extras["roic_quality_bucket"] = ident.get("quality_bucket")
+    if bundle.get("decision_usefulness"):
+        extras["decision_usefulness"] = bundle.get("decision_usefulness")
+    if bundle.get("priced_for_perfection") is not None:
+        extras["priced_for_perfection"] = bundle.get("priced_for_perfection")
 
     payload: dict[str, Any] = {
         "run_id": rid,
@@ -108,6 +112,7 @@ def _payload_for_session(session: Path, *, refresh_snapshot: bool = True) -> dic
         "margin_of_safety_pct": bundle.get("margin_of_safety_pct"),
         "model_name": bundle.get("model_name"),
         "priced_for_perfection": bundle.get("priced_for_perfection"),
+        "decision_usefulness": bundle.get("decision_usefulness"),
         "verdict_line": bundle.get("verdict_line"),
         "tech_signal": bundle.get("tech_signal"),
         "tech_regime": bundle.get("tech_regime"),

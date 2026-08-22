@@ -118,6 +118,7 @@ def build_for_session(session: Path, *, force: bool = False) -> dict[str, Any]:
         "data_quality": bundle.get("data_quality") or "ok",
         "audit_verdict": bundle.get("audit_verdict"),
         "priced_for_perfection": bundle.get("priced_for_perfection"),
+        "decision_usefulness": bundle.get("decision_usefulness"),
         "model_name": bundle.get("model_name"),
         **(
             {"roic_identity": bundle["roic_identity"]}

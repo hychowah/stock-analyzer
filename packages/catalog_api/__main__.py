@@ -57,7 +57,16 @@ def main(argv: list[str] | None = None) -> int:
 
     p_cal = sub.add_parser("calibration", help="MoS vs outcomes calibration")
     p_cal.add_argument("--horizon", default="1m")
-    p_cal.add_argument("--all-audits", action="store_true", help="Include non-PASS audits")
+    p_cal.add_argument(
+        "--pass-only",
+        action="store_true",
+        help="Restrict to audit PASS (process completeness, not a buy list)",
+    )
+    p_cal.add_argument(
+        "--all-audits",
+        action="store_true",
+        help="Deprecated: including all audits is now the default",
+    )
 
     args = ap.parse_args(argv)
     api = _api_from_env()
@@ -100,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
                 json.dumps(
                     api.calibration(
                         horizon=args.horizon,
-                        pass_only=not args.all_audits,
+                        pass_only=bool(getattr(args, "pass_only", False)),
                     ),
                     indent=2,
                 )

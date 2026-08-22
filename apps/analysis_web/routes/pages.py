@@ -269,11 +269,11 @@ def page_health(
 def page_calibration(
     request: Request,
     horizon: str = "1m",
-    pass_only: str = "1",
+    pass_only: str = "0",
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     horizon = (horizon or "1m").strip() or "1m"
-    po = pass_only != "0"
+    po = pass_only not in ("", "0", "false", "False")
     try:
         report = api.calibration(horizon=horizon, pass_only=po)
     except DbMissing as e:

@@ -47,6 +47,7 @@
     "data_quality": { "type": "string" },
     "audit_verdict": { "type": ["string", "null"] },
     "priced_for_perfection": { "type": ["boolean", "null", "object"] },
+    "decision_usefulness": { "type": ["string", "null"] },
     "model_name": { "type": ["string", "null"] },
     "roic_identity": {
       "type": "object",

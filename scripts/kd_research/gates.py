@@ -827,6 +827,11 @@ def entry_checks(
         else:
             results.append(("SKIPPED", f"optional:{rel}", f"{detail} (optional for legacy)"))
 
+    if phase_id in {"1d", "2_parallel"}:
+        from scripts.kd_research.cash_quality import check_cash_quality  # noqa: WPS433
+
+        results.extend(check_cash_quality(session))
+
     # Phase-specific extras when entering reports / audit
     if phase_id == "4_parallel":
         results.extend(check_stress_coverage(session))

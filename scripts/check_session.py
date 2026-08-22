@@ -1203,6 +1203,10 @@ def main() -> int:
             record(status, check, detail)
         check_wave3_epistemology_session(session)
         check_wave4_destock_session(session)
+        from scripts.kd_research.cash_quality import check_cash_quality  # noqa: WPS433
+
+        for status, check, detail in check_cash_quality(session):
+            record(status, check, detail)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

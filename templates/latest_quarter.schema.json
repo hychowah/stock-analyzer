@@ -23,6 +23,11 @@
     "margins_costs": { "type": "object" },
     "balance_sheet": { "type": "object", "properties": { "currency": {"type": "string"}, "unit": {"type": "string"} } },
     "cash_flow": { "type": "object", "properties": { "currency": {"type": "string"}, "unit": {"type": "string"} } },
+    "cash_quality": {
+      "type": "object",
+      "description": "REQUIRED on harness >= 2.15.0 when this file exists (Python gate, not schema required[]). ≥1 numeric among fcf, cfo, ni, gaap_ni, dso, dio, inventory. Agent 2d writes; Agent 5 reads.",
+      "additionalProperties": true
+    },
     "capital_returns": { "type": "object" },
     "management_tone": { "type": "object" },
     "risks": { "type": "array" },
@@ -38,7 +43,7 @@
           "materiality": { "type": "string", "description": "e.g. '+6% YoY, exceeds 5% threshold'" },
           "suggested_rule": {
             "type": "string",
-            "enum": ["two_quarter_rule", "guidance_change_rule", "inflection_rule", "capital_rule", "new_risk_rule", "none"]
+            "enum": ["two_quarter_rule", "guidance_change_rule", "inflection_rule", "capital_rule", "new_risk_rule", "cash_conversion_rule", "destock_rule", "none"]
           },
           "source": { "type": "string" }
         }

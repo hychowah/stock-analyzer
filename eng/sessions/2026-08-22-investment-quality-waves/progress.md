@@ -4,7 +4,7 @@
 Persona-review prompt-law waves 4–9 after 2.11.0 (destock default → mid-cycle → decision-after-2.5 → gather → README CIO → stop-the-plug). Waves 1–3 already shipped. Not the old Wave 4 mandate pack. No archive mutation.
 
 ## Status
-Waves 1–6 implemented through 2.14.0 (decision reopen after 2.5). Next: Wave 7 gather. Implementer does not flip `passes`.
+Waves 1–7 implemented through 2.15.0 (cash_quality gather). Next: Wave 8 README CIO. Implementer does not flip `passes`.
 
 ## Verify (Wave 4)
 - pytest `test_wave4_destock_default.py` + `test_wave3_epistemology.py`: 30 passed

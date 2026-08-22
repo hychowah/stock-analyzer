@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.14.0",
+  "harness_version": "2.15.0",
   "harness_spec": "v2",
-  "notes": "2.14.0: Wave 6 — duration verb provisional until 5b after Phase 2.5; reopened_after_stress + tsr_seen. Agent 5 single-writer. 2.13.0: mid-cycle construction. 2.12.0: destock default. 2.11.0: Wave 3. 2.10.0: decision packet. 2.9.0: decision-quality gates."
+  "notes": "2.15.0: Wave 7 gather — latest_quarter.cash_quality required; Phase 0 moat mechanism + retained-earnings trust; 1d_ind industry capex/units. 2.14.0: decision reopen. 2.13.0: mid-cycle. 2.12.0: destock default."
 }

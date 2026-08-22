@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.10.0",
+  "harness_version": "2.11.0",
   "harness_spec": "v2",
-  "notes": "2.10.0: Wave 2 decision object — registry/decision.json duration.action including pass; initiate illegal on low DU / wide cone; technical side=pass legal (no forced long); duration pass forbids TA long unless allow_long; snapshot/catalog project decision_action + kill_triggers. Legacy < 2.10.0 SKIPPED. 2.9.0: Wave 1 decision-quality machine gates. 2.8.0: ROIC identity. 2.7.1: sector identity. 2.7.0: Street bind."
+  "notes": "2.11.0: Wave 3 epistemology — unresolved destock cannot be silent duration-in-base; Street |delta|>20% is a calibration WARN not a skill-miss FAIL; TV>60% with Y8 g>=8% must extend/switch; related-party >=20% cannot stay intensity=low; update mode requires facts-only changelog (no prior FV/MoS/WACC). 2.10.0: decision packet. 2.9.0: decision-quality gates."
 }

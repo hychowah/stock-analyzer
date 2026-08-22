@@ -192,12 +192,13 @@ class BindTests(unittest.TestCase):
         rows = check_street_bind(s)
         self.assertTrue(any(r[1] == "street_bind.delta_pct" and r[0] == "FAIL" for r in rows))
 
-    def test_large_gap_without_response_fails(self) -> None:
-        # 123.5 vs 174 is about -29%
+    def test_large_gap_without_response_warns(self) -> None:
+        # 123.5 vs 174 is about -29%; calibration note, not a skill-miss FAIL
         bind = _bind(123.5, 174.0)
         s = self._sess(_vm(street_bind=bind), _street_file())
         rows = check_street_bind(s)
-        self.assertTrue(any("divergence" in r[1] or r[1].endswith("response") for r in rows if r[0] == "FAIL"))
+        self.assertTrue(any(r[0] == "WARN" and "calibration" in r[2] for r in rows), rows)
+        self.assertFalse(any(r[0] == "FAIL" and "20%" in r[2] for r in rows), rows)
 
     def test_large_gap_with_reopen_passes(self) -> None:
         bind = _bind(

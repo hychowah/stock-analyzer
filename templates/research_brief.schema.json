@@ -21,6 +21,15 @@
     "ticker": { "type": "string" },
     "session_date": { "type": "string", "format": "date" },
     "company_name": { "type": "string", "minLength": 1 },
+    "mode": {
+      "type": "string",
+      "enum": ["initiate", "update"],
+      "description": "initiate (default) = clean sheet. update = living position; requires earning_power_changelog.json; must not copy prior FV/MoS/WACC."
+    },
+    "prior_session_key": {
+      "type": "string",
+      "description": "Declared prior folder for update mode / post-audit compare. Do not browse archive/research to discover it."
+    },
     "investment_objective": {
       "type": "string",
       "minLength": 20,

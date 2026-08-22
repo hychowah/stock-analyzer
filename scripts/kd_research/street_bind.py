@@ -296,20 +296,14 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
         if abs(expected) > DELTA_THRESHOLD:
             div = str(bind.get("divergence_rationale") or "")
             resp = str(bind.get("response") or "").strip()
-            if len(div.strip()) < DIVERGENCE_MIN_LEN:
+            if len(div.strip()) < DIVERGENCE_MIN_LEN or resp not in RESPONSE_ENUM:
                 out.append(
                     (
-                        "FAIL",
-                        "street_bind.divergence_rationale",
-                        "|delta_pct| > 20% vs Street FY+1 — treat as a research miss: reopen the independent stack (missing segment/guide/run-rate). Do not paste Street. Being off is not FAIL; missing this rationale is FAIL.",
-                    )
-                )
-            elif resp not in RESPONSE_ENUM:
-                out.append(
-                    (
-                        "FAIL",
-                        "street_bind.response",
-                        f"|delta_pct| > 20% requires response in {sorted(RESPONSE_ENUM)}",
+                        "WARN",
+                        "street_bind.delta_calibration",
+                        "|delta_pct| > 20% vs Street FY+1 is a calibration note, not a "
+                        "valuation skill miss. Record divergence_rationale / response if you have "
+                        "them. Copying Street into the path remains FAIL.",
                     )
                 )
             else:

@@ -33,5 +33,7 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F25 | Wide FV cone still presented as a target; `inside` band on 6× span | `decision_usefulness` prompt-only; outcomes scored `inside` | W1 — DU required on width trigger; `fv_band_at_mark=ineligible` when span>100% |
 | F26 | Audit PASS used as buy-list / calibration default | `CatalogApi.calibration(pass_only=True)`; `/calibration` default yes | W1 — defaults false; UI label says completeness not a buy list |
 | F27 | Always-long technical setup; no pass action; README invents a second verdict | Agent 4 required stop-below-entry; no decision.json | W1 — 2.10.0 `side=pass` legal; duration.action including pass; initiate blocked on useless cone |
+| F28 | Unresolved destock parked in bear; base still duration | 1d keeps conflict; Agent 5 encodes destock only in bear mass | W1 — 2.11.0 destock_base FAIL unless destock-in-base / DU=low / pass |
+| F29 | Update run copies yesterday’s FV | Isolation vs amnesia | W1 — changelog facts only; prior FV/MoS/WACC keys FAIL |
 
 Add rows when audits or production incidents recur.

@@ -254,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
         "scripts/tests/test_portfolio.py",
         "scripts/tests/test_catalog_atomic.py",
         "scripts/tests/test_router_agents.py",
+        "scripts/tests/test_sector_classification_law.py",
         "scripts/tests/test_provenance.py",
         "scripts/tests/test_session_isolation_check.py",
         "scripts/tests/test_phase_graph.py",

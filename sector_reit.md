@@ -6,7 +6,9 @@
 
 ## 1. SECTOR DETECTION RULES
 
-### 1.1 Auto-Detection Criteria
+Orchestrator sets `primary_sector` via `RESEARCH_AGENTS.md` §5. This section is **signals/sub-type after identity**, not an auto-classifier.
+
+### 1.1 Diagnostic signals (not a classifier)
 
 | Criterion | Threshold | Notes |
 |-----------|-----------|-------|

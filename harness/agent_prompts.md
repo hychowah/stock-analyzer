@@ -51,6 +51,8 @@ Do not run valuation subagent (5) before phase `2_parallel` preflight passes; do
 
 **New-run start (mandatory):** When the user asks to research ticker T (and does not name an existing `session_key` to resume), **scaffold first** and work under that `S`. Always pass **`--orchestrator-model <id>`** (your actual model id, e.g. `grok-4.5`) so `meta/run_manifest.json` records it **before Phase 0** — never invent or guess the model id at finalize after a long context. Optional `--subagent-model` defaults to the same id. Preflight FAILs if missing. **Forbidden:** listing `archive/research/T/`, reading yesterday’s reports/registry, or deciding whether a prior run is “usable” before starting. That is cross-session contamination. Same-day re-runs get a new `session_key` (`date` or auto `date__rN`); keep `S` pointed only at the current folder. Do not inject any prior session paths into subagent prompts.
 
+**Classify from `ROOT/harness/RESEARCH_AGENTS.md` §5 first** (no scoring algorithm; modules do not classify). If you consult a `sector_*.md` detection list, it is diagnostic only. Empty `module_file` is valid for `standard`. Branded CPG / Consumer Defensive food with commodity-input beta stays `standard` (optional `is_also_growth`); seed the shock in the brief, do not switch the lead module.
+
 ---
 
 ## Phase 0 — Background research swarm
@@ -317,7 +319,7 @@ Hard constraints:
 - priced_for_perfection is a surface reverse-eng claim (name dials that justify price vs base/bull) — never from PW vs price×k or price>base alone.
 - Do not invent FDD/hooks if deep dive missing.
 
-1. CHOOSE the valuation model that fits (sector module + judgment + strategy_arc implied_model_hooks). Material multi-line businesses → SOTP or multi-method cross-check; if so, write multi_method_reconciliation (primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary). Justify in model.rationale.
+1. CHOOSE the valuation model that fits (sector module + judgment + strategy_arc implied_model_hooks). Empty `module_file` → ordinary DCF; still honor `research_brief.must_cover_risks` / Phase 0 `risk_candidate` stress seeds (commodity-input or protein-supply shocks on a standard name are path/stress work, not a module switch). Do not treat one peak year or one trough quarter as mid-cycle. Material multi-line businesses → SOTP or multi-method cross-check; if so, write multi_method_reconciliation (primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary). Justify in model.rationale.
 2. DECIDE every assumption: discount rate build-up (cash-flow currency vs discount-rate currency match or explicit FX policy; beta/Rf series scripted), growth/margin paths, terminal approach, multiples, CoC/governance dials (may be 0). Each {value, rationale, basis}. When using Gordon/exit/residual terminal, write terminal_consistency (method, wacc_minus_g or ke_minus_g, reinvestment/payout identity with quantified mismatch, tv_share_of_ev_base; if TV share >0.75 extend years / lower terminal / widen range). Footnotes for SBC/dilution, tax, debt/leases, segments when extracted. NEVER paste region-module ranges as mandated WACC/ERP/family discounts.
 3. Apply latest-quarter overrides from evidence_log when warranted (materiality >5% relative or >100bp; symmetric). Log overrides_applied; note rejects. Use company FY labels consistent with Agent 2d.
 4. CONSUME deep dive → filing_deep_dive_hooks[] (used_as with old/new | rejected | noted_only). Credibility may move weights/range width — not formulas. Degraded scorecard → widen range and say so.
@@ -354,7 +356,7 @@ Write S/registry/tsr_validation.json per ROOT/templates/tsr_validation.schema.js
 
 ## Phase 2.5 — stress-test swarm
 
-`AgentSwarm`, subagent_type `coder`, 5 items: the 4 most relevant sector scenarios (from the sector module's stress library — adapt to the company) + 1 macro scenario. Also add any scenario required by a `new_risk_rule` evidence entry. When S/registry/market_context.json has intensity `high` **or** research_brief.research_depth is `deep` with material region/ownership flags, at least one of the five must be region/governance/FX/policy (from the region module stress seeds or company-specific) and it must be **material** (not a checkbox narrative); when intensity is `medium`, include one if material. Also fold Phase 0 findings tagged `downstream_relevance=risk_candidate` that are still open. (If you judge a different 5-scenario mix more decision-relevant, deviate — and record the deviation with rationale in risk_bridge.json.) Machine gate remains **≥5 scenarios**. One worker per scenario; no nested swarms.
+`AgentSwarm`, subagent_type `coder`, 5 items: the 4 most relevant sector scenarios (from the sector module's stress library — adapt to the company) + 1 macro scenario. When `sector_config.module_file` is empty (`standard`), still seed ≥1 company-specific stress from `research_brief.must_cover_risks` / Phase 0 `risk_candidate` (protein-price, HPAI, oversupply, feed-cost, price-gap overlays are allowed on a staple). Also add any scenario required by a `new_risk_rule` evidence entry. When S/registry/market_context.json has intensity `high` **or** research_brief.research_depth is `deep` with material region/ownership flags, at least one of the five must be region/governance/FX/policy (from the region module stress seeds or company-specific) and it must be **material** (not a checkbox narrative); when intensity is `medium`, include one if material. Also fold Phase 0 findings tagged `downstream_relevance=risk_candidate` that are still open. (If you judge a different 5-scenario mix more decision-relevant, deviate — and record the deviation with rationale in risk_bridge.json.) Machine gate remains **≥5 scenarios**. One worker per scenario; no nested swarms.
 
 prompt_template:
 
@@ -478,7 +480,7 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 10. growth/is_also_growth: SBC/dilution critical intensity.
 
 **Band 4 — Fit & merge**
-7–8b. Cross-artifact inputs; sector fit; region fit.
+7–8b. Cross-artifact inputs; **sector fit vs identity** (not consistency with the chosen module); region fit. Challenge the **lead module vs identity**. Tripwire: GICS Consumer Defensive / Farm Products / Packaged Foods **and** branded retail mix **and** `primary_sector=cyclical` → **finding** unless a majority of revenue is realized at spot/index/posted producer prices. Lead `module_file` vs identity mismatch → finding. Do not PASS on schema-valid `sector_fit`. Branded CPG with a protein/feed shock is a 2.5 overlay, not proof that `sector_cyclical.md` should lead.
 11. Merge integrity (raw counts; no invented merge numbers).
 12. phase_status lag (pending agents with files on disk) = minor (machine WARN); phase complete without primary artifact = major if not waived; do not author missing FDD yourself as auditor.
 13. Process note: multi-agent *spawn API* is not required for PASS; decision-grade specialist *artifacts* and isolation are.

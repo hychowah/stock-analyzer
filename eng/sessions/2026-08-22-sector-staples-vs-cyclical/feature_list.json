@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json; baseline eng_verify",
+      "passes": true,
+      "verify": "issue.json success_criteria non-empty; baseline eng_verify noted"
+    },
+    {
+      "id": "law-s5-s9",
+      "description": "RESEARCH_AGENTS §5 short enum + two-shot + staple/shock; §9 diagnostic-only; HARNESS_MAP orch clause",
+      "passes": true,
+      "verify": "§5 contains staple-vs-shock and modules do not classify"
+    },
+    {
+      "id": "module-cyclical",
+      "description": "Cyclical §1.2 diagnostic only; protein row; neutralize other-module auto-decision language",
+      "passes": true,
+      "verify": "no ANY-of mandate; no return True / Score >= 7 as classifier"
+    },
+    {
+      "id": "prompts",
+      "description": "Runbook + Agent 13 P14 rubric + 2.5 empty-module stress + Agent 5 one-liner",
+      "passes": true,
+      "verify": "Agent 13 challenges lead-module identity; 2.5 seeds brief stresses when module_file empty"
+    },
+    {
+      "id": "tests-version",
+      "description": "test_sector_classification_law.py + VERSION 2.7.1 + F21",
+      "passes": true,
+      "verify": "pytest + eng_verify"
+    },
+    {
+      "id": "ship",
+      "description": "ship_note; verifier flips passes",
+      "passes": true,
+      "verify": "ship_note.json present; user asked before commit"
+    }
+  ]
+}

@@ -7,9 +7,11 @@
 
 ## 1. SECTOR DETECTION RULES
 
-### 1.1 Auto-Detection Scoring Matrix
+Orchestrator sets `primary_sector` via `RESEARCH_AGENTS.md` §5. This section is **signals/sub-type after identity**, not an auto-classifier.
 
-A company qualifies for "growth company modified analysis" if it meets **3 or more** of the following criteria:
+### 1.1 Diagnostic scoring matrix (signals only)
+
+Signals if §5 already set `primary_sector=growth` or `is_also_growth` (do **not** set `primary_sector` from this matrix). A company **may** show 3 or more of the following:
 
 | # | Criterion | Threshold | Weight | Detection Method |
 |---|-----------|-----------|--------|------------------|
@@ -24,10 +26,10 @@ A company qualifies for "growth company modified analysis" if it meets **3 or mo
 | 9 | ARR/Recurring Revenue | > 50% of total revenue (SaaS flag) | Medium | Company disclosures |
 | 10 | Stage of Maturity | Pre-revenue, early revenue, or scaling | High | Revenue size + age |
 
-**Decision Rule**: 
-- **Score ≥ 7 points (out of 10)**: Use full growth-company framework
-- **Score 4–6**: Use hybrid (standard + growth-modified)
-- **Score ≤ 3**: Use standard framework with minor adjustments
+**How to read the score (after §5 identity, not a classifier):**
+- **Score ≥ 7 points (out of 10)**: signals consistent with a full growth-company framework **if** §5 already chose growth as primary
+- **Score 4–6**: signals consistent with hybrid (standard + growth overlay) — still does not flip `primary_sector`
+- **Score ≤ 3**: signals consistent with standard framework and at most a light overlay
 
 ### 1.2 Maturity Stage Classification
 

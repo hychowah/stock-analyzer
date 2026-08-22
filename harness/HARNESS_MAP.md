@@ -40,7 +40,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 
 | Phase | Agents | Must produce (evidence) | Next phase needs |
 |-------|--------|-------------------------|------------------|
-| **orch** | main | `sector_config.json`, `market_context.json`, `research_brief.json` (new sessions) | Scope, sector model family, intensity, investment questions |
+| **orch** | main | `sector_config.json`, `market_context.json`, `research_brief.json` (new sessions) | Scope, sector model family, intensity, investment questions. **§5 identity; modules advisory** (detection lists do not classify). |
 | **0** | background swarm | `background.json`, `raw/phase0_*.json`, handoff | Valuation/risk themes; `risk_candidate` list; brief coverage gaps |
 | **1_parallel** | 2a, 2b, 2c | financials CSV, `street_estimates.json` (new runtime ≥ 2.7.0), `sec_filings` + `raw_sec/`, `news_sentiment`, fetch log, handoffs | Actuals, primary text, catalysts |
 | **1b** | 2d | `latest_quarter.json` + evidence_log | Overrides input for Agent 5; risks for 2.5 |

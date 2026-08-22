@@ -9,7 +9,9 @@
 
 ## 1. SECTOR DETECTION RULES
 
-### 1.1 Sector Classification Matrix
+Orchestrator sets `primary_sector` via `RESEARCH_AGENTS.md` §5. This section is **signals/sub-type after identity**, not an auto-classifier.
+
+### 1.1 Sector sub-type matrix (after identity)
 
 | Segment | Primary Revenue Source | Regulatory Body | Key Differentiator |
 |---------|----------------------|-----------------|-------------------|
@@ -20,7 +22,7 @@
 | **Pipeline / Midstream** | Transportation fees | FERC | Fee-based vs. commodity-exposed; take-or-pay contracts |
 | **Infrastructure (Toll Roads, Airports, Ports)** | User fees / availability payments | Concession grantor | Concession-based; remaining life critical |
 
-### 1.2 Detection Algorithm (for automated classification)
+### 1.2 Sub-type signals (after §5 identity; not an auto-classifier)
 
 **Step 1: Revenue Composition Check**
 ```

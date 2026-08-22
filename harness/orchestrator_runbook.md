@@ -25,9 +25,9 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
    - Confirm `registry/session_isolation.json` exists (`mode=isolated` default).  
    - Confirm `meta/run_manifest.json` has non-null `orchestrator_model` **before Phase 0**. Never invent it later.  
    - Set working `S` = that path only. **Skip** browsing other session keys.
-2. Write `registry/sector_config.json` — `module_file` is a **string** (never JSON `null`; use `""` only if documented). Use as-of **date** in JSON (`YYYY-MM-DD`), not necessarily the full session_key.
+2. Classify sector from `harness/RESEARCH_AGENTS.md` **§5 first** (no scoring algorithm; modules do not classify). If you consult a `sector_*.md` detection list, it is diagnostic only. If `cyclical` is in play: name the sub-type or cousin, or show majority revenue **realized at** spot/index/posted producer prices; otherwise do not pick cyclical. Branded CPG / Consumer Defensive food with commodity-input or price-gap beta → `standard` (optional `is_also_growth`); seed protein/feed/HPAI in the brief, do not switch the lead module. Write `registry/sector_config.json` — `module_file` is a **string** (never JSON `null`; use `""` for standard). Use as-of **date** in JSON (`YYYY-MM-DD`), not necessarily the full session_key.
 3. Write `registry/market_context.json` (intensity gate is load-bearing).
-4. Write `registry/research_brief.json` (new sessions) before Phase 0.
+4. Write `registry/research_brief.json` (new sessions) before Phase 0. Material commodity-input / protein-supply beta on a standard name must appear in `must_cover_risks`.
 5. **Do not** open prior session folders (valuation, reports, handoffs, snapshots) for any phase inputs. Intra-session sharing only under current `S`.
 
 ## Phase graph + subagents (mandatory)

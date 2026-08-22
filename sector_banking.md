@@ -3,7 +3,7 @@
 > **Author**: Senior Equity Research Analyst, Banking & Financial Services  
 > **Last Updated**: 2025  
 > **Applies To**: Commercial Banks, Investment Banks, Asset Managers, Fintech Lenders, Diversified Financials  
-> **Trigger**: Automatic activation when `sector = Financial Services` AND banking flags detected
+> **Trigger**: Use this module when `RESEARCH_AGENTS.md` §5 already set `primary_sector=banking` (signals below are not an auto-classifier)
 
 ---
 
@@ -27,9 +27,11 @@ The standard adaptive framework (FCF-based DCF, ROIC, P/E, operating leverage re
 
 ## 1. Sector Detection Rules
 
-### 1.1 Automatic Classification Hierarchy
+Orchestrator sets `primary_sector` via `RESEARCH_AGENTS.md` §5. This section is **signals/sub-type after identity**, not an auto-classifier.
 
-Banks are detected using a **multi-layer classification system**:
+### 1.1 Diagnostic signal hierarchy
+
+Banking **signals** (do **not** set `primary_sector` from this table):
 
 | Layer | Method | Criteria | Confidence |
 |-------|--------|----------|------------|
@@ -41,36 +43,36 @@ Banks are detected using a **multi-layer classification system**:
 ### 1.2 Detailed Detection Rules
 
 ```python
-# Pseudocode for bank detection
-def is_bank(ticker):
+# Pseudocode for banking SIGNALS after §5 identity — not a classifier (do not set primary_sector)
+def banking_signals(ticker):
     # Layer 1: Industry codes
     gics = get_gics_sector(ticker)
     sic = get_sic_code(ticker)
     if gics.startswith("40") or sic.startswith("60") or sic.startswith("61"):
-        return True, "industry_code"
+        return "signal", "industry_code"
 
     # Layer 2: Balance sheet structure
     bs = get_balance_sheet(ticker)
     if (bs["loans"] / bs["total_assets"] > 0.30 and
         bs["deposits"] / bs["total_liabilities"] > 0.20):
-        return True, "balance_sheet"
+        return "signal", "balance_sheet"
 
     # Layer 3: Revenue composition
     inc = get_income_statement(ticker)
     if inc["net_interest_income"] / inc["total_revenue"] > 0.25:
-        return True, "revenue_mix"
+        return "signal", "revenue_mix"
 
     # Layer 4: Regulatory filings
     filings = get_filings(ticker)
     if has_call_report(filings) or mentions_basell(filings):
-        return True, "regulatory"
+        return "signal", "regulatory"
 
-    return False, "not_bank"
+    return "no_signal", "not_bank"
 ```
 
 ### 1.3 Sub-Sector Classification
 
-Once detected as a bank, classify into sub-sector for model selection:
+After §5 sets `primary_sector=banking`, classify into sub-sector for model selection:
 
 | Sub-Sector | Revenue Mix | Key Metrics | Preferred Model |
 |------------|-------------|-------------|-----------------|

@@ -93,13 +93,24 @@ Fallback rule: if a primary source is unavailable or errors, state the failure i
 
 ## 5. Sector classification (agent judgment)
 
-Run **once**, by the main agent, before anything else. There is **no scoring algorithm** — classify by reasoning over objective inputs:
+Run **once**, by the main agent, before anything else. There is **no scoring algorithm** — classify by reasoning over objective inputs. **Sector modules do not classify.** Any “Automatic Detection Logic,” scoring matrix, or “classified if ANY of” list in `sector_*.md` is a diagnostic hint **after** this judgment. If a module hint contradicts this section, **this section wins.**
 
 1. Pull objective inputs: yfinance sector/industry, business description, revenue mix (latest 10-K), and which sector KPIs exist (NIM/CET1? FFO/AFFO? combined ratio? ARR/NRR? rate base? commodity exposure?).
-2. Judge the primary sector: `banking | insurance | growth | reit | utility | cyclical | standard`.
-3. Write `registry/sector_config.json` per `templates/sector_config.schema.json`: `primary_sector`, self-assessed `confidence`, `signals` (the evidence), `rationale` (why this sector, why this confidence), `is_also_growth`, `module_file`, plus `runner_up` (second-best hypothesis + why rejected) and `disconfirming_signals` (evidence against the choice that was weighed). For genuinely borderline cases, run two independent classification passes and reconcile.
-4. Confidence < 0.70 → use `standard`, set `requires_manual_review: true`, and say so prominently in the README.
-5. If `is_also_growth`: primary sector's model still leads; add growth-module SBC/dilution analysis at critical intensity; extend the explicit forecast to 7–10 years.
+2. Judge the primary sector: `banking | insurance | growth | reit | utility | cyclical | standard`. Meanings (heuristics, not a scorecard):
+   - **banking** — loans/deposits/NII/regulatory capital are the identity.
+   - **insurance** — underwriting, float, combined ratio / embedded value.
+   - **reit** — FFO/NAV, property or mortgage pass-through.
+   - **utility** — regulated rate base / allowed earnings.
+   - **growth** — lead model is path-to-profit / SBC-dilution because that **is** the identity (typically negative-FCF tech/biotech). Profitable branded consumer names are usually `standard` with optional `is_also_growth`.
+   - **cyclical** — **the cycle is the investment thesis** (mean-reverting earnings; peak multiples can be expensive). Judgment inputs (not a formula): a named cyclical sub-type or cousin (metals, E&P, steel, chemicals, fertilizers, shipping, semis, machinery, autos, airlines, unbranded posted-price protein/ag, cruise≈airlines/shipping, tires≈auto parts) **or** a majority of revenue **realized at** commodity spot / index / posted producer prices (`revenue ≈ volume × commodity price`).
+   - **standard** — residual ordinary DCF. **Includes branded CPG / consumer staples / farm-products brands** whose household demand is not a GDP cycle.
+3. **Demand staple vs supply shock stay split.** Households still buy eggs, coffee, chocolate, packaged meat in recessions → primary **standard** on the merits (not via the confidence fallback). HPAI, flock rebuild, oversupply, farm-gate feed, competitor price-gaps → Phase 2.5 / `research_brief.must_cover_risks`. That overlay does **not** switch the lead module to `sector_cyclical.md`.
+4. Illustrative (no ticker exceptions): branded retail carton / list-promo eggs → `standard` + shock overlay; unbranded posted-price shell eggs → `cyclical`; cruise capacity / berth-days ≈ airlines/shipping → `cyclical` (a defensive GICS label is not “never cyclical”).
+5. Classify from these meanings **first**. If you consult a module detection list, treat it as hints. If considering `cyclical` and no sub-type **or cousin** fits and revenue is not majority spot-realized, that is a strong veto. Then set `module_file` (`""` is valid for `standard`).
+6. Write `registry/sector_config.json` per `templates/sector_config.schema.json`: `primary_sector`, self-assessed `confidence`, `signals` (the evidence), `rationale` (why this sector, why this confidence), `is_also_growth`, `module_file`, plus `runner_up` (second-best hypothesis + why rejected) and `disconfirming_signals` (evidence against the choice that was weighed). For genuinely borderline cases, run two independent classification passes and reconcile.
+7. Confidence < 0.70 → use `standard`, set `requires_manual_review: true`, and say so prominently in the README. That fallback is for **uncertain** names, not for branded staples (those are `standard` on the merits).
+8. If `is_also_growth`: primary sector's model still leads; add growth-module SBC/dilution analysis at critical intensity; extend the explicit forecast to 7–10 years.
+9. Material commodity-input or protein-supply beta on a `standard` name **must** appear in `research_brief.must_cover_risks` / `must_answer_questions` so Agent 5 does not freeze a peak-year margin as mid-cycle.
 
 ## 5b. Market / region classification (agent judgment)
 
@@ -196,7 +207,7 @@ The audit agent (template in `harness/agent_prompts.md`) audits the orchestrator
 
 ## 9. Sector modules (advisory reference)
 
-Read the module for the classified sector before valuation: `sector_banking.md`, `sector_insurance.md`, `sector_growth.md`, `sector_reit.md`, `sector_utility.md`, `sector_cyclical.md`. They contain sound methodology (excess-return for banks, float-cost framing for insurers, AFFO/NAV for REITs, through-cycle normalization for cyclicals, SBC discipline for growth). Use them to *choose and shape* the model. Their numbers are reference ranges, not mandates — justify what you pick (§6).
+Read the module for the classified sector **after** §5 identity, before valuation: `sector_banking.md`, `sector_insurance.md`, `sector_growth.md`, `sector_reit.md`, `sector_utility.md`, `sector_cyclical.md`. Empty `module_file` is valid for `standard` (ordinary CPG/industrial DCF). They contain sound methodology (excess-return for banks, float-cost framing for insurers, AFFO/NAV for REITs, through-cycle normalization for cyclicals, SBC discipline for growth). Use them to *choose and shape* the model. Their numbers are reference ranges, not mandates — justify what you pick (§6). Module “detection” / “automatic classification” / scoring-matrix sections are **diagnostic only** — they do not set `primary_sector`. If they contradict §5, §5 wins.
 
 ## 9b. Region modules (advisory reference)
 

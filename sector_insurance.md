@@ -23,7 +23,9 @@ Standard equity analysis frameworks fail for insurers because:
 
 ## 1. SECTOR DETECTION RULES
 
-### 1.1 Auto-Detection Logic
+Orchestrator sets `primary_sector` via `RESEARCH_AGENTS.md` §5. This section is **signals/sub-type after identity**, not an auto-classifier.
+
+### 1.1 Diagnostic signals (not a classifier)
 
 | Detection Signal | Weight | Threshold | Notes |
 |-----------------|--------|-----------|-------|
@@ -42,7 +44,7 @@ Standard equity analysis frameworks fail for insurers because:
 
 ### 1.2 Sub-Sector Classification
 
-Once detected as an insurer, classify into sub-sector using this decision tree:
+After §5 sets `primary_sector=insurance`, classify into sub-sector using this decision tree (do **not** set primary_sector here):
 
 ```
 INSURER DETECTED

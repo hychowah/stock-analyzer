@@ -10,6 +10,8 @@ Cyclical industries represent a unique analytical challenge: standard valuation 
 
 ## 1. SECTOR DETECTION RULES
 
+Orchestrator sets `primary_sector` via `RESEARCH_AGENTS.md` §5. This section is **signals/sub-type after identity**, not an auto-classifier. Do **not** set `primary_sector` from anything below.
+
 ### 1.1 Cyclical Sub-Types and Identification Criteria
 
 | Sub-Type | Cycle Length | Primary Drivers | Detection Rules |
@@ -24,22 +26,25 @@ Cyclical industries represent a unique analytical challenge: standard valuation 
 | **Construction Equipment** | 5-8 years | Infrastructure spend, mining capex, replacement cycle | GICS 201060 (Construction Machinery), order book as % of sales |
 | **Automotive (OEMs)** | 4-7 years | Consumer credit, interest rates, model cycle, incentives | GICS 251010 (Automobiles), SAAR (Seasonally Adjusted Annual Rate) as demand proxy |
 | **Airlines** | 5-8 years | GDP, jet fuel, labor costs, capacity discipline | GICS 203020 (Airlines), RASK (Revenue per Available Seat-Km), load factor |
+| **Unbranded protein / commodity ag** | 2-5 years (flock/herd + disease) | Posted/spot farm-gate prices, HPAI, flock rebuild, oversupply | Revenue ≈ volume × posted or spot producer price; wide annual OM/revenue swings. **Not** branded retail carton / list-promo / packaged-food brands (those stay `standard` under §5; shocks go to Phase 2.5). Cousin: cruise ≈ airlines/shipping; tires ≈ auto parts. |
 
-### 1.2 Automatic Detection Logic
+### 1.2 Diagnostic hints (not a classifier)
 
-A stock is classified as **cyclical** if ANY of the following are true:
+These bullets are hints for the §5 judge **after** identity. **No test is sufficient alone. Do not set `primary_sector` from this list.** Do not treat the list as ANY-of or as `cycle-as-thesis AND (sub-type OR spot-majority)` assignment.
 
 ```
-1. Revenue volatility > 2x S&P 500 median over 10 years
-2. EBIT margin range (max - min) > 15 percentage points over 10 years
-3. Commodity price exposure: >30% of revenue linked to commodity spot/contract prices
-4. GICS code match in cyclical sectors list
-5. Capacity utilization mentioned in filings as key metric
-6. Order book / backlog reported as material metric
+1. Revenue volatility much larger than the broad market on a long annual series (hint, not a gate)
+2. Repeated annual EBIT/OM peaks and troughs on a long series (see §2.1 for TTC series quality — one shock quarter mixed with a peak year is not a cycle)
+3. Majority of revenue realized at commodity spot, index, or posted producer prices (revenue ≈ volume × commodity price). Exclude: branded retail list/promo ASP, commodity input/COGS exposure, competitor price-gap effects (those are stress seeds)
+4. GICS/sub-type match in the §1.1 table, or a named cousin (cruise≈airlines/shipping)
+5. Capacity utilization is a load-bearing management KPI (steel/chemicals mill analog — packing capacity or farm count is not)
+6. Order book / backlog reported as a material metric
 7. Book-to-bill ratio tracked by management
 ```
 
-### 1.3 Sub-Type Classification Flow
+If no §1.1 sub-type **or cousin** fits and revenue is not majority spot-realized, that is a strong veto of cyclical as primary — report it in `disconfirming_signals` and default off cyclical.
+
+### 1.3 Sub-type flow (after identity = cyclical)
 
 ```
 IF commodity_producer:
@@ -64,6 +69,8 @@ ELIF service_cyclical:
 ### 2.1 Through-the-Cycle (TTC) Earnings Approach
 
 **Concept:** Cyclical earnings oscillate around a mean. The TTC approach calculates the "mid-cycle" earnings power and applies a normalized multiple.
+
+**Series quality (methodology, not a sector detector):** Use **annual** EBIT or operating margin over a long window (preferably ≥8–10 years) with more than one peak and trough. Do not mix a single disease/oversupply quarter or TTM print with a peak fiscal year to manufacture a 15pp+ range. Scale-up from near-zero margins is a growth ramp, not a cycle. A short listing history fail-closes to “cannot claim a 10-year cycle from this series” — still value with judgment, do not infer cyclical identity from the gap.
 
 **Step 1: Calculate Mid-Cycle Earnings**
 

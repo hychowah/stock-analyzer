@@ -1,0 +1,25 @@
+{
+  "slug": "sector-staples-vs-cyclical",
+  "harness_version": "2.7.1",
+  "summary": "Sector identity is RESEARCH_AGENTS.md §5 judgment. Cyclical module §1.2 no longer ANY-of classifies; branded CPG/staples stay standard; protein/supply shock is Phase 2.5. Other sector §1 heads are diagnostic after identity. Agent 13 challenges lead-module vs identity.",
+  "verify_commands_run": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_sector_classification_law.py scripts/tests/test_router_agents.py -q"
+  ],
+  "verify": {
+    "eng_verify": "PASS (127 tests in default suite including test_sector_classification_law)",
+    "pytest_law": "PASS 9 in law file; 11 with test_router_agents"
+  },
+  "follow_ups": [
+    "Do not include archive/catalog/* in the 2.7.1 commit (live index rebuild; Mode B read-only).",
+    "Optional later Mode A re-run VITL under a new session_key (isolation: do not read the old folder for FV/thesis).",
+    "Growth-module scoring matrix body left as signals; a fuller rewrite is a separate W1 if orchestrators still score growth as primary from the matrix.",
+    "yfinance-market-mcp classify_sector is out of this allowlist."
+  ],
+  "do_not": [
+    "Did not rewrite archive/research/VITL/2026-08-22",
+    "Did not add a Python classifier or check_session scoring of primary_sector",
+    "Did not git commit"
+  ],
+  "intended_commit_subject": "Fix cyclical detection so branded staples stay standard (spec 2.7.1)"
+}

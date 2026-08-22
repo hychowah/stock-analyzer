@@ -1,0 +1,40 @@
+{
+  "goal": "Branded CPG/staples (including branded eggs) must not be classified cyclical because of commodity-input or price-gap beta; protein/supply shocks stay Phase 2.5. Identity is RESEARCH_AGENTS.md §5; sector modules are diagnostic after classification.",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite archive/research/VITL/2026-08-22",
+    "Do not add a Python sector classifier or check_session scoring of primary_sector",
+    "Do not add is_also_cyclical or a nested sector_classification.md",
+    "Do not rewrite growth scoring weights or banking excess-return math",
+    "Do not git commit until the user agrees in chat"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes including harness/VERSION 2.7.1 vs main",
+    "pytest test_sector_classification_law.py and test_router_agents.py pass",
+    "sector_cyclical.md has no 'classified as cyclical if ANY' mandate and does not assign primary_sector",
+    "RESEARCH_AGENTS.md §5 contains staple-vs-shock split and modules-do-not-classify; §9 says detection is diagnostic",
+    "Agent 13 Band 4 challenges lead-module vs identity (not schema-valid sector_fit)",
+    "No archive/research or archive/outcomes writes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "harness/",
+    "sector_cyclical.md",
+    "sector_growth.md",
+    "sector_banking.md",
+    "sector_insurance.md",
+    "sector_reit.md",
+    "sector_utility.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest scripts/tests/test_sector_classification_law.py scripts/tests/test_router_agents.py -q"
+  ]
+}

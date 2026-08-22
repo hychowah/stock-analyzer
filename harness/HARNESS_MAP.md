@@ -55,7 +55,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 
 **Dependency rule of thumb:** do not start **2** without 1b+1c evidence (and **1d** on harness ≥ 2.6.0); do not start **4** without valuation+risk_bridge+technical+tsr; do not claim **done** without audit PASS.
 
-**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`). When `street_estimates.json` exists (harness ≥ 2.7.0), Agent 5 independently builds FY+1 then logs `street_bind` / `street_hooks` as **calibration** — never copies consensus into base.
+**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`). When `street_estimates.json` exists (harness ≥ 2.7.0), Agent 5 independently builds FY+1 then logs `street_bind` / `street_hooks` as **calibration** — never copies consensus into base. On harness ≥ 2.8.0, Agent 5 writes `roic_identity` (same-script NOPAT/IC vs WACC; legal exits; cheap_claim) — Agent 12 stays parallel.
 
 ---
 

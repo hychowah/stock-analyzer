@@ -843,6 +843,10 @@ def entry_checks(
             results.extend(check_street_fetch(session))
             if vm.is_file():
                 results.extend(check_street_bind(session))
+        if vm.is_file():
+            from scripts.kd_research.roic_identity import check_roic_identity  # noqa: WPS433
+
+            results.extend(check_roic_identity(session))
     if phase_id == "2_5":
         # valuation must parse with fair_value-ish keys soft-check
         vm, err = load_json(session / "data" / "valuation_model.json")
@@ -1002,6 +1006,9 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
 
         out.extend(check_operating_path_hooks(session))
         out.extend(check_street_bind(session))
+        from scripts.kd_research.roic_identity import check_roic_identity  # noqa: WPS433
+
+        out.extend(check_roic_identity(session))
         return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)

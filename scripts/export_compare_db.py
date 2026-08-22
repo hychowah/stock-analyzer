@@ -29,6 +29,7 @@ from scripts.kd_research.compare_db import (  # noqa: E402
     upsert_run,
     utc_now,
 )
+from scripts.kd_research.roic_identity import thin_roic_metrics  # noqa: E402
 from scripts.kd_research.paths import (  # noqa: E402
     iter_research_sessions,
     rel_to_project,
@@ -57,6 +58,13 @@ def _payload_for_session(session: Path, *, refresh_snapshot: bool = True) -> dic
         "gaps": bundle.get("gaps") or [],
         "experiment_label": prov.get("experiment_label"),
     }
+    ident = bundle.get("roic_identity")
+    if isinstance(ident, dict):
+        extras["roic_identity"] = ident
+        if ident.get("cheap_claim"):
+            extras["roic_cheap_claim"] = ident.get("cheap_claim")
+        if ident.get("quality_bucket"):
+            extras["roic_quality_bucket"] = ident.get("quality_bucket")
 
     payload: dict[str, Any] = {
         "run_id": rid,
@@ -128,6 +136,8 @@ def export_session(
     row = row_from_export_payload(payload)
     upsert_run(conn, row)
     metrics = compute_run_metrics(row)
+    extras = payload.get("extras") or {}
+    metrics.update(thin_roic_metrics({"roic_identity": extras.get("roic_identity")}))
     replace_run_metrics(conn, row["run_id"], metrics)
     return {
         "run_id": row["run_id"],

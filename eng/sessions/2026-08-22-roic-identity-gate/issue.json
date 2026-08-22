@@ -1,0 +1,39 @@
+{
+  "goal": "Agent 5 same-script owner-earnings ROIC identity: dual-column residual-claim FCFF vs residual-income EV; legal exits when ROIC ≤ WACC; cheap_claim gated. Thin lookback into prediction_snapshot + run_metrics. Not a g=0 formula and not a 15% Buffett hurdle.",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite GT 2026-08-22 or any completed session",
+    "Do not silently overwrite Agent 5 terminal g",
+    "Do not paste a 15% owner-earnings hurdle",
+    "Do not add first-class runs / runs_index / catalog_api columns",
+    "Do not overload run_metrics.posture",
+    "Do not build_for_session(force=True) on archive/research or eng/fixtures",
+    "Do not serialize Agent 12 before Agent 5"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes (includes harness/VERSION 2.8.0 bump vs main)",
+    "pytest test_roic_identity, test_street_bind, test_gates_preflight, test_provenance pass",
+    "Missing harness_version and harness < 2.8.0 SKIPPED when object absent",
+    "New runtime (harness >= 2.8.0) requires roic_identity on valuation; applies:false needs a reason",
+    "franchise_mos forbidden when quality_bucket is below/approx WACC",
+    "Live 2.7 session check_session --full still PASS with roic_identity SKIPPED"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "templates/",
+    "harness/",
+    "sector_cyclical.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**",
+    "eng/fixtures/archive/research/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_roic_identity.py scripts/tests/test_street_bind.py scripts/tests/test_gates_preflight.py scripts/tests/test_provenance.py -q"
+  ]
+}

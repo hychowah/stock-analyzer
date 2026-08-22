@@ -48,6 +48,26 @@
     "audit_verdict": { "type": ["string", "null"] },
     "priced_for_perfection": { "type": ["boolean", "null", "object"] },
     "model_name": { "type": ["string", "null"] },
+    "roic_identity": {
+      "type": "object",
+      "description": "Optional thin projection of valuation_model.roic_identity (harness >= 2.8.0). Omit the key entirely on legacy sessions. Canonical numbers stay in data/valuation_model.json.",
+      "additionalProperties": true,
+      "properties": {
+        "applies": { "type": "boolean" },
+        "native_analog": { "type": ["string", "null"] },
+        "mid_cycle_roic": { "type": ["number", "null"] },
+        "ttc_roic": { "type": ["number", "null"] },
+        "wacc": { "type": ["number", "null"] },
+        "spread_mid_cycle": { "type": ["number", "null"] },
+        "quality_bucket": { "type": ["string", "null"] },
+        "cheap_claim": { "type": ["string", "null"] },
+        "gate_response": { "type": ["string", "null"] },
+        "g0_equity_fv": { "type": ["number", "null"] },
+        "column_a_ev": { "type": ["number", "null"] },
+        "column_b_ev": { "type": ["number", "null"] },
+        "invested_capital": { "type": ["number", "null"] }
+      }
+    },
     "tech_signal": { "type": ["string", "null"] },
     "tech_regime": { "type": ["string", "null"] },
     "tech_summary": { "type": "object" },

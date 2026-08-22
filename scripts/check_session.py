@@ -740,6 +740,28 @@ def check_operating_path(session: Path) -> None:
             record(status, check, detail)
 
 
+def check_roic_identity_session(session: Path) -> None:
+    """New-runtime owner-earnings ROIC identity; SKIPPED on legacy."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.roic_identity import (  # noqa: WPS433
+        check_roic_identity,
+        session_is_roic_runtime,
+    )
+
+    vm = session / "data" / "valuation_model.json"
+    if not session_is_roic_runtime(session) and not (
+        vm.is_file() and "roic_identity" in vm.read_text(encoding="utf-8", errors="replace")
+    ):
+        record("SKIPPED", "roic_identity", "legacy/slim (no roic_identity; harness_version < 2.8.0)")
+        return
+    if vm.is_file():
+        for status, check, detail in check_roic_identity(session):
+            record(status, check, detail)
+    elif session_is_roic_runtime(session):
+        record("SKIPPED", "roic_identity", "valuation_model.json missing")
+
+
 def check_street_bind_session(session: Path) -> None:
     """New-runtime Street fetch + Agent 5 calibration bind; SKIPPED on legacy."""
     if str(PROJECT_ROOT) not in sys.path:
@@ -1133,6 +1155,7 @@ def main() -> int:
         check_year_dives(session)
         check_operating_path(session)
         check_street_bind_session(session)
+        check_roic_identity_session(session)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

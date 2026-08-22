@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": false,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "gate",
+      "description": "Schema + §10d + short prompts + roic_identity.py checker + tests + VERSION 2.8.0",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_roic_identity.py scripts/tests/test_gates_preflight.py -q"
+    },
+    {
+      "id": "lookback",
+      "description": "Thin extract → snapshot omit-if-absent → run_metrics (no posture enum change)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_roic_identity.py -q -k lookback"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

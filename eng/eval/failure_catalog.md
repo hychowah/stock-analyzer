@@ -27,5 +27,6 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F19 | Missing phase0/phase25 swarm handoffs | Merge without decision-grade swarm lead note | W1 |
 | F20 | medium/high intensity all market_context_hooks noted_only | Hollow region treatment | W1 |
 | F21 | Branded CPG/eggs labeled cyclical | Module ANY-of Rule 3 (“linked to” commodity) overrode §5; audit rubber-stamped sector_fit | W1 |
+| F22 | MoS vs residual-claim DCF narrated as franchise cheap while mid-cycle ROIC ≤ WACC / EV≈IC | Agent 5 DCF and Agent 12 ROC screen never had to agree; Gordon `g` with capex≤D&A; `terminal_consistency` disclosure instead of identity | W1 |
 
 Add rows when audits or production incidents recur.

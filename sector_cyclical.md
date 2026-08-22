@@ -932,7 +932,7 @@ OVERALL QUALITY RANKING         | #1      | #2      | #3      |
 | Standard Component | Cyclical Replacement | Rationale |
 |---|---|---|
 | **DCF (steady-state)** | **FCF-DCF with explicit cycle phases** | Cyclicals do NOT have steady-state earnings. Model the cycle explicitly: boom/bust phases with reversion to long-run price. Terminal value must use mid-cycle FCF, not peak FCF. |
-| **ROIC (point-in-time)** | **Through-Cycle ROIC** | Point-in-time ROIC at peak can be 20%+; at trough, negative. Calculate ROIC using mid-cycle EBIT and average capital employed through the cycle. Quality threshold: TTC ROIC > WACC. |
+| **ROIC (point-in-time)** | **Through-Cycle ROIC** | Point-in-time ROIC at peak can be 20%+; at trough, negative. Calculate ROIC using mid-cycle EBIT and average capital employed through the cycle. Quality threshold: TTC ROIC > WACC. **Agent 5 must code NOPAT/IC vs WACC in `roic_identity` (harness ≥ 2.8.0); this table is not a substitute.** TTC below WACC is a quality finding, not an automatic `g=0` for manufacturing cyclicals (tires/auto parts still use mid-cycle FCFF; mines keep no-growth TV). |
 | **P/E multiple** | **TTC EV/EBITDA or NAV discount** | P/E is inverted for cyclicals: low P/E at peak = expensive (sell signal); high P/E at trough = cheap (buy signal). Replace with TTC EV/EBITDA or price-to-NAV. |
 | **FCF Yield (current)** | **FCF Yield on TTC basis** | Current FCF yield at peak can be 15%+ (unsustainable). Calculate FCF yield using mid-cycle FCF. Target: TTC FCF yield > 8% for miners. |
 | **Revenue growth focus** | **Volume growth + cost control** | Revenue growth in cyclicals often reflects price inflation, not value creation. Focus on volume growth (production increases), cost reductions, and reserve replacement. |

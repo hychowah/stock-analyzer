@@ -119,6 +119,11 @@ def build_for_session(session: Path, *, force: bool = False) -> dict[str, Any]:
         "audit_verdict": bundle.get("audit_verdict"),
         "priced_for_perfection": bundle.get("priced_for_perfection"),
         "model_name": bundle.get("model_name"),
+        **(
+            {"roic_identity": bundle["roic_identity"]}
+            if bundle.get("roic_identity") is not None
+            else {}
+        ),
         "tech_signal": bundle.get("tech_signal"),
         "tech_regime": bundle.get("tech_regime"),
         "tech_summary": bundle.get("tech_summary") or {},

@@ -55,6 +55,56 @@
       "type": "object",
       "description": "Optional but expected when model uses Gordon/exit/residual terminal value: method, wacc_minus_g (or ke_minus_g), reinvestment/payout identity, tv_share_of_ev_base, and response if TV share is high."
     },
+    "roic_identity": {
+      "type": "object",
+      "description": "REQUIRED on harness >= 2.8.0 when valuation exists (Python gate; not schema required[]). Same-script owner-earnings ROIC on the DCF's NOPAT/tax/lease/WACC stack, dual column residual-claim FCFF vs residual-income EV, g=0 counterfactual, legal exit when mid-cycle ROIC ≤ WACC, cheap_claim. applies:false with not_applicable_reason for banks/REITs/pre-profit growth. Example numbers are illustrative round fakes — do not copy.",
+      "additionalProperties": true,
+      "properties": {
+        "applies": { "type": "boolean" },
+        "not_applicable_reason": { "type": "string" },
+        "native_analog": { "type": ["string", "null"] },
+        "leases": {
+          "type": "string",
+          "enum": ["opex_and_out_of_ic", "capitalized_both"]
+        },
+        "wacc": { "type": "number" },
+        "spread_mid_cycle": { "type": "number" },
+        "quality_bucket": {
+          "type": "string",
+          "enum": ["above_wacc", "approx_wacc", "below_wacc"]
+        },
+        "gate": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "string",
+              "enum": [
+                "g_zero",
+                "cut_earnings_power",
+                "reinvestment_in_engine",
+                "reconciled_to_ic"
+              ]
+            },
+            "rationale": { "type": "string" }
+          }
+        },
+        "cheap_claim": {
+          "type": "object",
+          "properties": {
+            "class": {
+              "type": "string",
+              "enum": [
+                "franchise_mos",
+                "equity_near_book",
+                "residual_option",
+                "not_cheap"
+              ]
+            },
+            "rationale": { "type": "string" }
+          }
+        }
+      }
+    },
     "multi_method_reconciliation": {
       "type": "object",
       "description": "Required when a material SOTP/exit-multiple/peer cross-check is run: primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary. If |SOTP−DCF|/primary > 40%, set path_reopened + what_changed or gap_rationale why the gap is real — then reopen the independent volume path if it is a skill miss.",

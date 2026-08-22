@@ -266,3 +266,56 @@ Next-year Street revenue is a **reference** (usually reasonably accurate). The a
 ```
 
 **Why good:** Path from company evidence; Street used only after; no paste. If |delta| were >20%, GOOD is `response: reopen_path` and a rebuilt stack, not `base = street`.
+
+---
+
+## Pair 7 — ROIC identity vs Gordon disclosure (illustrative; not a live ticker)
+
+### Context (shared)
+
+Mid-cycle NOPAT 900 on IC 10,000; WACC 9.0%; terminal g 1.5% with capex ≤ D&A. Column A EV 10,000.
+
+### BAD — Agent 5
+
+```json
+{
+  "terminal_consistency": {
+    "g": 0.015,
+    "reinvestment_identity": "If g = ROC × reinvestment with ROC=WACC, reinvestment would be 16.7% of NOPAT; model holds capex ≤ D&A and still uses g=1.5% — disclosed, not hidden."
+  },
+  "fair_value": { "base": 12.0, "margin_of_safety_pct": 46.0 }
+}
+```
+
+**Why bad:** Disclosure is not the identity. Mid-cycle ROIC ≈ WACC, so EV ≈ IC is equity near book — not a 46-point franchise MoS. Agent 12 `roc_vs_cost_of_capital` fail unused.
+
+### GOOD — Agent 5
+
+```json
+{
+  "roic_identity": {
+    "applies": true,
+    "nopat": { "value": 900.0 },
+    "invested_capital": { "value": 10000.0 },
+    "wacc": 0.09,
+    "mid_cycle_roic": { "value": 0.09 },
+    "spread_mid_cycle": 0.0,
+    "quality_bucket": "approx_wacc",
+    "column_a": { "ev": 10000.0 },
+    "column_b": { "ev": 10000.0, "ic": 10000.0 },
+    "g0_counterfactual": { "equity_fv": 7.0 },
+    "gate": { "response": "reconciled_to_ic" },
+    "cheap_claim": { "class": "equity_near_book" }
+  }
+}
+```
+
+**Why good:** Same-script NOPAT/IC; dual column; g=0 printed; legal exit; cheap_claim is book, not franchise. Alternative GOOD: `gate.response=g_zero` with terminal g = 0 and decision FV on that path.
+
+### BAD — Agent 13 `4-roic`
+
+Passing a session that capitalizes mid-cycle SOI as a franchise while `quality_bucket` is `approx_wacc` / `below_wacc` and reports lead with MoS as “why cheap.” Schema-valid is not PASS.
+
+### GOOD — Agent 13 `4-roic`
+
+Confirm NOPAT matches the DCF tax/lease stack; legal exit paperwork holds; README/value lens restates cheap_claim class. Banks with `applies:false` + `roe_vs_ke` analog are not a miss.

@@ -500,6 +500,8 @@ def extract_peers(session: Path, sector: dict[str, Any] | None) -> list[str]:
 
 def extract_session_bundle(session: Path) -> dict[str, Any]:
     """Full comparison payload derived only from session files."""
+    from scripts.kd_research.roic_identity import thin_roic_from_valuation  # noqa: WPS433
+
     session = session.resolve()
     # session_key is folder name; ticker is parent
     session_key = session.name
@@ -636,6 +638,7 @@ def extract_session_bundle(session: Path) -> dict[str, Any]:
         or ("degraded" if gaps else "ok"),
         "audit_verdict": audit_verdict,
         "priced_for_perfection": priced,
+        "roic_identity": thin_roic_from_valuation(valuation),
         "model_name": model_name,
         "tech_signal": tech.get("tech_signal"),
         "tech_regime": tech.get("tech_regime"),

@@ -1,0 +1,33 @@
+{
+  "goal": "Street/guide calibration for Agent 5: independent FY+1 forecast from company evidence; next-year consensus is a reference bar, not a number to paste",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent a new official AVGO FV",
+    "Do not auto-set valuation base = Street mean",
+    "Do not treat analyst price targets as company guidance"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes (includes harness/VERSION 2.7.0 bump vs main)",
+    "pytest test_street_bind, test_gates_preflight, test_agent4_isolation_check, test_operating_path_1d, test_fdd_hooks_check, test_phase_graph, test_handoff_structure, test_provenance pass",
+    "Legacy sessions without street_estimates.json SKIPPED; new runtime (harness >= 2.7.0) requires fetch or explicit failure",
+    "|delta_pct|>20% must-respond without failing for disagreement; path-copy street_hooks FAIL",
+    "Agent 4 isolation includes street_estimates",
+    "Live AVGO 2026-08-21 check_session --full still PASS (street SKIPPED)"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "templates/",
+    "harness/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_street_bind.py scripts/tests/test_gates_preflight.py scripts/tests/test_agent4_isolation_check.py scripts/tests/test_operating_path_1d.py scripts/tests/test_fdd_hooks_check.py scripts/tests/test_phase_graph.py scripts/tests/test_handoff_structure.py scripts/tests/test_provenance.py -q"
+  ]
+}

@@ -201,4 +201,68 @@ Scorecard mixed; binary pipeline AdCom risk elevated.
 }
 ```
 
-**Why good:** Explicit old→new haircut; first path value matches the modeled level.
+**Why good:** Explicit old→new haircut; first path value matches the modeled level. This pair is **congruence** (prose matches the number). It is **not** permission to exile a printed **revenue** guide from **base** without putting the haircut in bear/range — see Pair 6.
+
+---
+
+## Pair 6 — Independent FY+1 vs Street calibration (do not copy consensus)
+
+Next-year Street revenue is a **reference** (usually reasonably accurate). The agent must **predict** it from company evidence, not paste it.
+
+### BAD — copy Street
+
+```json
+{
+  "assumptions": {
+    "fy_plus_1_revenue": {
+      "value": 173.6,
+      "rationale": "Yahoo consensus FY+1 revenue.",
+      "basis": "registry/street_estimates.json"
+    }
+  }
+}
+```
+
+**Why bad:** Consensus is not a model. Skill is building the stack (guide + segments + run-rate) so you *land near* Street.
+
+### BAD — silent haircut of company guide into base
+
+```json
+{
+  "street_bind": {
+    "guide": 100,
+    "street": 174,
+    "base": 123.5,
+    "delta_pct": -0.29,
+    "independent_construction": { "rationale": "Transcripts degraded; use $72B AI in base." }
+  }
+}
+```
+
+**Why bad:** Printed company AI/revenue outlook was dropped from **base** because a call transcript was HTML. That is a skill miss. Haircut belongs in **bear**, or the independent stack is rebuilt.
+
+### GOOD — independent stack, then calibrate
+
+```json
+{
+  "street_bind": {
+    "guide": 154.0,
+    "street": 173.6,
+    "base": 158.0,
+    "delta_pct": -0.09,
+    "independent_construction": {
+      "rationale": "FY+1 base = AI company floor 100 + software run-rate 36 + non-AI 18 from 8-K segments and Q3 sequential; not Street mean."
+    },
+    "response": "keep_independent_vs_street"
+  },
+  "street_hooks": [
+    {
+      "from": "street_estimates.years[+1y].revenue",
+      "action": "used_as:calibration_check",
+      "reason": "Independent stack 158 vs Street 173.6 (delta -9%) — inside 20%; no path copy."
+    }
+  ]
+}
+```
+
+**Why good:** Path from company evidence; Street used only after; no paste. If |delta| were >20%, GOOD is `response: reopen_path` and a rebuilt stack, not `base = street`.

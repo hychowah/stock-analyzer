@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "street_estimates.schema.json",
+  "title": "Street consensus estimates (calibration reference)",
+  "description": "Written by Agent 2a in Phase 1. Forward vendor consensus (FY+1 / FY+2 revenue and EPS). This is a calibration reference for Agent 5, NOT company guidance and NOT an input to copy into the revenue path. Agent 2d latest_quarter.guidance stays company-only. Analyst price targets belong in news_sentiment.positioning, not here.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "session_date", "source", "fiscal_convention", "years"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "as_of": { "type": ["string", "null"] },
+    "source": {
+      "type": "string",
+      "description": "Vendor/tool, e.g. yfinance.revenue_estimate | sp_data estimates"
+    },
+    "fiscal_convention": {
+      "type": "string",
+      "description": "company_fy | calendar | unclear — label how the vendor years map to company FY"
+    },
+    "years": {
+      "type": "array",
+      "minItems": 0,
+      "description": "FY rows. Empty only when unavailable=true; otherwise ≥1 (schema if/then + check_street_fetch).",
+      "items": {
+        "type": "object",
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string", "description": "e.g. FY+1, FY2027, 0y, +1y" },
+          "fiscal_year": { "type": ["integer", "null"] },
+          "revenue": { "type": ["number", "null"] },
+          "revenue_low": { "type": ["number", "null"] },
+          "revenue_high": { "type": ["number", "null"] },
+          "n_revenue": { "type": ["integer", "null"] },
+          "eps": { "type": ["number", "null"] },
+          "eps_low": { "type": ["number", "null"] },
+          "eps_high": { "type": ["number", "null"] },
+          "n_eps": { "type": ["integer", "null"] },
+          "eps_basis": { "type": "string", "description": "non_gaap | gaap | unknown" }
+        }
+      }
+    },
+    "notes": { "type": "string" },
+    "unavailable": {
+      "type": "boolean",
+      "description": "True when fetch failed; years may be empty. Agent 5 widens range; does not invent consensus."
+    }
+  },
+  "if": {
+    "properties": { "unavailable": { "const": true } },
+    "required": ["unavailable"]
+  },
+  "then": {},
+  "else": {
+    "properties": {
+      "years": { "minItems": 1 }
+    }
+  }
+}

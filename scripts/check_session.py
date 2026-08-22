@@ -740,6 +740,35 @@ def check_operating_path(session: Path) -> None:
             record(status, check, detail)
 
 
+def check_street_bind_session(session: Path) -> None:
+    """New-runtime Street fetch + Agent 5 calibration bind; SKIPPED on legacy."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.street_bind import (  # noqa: WPS433
+        check_street_bind,
+        check_street_fetch,
+        session_enforces_street,
+        street_path,
+    )
+
+    if not session_enforces_street(session) and not street_path(session).is_file():
+        record("SKIPPED", "street_bind", "legacy/slim (no street_estimates.json; harness_version < 2.7.0)")
+        return
+    if street_path(session).is_file():
+        check_file(
+            session,
+            "registry/street_estimates.json",
+            "street_estimates",
+            ["ticker", "session_date", "source", "fiscal_convention", "years"],
+        )
+    for status, check, detail in check_street_fetch(session):
+        record(status, check, detail)
+    vm = session / "data" / "valuation_model.json"
+    if vm.is_file():
+        for status, check, detail in check_street_bind(session):
+            record(status, check, detail)
+
+
 def check_year_dives(session: Path) -> None:
     """New-runtime year-reader files + excerpt-in-source; SKIPPED on legacy/slim."""
     if str(PROJECT_ROOT) not in sys.path:
@@ -1103,6 +1132,7 @@ def main() -> int:
         check_filing_deep_dive(session)
         check_year_dives(session)
         check_operating_path(session)
+        check_street_bind_session(session)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

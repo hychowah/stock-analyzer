@@ -466,6 +466,8 @@ AGENT4_FORBIDDEN_TOKENS = (
     "revenue_growth.json",
     "industry_trend.json",
     "operating_leverage.json",
+    "street_estimates",
+    "street_bind",
 )
 
 # Primary artifacts for phase_status complete / lag checks (agent_id -> rel paths).
@@ -822,14 +824,25 @@ def entry_checks(
             session_enforces_1d,
         )
 
+        vm = session / "data" / "valuation_model.json"
         if session_enforces_1d(session):
             status, detail = check_path(session, BRIEF_REL)
             results.append((status, BRIEF_REL, detail))
             from scripts.kd_research.operating_path import check_operating_path_hooks
 
-            vm = session / "data" / "valuation_model.json"
             if vm.is_file():
                 results.extend(check_operating_path_hooks(session))
+        from scripts.kd_research.street_bind import (  # noqa: WPS433
+            check_street_bind,
+            check_street_fetch,
+            session_enforces_street,
+            street_path,
+        )
+
+        if session_enforces_street(session) or street_path(session).is_file():
+            results.extend(check_street_fetch(session))
+            if vm.is_file():
+                results.extend(check_street_bind(session))
     if phase_id == "2_5":
         # valuation must parse with fair_value-ish keys soft-check
         vm, err = load_json(session / "data" / "valuation_model.json")
@@ -964,6 +977,9 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
         ):
             status, detail = check_path(session, rel)
             out.append((status, rel, detail))
+        from scripts.kd_research.street_bind import check_street_fetch  # noqa: WPS433
+
+        out.extend(check_street_fetch(session))
         return out
     if phase_id == "1c":
         return check_1c_year_dive_complete(session)
@@ -982,8 +998,10 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
             out.append((status, rel, detail))
         out.extend(check_filing_deep_dive_hooks(session))
         from scripts.kd_research.operating_path import check_operating_path_hooks  # noqa: WPS433
+        from scripts.kd_research.street_bind import check_street_bind  # noqa: WPS433
 
         out.extend(check_operating_path_hooks(session))
+        out.extend(check_street_bind(session))
         return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)

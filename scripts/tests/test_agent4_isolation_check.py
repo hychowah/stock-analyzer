@@ -51,6 +51,15 @@ class Agent4IsolationTests(unittest.TestCase):
         out = check_agent4_isolation(session, full=False)
         self.assertEqual(out[0][0], "WARN")
 
+    def test_street_estimates_path_fails_full(self):
+        session = self._session(
+            {"ticker": "TEST"},
+            "I peeked at registry/street_estimates.json for FY+1 revenue.\n",
+        )
+        out = check_agent4_isolation(session, full=True)
+        self.assertEqual(out[0][0], "FAIL")
+        self.assertIn("street_estimates", out[0][2])
+
     def test_skipped_when_no_files(self):
         session = self._session(None, None)
         out = check_agent4_isolation(session, full=True)

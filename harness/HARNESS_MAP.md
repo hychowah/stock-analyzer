@@ -42,7 +42,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 |-------|--------|-------------------------|------------------|
 | **orch** | main | `sector_config.json`, `market_context.json`, `research_brief.json` (new sessions) | Scope, sector model family, intensity, investment questions |
 | **0** | background swarm | `background.json`, `raw/phase0_*.json`, handoff | Valuation/risk themes; `risk_candidate` list; brief coverage gaps |
-| **1_parallel** | 2a, 2b, 2c | financials CSV, `sec_filings` + `raw_sec/`, `news_sentiment`, fetch log, handoffs | Actuals, primary text, catalysts |
+| **1_parallel** | 2a, 2b, 2c | financials CSV, `street_estimates.json` (new runtime ≥ 2.7.0), `sec_filings` + `raw_sec/`, `news_sentiment`, fetch log, handoffs | Actuals, primary text, catalysts |
 | **1b** | 2d | `latest_quarter.json` + evidence_log | Overrides input for Agent 5; risks for 2.5 |
 | **1c** | year-readers + 2e merger | `raw/fdd_year_*.json` (new runtime) + excerpt check + `filing_deep_dive.json` (+ transcripts if any) | Footnotes, strategy_arc, scorecard for valuation hooks |
 | **1d** | 1d_rev ∥ 1d_ind ∥ 1d_ol then 1d_merge | `raw/oppath_*.json` + `operating_path_brief.json` (new runtime ≥ 2.6.0) | Growth/industry/leverage facts + conflict map for Agent 5 |
@@ -55,7 +55,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 
 **Dependency rule of thumb:** do not start **2** without 1b+1c evidence (and **1d** on harness ≥ 2.6.0); do not start **4** without valuation+risk_bridge+technical+tsr; do not claim **done** without audit PASS.
 
-**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`).
+**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`). When `street_estimates.json` exists (harness ≥ 2.7.0), Agent 5 independently builds FY+1 then logs `street_bind` / `street_hooks` as **calibration** — never copies consensus into base.
 
 ---
 
@@ -68,6 +68,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 | `sp_financials.csv` or `sec_filings` / raw_sec | 1b / 1c / 2 | Agents 2a / 2b |
 | `latest_quarter` or `filing_deep_dive` | Phase 2 valuation | 2d / 1c (year-readers + 2e) |
 | `operating_path_brief` (new runtime) | Agent 5 | 1d workers + 1d_merge |
+| `street_estimates.json` (new runtime ≥ 2.7.0) | Agent 5 bind | Agent 2a fetch (or explicit fetch-fail + widen range) |
 | `valuation_model.json` | 2.5, 3, 4 | Agent 5 |
 | `risk_bridge` or technical / tsr | Phase 4 reports | 2.5 / 4 / 12 |
 | Three reports | Phase 5 | Agents 7 / 8 / 11 |

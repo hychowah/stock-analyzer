@@ -1,0 +1,9 @@
+{
+  "slug": "street-estimate-bind",
+  "session_key": "2026-08-22-street-estimate-bind",
+  "status": "complete",
+  "created_at": "2026-08-22T02:51:37Z",
+  "updated_at": "2026-08-22T04:05:14Z",
+  "work_type": "W1",
+  "resume_hint": "Ready to commit harness 2.7.0 Street-bind (staged). Leave archive/catalog/* unstaged — live index rebuild, not this W1. No git commit until user agrees."
+}

@@ -94,9 +94,10 @@ Primary source: kimi-datasource plugin — call get_data_source_desc("sp_data") 
 Write:
 - S/data/sp_financials.csv — long format: ticker,period_type(Annual|Quarterly),fiscal_year,fiscal_quarter,item,value,unit,currency,source
 - S/data/peer_comparison.csv — peers' key multiples and growth rates, with a "source" column
+- S/registry/street_estimates.json — vendor FY+1 and FY+2 **consensus revenue and EPS** (yfinance revenue_estimate/earnings_estimate and/or sp_data estimates). Label company_fy vs calendar. This is a **calibration reference for Agent 5**, not company guidance and not a path to copy. Schema: ROOT/templates/street_estimates.schema.json. If the fetch fails, set unavailable=true and log the failure — do not invent consensus.
 - S/registry/data_fetch_log.json — {"ticker", "as_of", "fetched": [...], "failed": [...], "substitutions": [...], "downstream_instructions": [...]} — explicitly tell downstream agents which gaps to fill from filings
 
-Numbers must come from the sources above — do not estimate. State units and currency. NOTE: data-provider "total revenue" for financial firms may be netted differently from filing-basis revenue — record which definition you stored.
+Numbers must come from the sources above — do not **invent**. **Do fetch** vendor consensus and label it source=street. State units and currency. NOTE: data-provider "total revenue" for financial firms may be netted differently from filing-basis revenue — record which definition you stored.
 ```
 
 ### Agent 2b — SEC filings (`coder`)
@@ -130,7 +131,7 @@ Log gaps (missing years, failed downloads) in S/registry/data_fetch_log.json so 
 ```text
 Build the news & sentiment picture for TICKER as of DATE.
 
-Cover: (1) 8-15 material news items from the last ~3 months (earnings, guidance changes, regulator actions, management changes, M&A); (2) positioning: analyst consensus and dispersion, short interest, insider transactions (search for these; if a data point is unavailable, say so explicitly rather than omitting the key); (3) catalyst calendar: next earnings date, known regulatory decisions, product/event dates.
+Cover: (1) 8-15 material news items from the last ~3 months (earnings, guidance changes, regulator actions, management changes, M&A); (2) positioning: analyst **price-target** consensus and dispersion, short interest, insider transactions (search for these; if a data point is unavailable, say so explicitly rather than omitting the key). FY+1/+2 **revenue/EPS tables** belong in S/registry/street_estimates.json (Agent 2a) — point at that file if present; do not duplicate the table here. Price targets are **not** company guidance; (3) catalyst calendar: next earnings date, known regulatory decisions, product/event dates.
 
 Source reliability (investment quality): prefer primary sources (company IR, SEC/exchange filings, reputable newswires) over SEO farms. Every item needs a source URL when possible. After building the list, run ROOT/scripts/kd_research/url_health.py (or equivalent HEAD/GET with short timeout) on http(s) sources and set per-item source_status to ok | dead | unknown | not_url. Dead links: replace with a working primary source or keep the item with source_status=dead and disclose in the handoff — do not invent headlines. Network flakes → unknown is OK with disclosure; do not block the whole agent on one timeout.
 
@@ -150,7 +151,7 @@ Role: evidence integrator only. Anti-role: do NOT change valuation assumptions (
 
 Inputs: S/registry/sec_filings.json, S/data/latest_supplement.* (the uncapped supplement from 2b — use it first), S/data/sp_financials.csv, S/registry/sector_config.json, S/registry/data_fetch_log.json (its downstream_instructions tell you which gaps to fill). Fetch the earnings-release/press summary via kimi-datasource sec_edgar or web search if not already covered.
 
-Extract per ROOT/templates/latest_quarter.schema.json: fiscal_period (must match the numbers!), currency, sources (URLs), revenue/earnings vs prior year and vs consensus if findable, guidance (company guidance only — analyst price targets are NOT guidance; verify raise/cut claims against the prior quarter's guidance, not media headlines), segments, sector KPIs per the sector module, margins, balance sheet, cash flow, capital returns, management_tone, risks. For any historical series you quote (e.g. capital ratios over 4 quarters), verify each point against the prior-quarter supplements, not memory — cite accession/URL per point.
+Extract per ROOT/templates/latest_quarter.schema.json: fiscal_period (must match the numbers!), currency, sources (URLs), revenue/earnings vs prior year and vs consensus if findable, guidance (company guidance only — analyst price targets and Street FY estimates are NOT guidance and must not be written into the guidance object; verify raise/cut claims against the prior quarter's guidance, not media headlines), segments, sector KPIs per the sector module, margins, balance sheet, cash flow, capital returns, management_tone, risks. For any historical series you quote (e.g. capital ratios over 4 quarters), verify each point against the prior-quarter supplements, not memory — cite accession/URL per point.
 
 Fiscal labels: use the **company’s own FY label** in fiscal_period and guidance keys; when S&P/Yahoo fiscal_year or calendar end differs, add a parenthetical or sibling field (calendar_end / sp_fiscal_year). Never rename company FY solely because the year ends in the next calendar year.
 
@@ -237,7 +238,7 @@ Sector-adaptive: remaps for banks (NII/fees/efficiency), REITs (NOI/FFO), insure
 ```text
 Gather COMPANY growth facts for TICKER (session S). Anti-role: do not emit an FY+1…FY+8 YoY path; do not value the stock.
 
-Read: S/data/sp_financials.csv, S/registry/latest_quarter.json, S/registry/sector_config.json, S/registry/filing_deep_dive.json (scorecard/strategy only).
+Read: S/data/sp_financials.csv, S/registry/latest_quarter.json, S/registry/sector_config.json, S/registry/filing_deep_dive.json (scorecard/strategy only). If S/registry/street_estimates.json exists, you may cite it as a **conflict/hint only** (next-year consensus vs run-rate). Do not fetch Street (no network). Do not bind Agent 5 to the Street mean.
 
 Write and run S/data/compute/revenue_growth.py (hermetic; historical CAGRs from the CSV). Persist S/registry/raw/oppath_rev.json per ROOT/templates/oppath_worker.schema.json (lens=revenue_growth): findings, sources, destock analog years, guide vs run-rate, mix/organic vs M&A. Handoff S/registry/handoffs/1d_rev.md.
 ```
@@ -267,7 +268,7 @@ Write and run S/data/compute/operating_leverage.py. Persist S/registry/raw/oppat
 ```text
 Merge 1d workers into S/registry/operating_path_brief.json (SINGLE writer). Anti-role: do not invent numbers; do not bind Agent 5 paths; do not average two growth or OM series.
 
-Read all S/registry/raw/oppath_*.json. Persist they already exist. Build per ROOT/templates/operating_path_brief.schema.json: sources.workers (3 paths), conflicts[] (flatten vs destock stays unresolved if both evidenced), scenario_hints (propose destock-fade in bear, duration in base/bull — Agent 5 decides), rejected_shapes[], recommended_for_agent5 (qualitative; any illustrative path labeled non-binding), verify_rechecks[] ≥3 against CSV/LQ/raw.
+Read all S/registry/raw/oppath_*.json. Persist they already exist. If S/registry/street_estimates.json exists, map Street vs company run-rate/guide into conflicts[] or hints — still **non-binding**; do **not** average Street with destock into a recommended path. Build per ROOT/templates/operating_path_brief.schema.json: sources.workers (3 paths), conflicts[] (flatten vs destock stays unresolved if both evidenced), scenario_hints (propose destock-fade in bear, duration/company-guide in base/bull — Agent 5 decides), rejected_shapes[], recommended_for_agent5 (qualitative; any illustrative path labeled non-binding), verify_rechecks[] ≥3 against CSV/LQ/raw.
 
 Handoff S/registry/handoffs/1d_merge.md.
 ```
@@ -281,7 +282,7 @@ Orchestrator: `preflight --phase 1d` before workers; `preflight --phase 1d --mod
 ### Agent 4 — technical analysis (`coder`)
 
 ```text
-Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news, no operating_path_brief / oppath_* / revenue_growth / industry_trend / operating_leverage). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
+Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news, no street_estimates / street_bind, no operating_path_brief / oppath_* / revenue_growth / industry_trend / operating_leverage). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
 
 Fetch ~2 years of daily prices for TICKER, the regional benchmark, and the sector index declared by the orchestrator (deviate only with rationale) via the yfinance MCP (get_price_history) or yahoo_finance datasource. Cache them to S/data/prices_*.csv. If S/data/price_snapshot.json exists (price-only freeze from orchestrator), use its `close` as the session “last close” / current-price anchor for levels that need a single print; still use full history for indicators.
 
@@ -302,7 +303,7 @@ Value TICKER as of DATE.
 Role: model designer + assumption judge. Anti-role: not a module-default paste machine; not a self-auditor.
 Judgment style: read ROOT/harness/exemplars/rationale_quality.md, hooks_quality.md, and valuation_decision_quality.md (GOOD patterns; do not copy illustrative numbers).
 
-Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED), S/registry/operating_path_brief.json (REQUIRED on harness ≥ 2.6.0), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from filings if needed. 1d workers are evidence only — YOU write growth/OM paths. Do not average unresolved flatten-vs-destock conflicts; encode them in bear/base/bull.
+Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json, S/registry/filing_deep_dive.json (REQUIRED), S/registry/operating_path_brief.json (REQUIRED on harness ≥ 2.6.0), S/registry/street_estimates.json (REQUIRED on harness ≥ 2.7.0 unless data_fetch_log records a Street fetch failure), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from filings if needed. 1d workers are evidence only — YOU write growth/OM paths. Do not average unresolved flatten-vs-destock conflicts; encode them in bear/base/bull. Do **not** average Street consensus with company guide into base.
 
 PREFLIGHT (stop → handoff status=blocked; do not invent):
 - registry/filing_deep_dive.json exists with footnotes + strategy_arc + management_scorecard.
@@ -323,14 +324,15 @@ Hard constraints:
 4b. CONSUME market context → market_context_hooks[]. intensity=low: single noted_only OK. medium/high: local CoC + ownership/accounting addressed (use or reject). Manual review / conf<0.70 → widen. Avoid double-counting country risk across WACC/CF/stress.
 4c. When research_brief exists: research_brief_hooks[] for open must_answer_questions (used_as:range|probs|scenario_seed | unanswered_widens_range | not_material).
 4d. When operating_path_brief.json exists: operating_path_hooks[] (used_as with old/new | rejected | noted_only). Material 1d recommendations may not be all noted_only. You may reject the brief; you may not skip consumption.
+4e. INDEPENDENT FY+1 THEN STREET CALIBRATION (harness ≥ 2.7.0 / when street_estimates.json exists). **First** build base FY+1 revenue from **company** evidence only: printed guide (EX-99.1 / 8-K CEO $), segment stack, run-rate/sequential, RPO. IR/8-K CEO dollars are first-class; degraded transcripts widen **range**, they do not exile a printed outlook from base. Haircuts go to bear/range/explicit overlay. **Then** write street_bind (guide × street × independent base, delta_pct = (base−street)/street, independent_construction.rationale showing the stack) and street_hooks[] with action used_as:calibration_check or rejected. **street_bind.street must equal street_estimates FY+1** when numeric (`response=street_unusable` to skip). **Forbidden:** used_as:revenue_path / used_as:street_mean / pasting consensus into the path. Next-year Street is usually a decent reference — if |delta_pct| > 0.20, treat it as a **skill miss**: response=reopen_path and rebuild from the missing segment/guide/quarter. keep_independent_vs_street needs a transmission mechanism, not “transcripts HTML”. The harness never sets base=street. **Required** conservatism_dials[] with four keys (volume_vs_guide, gaap_om_vs_guide, sbc_in_fcff, wacc_vs_buildup); omit is FAIL. Do not silently stack ≥3 of those in base without stacking_justification. If SOTP and DCF both run, write multi_method_reconciliation (omit is FAIL); if |Δ|/primary > 40%, path_reopened + what_changed or gap_rationale — reopen the independent volume path if that gap is a skill miss.
 5. Write S/data/compute/valuation.py (session-relative), hermetic from session files, run it; JSON matches script output. Emit dual MoS from the script when possible.
-6. SENSITIVITY: ~4×4 on two most judgment-dependent dials; base cell = base FV. fair_value.posture one sentence (conservative|neutral|aggressive lean).
+6. SENSITIVITY: ~4×4 on two most judgment-dependent dials; base cell = base FV. fair_value.posture one sentence (conservative|neutral|aggressive lean). If the stack leans conservative, say so — a conservative **stress** must not be labeled base.
 7. Reverse-engineer current price (implied dials, full grid not only extremes). Set reverse_engineering.priced_for_perfection per valuation_decision_quality (surface claim).
 8. MoS dual fields (step constraints). Scenario probs justified + probability_method. If (bull−bear)/base >100% or bear <0.4×base: set fair_value.decision_usefulness high|medium|low + what would shrink range — do not present PW as precise when low.
 
-OUTPUT CONTRACT — write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json including: model, fair_value (bear/base/bull/PW + dual MoS), assumptions, compute_script, sensitivity, filing_deep_dive_hooks, market_context_hooks (when MC present), operating_path_hooks (when 1d brief present), reverse_engineering; plus terminal_consistency / multi_method_reconciliation / research_brief_hooks / decision_usefulness / probability_method when triggered. Fair-value weights become risk_bridge scenario_probabilities (bare floats only; consistent).
+OUTPUT CONTRACT — write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json including: model, fair_value (bear/base/bull/PW + dual MoS), assumptions, compute_script, sensitivity, filing_deep_dive_hooks, market_context_hooks (when MC present), operating_path_hooks (when 1d brief present), street_bind + street_hooks (when street_estimates present), conservatism_dials (required on harness ≥ 2.7.0), reverse_engineering; plus terminal_consistency / multi_method_reconciliation (required when SOTP and DCF both run) / research_brief_hooks / decision_usefulness / probability_method when triggered. Fair-value weights become risk_bridge scenario_probabilities (bare floats only; consistent).
 
-SELF-CHECK before handoff: (1) abs(pct − 100×frac) < 0.05; (2) ≥3 rationales rehydrate values; (3) terminal_consistency if terminal method; (4) PFP names dials or explicit FALSE with dial evidence; (5) ERP/method competitor named if CoE used.
+SELF-CHECK before handoff: (1) abs(pct − 100×frac) < 0.05; (2) ≥3 rationales rehydrate values; (3) terminal_consistency if terminal method; (4) PFP names dials or explicit FALSE with dial evidence; (5) ERP/method competitor named if CoE used; (6) independent FY+1 construction does not cite Street as the path source; (7) |delta_pct| > 0.20 has response; (8) street_bind.street matches the Street file; (9) four conservatism_dials keys present.
 Write S/registry/handoffs/5_valuation.md.
 ```
 
@@ -465,12 +467,13 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality). When `operating_path_brief.json` exists: non-empty `operating_path_hooks` that are not all-`noted_only`. Machine check_session enforces non-empty filing_deep_dive_hooks when FDD exists (F8) and medium/high all-noted_only — still grade *substance* of use/reject.
 2c+. If filing_deep_dive was created during Phase 5 after valuation with empty material hooks → major FAIL (backfill-without-revalue is not PASS) unless re-value or explicit README waive that FV did not consume FDD. **You must not author missing FDD or rewrite valuation as auditor.**
 2e–2g. Decision-grade handoffs (four sections); research_brief coverage; news URL sample.
-2h. **Agent 4 isolation:** technical.json / handoffs/4* must not cite fundamental paths (valuation_model, filing_deep_dive, background, latest_quarter, market_context, sec_filings, sp_financials). Machine may FAIL under --full; confirm independence of TA lens.
+2h. **Agent 4 isolation:** technical.json / handoffs/4* must not cite fundamental paths (valuation_model, filing_deep_dive, background, latest_quarter, market_context, sec_filings, sp_financials, street_estimates). Machine may FAIL under --full; confirm independence of TA lens.
 2i. Swarm lead handoffs present (phase0_* / phase25_*); hollow “none” gaps when artifacts show problems = finding.
 
 **Band 3 — Judgment quality sample**
 3. Reproducibility: rerun ALL compute scripts from cache.
 4. Justification contract + scripted intermediates. Sample ≥3 path assumptions: FAIL major if rationale cites a different level than value without explicit haircut. "Industry standard" / "mid of band" alone not substantive for ERP. Grade PFP/MoS/probs style against valuation_decision_quality.md GOOD vs BAD.
+4-street. When street_estimates.json exists: independent_construction must be a company-evidence stack (guide/segments/run-rate/RPO), not “use consensus.” |delta_pct|>20% without reopen/transmission is major. Copying Street into base is major even if schema-valid. Numeric base==street with a calibration hook is machine-allowed (landing near consensus); paste-without-needle is still Band 3 FAIL. Degraded transcripts that exile a printed IR/8-K outlook from base are major. Omit conservatism_dials or omit multi_method_reconciliation when both SOTP and DCF ran is machine FAIL on ≥2.7.0.
 9. Reverse-engineering present; priced_for_perfection is a surface dial argument — FAIL if boolean is threshold-only in compute without surface rationale.
 10. growth/is_also_growth: SBC/dilution critical intensity.
 

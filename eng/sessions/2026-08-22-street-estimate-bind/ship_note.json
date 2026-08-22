@@ -1,0 +1,24 @@
+{
+  "slug": "street-estimate-bind",
+  "harness_version": "2.7.0",
+  "summary": "Agent 5 must independently build FY+1 revenue from company evidence, then calibrate against Street. Consensus is a reference bar (usually accurate for next year), not a number to paste. |delta|>20% requires reopen_path (skill miss) or a transmission mechanism. Copying Street into the path FAILs. Follow-up: bind.street identity, required conservatism_dials, SOTP+DCF reconciliation, Street schema when present.",
+  "verify_commands_run": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_street_bind.py scripts/tests/test_gates_preflight.py scripts/tests/test_agent4_isolation_check.py scripts/tests/test_operating_path_1d.py scripts/tests/test_fdd_hooks_check.py scripts/tests/test_phase_graph.py scripts/tests/test_handoff_structure.py scripts/tests/test_provenance.py -q",
+    "python scripts/check_session.py --ticker AVGO --date 2026-08-21 --full"
+  ],
+  "verify": {
+    "eng_verify": "PASS",
+    "pytest_street_bind_and_related": "PASS (81)",
+    "avgo_2026-08-21_full": "PASS 115 / SKIPPED street_bind legacy"
+  },
+  "follow_ups": [
+    "Do not include archive/catalog/* in the 2.7.0 commit (live index rebuild; Mode B read-only).",
+    "2c duplicate FY tables and 2d guidance≠Street remain prompt/audit-only."
+  ],
+  "do_not": [
+    "Did not rewrite archive/research/AVGO/2026-08-21",
+    "Did not auto-set base = Street",
+    "Did not git commit"
+  ]
+}

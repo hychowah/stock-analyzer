@@ -57,7 +57,75 @@
     },
     "multi_method_reconciliation": {
       "type": "object",
-      "description": "Optional when a material SOTP/exit-multiple/peer cross-check is run: primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary."
+      "description": "Required when a material SOTP/exit-multiple/peer cross-check is run: primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary. If |SOTP−DCF|/primary > 40%, set path_reopened + what_changed or gap_rationale why the gap is real — then reopen the independent volume path if it is a skill miss.",
+      "additionalProperties": true,
+      "properties": {
+        "primary_fv_for_decision": { "type": "number" },
+        "cross_check_fv": { "type": "number" },
+        "delta_pct": { "type": "number" },
+        "why_primary_wins": { "type": "string" },
+        "what_would_flip_primary": { "type": "string" },
+        "path_reopened": { "type": "boolean" },
+        "what_changed": { "type": "string" },
+        "gap_rationale": { "type": "string" }
+      }
+    },
+    "street_bind": {
+      "type": "object",
+      "description": "REQUIRED when registry/street_estimates.json exists (harness >= 2.7.0). Independent FY+1 revenue vs vendor consensus. Street is a calibration reference after the path is built from company evidence — never copy consensus into base. delta_pct = (base − street) / street. |delta_pct| > 0.20 requires divergence_rationale + response (reopen_path | keep_independent_vs_street | street_unusable | guide_missing). Being off Street is not FAIL; missing the response is FAIL.",
+      "additionalProperties": true,
+      "properties": {
+        "fy_plus_1_label": { "type": "string" },
+        "guide": { "type": ["number", "null"] },
+        "guide_source": { "type": "string" },
+        "street": { "type": ["number", "null"], "description": "Must match street_estimates FY+1 revenue when that value is numeric, unless response=street_unusable. Do not set street=base to skip |delta|>20%." },
+        "street_source": { "type": "string" },
+        "base": { "type": "number", "description": "Independent model FY+1 revenue (same units as street)." },
+        "delta_pct": { "type": "number" },
+        "independent_construction": {},
+        "divergence_rationale": { "type": "string" },
+        "response": {
+          "type": "string",
+          "enum": [
+            "reopen_path",
+            "keep_independent_vs_street",
+            "street_unusable",
+            "guide_missing"
+          ]
+        }
+      }
+    },
+    "street_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/street_estimates.json exists. Consume Street as used_as:calibration_check (or reject). Forbidden: used_as:revenue_path / used_as:street_mean / copying consensus into the path. Not all noted_only.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": { "type": "string" },
+          "action": { "type": "string" },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "conservatism_dials": {
+      "type": "array",
+      "description": "REQUIRED on harness >= 2.7.0 when valuation exists. Keys volume_vs_guide, gaap_om_vs_guide, sbc_in_fcff, wacc_vs_buildup; applies_in base | bear_only | none. Omitting the array is silent stacking (FAIL). ≥3 in base requires stacking_justification.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "dial": { "type": "string" },
+          "applies_in": { "type": "string", "enum": ["base", "bear_only", "none"] },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "stacking_justification": {
+      "type": "string",
+      "description": "Required when ≥3 conservatism_dials apply in base. Silent stacking of volume + GAAP OM + SBC-as-cash + high WACC into base is FAIL-quality."
     },
     "research_brief_hooks": {
       "type": "array",

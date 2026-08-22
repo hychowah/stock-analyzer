@@ -500,6 +500,18 @@ def extract_peers(session: Path, sector: dict[str, Any] | None) -> list[str]:
     return []
 
 
+def _extract_decision_action(session: Path) -> str | None:
+    from scripts.kd_research.decision import extract_decision_action  # noqa: WPS433
+
+    return extract_decision_action(session)
+
+
+def _extract_kill_triggers(session: Path) -> list[str]:
+    from scripts.kd_research.decision import extract_kill_triggers  # noqa: WPS433
+
+    return extract_kill_triggers(session)
+
+
 def extract_session_bundle(session: Path) -> dict[str, Any]:
     """Full comparison payload derived only from session files."""
     from scripts.kd_research.roic_identity import thin_roic_from_valuation  # noqa: WPS433
@@ -654,6 +666,8 @@ def extract_session_bundle(session: Path) -> dict[str, Any]:
         "tech_regime": tech.get("tech_regime"),
         "tech_summary": tech.get("tech_summary") or {},
         "research_depth": research_depth,
+        "decision_action": _extract_decision_action(session),
+        "kill_triggers": _extract_kill_triggers(session),
         "provenance": provenance,
         "gaps": gaps,
         "status": (manifest or {}).get("status")

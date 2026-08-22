@@ -32,5 +32,6 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F24 | `priced_for_perfection` from price≷base/PW; catalog PFP null | Extracted only top-level `valuation.priced_for_perfection`, not `reverse_engineering` | W1 — named-dial gate + extract from reverse_engineering |
 | F25 | Wide FV cone still presented as a target; `inside` band on 6× span | `decision_usefulness` prompt-only; outcomes scored `inside` | W1 — DU required on width trigger; `fv_band_at_mark=ineligible` when span>100% |
 | F26 | Audit PASS used as buy-list / calibration default | `CatalogApi.calibration(pass_only=True)`; `/calibration` default yes | W1 — defaults false; UI label says completeness not a buy list |
+| F27 | Always-long technical setup; no pass action; README invents a second verdict | Agent 4 required stop-below-entry; no decision.json | W1 — 2.10.0 `side=pass` legal; duration.action including pass; initiate blocked on useless cone |
 
 Add rows when audits or production incidents recur.

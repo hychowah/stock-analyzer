@@ -740,6 +740,15 @@ def check_operating_path(session: Path) -> None:
             record(status, check, detail)
 
 
+def check_wave2_decision_session(session: Path) -> None:
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.decision import check_wave2_decision  # noqa: WPS433
+
+    for status, check, detail in check_wave2_decision(session):
+        record(status, check, detail)
+
+
 def check_decision_quality_session(session: Path) -> None:
     """Wave 1 decision-quality gates; SKIPPED on harness < 2.9.0."""
     if str(PROJECT_ROOT) not in sys.path:
@@ -1169,6 +1178,7 @@ def main() -> int:
         check_street_bind_session(session)
         check_roic_identity_session(session)
         check_decision_quality_session(session)
+        check_wave2_decision_session(session)
         check_risk_bridge(session)
         check_valuation_mos_units(session)
         check_reports(session, ticker)

@@ -4,7 +4,7 @@
 Three W1 waves on `harness/investment-quality-waves`: (1) enforce existing law 2.9.0, (2) decision object, (3) epistemology. No archive mutation. No Wave 4 mandate pack.
 
 ## Status
-Wave 1 implemented (harness 2.9.0). `eng_verify` PASS. Alignment PASS-WITH-FIXES applied (A2 unique WARN; A7 no FCF classifier; A6 mixed SKIPPED). Implementer does not flip `passes`.
+Wave 1 committed (2.9.0). Wave 2 implemented (2.10.0): `registry/decision.json` including pass; initiate blocked on useless cone; TA `side=pass` legal; duration pass + TA long legal (C2 demoted). Implementer does not flip `passes`.
 
 ## Verify (implementer-run)
 - pytest Wave 1 related: 134 passed

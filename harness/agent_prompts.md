@@ -290,9 +290,9 @@ Fetch ~2 years of daily prices for TICKER, the regional benchmark, and the secto
 
 Write a runtime script S/data/compute/technical_indicators.py that READS the cached CSVs (fetches only if absent) and computes: trend (SMAs), momentum (RSI, MACD), volatility (ATR), volume profile, relative strength vs both benchmarks, support/resistance, max drawdown. Run it.
 
-Then YOU decide: entry level, stop-loss (must be below entry), targets, and ATR-based position sizing (state the account-risk assumption) — each with rationale. If your highest-probability near-term scenario is a pullback, set the entry where that scenario says to buy — internal coherence between scenarios and levels is required.
+Then YOU decide: `side` = long | short | **pass**. Pass is legal — do **not** invent a buy entry to fill the schema. If side=pass, omit entry/stop or leave levels empty. If side=long, stop-loss must be below entry; if short, stop must be above entry. ATR-based sizing (state the account-risk assumption) is an optional overlay, not a duration-book size. If your highest-probability near-term scenario is a pullback **and** you are taking a long, set the entry where that scenario says to buy.
 
-Write S/registry/technical.json per ROOT/templates/technical.schema.json, including compute_script path.
+Write S/registry/technical.json per ROOT/templates/technical.schema.json, including compute_script path and `side`.
 ```
 
 ### Agent 5 — valuation (`coder`)
@@ -333,6 +333,8 @@ Hard constraints:
 6. SENSITIVITY: ~4×4 on two most judgment-dependent dials; base cell = base FV. fair_value.posture one sentence (conservative|neutral|aggressive lean). If the stack leans conservative, say so — a conservative **stress** must not be labeled base.
 7. Reverse-engineer current price (implied dials, full grid not only extremes). Set reverse_engineering.priced_for_perfection per valuation_decision_quality (surface claim).
 8. MoS dual fields (step constraints). Scenario probs justified + probability_method. If (bull−bear)/base >100% or bear <0.4×base: set fair_value.decision_usefulness high|medium|low + what would shrink range — do not present PW as precise when low.
+
+Also write S/registry/decision.json per ROOT/templates/decision.schema.json (harness ≥ 2.10.0): duration.action in initiate|add|hold|trim|sell|short|pass|too_hard plus rationale ≥20 chars. **pass/too_hard** are first-class. initiate/add are illegal when decision_usefulness=low or (bull−bear)/base >100% or bear < 0.4×base. Do not emit a duration long while calling the cone decision-useless.
 
 OUTPUT CONTRACT — write S/data/valuation_model.json per ROOT/templates/valuation_model.schema.json including: model, fair_value (bear/base/bull/PW + dual MoS), assumptions, compute_script, sensitivity, filing_deep_dive_hooks, market_context_hooks (when MC present), operating_path_hooks (when 1d brief present), street_bind + street_hooks (when street_estimates present), conservatism_dials (required on harness ≥ 2.7.0), reverse_engineering; plus terminal_consistency / multi_method_reconciliation (required when SOTP and DCF both run) / research_brief_hooks / decision_usefulness / probability_method when triggered / **roic_identity (required on harness ≥ 2.8.0)**. Fair-value weights become risk_bridge scenario_probabilities (bare floats only; consistent).
 
@@ -444,6 +446,8 @@ Cover: trend/momentum/volatility summary, support/resistance, relative strength 
 Write S/reports/00_TICKER_README.md — the one-page summary.
 
 Read S/registry/sector_config.json, S/registry/market_context.json (if present), S/registry/research_brief.json (if present), S/data/valuation_model.json, S/registry/latest_quarter.json, S/registry/risk_bridge.json, S/registry/technical.json, S/registry/tsr_validation.json.
+
+Read S/registry/decision.json when present and **quote** `duration.action` in the verdict line. Do not invent a second action. ATR share-count is not a cover position size.
 
 Cover: sector classification + confidence + one-line rationale; market/region + intensity + one-line rationale (or "legacy session: market_context absent"); research_brief investment objective + research_depth when present; fair value vs price + margin of safety (numbers from valuation_model only); when `roic_identity` exists, one line for mid-cycle ROIC vs WACC + cheap_claim class **next to MoS** (if cheap_claim ≠ franchise_mos, do **not** lead with MoS as a franchise gift); latest-quarter headline; key risks (top 3); verdict (bull/base/bear in one line each); required inputs AS EXECUTED (peers, benchmarks, currency, exchange actually used — not the plan); data-quality notes (fallbacks used, degraded sources, manual-review flags); pointer to the other two reports. Leave a one-line placeholder for the audit verdict — Phase 5 will fill it with **Audit PASS = process completeness (provenance/hooks), not an investment recommendation or buy list.** Do not put ATR share-count on this cover as a position size.
 ```

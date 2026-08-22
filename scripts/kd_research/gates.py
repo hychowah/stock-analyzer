@@ -483,7 +483,7 @@ PHASE_PRIMARY_ARTIFACTS: dict[str, list[str]] = {
     "1d_ol": ["registry/raw/oppath_ol.json"],
     "1d_merge": ["registry/operating_path_brief.json"],
     "4": ["registry/technical.json"],
-    "5": ["data/valuation_model.json"],
+    "5": ["data/valuation_model.json"],  # + registry/decision.json on ≥ 2.10.0 (see primary_artifact_exists)
     "12": ["registry/tsr_validation.json"],
     "phase25_swarm": ["registry/risk_bridge.json"],
     "6": ["charts"],  # special: any charts dir with files
@@ -630,20 +630,33 @@ def primary_artifact_exists(session: Path, agent_id: str) -> bool | None:
     rels = PHASE_PRIMARY_ARTIFACTS.get(agent_id)
     if not rels:
         return None
+    found = False
     for rel in rels:
         if rel == "charts":
             d = session / "charts"
             if d.is_dir() and any(d.iterdir()):
-                return True
+                found = True
+                break
             continue
         if rel == "reports":
             d = session / "reports"
             if d.is_dir() and any(d.glob("*.md")):
-                return True
+                found = True
+                break
             continue
         if (session / rel).exists():
-            return True
-    return False
+            found = True
+            break
+    if not found:
+        return False
+    if agent_id == "5":
+        from scripts.kd_research.decision import session_is_wave2_runtime  # noqa: WPS433
+
+        if session_is_wave2_runtime(session) and not (
+            session / "registry" / "decision.json"
+        ).exists():
+            return False
+    return True
 
 
 def check_phase_status_disk(session: Path, data: dict[str, Any]) -> list[tuple[str, str, str]]:
@@ -1013,12 +1026,29 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
 
         out.extend(check_roic_identity(session))
         out.extend(check_wave1_decision_quality(session, include_reports=False))
+        from scripts.kd_research.decision import (  # noqa: WPS433
+            check_decision_packet,
+            check_technical_pass_allowed,
+            session_is_wave2_runtime,
+        )
+
+        if session_is_wave2_runtime(session):
+            out.extend(check_decision_packet(session))
+            out.extend(check_technical_pass_allowed(session))
         return out
     if phase_id == "2_5":
         return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)
     if phase_id == "4_parallel":
         t = _infer_ticker(session)
-        return check_reports(session, t)
+        out = check_reports(session, t)
+        from scripts.kd_research.decision import (  # noqa: WPS433
+            check_decision_packet,
+            session_is_wave2_runtime,
+        )
+
+        if session_is_wave2_runtime(session):
+            out.extend(check_decision_packet(session))
+        return out
     return [("SKIPPED", "complete_checks", f"no merge gate for phase {phase_id}")]
 
 

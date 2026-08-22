@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "decision.schema.json",
+  "title": "Investment decision packet (duration book)",
+  "description": "Agent 5 single writer. Duration action including pass/too_hard. README quotes this; must not invent a second verdict. Optional on harness < 2.10.0 (SKIPPED).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "duration"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "duration": {
+      "type": "object",
+      "required": ["action", "rationale"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["initiate", "add", "hold", "trim", "sell", "short", "pass", "too_hard"]
+        },
+        "rationale": { "type": "string", "minLength": 20 }
+      },
+      "additionalProperties": true
+    },
+    "tactical": {
+      "type": "object",
+      "description": "Optional overlay. Isolated TA long next to duration pass is legal; README must quote duration.action.",
+      "properties": {
+        "action": { "type": "string" },
+        "side": { "type": "string", "enum": ["long", "short", "pass"] },
+        "allow_long": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

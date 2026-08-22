@@ -12,14 +12,20 @@
     "compute_script": { "type": "string", "description": "Path to runtime script under data/compute/." },
     "benchmarks": { "type": "array", "items": { "type": "string" }, "description": "Regional benchmark + sector index/ETF, chosen per market." },
     "indicators": { "type": "object", "description": "Computed values: trend, momentum, volatility (ATR), volume, relative strength." },
+    "side": {
+      "type": "string",
+      "enum": ["long", "short", "pass"],
+      "description": "pass = no trade. entry/stop required only when side is long or short (machine on harness >= 2.10.0)."
+    },
     "levels": {
       "type": "object",
-      "required": ["entry", "stop_loss", "targets"],
+      "description": "Entry/stop/targets required for long/short setups. Omit or empty when side=pass.",
       "properties": {
-        "entry": { "type": "object", "required": ["value", "rationale"], "properties": { "value": {}, "rationale": { "type": "string" } } },
-        "stop_loss": { "type": "object", "required": ["value", "rationale"], "properties": { "value": {}, "rationale": { "type": "string" } } },
+        "entry": { "type": "object", "properties": { "value": {}, "rationale": { "type": "string" } } },
+        "stop_loss": { "type": "object", "properties": { "value": {}, "rationale": { "type": "string" } } },
         "targets": { "type": "array" },
-        "position_sizing": { "type": "object", "description": "Volatility/ATR-based sizing with rationale." }
+        "setup": { "type": "string" },
+        "position_sizing": { "type": "object", "description": "Volatility/ATR-based sizing with rationale. Not a duration-book size." }
       }
     },
     "support_resistance": { "type": "object" }

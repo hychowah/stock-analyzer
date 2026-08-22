@@ -69,6 +69,10 @@ def _payload_for_session(session: Path, *, refresh_snapshot: bool = True) -> dic
         extras["decision_usefulness"] = bundle.get("decision_usefulness")
     if bundle.get("priced_for_perfection") is not None:
         extras["priced_for_perfection"] = bundle.get("priced_for_perfection")
+    if bundle.get("decision_action"):
+        extras["decision_action"] = bundle.get("decision_action")
+    if bundle.get("kill_triggers"):
+        extras["kill_triggers"] = bundle.get("kill_triggers")
 
     payload: dict[str, Any] = {
         "run_id": rid,

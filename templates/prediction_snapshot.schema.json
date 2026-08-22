@@ -48,6 +48,8 @@
     "audit_verdict": { "type": ["string", "null"] },
     "priced_for_perfection": { "type": ["boolean", "null", "object"] },
     "decision_usefulness": { "type": ["string", "null"] },
+    "decision_action": { "type": ["string", "null"] },
+    "kill_triggers": { "type": "array", "items": { "type": "string" } },
     "model_name": { "type": ["string", "null"] },
     "roic_identity": {
       "type": "object",

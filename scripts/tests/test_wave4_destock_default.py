@@ -121,9 +121,13 @@ class PromptLawTests(unittest.TestCase):
         }
         self.assertTrue(_destock_in_base({"operating_path_hooks": [hook]}))
 
-    def test_version_is_212(self) -> None:
+    def test_version_at_least_212(self) -> None:
+        from scripts.kd_research.annuals import parse_semver
+
         payload = json.loads((ROOT / "harness" / "VERSION").read_text(encoding="utf-8"))
-        self.assertEqual(payload.get("harness_version"), "2.12.0")
+        parsed = parse_semver(payload.get("harness_version"))
+        self.assertIsNotNone(parsed)
+        self.assertGreaterEqual(parsed, (2, 12, 0))
 
 
 class DestockDefaultTests(unittest.TestCase):

@@ -102,6 +102,25 @@
             },
             "rationale": { "type": "string" }
           }
+        },
+        "mid_cycle_construction": {
+          "type": "object",
+          "description": "REQUIRED on harness >= 2.13.0 when applies:true (Python gate). window_kind ttc_cycle|multi_year_avg|last_year|peak_year|insufficient_window; years_used year list or {start,end}; print_vs_midcycle ≥20 chars. above_wacc/franchise_mos license only ttc_cycle|multi_year_avg with ≥2 years. Example numbers are illustrative — do not copy.",
+          "additionalProperties": true,
+          "properties": {
+            "window_kind": {
+              "type": "string",
+              "enum": [
+                "ttc_cycle",
+                "multi_year_avg",
+                "last_year",
+                "peak_year",
+                "insufficient_window"
+              ]
+            },
+            "years_used": {},
+            "print_vs_midcycle": { "type": "string", "minLength": 20 }
+          }
         }
       }
     },

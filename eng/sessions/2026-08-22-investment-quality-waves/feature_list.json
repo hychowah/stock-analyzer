@@ -34,7 +34,7 @@
       "id": "wave5_midcycle",
       "description": "Mid-cycle construction required; peak/last-year SOI cannot license franchise_mos (2.13.0)",
       "passes": false,
-      "verify": "python -m pytest scripts/tests/test_wave5_midcycle.py -q; python scripts/eng_verify.py"
+      "verify": "python -m pytest scripts/tests/test_wave5_midcycle.py scripts/tests/test_roic_identity.py -q; python scripts/eng_verify.py"
     },
     {
       "id": "wave6_decision_reopen",

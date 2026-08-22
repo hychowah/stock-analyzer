@@ -319,3 +319,80 @@ Passing a session that capitalizes mid-cycle SOI as a franchise while `quality_b
 ### GOOD — Agent 13 `4-roic`
 
 Confirm NOPAT matches the DCF tax/lease stack; legal exit paperwork holds; README/value lens restates cheap_claim class. Banks with `applies:false` + `roe_vs_ke` analog are not a miss.
+
+---
+
+## Pair 8 — False franchise from a peak / last-year print (illustrative)
+
+### BAD
+
+Last-year SOI capitalized as mid-cycle ROIC 18%; `window_kind=last_year` (or missing); `cheap_claim=franchise_mos`.
+
+```json
+{
+  "roic_identity": {
+    "applies": true,
+    "nopat": { "value": 1800.0 },
+    "invested_capital": { "value": 10000.0 },
+    "wacc": 0.09,
+    "mid_cycle_roic": { "value": 0.18 },
+    "quality_bucket": "above_wacc",
+    "cheap_claim": { "class": "franchise_mos" },
+    "mid_cycle_construction": {
+      "window_kind": "last_year",
+      "years_used": [2024],
+      "print_vs_midcycle": "Used FY2024 SOI as mid-cycle because it is the latest year."
+    }
+  }
+}
+```
+
+**Why bad:** Peak/last-year NOPAT in `mid_cycle_roic` derives `above_wacc` and licenses a franchise. Wave 5 FAIL. A stuffed `years_used` list does not save `window_kind=last_year`.
+
+### GOOD — windowed mid-cycle (license)
+
+Peak 18% is the **print**, not the identity numerator. Window ≥2 years; `window_kind=multi_year_avg` or `ttc_cycle`.
+
+```json
+{
+  "roic_identity": {
+    "applies": true,
+    "nopat": { "value": 1100.0 },
+    "invested_capital": { "value": 10000.0 },
+    "wacc": 0.09,
+    "mid_cycle_roic": { "value": 0.11 },
+    "quality_bucket": "above_wacc",
+    "cheap_claim": { "class": "franchise_mos" },
+    "mid_cycle_construction": {
+      "window_kind": "multi_year_avg",
+      "years_used": [2018, 2019, 2020, 2021, 2022, 2023],
+      "print_vs_midcycle": "FY2024 print OM is 18%; mid-cycle NOPAT is the 2018–2023 average, not that peak year."
+    }
+  }
+}
+```
+
+**Why good:** Construction licenses the bucket. Peak stays in `print_vs_midcycle`.
+
+### GOOD — last-year print, no franchise (no license)
+
+```json
+{
+  "roic_identity": {
+    "applies": true,
+    "nopat": { "value": 900.0 },
+    "invested_capital": { "value": 10000.0 },
+    "wacc": 0.09,
+    "mid_cycle_roic": { "value": 0.09 },
+    "quality_bucket": "approx_wacc",
+    "cheap_claim": { "class": "equity_near_book" },
+    "mid_cycle_construction": {
+      "window_kind": "last_year",
+      "years_used": [2024],
+      "print_vs_midcycle": "Only one clean year on disk; do not call this a franchise. Equity near book."
+    }
+  }
+}
+```
+
+**Why good:** `last_year` is legal construction when it does **not** license `above_wacc` / `franchise_mos`. `initiate` is still not blocked solely by cheap class.

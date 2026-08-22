@@ -12,6 +12,7 @@ absent. Presence on an old session is validated, never omit-FAIL.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ from scripts.kd_research.annuals import load_run_manifest_version, parse_semver
 from scripts.kd_research.gates import load_json
 
 ROIC_SINCE = (2, 8, 0)
+MIDCYCLE_SINCE = (2, 13, 0)
 VM_REL = "data/valuation_model.json"
 RESULT_REL = "data/compute/valuation_result.json"
 
@@ -53,6 +55,10 @@ CHEAP_OK = frozenset(
 CHEAP_WHEN_NOT_ABOVE = frozenset(
     {"equity_near_book", "residual_option", "not_cheap"}
 )
+WINDOW_KINDS = frozenset(
+    {"ttc_cycle", "multi_year_avg", "last_year", "peak_year", "insufficient_window"}
+)
+LICENSE_WINDOW_KINDS = frozenset({"ttc_cycle", "multi_year_avg"})
 
 
 def session_is_roic_runtime(session: Path) -> bool:
@@ -61,6 +67,110 @@ def session_is_roic_runtime(session: Path) -> bool:
     if parsed is None:
         return False
     return parsed >= ROIC_SINCE
+
+
+def session_is_midcycle_runtime(session: Path) -> bool:
+    parsed = parse_semver(load_run_manifest_version(session))
+    if parsed is None:
+        return False
+    return parsed >= MIDCYCLE_SINCE
+
+
+def _year_int(val: Any) -> int | None:
+    if isinstance(val, bool):
+        return None
+    if isinstance(val, int):
+        return val
+    if isinstance(val, float) and val == int(val):
+        return int(val)
+    if isinstance(val, str):
+        match = re.search(r"(?:19|20)\d{2}", val)
+        if match:
+            return int(match.group(0))
+    return None
+
+
+def _window_year_count(years_used: Any) -> int:
+    """Count distinct years. A dash-string is one year (first match), not a span."""
+    if isinstance(years_used, dict):
+        start = _year_int(years_used.get("start"))
+        end = _year_int(years_used.get("end"))
+        if start is None or end is None:
+            return 0
+        return abs(end - start) + 1
+    if isinstance(years_used, list):
+        years = {_year_int(item) for item in years_used}
+        years.discard(None)
+        return len(years)
+    if _year_int(years_used) is not None:
+        return 1
+    return 0
+
+
+def check_mid_cycle_construction(ident: dict[str, Any], session: Path) -> list[tuple[str, str, str]]:
+    """Wave 5: franchise/above_wacc needs a ≥2-year window, not last-year SOI."""
+    if not session_is_midcycle_runtime(session):
+        return []
+    if ident.get("applies") is not True:
+        return [("PASS", "mid_cycle_construction", "applies=false")]
+    cons = ident.get("mid_cycle_construction")
+    if not isinstance(cons, dict):
+        return [
+            (
+                "FAIL",
+                "mid_cycle_construction",
+                "applies:true on harness ≥ 2.13.0 requires mid_cycle_construction "
+                "(window_kind, years_used, print_vs_midcycle ≥20 chars)",
+            )
+        ]
+    kind = str(cons.get("window_kind") or "").strip()
+    if kind not in WINDOW_KINDS:
+        return [
+            (
+                "FAIL",
+                "mid_cycle_construction.window_kind",
+                f"window_kind must be one of {sorted(WINDOW_KINDS)}; got {kind!r}",
+            )
+        ]
+    n_years = _window_year_count(cons.get("years_used"))
+    if n_years < 1:
+        return [
+            (
+                "FAIL",
+                "mid_cycle_construction.years_used",
+                "years_used must be a year list or {start,end} with at least one year",
+            )
+        ]
+    print_vs = cons.get("print_vs_midcycle")
+    if print_vs is None:
+        print_vs = cons.get("print_vs_mid_cycle")
+    if not isinstance(print_vs, str) or len(print_vs.strip()) < 20:
+        return [
+            (
+                "FAIL",
+                "mid_cycle_construction.print_vs_midcycle",
+                "print_vs_midcycle must be a rationale ≥20 chars (this print vs the window)",
+            )
+        ]
+    bucket = str(ident.get("quality_bucket") or "").strip()
+    cheap = _cheap_class(ident)
+    licensed = bucket == "above_wacc" or cheap == "franchise_mos"
+    if licensed and (kind not in LICENSE_WINDOW_KINDS or n_years < 2):
+        return [
+            (
+                "FAIL",
+                "mid_cycle_construction.license",
+                "above_wacc / franchise_mos require window_kind ttc_cycle|multi_year_avg "
+                "and a ≥2-year window (last_year/peak_year/insufficient_window never license)",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "mid_cycle_construction",
+            f"kind={kind} years={n_years} licensed={licensed}",
+        )
+    ]
 
 
 def _as_float(val: Any) -> float | None:
@@ -603,6 +713,8 @@ def check_roic_identity(session: Path) -> list[tuple[str, str, str]]:
                 )
     else:
         out.append(("PASS", "roic_identity.gate", "above_wacc — Gordon allowed"))
+
+    out.extend(check_mid_cycle_construction(ident, session))
 
     if not any(r[0] == "FAIL" for r in out):
         out.append(("PASS", "roic_identity", f"bucket={bucket} cheap={cheap}"))

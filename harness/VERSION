@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.17.0",
+  "harness_version": "2.18.0",
   "harness_spec": "v2",
-  "notes": "2.17.0: Wave 9 stop-the-plug — no canned growth decay/TAM path; confidence<0.70 does not force standard DCF. 2.16.0: README CIO. 2.15.0: cash_quality. 2.14.0: decision reopen."
+  "notes": "2.18.0: Street FY+1 is base Y1; destock analog in bear while Street is usable. 2.17.0: Wave 9 stop-the-plug. 2.16.0: README CIO."
 }

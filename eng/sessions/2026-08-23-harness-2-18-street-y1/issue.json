@@ -1,0 +1,35 @@
+{
+  "goal": "Harness 2.18: Street FY+1 is base Y1; invert destock-in-base when Street is usable",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invert 2.7 on sessions stamped < 2.18.0",
+    "Do not use Street price targets as DCF inputs"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "harness/VERSION is 2.18.0 in the same change set",
+    "Street numeric FY+1: |base-street|/street > 5% FAILs unless street_unusable",
+    "Wave 3/4 on ≥2.18 + Street usable: destock-in-bear PASSes; destock-in-base FAILs",
+    "Legacy 2.12/2.17 destock-in-base still PASSes on old stamps",
+    "1d_merge and Pair 0 teach Street Y1 + destock in bear",
+    "pytest scripts/tests/test_street_bind.py test_wave3_epistemology.py test_wave4_destock_default.py test_wave10_street_y1.py -q",
+    "python scripts/eng_verify.py"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "harness/",
+    "templates/",
+    "scripts/",
+    "packages/",
+    "apps/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest scripts/tests/test_street_bind.py scripts/tests/test_wave3_epistemology.py scripts/tests/test_wave4_destock_default.py scripts/tests/test_wave10_street_y1.py -q",
+    "python scripts/eng_verify.py"
+  ]
+}

@@ -49,6 +49,7 @@ class ReadmeCioTests(unittest.TestCase):
     def test_agent11_cover_starts_with_duration(self) -> None:
         text = (ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
         self.assertIn("quote** `duration.action` first", text)
+        self.assertIn("lead with the **cone + pass**", text)
 
     def test_215_unquoted_is_warn(self) -> None:
         s = self._sess("2.15.0", "# README\nFair value vs price: 10 vs 12.\nAudit PASS.\n")

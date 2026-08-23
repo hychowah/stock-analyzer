@@ -90,28 +90,15 @@ BASE_HOOK = {
 
 
 class PromptLawTests(unittest.TestCase):
-    def test_1d_merge_does_not_teach_destock_in_bear(self) -> None:
+    def test_1d_merge_retired_promoter_phrase_stays_gone(self) -> None:
         text = (ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
         self.assertNotIn(
             "propose destock-fade in bear, duration/company-guide in base/bull",
             text,
         )
-        self.assertIn("destock/quality-reset in **base**", text)
-        self.assertIn("duration **only in bull**", text)
+        # Live 2.18 prompt law (Street Y1 + destock-in-bear) is in test_wave10.
 
-    def test_pair0_good_is_destock_in_base(self) -> None:
-        text = (ROOT / "harness" / "exemplars" / "hooks_quality.md").read_text(encoding="utf-8")
-        self.assertIn("BAD — destock analog lives in bear only", text)
-        good_idx = text.find("### GOOD")
-        self.assertGreater(good_idx, 0)
-        good = text[good_idx : good_idx + 1800]
-        self.assertIn('"applies_in": "base"', good)
-        self.assertIn("used_as:base", good)
-        self.assertIn("Y1 destock/quality-reset on the base path", good)
-        self.assertNotIn(
-            '"new": "Y1–Y2 keep printed duration; mid-horizon held in high-teens; destock analog lives in bear only"',
-            good,
-        )
+    def test_pair0_still_has_a_destock_in_base_detector(self) -> None:
         hook = {
             "from": "x",
             "action": "used_as:base",

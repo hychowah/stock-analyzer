@@ -17,7 +17,16 @@
       "description": "Filing / press-release URLs or tool citations for the extraction."
     },
     "revenue_earnings": { "type": "object" },
-    "guidance": { "type": "object", "description": "Company guidance only. Analyst price targets are NOT guidance." },
+    "guidance": {
+      "type": "object",
+      "description": "Company guidance only. Analyst price targets are NOT guidance. On harness >= 2.18.0 optional typed remaining-period box: revenue_box_low / revenue_box_high / revenue_box_period (same-period floor for base).",
+      "additionalProperties": true,
+      "properties": {
+        "revenue_box_low": { "type": ["number", "null"] },
+        "revenue_box_high": { "type": ["number", "null"] },
+        "revenue_box_period": { "type": "string", "description": "e.g. Q3 — must match street_bind.intra_year[].period" }
+      }
+    },
     "segments": { "type": "object" },
     "sector_kpis": { "type": "object", "description": "Sector-module KPIs, e.g. NIM/CET1 for banks, AFFO for REITs." },
     "margins_costs": { "type": "object" },

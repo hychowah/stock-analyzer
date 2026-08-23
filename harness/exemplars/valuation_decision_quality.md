@@ -205,67 +205,68 @@ Scorecard mixed; binary pipeline AdCom risk elevated.
 
 ---
 
-## Pair 6 — Independent FY+1 vs Street calibration (do not copy consensus)
+## Pair 6 — Street FY+1 is base Y1 (harness ≥ 2.18.0)
 
-Next-year Street revenue is a **reference** (usually reasonably accurate). The agent must **predict** it from company evidence, not paste it.
+Next-year Street revenue is the **required Y1 start**. Do not invent a destock or duration FY+1 and treat Street as a footnote. Street **price targets** are still not a DCF input.
 
-### BAD — copy Street
+### BAD — replace Street with destock Y1
+
+```json
+{
+  "street_bind": {
+    "guide": 174,
+    "street": 174,
+    "base": 123.5,
+    "delta_pct": -0.29,
+    "independent_construction": { "rationale": "Destock analog in base; Street is calibration only." },
+    "response": "keep_independent_vs_street"
+  }
+}
+```
+
+**Why bad:** |delta| 29% (and even 7%) is a 2.18 machine FAIL. `keep_independent_vs_street` is illegal. Haircut belongs in **bear**.
+
+### BAD — unknown-basis EPS pasted as EBIT
 
 ```json
 {
   "assumptions": {
-    "fy_plus_1_revenue": {
-      "value": 173.6,
-      "rationale": "Yahoo consensus FY+1 revenue.",
+    "fy_plus_1_ebit": {
+      "value": 80.8,
+      "rationale": "Street EPS 31.72 × shares; eps_basis unknown.",
       "basis": "registry/street_estimates.json"
     }
   }
 }
 ```
 
-**Why bad:** Consensus is not a model. Skill is building the stack (guide + segments + run-rate) so you *land near* Street.
+**Why bad:** Unknown-basis EPS is not EBIT. Use Street EBIT/OI if fetched, else a documented bridge, else the company OI box.
 
-### BAD — silent haircut of company guide into base
-
-```json
-{
-  "street_bind": {
-    "guide": 100,
-    "street": 174,
-    "base": 123.5,
-    "delta_pct": -0.29,
-    "independent_construction": { "rationale": "Transcripts degraded; use $72B AI in base." }
-  }
-}
-```
-
-**Why bad:** Printed company AI/revenue outlook was dropped from **base** because a call transcript was HTML. That is a skill miss. Haircut belongs in **bear**, or the independent stack is rebuilt.
-
-### GOOD — independent stack, then calibrate
+### GOOD — Street Y1 start
 
 ```json
 {
   "street_bind": {
     "guide": 154.0,
     "street": 173.6,
-    "base": 158.0,
-    "delta_pct": -0.09,
+    "base": 173.6,
+    "delta_pct": 0.0,
     "independent_construction": {
-      "rationale": "FY+1 base = AI company floor 100 + software run-rate 36 + non-AI 18 from 8-K segments and Q3 sequential; not Street mean."
+      "rationale": "Base Y1 starts from Street FY+1 vendor mean 173.6; remaining-period box is the cross-check; destock analog is bear-only."
     },
-    "response": "keep_independent_vs_street"
+    "response": "street_baseline"
   },
   "street_hooks": [
     {
       "from": "street_estimates.years[+1y].revenue",
-      "action": "used_as:calibration_check",
-      "reason": "Independent stack 158 vs Street 173.6 (delta -9%) — inside 20%; no path copy."
+      "action": "used_as:fy1_baseline",
+      "reason": "Street FY+1 revenue is the required base Y1 starting point."
     }
   ]
 }
 ```
 
-**Why good:** Path from company evidence; Street used only after; no paste. If |delta| were >20%, GOOD is `response: reopen_path` and a rebuilt stack, not `base = street`.
+**Why good:** Y1 *is* Street. Needle present. Destock/haircuts live in bear. (On 2.7–2.17, copying Street was the BAD example.)
 
 ---
 

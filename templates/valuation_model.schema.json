@@ -141,7 +141,7 @@
     },
     "street_bind": {
       "type": "object",
-      "description": "REQUIRED when registry/street_estimates.json exists (harness >= 2.7.0). Independent FY+1 revenue vs vendor consensus. Street is a calibration reference after the path is built from company evidence — never copy consensus into base. delta_pct = (base − street) / street. |delta_pct| > 0.20 requires divergence_rationale + response (reopen_path | keep_independent_vs_street | street_unusable | guide_missing). Being off Street is not FAIL; missing the response is FAIL.",
+      "description": "REQUIRED when registry/street_estimates.json exists (harness >= 2.7.0). On >= 2.18.0 base Y1 starts from Street FY+1 (used_as:fy1_baseline); |delta_pct| > 0.05 FAILs unless street_unusable. On 2.7-2.17 Street is calibration after an independent stack; copying was FAIL. delta_pct = (base − street) / street. street must match street_estimates FY+1 when numeric.",
       "additionalProperties": true,
       "properties": {
         "fy_plus_1_label": { "type": "string" },
@@ -149,7 +149,7 @@
         "guide_source": { "type": "string" },
         "street": { "type": ["number", "null"], "description": "Must match street_estimates FY+1 revenue when that value is numeric, unless response=street_unusable. Do not set street=base to skip |delta|>20%." },
         "street_source": { "type": "string" },
-        "base": { "type": "number", "description": "Independent model FY+1 revenue (same units as street)." },
+        "base": { "type": "number", "description": "Model FY+1 revenue (same units as street). On >= 2.18.0 this starts from Street FY+1." },
         "delta_pct": { "type": "number" },
         "independent_construction": {},
         "divergence_rationale": { "type": "string" },
@@ -159,14 +159,26 @@
             "reopen_path",
             "keep_independent_vs_street",
             "street_unusable",
-            "guide_missing"
+            "guide_missing",
+            "street_baseline"
           ]
+        },
+        "intra_year": {
+          "type": "array",
+          "description": "Optional same-period quarter paths vs a typed company box (harness >= 2.18.0).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "period": { "type": "string" },
+              "revenue": { "type": "number" }
+            }
+          }
         }
       }
     },
     "street_hooks": {
       "type": "array",
-      "description": "REQUIRED when registry/street_estimates.json exists. Consume Street as used_as:calibration_check (or reject). Forbidden: used_as:revenue_path / used_as:street_mean / copying consensus into the path. Not all noted_only.",
+      "description": "REQUIRED when registry/street_estimates.json exists. On >= 2.18.0 consume Street as used_as:fy1_baseline (revenue_path / street_mean also legal). On 2.7-2.17 used_as:calibration_check; path-copy forbidden. Not all noted_only.",
       "items": {
         "type": "object",
         "required": ["from", "action", "reason"],
@@ -195,6 +207,24 @@
     "stacking_justification": {
       "type": "string",
       "description": "Required when ≥3 conservatism_dials apply in base. Silent stacking of volume + GAAP OM + SBC-as-cash + high WACC into base is FAIL-quality."
+    },
+    "fcff_identity": {
+      "type": "object",
+      "description": "Owner-earnings identity (harness >= 2.18.0). Never subtract SBC from after-SBC GAAP NOPAT.",
+      "additionalProperties": true,
+      "properties": {
+        "starting_kpi": { "type": "string" },
+        "sbc_convention": {
+          "type": "string",
+          "enum": ["leave_sbc_in_ebit", "ir_fcf_nss", "other"]
+        },
+        "bridge": { "type": "string" }
+      }
+    },
+    "discounting_convention": {
+      "type": "string",
+      "description": "Named mid_year | year_end. Disclosure required; mid_year is not mandated.",
+      "enum": ["mid_year", "year_end"]
     },
     "research_brief_hooks": {
       "type": "array",

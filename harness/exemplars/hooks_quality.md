@@ -20,26 +20,7 @@ Used by: Agent 5 (write), Agent 13 (grade).
 
 **Why bad:** The brief exists so Agent 5 cannot invent a fade or OM path. A single `noted_only` is checkbox theater. Machine FAIL if all hooks are `noted_only`.
 
-### BAD — destock analog lives in bear only (Wave 3/4 FAIL)
-
-```json
-{
-  "operating_path_hooks": [
-    {
-      "from": "registry/operating_path_brief.json#conflicts.fade_vs_flatten",
-      "action": "used_as:dnc_growth_path",
-      "applies_in": "bear_only",
-      "old": "fade to 4% by Y8 as default",
-      "new": "Y1–Y2 keep printed duration; mid-horizon held in high-teens; destock analog lives in bear only",
-      "reason": "Unresolved flatten-vs-destock is encoded in scenarios, not averaged into one CAGR."
-    }
-  ]
-}
-```
-
-**Why bad:** Parking destock in bear while duration stays in base is the promoter path. Wave 3 FAILs it when the conflict is unresolved; Wave 4 FAILs it even if status=`resolved`. `fair_value.base` existing as a key is not destock-in-base.
-
-### GOOD
+### BAD — destock-in-base while Street FY+1 is usable (harness ≥ 2.18 FAIL)
 
 ```json
 {
@@ -48,20 +29,46 @@ Used by: Agent 5 (write), Agent 13 (grade).
       "from": "registry/operating_path_brief.json#conflicts.fade_vs_flatten",
       "action": "used_as:base",
       "applies_in": "base",
-      "old": "Y1–Y2 keep printed duration; destock analog lives in bear only",
+      "old": "Y1 Street duration; destock analog lives in bear only",
       "new": "Y1 destock/quality-reset on the base path (run-rate ex destock); duration only in bull",
-      "reason": "Destock default is base until cash/channel prove demand. Conflict not averaged; not parked in bear."
+      "reason": "Unresolved flatten-vs-destock; destock default is base until cash/channel prove demand."
+    }
+  ]
+}
+```
+
+**Why bad:** Street FY+1 is the required Y1 start. Putting a destock analog in **base** while Street is usable is the Session B failure. Wave 3/4 on ≥ 2.18 FAIL destock-in-base. (On 2.12–2.17 this pairing was the GOOD example.)
+
+### GOOD
+
+```json
+{
+  "operating_path_hooks": [
+    {
+      "from": "registry/operating_path_brief.json#conflicts.fade_vs_flatten",
+      "action": "used_as:bear_only",
+      "applies_in": "bear_only",
+      "old": "Y1 destock/quality-reset on the base path",
+      "new": "Y1 Street duration; destock analog lives in bear only",
+      "reason": "Street FY+1 is the Y1 baseline; destock analog is a bear seed. Conflict not averaged."
     },
     {
       "from": "registry/operating_path_brief.json#rejected_shapes.om_28_35",
       "action": "rejected",
       "reason": "GM-minus-opex identity and incremental OM on session actuals do not support a 28–35% OM path."
     }
+  ],
+  "street_hooks": [
+    {
+      "from": "street_estimates.years[+1y].revenue",
+      "action": "used_as:fy1_baseline",
+      "reason": "Street FY+1 revenue is base Y1; destock analog is bear-only."
+    }
   ]
 }
 ```
 
-**Why good:** Destock/quality-reset is on the **base** path (`applies_in: base` / `used_as:base` so `_destock_in_base` is true). Duration is bull-only. Material OM recommendation is `rejected`. Illustrative numbers are style only.
+**Why good:** Street is Y1 (`used_as:fy1_baseline`). Destock analog is `applies_in: bear_only`. Material OM recommendation is `rejected`. Illustrative numbers are style only. Destock-in-base remains legal only when Street is `street_unusable` **and** analog matches this print.
 
 ---
 

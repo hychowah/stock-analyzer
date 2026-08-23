@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "street_estimates.schema.json",
   "title": "Street consensus estimates (calibration reference)",
-  "description": "Written by Agent 2a in Phase 1. Forward vendor consensus (FY+1 / FY+2 revenue and EPS). This is a calibration reference for Agent 5, NOT company guidance and NOT an input to copy into the revenue path. Agent 2d latest_quarter.guidance stays company-only. Analyst price targets belong in news_sentiment.positioning, not here.",
+  "description": "Written by Agent 2a in Phase 1. Forward vendor consensus (FY+1 / FY+2 revenue and EPS). On harness >= 2.18.0 this is Agent 5's required base Y1 start (not company guidance; not a price-target path). Agent 2d latest_quarter.guidance stays company-only. Analyst price targets belong in news_sentiment.positioning, not here.",
   "type": "object",
   "additionalProperties": true,
   "required": ["ticker", "session_date", "source", "fiscal_convention", "years"],

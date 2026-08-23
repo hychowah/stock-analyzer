@@ -13,6 +13,7 @@ from typing import Any
 
 from scripts.kd_research.annuals import load_run_manifest_version, parse_semver
 from scripts.kd_research.gates import load_json
+from scripts.kd_research.street_bind import session_is_street_y1_runtime, street_y1_usable
 
 WAVE3_SINCE = (2, 11, 0)
 WAVE4_SINCE = (2, 12, 0)
@@ -134,6 +135,42 @@ def check_destock_not_silent_duration(session: Path) -> list[tuple[str, str, str
     if isinstance(dec, dict):
         dur = dec.get("duration") if isinstance(dec.get("duration"), dict) else {}
         action = str(dur.get("action") or "").strip().lower()
+    y1_street = session_is_street_y1_runtime(session) and street_y1_usable(session)
+    if y1_street:
+        if _destock_in_base(vm):
+            return [
+                (
+                    "FAIL",
+                    "destock_base",
+                    "harness ≥ 2.18.0: destock-in-base is illegal while Street FY+1 is "
+                    "usable; Street is Y1; destock analog belongs in bear",
+                )
+            ]
+        if _destock_only_in_bear(vm):
+            return [
+                (
+                    "PASS",
+                    "destock_base",
+                    "unresolved destock encoded in bear; Street is Y1 baseline",
+                )
+            ]
+        if du_s == "low" or action in {"pass", "too_hard"}:
+            return [
+                (
+                    "PASS",
+                    "destock_base",
+                    f"unresolved destock with DU={du_s or 'unset'} action={action or 'unset'} "
+                    "(Street Y1; destock not in base)",
+                )
+            ]
+        return [
+            (
+                "FAIL",
+                "destock_base",
+                "unresolved destock with Street Y1 baseline must encode destock analog "
+                "in bear (not silent, not destock-in-base)",
+            )
+        ]
     if du_s == "low" or action in {"pass", "too_hard"}:
         return [
             (
@@ -162,28 +199,79 @@ def check_tv_share_duration(session: Path) -> list[tuple[str, str, str]]:
     if not isinstance(tc, dict):
         return [("SKIPPED", "tv_share", "terminal_consistency absent")]
     share = _as_float(tc.get("tv_share_of_ev_base"))
-    if share is None or share <= 0.60:
-        return [("PASS", "tv_share", f"tv_share={share}")]
     y8 = _as_float(tc.get("y8_growth")) or _as_float(tc.get("explicit_end_growth"))
     assumptions = vm.get("assumptions") if isinstance(vm.get("assumptions"), dict) else {}
     if y8 is None:
         y8 = _as_float(assumptions.get("y8_growth") or assumptions.get("year8_growth"))
     years = _as_float(tc.get("explicit_years") or assumptions.get("explicit_years"))
     resp = str(tc.get("response") or tc.get("high_tv_response") or "").strip().lower()
+    if share is None or share <= 0.60:
+        out = [("PASS", "tv_share", f"tv_share={share}")]
+        out.extend(_check_tv_share_218(session, vm, tc, share, years, resp))
+        return out
     if years is not None and years >= 10:
-        return [("PASS", "tv_share", f"tv_share={share} explicit_years={years}")]
+        out = [("PASS", "tv_share", f"tv_share={share} explicit_years={years}")]
+        out.extend(_check_tv_share_218(session, vm, tc, share, years, resp))
+        return out
     if y8 is None or y8 < 0.08:
-        return [("PASS", "tv_share", f"tv_share={share} y8_growth={y8}")]
-    if resp in TV_RESPONSE_OK:
-        return [("PASS", "tv_share", f"response={resp}")]
-    return [
-        (
-            "FAIL",
-            "tv_share",
-            "TV share >60% with Y8 growth still ≥8% requires extend_years / "
-            "switch_primary / residual_income (not 'below 75%, widen range')",
+        out = [("PASS", "tv_share", f"tv_share={share} y8_growth={y8}")]
+    elif resp in TV_RESPONSE_OK:
+        out = [("PASS", "tv_share", f"response={resp}")]
+    else:
+        out = [
+            (
+                "FAIL",
+                "tv_share",
+                "TV share >60% with Y8 growth still ≥8% requires extend_years / "
+                "switch_primary / residual_income (not 'below 75%, widen range')",
+            )
+        ]
+    out.extend(_check_tv_share_218(session, vm, tc, share, years, resp))
+    return out
+
+
+def _check_tv_share_218(
+    session: Path,
+    vm: dict[str, Any],
+    tc: dict[str, Any],
+    share: float | None,
+    years: float | None,
+    resp: str,
+) -> list[tuple[str, str, str]]:
+    if not session_is_street_y1_runtime(session):
+        return []
+    out: list[tuple[str, str, str]] = []
+    fv = vm.get("fair_value") if isinstance(vm.get("fair_value"), dict) else {}
+    du = fv.get("decision_usefulness")
+    if isinstance(du, dict):
+        du = du.get("value")
+    du_s = str(du or "").strip().lower()
+    if share is not None and share > 0.75:
+        if du_s == "low" or resp in TV_RESPONSE_OK or (years is not None and years >= 10):
+            out.append(("PASS", "tv_share_75", f"tv_share={share} du={du_s or 'unset'}"))
+        else:
+            out.append(
+                (
+                    "FAIL",
+                    "tv_share_75",
+                    "base TV share >75% requires extend/switch or decision_usefulness=low "
+                    "(do not lead with that point FV)",
+                )
+            )
+    bear = _as_float(tc.get("tv_share_of_ev_bear"))
+    role = str(tc.get("bear_tv_role") or "").strip().lower()
+    if bear is not None and bear > 1.0 and role != "stress_only":
+        out.append(
+            (
+                "FAIL",
+                "bear_tv_share",
+                "bear TV share of EV > 1.0 cannot be a PW going-concern input; "
+                "tag bear_tv_role=stress_only and mass 0",
+            )
         )
-    ]
+    elif bear is not None and bear > 1.0:
+        out.append(("PASS", "bear_tv_share", "bear TV>1 tagged stress_only"))
+    return out
 
 
 def check_related_party_intensity(session: Path) -> list[tuple[str, str, str]]:
@@ -489,6 +577,41 @@ def check_destock_default(session: Path) -> list[tuple[str, str, str]]:
     if verr or not isinstance(vm, dict):
         return [("SKIPPED", "destock_default", "valuation_model.json missing")]
     du_s, action = _duration_legal_fields(session, vm)
+    y1_street = session_is_street_y1_runtime(session) and street_y1_usable(session)
+    if y1_street:
+        if _destock_in_base(vm):
+            return [
+                (
+                    "FAIL",
+                    "destock_default",
+                    "harness ≥ 2.18.0: destock-in-base is illegal while Street FY+1 is "
+                    "usable; put destock analog in bear",
+                )
+            ]
+        if _destock_only_in_bear(vm) or _hints_teach_destock_in_bear(brief):
+            return [
+                (
+                    "PASS",
+                    "destock_default",
+                    "destock analog in bear; Street Y1 is base",
+                )
+            ]
+        if du_s == "low" or action in {"pass", "too_hard"}:
+            return [
+                (
+                    "PASS",
+                    "destock_default",
+                    f"destock conflict with DU={du_s or 'unset'} action={action or 'unset'} "
+                    "(Street Y1; destock not in base)",
+                )
+            ]
+        return [
+            (
+                "FAIL",
+                "destock_default",
+                "destock conflict with Street Y1 baseline must park destock analog in bear",
+            )
+        ]
     if du_s == "low" or action in {"pass", "too_hard"}:
         return [
             (

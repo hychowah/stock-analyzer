@@ -1,8 +1,11 @@
-"""Street-estimate calibration gates (harness >= 2.7.0).
+"""Street-estimate gates (harness >= 2.7.0; Y1 baseline >= 2.18.0).
 
-Street FY+1/+2 consensus is a *reference* after Agent 5 independently builds
-the revenue path from company evidence. Copying Street into base is FAIL-quality.
-Being off Street is not FAIL; missing a must-respond when |delta| > 20% is FAIL.
+2.7–2.17: Street FY+1 is a *calibration* after an independent company-evidence
+stack. Copying Street into base is FAIL-quality. |delta| > 20% is a WARN.
+
+>= 2.18.0: Street FY+1 revenue is the required base Y1 start. |delta| > 5%
+FAILs unless response=street_unusable. Copying Street into Y1 is the point
+(used_as:fy1_baseline). Replacing Street with an invented destock stack is FAIL.
 
 Legacy sessions without street_estimates.json and harness < 2.7.0 SKIPPED.
 """
@@ -17,16 +20,20 @@ from scripts.kd_research.annuals import load_run_manifest_version, parse_semver
 from scripts.kd_research.gates import load_json, validate_hooks_list
 
 STREET_SINCE = (2, 7, 0)
+STREET_Y1_SINCE = (2, 18, 0)
 STREET_REL = "registry/street_estimates.json"
 VM_REL = "data/valuation_model.json"
 
 DELTA_THRESHOLD = 0.20
+Y1_BAND = 0.05
+Y1_WARN_BAND = 0.03
 DELTA_EPS = 0.005
 SOTP_GAP_THRESHOLD = 0.40
 CONSTRUCTION_MIN_LEN = 40
 DIVERGENCE_MIN_LEN = 40
 STACK_JUSTIFY_MIN_LEN = 40
 GAP_RATIONALE_MIN_LEN = 40
+N_REVENUE_MIN = 5
 
 RESPONSE_ENUM = frozenset(
     {
@@ -34,6 +41,15 @@ RESPONSE_ENUM = frozenset(
         "keep_independent_vs_street",
         "street_unusable",
         "guide_missing",
+        "street_baseline",
+    }
+)
+RESPONSE_ENUM_Y1 = frozenset(
+    {
+        "reopen_path",
+        "street_unusable",
+        "guide_missing",
+        "street_baseline",
     }
 )
 DIAL_KEYS = (
@@ -48,6 +64,12 @@ PATH_COPY_NEEDLES = (
     "used_as:street_mean",
     "used_as:consensus",
     "used_as:copy_street",
+)
+FY1_BASELINE_NEEDLES = (
+    "used_as:fy1_baseline",
+    "used_as:street_baseline",
+    "used_as:revenue_path",
+    "used_as:street_mean",
 )
 
 
@@ -68,6 +90,59 @@ def session_enforces_street(session: Path) -> bool:
     if street_path(session).is_file():
         return True
     return session_is_street_runtime(session)
+
+
+def session_is_street_y1_runtime(session: Path) -> bool:
+    """True when harness_version >= 2.18.0 (Street FY+1 is base Y1)."""
+    parsed = parse_semver(load_run_manifest_version(session))
+    if parsed is None:
+        return False
+    return parsed >= STREET_Y1_SINCE
+
+
+def street_y1_usable(session: Path, street_data: dict[str, Any] | None = None) -> bool:
+    """Numeric FY+1 Street is usable as the Y1 baseline (not unavailable / unusable)."""
+    data = street_data
+    if data is None:
+        if not street_path(session).is_file():
+            return False
+        data, err = load_json(street_path(session))
+        if err or not isinstance(data, dict):
+            return False
+    if data.get("unavailable") is True:
+        return False
+    rev = fy1_street_revenue(data)
+    if rev is None:
+        return False
+    n_rev = _fy1_n_revenue(data)
+    if n_rev is not None and n_rev < N_REVENUE_MIN:
+        return False
+    vm, _ = load_json(session / VM_REL)
+    if isinstance(vm, dict):
+        bind = vm.get("street_bind")
+        if isinstance(bind, dict) and str(bind.get("response") or "").strip() == "street_unusable":
+            return False
+    return True
+
+
+def _fy1_n_revenue(data: dict[str, Any]) -> int | None:
+    years = data.get("years")
+    if not isinstance(years, list):
+        return None
+    prefer = ("+1y", "fy+1", "fy+ 1", "next year")
+    for i, row in enumerate(years):
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("label") or "").strip().lower()
+        if i == 1 or any(p in label for p in prefer) or label.endswith("+1y"):
+            n = row.get("n_revenue")
+            if isinstance(n, int):
+                return n
+    if len(years) >= 2 and isinstance(years[1], dict):
+        n = years[1].get("n_revenue")
+        if isinstance(n, int):
+            return n
+    return None
 
 
 def _fetch_log_street_failed(session: Path) -> bool:
@@ -224,7 +299,7 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
             (
                 "FAIL",
                 "street_bind",
-                "valuation_model.street_bind object required when street_estimates.json exists (independent FY+1 vs Street calibration; do not copy Street into base)",
+                "valuation_model.street_bind object required when street_estimates.json exists (Street FY+1 vs modeled Y1)",
             )
         )
         return out
@@ -257,9 +332,10 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
     elif street_col is None:
         street_col = street_rev
     if base is None:
-        out.append(("FAIL", "street_bind.base", "base (independent FY+1 revenue) required"))
+        out.append(("FAIL", "street_bind.base", "base (model FY+1 revenue) required"))
         return out
 
+    y1_runtime = session_is_street_y1_runtime(session)
     construction = bind.get("independent_construction")
     rationale = ""
     if isinstance(construction, dict):
@@ -271,7 +347,8 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
             (
                 "FAIL",
                 "street_bind.independent_construction",
-                "independent_construction.rationale must show the company-evidence stack (guide/segments/run-rate/RPO) — not 'use consensus'",
+                "independent_construction.rationale must show the Y1 construction "
+                "(≥2.18: Street FY+1 as the start plus any overlay; 2.7–2.17: company-evidence stack)",
             )
         )
     else:
@@ -293,9 +370,48 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
             )
         else:
             out.append(("PASS", "street_bind.delta_pct", f"{d:.4f}"))
-        if abs(expected) > DELTA_THRESHOLD:
+        resp = str(bind.get("response") or "").strip()
+        if y1_runtime:
+            if resp == "keep_independent_vs_street":
+                out.append(
+                    (
+                        "FAIL",
+                        "street_bind.response",
+                        "harness ≥ 2.18.0: keep_independent_vs_street is not a legal Y1 "
+                        "response when Street FY+1 is numeric; start base from Street "
+                        "(street_baseline) or set street_unusable",
+                    )
+                )
+            if resp != "street_unusable" and abs(expected) > Y1_BAND:
+                out.append(
+                    (
+                        "FAIL",
+                        "street_bind.y1_band",
+                        f"|delta_pct| {expected:.4f} > 5% vs Street FY+1 — base Y1 must "
+                        "start from Street (or response=street_unusable)",
+                    )
+                )
+            elif resp != "street_unusable" and abs(expected) > Y1_WARN_BAND:
+                out.append(
+                    (
+                        "WARN",
+                        "street_bind.y1_band",
+                        f"|delta_pct| {expected:.4f} > 3% vs Street FY+1 — document the overlay",
+                    )
+                )
+            if abs(expected) > DELTA_THRESHOLD:
+                div = str(bind.get("divergence_rationale") or "")
+                if len(div.strip()) < DIVERGENCE_MIN_LEN or resp not in RESPONSE_ENUM_Y1:
+                    out.append(
+                        (
+                            "WARN",
+                            "street_bind.delta_calibration",
+                            "|delta_pct| > 20% vs Street FY+1 still needs divergence_rationale "
+                            "and a legal ≥2.18 response (street_unusable / reopen_path to Street)",
+                        )
+                    )
+        elif abs(expected) > DELTA_THRESHOLD:
             div = str(bind.get("divergence_rationale") or "")
-            resp = str(bind.get("response") or "").strip()
             if len(div.strip()) < DIVERGENCE_MIN_LEN or resp not in RESPONSE_ENUM:
                 out.append(
                     (
@@ -303,7 +419,7 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
                         "street_bind.delta_calibration",
                         "|delta_pct| > 20% vs Street FY+1 is a calibration note, not a "
                         "valuation skill miss. Record divergence_rationale / response if you have "
-                        "them. Copying Street into the path remains FAIL.",
+                        "them. Copying Street into the path remains FAIL on harness < 2.18.0.",
                     )
                 )
             else:
@@ -329,7 +445,36 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
             actions.append(a)
             if any(n in a for n in PATH_COPY_NEEDLES):
                 copy_hits.append(a)
-        if copy_hits:
+        if y1_runtime:
+            if copy_hits:
+                out.append(
+                    (
+                        "PASS",
+                        "street_hooks copy",
+                        "≥2.18.0: used_as:revenue_path / street_mean is legal (Street is Y1 baseline)",
+                    )
+                )
+            has_baseline = any(any(n in a for n in FY1_BASELINE_NEEDLES) for a in actions)
+            if actions and all(a == "noted_only" for a in actions):
+                out.append(
+                    (
+                        "FAIL",
+                        "street_hooks noted_only",
+                        "all street_hooks are noted_only — consume Street as used_as:fy1_baseline",
+                    )
+                )
+            elif not has_baseline:
+                out.append(
+                    (
+                        "FAIL",
+                        "street_hooks fy1_baseline",
+                        "harness ≥ 2.18.0 requires a street_hooks action used_as:fy1_baseline "
+                        "(or used_as:revenue_path / street_mean) when Street FY+1 is numeric",
+                    )
+                )
+            else:
+                out.append(("PASS", "street_hooks fy1_baseline", "Street consumed as Y1 baseline"))
+        elif copy_hits:
             out.append(
                 (
                     "FAIL",
@@ -349,7 +494,11 @@ def check_street_bind(session: Path) -> list[tuple[str, str, str]]:
             out.append(("PASS", "street_hooks noted_only", "not all noted_only; no path-copy action"))
 
     out.extend(_check_conservatism_dials(vm, require=require_dials))
+    if y1_runtime and street_col is not None and base is not None and abs(street_col) > 1e-12:
+        out.extend(_check_y1_stacking_pair(vm, abs((base - street_col) / street_col)))
     out.extend(_check_sotp_gap(vm, require_if_both=require_dials))
+    if y1_runtime:
+        out.extend(check_same_period_box_floor(session, vm))
     return out
 
 
@@ -417,6 +566,80 @@ def _check_conservatism_dials(vm: dict[str, Any], *, require: bool) -> list[tupl
             )
         ]
     return [("PASS", "conservatism_dials", f"{len(dials)} dial(s); n_base={n_base}")]
+
+
+def _check_y1_stacking_pair(vm: dict[str, Any], abs_delta: float) -> list[tuple[str, str, str]]:
+    """FAIL volume_vs_guide ∧ sbc_in_fcff in base while Y1 is outside the Street 5% band."""
+    dials = vm.get("conservatism_dials")
+    if not isinstance(dials, list):
+        return []
+    by_key: dict[str, str] = {}
+    for d in dials:
+        if not isinstance(d, dict):
+            continue
+        k = str(d.get("key") or d.get("dial") or "").strip()
+        applies = str(d.get("applies_in") or "").strip()
+        if k:
+            by_key[k] = applies
+    if (
+        by_key.get("volume_vs_guide") == "base"
+        and by_key.get("sbc_in_fcff") == "base"
+        and abs_delta > Y1_BAND
+    ):
+        return [
+            (
+                "FAIL",
+                "conservatism_dials stacking_pair",
+                "volume_vs_guide and sbc_in_fcff both applies_in=base while Y1 is "
+                "outside the Street 5% band",
+            )
+        ]
+    return [
+        (
+            "PASS",
+            "conservatism_dials stacking_pair",
+            "no destock-below-Street + SBC-in-base pair",
+        )
+    ]
+
+
+def check_same_period_box_floor(
+    session: Path, vm: dict[str, Any]
+) -> list[tuple[str, str, str]]:
+    """FAIL a same-period remaining-box low undercut while Street is usable."""
+    lq, err = load_json(session / "registry" / "latest_quarter.json")
+    if err or not isinstance(lq, dict):
+        return [("SKIPPED", "guide_floor", "latest_quarter.json missing")]
+    guidance = lq.get("guidance") if isinstance(lq.get("guidance"), dict) else {}
+    box_low = _as_float(guidance.get("revenue_box_low"))
+    period = str(guidance.get("revenue_box_period") or "").strip()
+    if box_low is None or not period:
+        return [("PASS", "guide_floor", "no typed same-period revenue box")]
+    bind = vm.get("street_bind") if isinstance(vm.get("street_bind"), dict) else {}
+    intra = bind.get("intra_year")
+    if not isinstance(intra, list):
+        return [("PASS", "guide_floor", "no intra_year path to compare")]
+    hits = []
+    for row in intra:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("period") or "").strip().lower() != period.lower():
+            continue
+        rev = _as_float(row.get("revenue"))
+        if rev is not None:
+            hits.append(rev)
+    if not hits:
+        return [("PASS", "guide_floor", f"no {period} path encoded")]
+    path_rev = hits[0]
+    if path_rev + 1e-9 < box_low:
+        return [
+            (
+                "FAIL",
+                "guide_floor",
+                f"{period} path {path_rev} is below printed box low {box_low}",
+            )
+        ]
+    return [("PASS", "guide_floor", f"{period} path {path_rev} >= box low {box_low}")]
 
 
 def _check_sotp_gap(vm: dict[str, Any], *, require_if_both: bool = False) -> list[tuple[str, str, str]]:

@@ -258,6 +258,8 @@ def main(argv: list[str] | None = None) -> int:
         "scripts/tests/test_provenance.py",
         "scripts/tests/test_session_isolation_check.py",
         "scripts/tests/test_phase_graph.py",
+        "scripts/tests/test_library.py",
+        "scripts/tests/test_doc_text.py",
     ]
     existing = [t for t in tests if (root / t).is_file()]
     if not existing:

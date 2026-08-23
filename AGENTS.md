@@ -7,7 +7,7 @@ Auto-loaded entrypoint. **Keep this file short.** Deep law lives in nested files
 | Mode | When to use | Normative law (read before acting) | Data |
 |------|-------------|--------------------------------------|------|
 | **A — Research** | Run equity research on a ticker (Phases 0–5) | **`harness/RESEARCH_AGENTS.md`** + `harness/HARNESS_MAP.md` + `harness/agent_prompts.md` | **Write** `archive/research/<TICKER>/<DATE>/` |
-| **B — Build** | Features, UI, catalog API, harness code | **`eng/AGENTS.md`** + `eng/HARNESS_MAP.md` | **Read-only** `archive/`; code under `eng/`, `packages/`, `apps/`, `programs/` |
+| **B — Build** | Features, UI, catalog API, harness code | **`eng/AGENTS.md`** + `eng/HARNESS_MAP.md` | Immutable `archive/research` + `archive/outcomes`; append `archive/library/`; code under `eng/`, `packages/`, `apps/`, `programs/` |
 
 ### Hard rules (both modes)
 
@@ -22,7 +22,9 @@ Auto-loaded entrypoint. **Keep this file short.** Deep law lives in nested files
 
 ```bash
 # Mode A — research
+python3 scripts/ingest_library.py --ticker META
 python3 scripts/scaffold_session.py --ticker META --date $(date +%F) --orchestrator-model grok-4.5
+python3 scripts/bind_library.py --ticker META --date $(date +%F)
 python3 scripts/preflight_phase.py --ticker META --date $(date +%F) --phase 2_parallel
 python3 scripts/check_session.py --ticker META --date $(date +%F) --full
 python3 scripts/finalize_session.py --ticker META --date $(date +%F)
@@ -48,12 +50,13 @@ python3 -m apps.analysis_web          # http://127.0.0.1:8765/
 | Catalog read API | `packages/catalog_api/` |
 | Analysis UI | `apps/analysis_web/` |
 | Live research records | `archive/research/`, `archive/catalog/`, `archive/outcomes/` |
+| Ticker document library | `archive/library/` (filings/transcripts; not judgments) — `harness/library.md` |
 | Offline CI fixtures | `eng/fixtures/archive/` (same shape as `archive/`) |
 | Industry harness research pack | `harness/research/` (advisory) |
 
 ## Mode A one-line pipeline
 
-Scaffold **new** `S` → sector + `market_context` → `research_brief` → Phase 0… → **preflight** before 2 / 2.5 / 4 / 5 → audit → `finalize_session`.  
+Scaffold **new** `S` → sector + `market_context` → `research_brief` → `bind_library.py` (before 2b) → Phase 0… → **preflight** before 1 / 2 / 2.5 / 4 / 5 → audit → `finalize_session`.  
 **Do not** browse prior `archive/research/<T>/` sessions before a new run (isolation). Resume only if the user names that folder.  
 Details: **`harness/RESEARCH_AGENTS.md`**.
 

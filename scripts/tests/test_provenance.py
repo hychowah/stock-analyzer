@@ -81,6 +81,9 @@ class RuntimePathTests(unittest.TestCase):
     def test_research_runtime_paths(self):
         self.assertTrue(is_research_runtime_path("harness/RESEARCH_AGENTS.md"))
         self.assertTrue(is_research_runtime_path("scripts/kd_research/gates.py"))
+        self.assertTrue(is_research_runtime_path("scripts/ingest_library.py"))
+        self.assertTrue(is_research_runtime_path("scripts/bind_library.py"))
+        self.assertTrue(is_research_runtime_path("scripts/harvest_library.py"))
         self.assertTrue(is_research_runtime_path("templates/audit.schema.json"))
         self.assertTrue(is_research_runtime_path("sector_banking.md"))
         self.assertTrue(is_research_runtime_path("region_us.md"))

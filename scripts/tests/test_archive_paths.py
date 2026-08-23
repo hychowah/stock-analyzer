@@ -14,8 +14,10 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.kd_research.paths import (  # noqa: E402
     allocate_session_key,
+    ensure_archive_tree,
     is_production_session_key,
     iter_research_sessions,
+    library_root,
     make_session_key,
     parse_session_key,
     resolve_session,
@@ -72,6 +74,12 @@ class PathsTests(unittest.TestCase):
             (p2 / "meta").mkdir()
             key3 = allocate_session_key("META", "2026-08-10", output_dir=root)
             self.assertEqual(key3, "2026-08-10__r3")
+
+    def test_ensure_archive_tree_has_library(self):
+        with tempfile.TemporaryDirectory() as td:
+            dirs = ensure_archive_tree(td)
+            self.assertTrue(dirs["library"].is_dir())
+            self.assertEqual(library_root(td), Path(td) / "archive" / "library")
 
     def test_session_root_default_under_archive(self):
         with tempfile.TemporaryDirectory() as td:

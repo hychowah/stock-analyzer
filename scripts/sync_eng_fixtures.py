@@ -153,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
 
     dest_project: Path = args.dest
     dest_archive = dest_project / "archive"
+    (dest_archive / "library").mkdir(parents=True, exist_ok=True)
     src_root = PROJECT_ROOT / "archive" / "research"
 
     copied: list[tuple[str, str]] = []

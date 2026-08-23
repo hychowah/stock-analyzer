@@ -14,7 +14,7 @@ Every template already carries the justification contract — do not strip it. S
 **Conventions for all agents:**
 - **Product purpose**: this harness produces **investment-decision research** (fair value, risks, timing, provenance). Optimize for **valuable results the next phase can use** — not for shorter chat or token thrift. Drop noise and raw dumps; never drop material risks, ownership facts, or footnote numbers to look concise.
 - **Hermetic scripts**: compute scripts must read session-cached data (`S/data/*.csv`, `S/registry/*.json`) when present and fetch live data only when absent. A rerun on the same session must reproduce the same numbers.
-- **Session sharing vs isolation**: **Within this session** agents must use each other’s artifacts under `S/` (handoffs, registry, data). **Across sessions** (other `session_key` under the same or other tickers): do **not** open, list, or mine prior runs for FV, MoS, thesis, handoffs, or “is yesterday complete?” — unless the user explicitly said **resume that folder** or **compare after this run**. Default new-run start: scaffold → work under `S` only. See `S/registry/session_isolation.json`.
+- **Session sharing vs isolation**: **Within this session** agents must use each other’s artifacts under `S/` (handoffs, registry, data). **Across sessions** (other `session_key` under the same or other tickers): do **not** open, list, or mine prior runs for FV, MoS, thesis, handoffs, or “is yesterday complete?” — unless the user explicitly said **resume that folder** or **compare after this run**. Default new-run start: scaffold → work under `S` only. Do **not** open other archive trees for filings (work from `S/data/raw_sec` and `S/data/transcripts` when those exist). See `S/registry/session_isolation.json`.
 - **Scripted intermediates / number integrity**: any number used inside an assumption build-up (e.g. realized beta, growth CAGR) must be computed by a script in `S/data/compute/`, not by unscripted mental math. Multi-step arithmetic belongs in compute scripts. Reports and later agents must **rehydrate** judgment numbers from registry/compute paths — never from chat memory.
 - **Benchmarks**: use the regional benchmark and sector index declared by the orchestrator in the session's required inputs (and `S/registry/research_brief.json` when present); deviate only with a stated rationale.
 - **Market / region context**: read `S/registry/market_context.json` when present (orchestrator writes it with sector_config). Cost of capital and governance dials are **local to listing and cash-flow currency** — do not paste US 10Y/ERP by default for non-USD models. Region modules (`region_*.md`) are advisory only; never apply hardcoded country WACC, ERP tables, or family-control discounts. Intensity `low` may no-op with explicit `noted_only` hooks; `medium`/`high` require real treatment. There is **no always-on region agent** — ownership depth is Agent 2e; CoC judgment is Agent 5.
@@ -23,7 +23,7 @@ Every template already carries the justification contract — do not strip it. S
 - **Decision-grade return contract** (every agent):
   - **Primary product is on disk** (registry JSON, data CSVs, compute outputs, charts, reports). Chat to the parent is disposable.
   - **Specialist agents**: finish by writing the artifact + handoff. Parent-facing summary = handoff path + 3–5 bullets of what changed for downstream — do not paste full tables or filings into chat.
-  - **Swarm workers (Phase 0 / 2.5)**: return **JSON only** with mandatory decision fields (see templates). Prefer **signal density**: 3–6 specific, sourced findings beat 20 generic industry platitudes. Put full text under `S/data/` (raw_sec, transcripts, caches); returns carry **paths + short excerpts**, not uncapped 10-K prose.
+  - **Swarm workers (Phase 0 / 2.5)**: return **JSON only** with mandatory decision fields (see templates). Prefer **signal density**: 3–6 specific, sourced findings beat 20 generic industry platitudes. Do **not** write `S/data/raw_sec` or transcripts (Phase 1). Returns carry **paths + short excerpts**, not uncapped 10-K prose.
   - **Anti-patterns (FAIL-quality even if schema-valid)**: empty or missing `downstream_relevance` on Phase 0 findings; quantitative claims without sources; inventing litigation/contingent quanta; pasting full filing/HTML into return JSON or handoff; hollow “looks fine” handoffs that hide gaps; report numbers not present in registry/compute.
   - **Orchestrator merges**: write each raw return under `S/registry/raw/` **before** merging; merge for **coverage** (brief questions, risk candidates, stress library) and conflict notes; spot-check ≥3 headline numbers against data/raw — never invent merge numbers.
 - **Judgment exemplars (style only)**: before writing judgment-heavy outputs, match the GOOD patterns in `ROOT/harness/exemplars/` (index: `ROOT/harness/exemplars/index.json`). BAD patterns are FAIL-quality even if schema-valid. **Do not copy illustrative numbers into this session.** Agent map: valuation (5) and audit (13) → `rationale_quality.md` + `hooks_quality.md` + `valuation_decision_quality.md`; technical (4), TSR (12), deep dive (2e) → `rationale_quality.md`; **every agent** → `handoff_quality.md` for handoff style. Orchestrator injects the relevant paths into each subagent prompt (do not paste full exemplar banks into every template).
@@ -51,6 +51,8 @@ Do not run valuation subagent (5) before phase `2_parallel` preflight passes; do
 
 **New-run start (mandatory):** When the user asks to research ticker T (and does not name an existing `session_key` to resume), **scaffold first** and work under that `S`. Always pass **`--orchestrator-model <id>`** (your actual model id, e.g. `grok-4.5`) so `meta/run_manifest.json` records it **before Phase 0** — never invent or guess the model id at finalize after a long context. Optional `--subagent-model` defaults to the same id. Preflight FAILs if missing. **Forbidden:** listing `archive/research/T/`, reading yesterday’s reports/registry, or deciding whether a prior run is “usable” before starting. That is cross-session contamination. Same-day re-runs get a new `session_key` (`date` or auto `date__rN`); keep `S` pointed only at the current folder. Do not inject any prior session paths into subagent prompts.
 
+**Document library (harness ≥ 2.19.0):** After research_brief (may overlap Phase 0), run `python3 scripts/bind_library.py --ticker T --date D` **before spawning 2b**. Bind **refuses** a completed session (`prediction_snapshot` or finalized `run_manifest`) — never re-bind finished history. Read `ROOT/harness/library.md` (you and Agent 2b only; do **not** paste it or the live library path into other subagents). Inject `session_missing` from bind/index into the **2b** prompt only. Year-reader paths must be `S/data/raw_sec/*.txt`. Do **not** run `harvest_library.py` from a new research run.
+
 **Classify from `ROOT/harness/RESEARCH_AGENTS.md` §5 first** (no scoring algorithm; modules do not classify). If you consult a `sector_*.md` detection list, it is diagnostic only. Empty `module_file` is valid for `standard`. Branded CPG / Consumer Defensive food with commodity-input beta stays `standard` (optional `is_also_growth`); seed the shock in the brief, do not switch the lead module.
 
 **Research brief (new sessions):** after sector_config + market_context, write `research_brief.json`. `must_answer_questions` still min 3. Include at least one question each on (1) the industry game / who sets price, (2) destock vs demand or cycle position, (3) whether you would trust retained earnings. Schema minItems stays 3; these seeds are coverage, not extra schema required keys.
@@ -70,7 +72,7 @@ You are a research analyst gathering background on {{item}} for TICKER (session 
 
 Read first: S/registry/sector_config.json, S/registry/market_context.json (if present), and S/registry/research_brief.json (if present). If intensity is medium/high or research_depth is deep, prioritize local institutional facts over US-default framing. Prefer primary sources (filings, IR, exchange) over SEO aggregators when both exist.
 
-Research the assigned topic using web search. Return JSON only (do not write files). Decision-grade contract: 3-6 specific factual findings beat generic filler; every quantitative claim needs a source; full articles stay on the web/cache — do not paste multi-page text into the return.
+Research the assigned topic using web search. Return JSON only (do not write files). Do not open other research sessions or write `S/data/raw_sec` / transcripts (Agent 2b / 2e). Decision-grade contract: 3-6 specific factual findings beat generic filler; every quantitative claim needs a source; full articles stay on the web/cache — do not paste multi-page text into the return.
 
 {"topic": "...",
  "findings": ["3-6 specific, factual bullets with numbers where possible"],
@@ -107,27 +109,35 @@ Numbers must come from the sources above — do not **invent**. **Do fetch** ven
 ### Agent 2b — SEC filings (`coder`)
 
 ```text
-Fetch SEC (or local-jurisdiction) primary filings for TICKER and store them under the session tree for deep mining. Read S/registry/market_context.json when present and honor listing.primary_filing_source / filing_forms_expected — do not pretend EDGAR is primary if the annual is HKEX, DART, or another local venue.
+Inventory bound filings already in S/data/raw_sec/ (orchestrator ran bind_library.py). Persist a listing and fetch **only** session_missing[] into S. Read ROOT/harness/library.md. Read S/registry/library_bind.json. Read S/registry/market_context.json when present and honor listing.primary_filing_source / filing_forms_expected — do not pretend EDGAR is primary if the annual is HKEX, DART, or another local venue.
 
-REQUIRED fetch set:
-1. At least the **three most recent annual reports** (US: 10-K; non-US: 20-F / annual report equivalents). When `research_brief.research_depth` is `deep` **or** `market_context.intensity` is `high`, fetch **five** annuals when they exist. Extra years are not a substitute for ownership/control depth in 1c.
+LIBRARY-FIRST (harness ≥ 2.19.0):
+- Bind already copied cleaned .txt into S. Do not re-download or reconvert those. Do not write extract_sidecars.py in S/data/compute/. Convert new files with ROOT/scripts/kd_research/doc_text.py then `python3 scripts/ingest_library.py --ticker T --from-file PATH`.
+- Persist a listing: US → S/registry/raw/filing_index.json; non-US → S/registry/raw/ir_listing.json (items[] with kind, form, fiscal_period, filing_date, accession when known). Not a vibe.
+- Fetch into S ONLY session_missing[] (required-set slots not in S, including newer than bound). Do NOT fetch library_gaps[] (older years) into S — that explodes 1c year-readers.
+- Required set: 3 most recent unique-FY annuals (5 if research_depth=deep or intensity=high); 2 interims; latest earnings exhibit + supplement. One primary .txt per FY.
+- _unlabeled/: line-range read at most 5 txts; label via ingest --label. If a labeled doc fills a required-set slot, copy the txt into S. Ignore-with-log only for kind=other / duplicate hash. Unlabeled that still matches session_missing at finish → FAIL. Do not walk filings/ to mine footnotes.
+
+REQUIRED fetch set (if not already bound):
+1. At least the **three most recent annual reports** (US: 10-K; non-US: 20-F / AR / annual equivalents). When `research_brief.research_depth` is `deep` **or** `market_context.intensity` is `high`, fetch **five** annuals when they exist. Extra years are not a substitute for ownership/control depth in 1c.
 2. The two most recent interim reports (10-Q / half-year / etc.).
 3. The latest earnings 8-K exhibit (EX-99.1 and financial supplement EX-99.2 if any).
-Store a cleaned `.txt` sidecar next to HTML/PDF so year-readers can section-walk without pasting HTML.
+Store a cleaned `.txt` sidecar next to HTML/PDF (doc_text.py) so year-readers can section-walk without pasting HTML. Never copy a PDF/HTML-only file into raw_sec.
 
-Primary: kimi-datasource plugin (get_data_source_desc("sec_edgar")). Fallback: local sec-edgar MCP (search_company_by_ticker, get_latest_filings, then get_filing_text — it returns only a 20k-char preview in the MCP response; read the COMPLETE filing from the `full_text_path` it returns). Note any substitution.
+If session_missing is non-empty: Primary = kimi-datasource plugin (get_data_source_desc("sec_edgar")). Fallback: local sec-edgar MCP (search_company_by_ticker, get_latest_filings, then get_filing_text — it returns only a 20k-char preview in the MCP response; read the COMPLETE filing from the `full_text_path` it returns). Note any substitution. Do not use MCP to re-pull bound years.
 
-HERMETIC STORE (required):
-- Copy complete primary-document text into S/data/raw_sec/ with stable filenames (accession or form+period). Deep mining and audit re-reads MUST work from the session tree, not only a global MCP cache.
-- Optionally also keep prior-year earnings EX-99.1 outlook text under S/data/raw_sec/ when available (helps the management scorecard).
+HERMETIC STORE (required — **session_missing[] only**):
+- Copy newly fetched complete text into S/data/raw_sec/ with stable filenames (accession or form+period). Deep mining and audit re-reads MUST work from the session tree, not only a global MCP cache. Bound files are already the working copy.
+- Write-through those new downloads via ingest_library.py --from-file (session path as --from-file).
+- Optionally also keep prior-year earnings EX-99.1 outlook text under S/data/raw_sec/ when available (helps the management scorecard) if it is in session_missing.
 
 INDEX ONLY (capped):
 - For each filing, extract Business, Risk Factors, MD&A, and financial-statement highlights, capped to ~20k chars total per filing (python3 with ROOT/scripts/kd_research/sec_context.py: extract_all_sections + cap_context + context_to_dict).
-- Write S/registry/sec_filings.json per ROOT/templates/sec_filings.schema.json. This is a navigable index — do NOT replace multi-year raw_sec with caps alone.
+- Write S/registry/sec_filings.json per ROOT/templates/sec_filings.schema.json. This is a navigable index — do NOT replace multi-year raw_sec with caps alone. Forms for annuals must pass is_annual_form (10-K/20-F/annual/AR).
 
 IMPORTANT exception: for the MOST RECENT earnings release, also fetch the financial-supplement / data-table exhibit (e.g. 8-K ex-99.2) UNCAPPED — the latest-quarter integrator needs those tables (capital ratios, NIM, TBVPS, credit detail). Store it as S/data/latest_supplement.txt (or .csv if tabular).
 
-Log gaps (missing years, failed downloads) in S/registry/data_fetch_log.json so 2e can mark strategy_arc / scorecard coverage degraded.
+Log S/registry/data_fetch_log.json including freshness: checked_at, index_source, index_path, session_missing, fetched_new. Bind-time fields do not count. Gaps so 2e can mark strategy_arc / scorecard coverage degraded.
 ```
 
 ### Agent 2c — news & sentiment (`coder`)
@@ -180,12 +190,12 @@ Orchestrator: list annuals with `python3 -c "from scripts.kd_research.annuals im
 ```text
 You extract ONE fiscal year's annual report for TICKER (session S). You do not write filing_deep_dive.json.
 
-Anti-role: no other years, no valuation, no transcripts, no promise_vs_actual.py, no multi-year narrative, no WACC/FV. Cross-year joins are Agent 2e's job.
+Anti-role: no other years, no valuation, no transcripts, no promise_vs_actual.py, no multi-year narrative, no WACC/FV, no library_bind, no paths outside S/data/raw_sec. Cross-year joins are Agent 2e's job.
 
 Read first: S/registry/sector_config.json, S/registry/market_context.json (ownership depth for THIS filing), ROOT/harness/filing_deep_dive.md checklist, ROOT/templates/filing_year_dive.schema.json.
 
 HOW TO READ (mandatory):
-- Open only the cleaned .txt for YOUR year under S/data/raw_sec/ (path injected by orchestrator). Never feed .htm. Never paste the whole file into chat.
+- Open only the cleaned .txt for YOUR year under S/data/raw_sec/ (path injected by orchestrator). Refuse any path not under S/data/raw_sec/. Never feed .htm. Never paste the whole file into chat.
 - Section-walk with line-range reads and search only. Recite unread required sections as you go.
 - Required sections_walked ids: business, risk_factors, legal, md_and_a, notes, related_party.
 - Helpers allowed on THIS file only: ROOT/scripts/kd_research/note_extract.py.
@@ -223,8 +233,10 @@ Build S/registry/filing_deep_dive.json per ROOT/templates/filing_deep_dive.schem
 6) Optional risk_factor_delta from year-file themes.
 
 TRANSCRIPTS (secondary; after year merge):
-- Last 4–8 quarters via web-fetch / IR when possible → S/data/transcripts/.
-- If none: sources.transcripts status=missing, scorecard data_quality degraded_no_transcripts or partial; never invent quotes.
+- Read only S/data/transcripts/*.txt (already bound into S). Do not list or open other transcript trees. Do not write extract_sidecars.py.
+- Write data_fetch_log.transcript_freshness: checked_at, latest_period (from latest_quarter / latest 8-K vs session transcript names), fetched_new. Unchecked is FAIL; missing after a recorded fetch attempt degrades scorecard (not 1c FAIL).
+- Required window = last **8** unique periods already in S. Fetch only session_missing slots for that window (usually the latest call). Convert with ROOT/scripts/kd_research/doc_text.py; copy into S/data/transcripts/. Do not fetch library_gaps (older holes). Orchestrator may ingest new S files later; you do not need to.
+- If none and fetch fails: sources.transcripts status=missing, scorecard data_quality degraded_no_transcripts or partial; never invent quotes.
 
 Write S/registry/handoffs/2e_filing_deep_dive.md (verify re-checks, dropped worker figures, ownership treatment).
 ```
@@ -286,7 +298,7 @@ Orchestrator: `preflight --phase 1d` before workers; `preflight --phase 1d --mod
 ### Agent 4 — technical analysis (`coder`)
 
 ```text
-Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news, no street_estimates / street_bind, no operating_path_brief / oppath_* / revenue_growth / industry_trend / operating_leverage). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
+Technical analysis for TICKER as of DATE. You must NOT read any fundamental artifact (no valuation model, no filings, no background, no news, no street_estimates / street_bind, no operating_path_brief / oppath_* / revenue_growth / industry_trend / operating_leverage, no library_bind / archive/library). Price/volume data only. The orchestrator will tell you the latest earnings DATE (date only, no content) so you can note any price gap around it.
 
 Fetch ~2 years of daily prices for TICKER, the regional benchmark, and the sector index declared by the orchestrator (deviate only with rationale) via the yfinance MCP (get_price_history) or yahoo_finance datasource. Cache them to S/data/prices_*.csv. If S/data/price_snapshot.json exists (price-only freeze from orchestrator), use its `close` as the session “last close” / current-price anchor for levels that need a single print; still use full history for indicators.
 
@@ -299,7 +311,7 @@ Write S/registry/technical.json per ROOT/templates/technical.schema.json, includ
 
 ### Agent 5 — valuation (`coder`)
 
-**Anti-anchoring:** Derive FV/MoS/probs only from **this session** (`S/data`, `S/registry`, compute scripts, primary sources). Do **not** open or target other `archive/research/<TICKER>/<other_session_key>/` valuation models, snapshots, or report verdicts to “stay consistent” with a prior run. Same-session upstream is 2a–2e + 1d + street_estimates (when present). Agent 4 is isolated; Agent 12 is **parallel** — do not wait for TSR WACC. Compute TTC ROIC from `S/data/sp_financials.csv` + FDD yourself. Prior-day research is not an input.
+**Anti-anchoring:** Derive FV/MoS/probs only from **this session** (`S/data`, `S/registry`, compute scripts). Bound filings are `S/data/raw_sec/*.txt` — do not follow `library_bind` `library_text` paths or re-download annuals. Do **not** open or target other `archive/research/<TICKER>/<other_session_key>/` valuation models, snapshots, or report verdicts to “stay consistent” with a prior run. Same-session upstream is 2a–2e + 1d + street_estimates (when present). Agent 4 is isolated; Agent 12 is **parallel** — do not wait for TSR WACC. Compute TTC ROIC from `S/data/sp_financials.csv` + FDD yourself. Prior-day research is not an input.
 
 ```text
 Value TICKER as of DATE.
@@ -307,7 +319,7 @@ Value TICKER as of DATE.
 Role: model designer + assumption judge. Anti-role: not a module-default paste machine; not a self-auditor.
 Judgment style: read ROOT/harness/exemplars/rationale_quality.md, hooks_quality.md, and valuation_decision_quality.md (GOOD patterns; do not copy illustrative numbers).
 
-Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json (read cash_quality when present — you do not write it), S/registry/filing_deep_dive.json (REQUIRED), S/registry/operating_path_brief.json (REQUIRED on harness ≥ 2.6.0), S/registry/street_estimates.json (REQUIRED on harness ≥ 2.7.0 unless data_fetch_log records a Street fetch failure), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from filings if needed. 1d workers are evidence only — YOU write growth/OM paths. Do not average flatten-vs-destock. On harness ≥ 2.18.0 Street FY+1 is **base Y1**; destock analog belongs in **bear** while Street is usable — do **not** destock-in-base to “win” an unresolved conflict. Do **not** average Street consensus with a destock stack into one CAGR called base. Street **price targets** are not a DCF input.
+Inputs: S/registry/sector_config.json, S/registry/market_context.json (REQUIRED for new sessions), S/registry/research_brief.json (when present), S/registry/latest_quarter.json (read cash_quality when present — you do not write it), S/registry/filing_deep_dive.json (REQUIRED), S/registry/operating_path_brief.json (REQUIRED on harness ≥ 2.6.0), S/registry/street_estimates.json (REQUIRED on harness ≥ 2.7.0 unless data_fetch_log records a Street fetch failure), S/registry/data_fetch_log.json, S/data/sp_financials.csv, S/data/peer_comparison.csv, S/registry/background.json, sector module in sector_config.module_file, region module in market_context.module_file (both advisory). Prefer S/data/price_snapshot.json for current price / MoS when present (orchestrator freezes it before Phase 2). Fill peer KPI gaps from S/data/raw_sec, FDD, or sec_filings.json — if still missing, handoff + widen; do not re-fetch annuals. 1d workers are evidence only — YOU write growth/OM paths. Do not average flatten-vs-destock. On harness ≥ 2.18.0 Street FY+1 is **base Y1**; destock analog belongs in **bear** while Street is usable — do **not** destock-in-base to “win” an unresolved conflict. Do **not** average Street consensus with a destock stack into one CAGR called base. Street **price targets** are not a DCF input.
 
 PREFLIGHT (stop → handoff status=blocked; do not invent):
 - registry/filing_deep_dive.json exists with footnotes + strategy_arc + management_scorecard.
@@ -413,7 +425,7 @@ Labels and titles in English, descriptive file names, cite data source on each c
 ```text
 Write S/reports/01_TICKER_fundamental.md.
 
-Read: all of S/registry/ (sector_config, market_context, research_brief when present, background, sec_filings, filing_deep_dive, news_sentiment, latest_quarter, tsr_validation, risk_bridge, data_fetch_log), S/data/valuation_model.json, S/data/peer_comparison.csv. Skim sec_filings.json sections as needed; use filing_deep_dive.json for footnotes/strategy/scorecard (do not re-hallucinate from web when deep dive has primary excerpts). Use market_context.json for listing/accounting/ownership/intensity (do not invent regional haircuts not in the valuation model).
+Read: all of S/registry/ (sector_config, market_context, research_brief when present, background, sec_filings, filing_deep_dive, news_sentiment, latest_quarter, tsr_validation, risk_bridge, data_fetch_log), S/data/valuation_model.json, S/data/peer_comparison.csv, S/data/raw_sec/*.txt as needed. Skim sec_filings.json sections as needed; use filing_deep_dive.json for footnotes/strategy/scorecard (do not re-hallucinate from web when deep dive has primary excerpts). Do not re-download 10-Ks. Use market_context.json for listing/accounting/ownership/intensity (do not invent regional haircuts not in the valuation model).
 
 Structure:
 - executive summary & verdict (quote registry/decision.json duration.action first; do not invent a second verdict)
@@ -431,7 +443,7 @@ Structure:
 - bull-base-bear with probabilities and rationale
 - position-sizing input
 
-Rules: every number cites a source (registry file, filing URL, or compute script). Key judgment numbers must be restated with their rationale and must match registry/compute — **no chat-only or mental-math figures**. No new numbers that are not in the registry. MoS: restate dual units consistently (percent points for readers) using base FV as primary; if fair_value.decision_usefulness is low/medium, do **not** lead the valuation/verdict section with probability-weighted FV as a precise target — say the range is decision-limiting. When `roic_identity` exists: restate `quality_bucket`, dual-column EVs, and `cheap_claim.class` in the value lens. If cheap_claim ≠ franchise_mos, do **not** lead with MoS as a franchise gift (say equity ≈ book / residual option). Reconcile Agent 12 `roc_vs_cost_of_capital` in perspective conflicts — different stack, same question. If research_brief exists, note any still-open must_answer_questions and how uncertainty was widened. If the assumption stack leans one direction, disclose it. When two vintages of a metric exist (e.g. latest-quarter vs FY book value), use one consistently and say which. Label transcript-sourced claims as secondary.
+Rules: every number cites a source (registry file, S/data/raw_sec path, or compute script). Web only for news URLs already in news_sentiment. Key judgment numbers must be restated with their rationale and must match registry/compute — **no chat-only or mental-math figures**. No new numbers that are not in the registry. MoS: restate dual units consistently (percent points for readers) using base FV as primary; if fair_value.decision_usefulness is low/medium, do **not** lead the valuation/verdict section with probability-weighted FV as a precise target — say the range is decision-limiting. When `roic_identity` exists: restate `quality_bucket`, dual-column EVs, and `cheap_claim.class` in the value lens. If cheap_claim ≠ franchise_mos, do **not** lead with MoS as a franchise gift (say equity ≈ book / residual option). Reconcile Agent 12 `roc_vs_cost_of_capital` in perspective conflicts — different stack, same question. If research_brief exists, note any still-open must_answer_questions and how uncertainty was widened. If the assumption stack leans one direction, disclose it. When two vintages of a metric exist (e.g. latest-quarter vs FY book value), use one consistently and say which. Label transcript-sourced claims as secondary.
 ```
 
 ### Agent 8 — technical report (`coder`)
@@ -475,11 +487,11 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 1c. scenario_probabilities: only bear/base/bull numerics (extra keys / string rationale inside map = major until fixed). Machine check_session may WARN/FAIL — treat as structural.
 
 **Band 2 — Consumption & process integrity**
-2. EXTERNAL VERIFICATION: ≥5 filing-grade numbers vs primary sources. Consistency is not truth. ≥1 of the ≥5 must be multi-period series or historical stress anchor (not five lines from the same EX-99.1 only).
+2. EXTERNAL VERIFICATION: ≥5 filing-grade numbers vs issuer/EDGAR/exchange **for the same accession already on disk in S/data/raw_sec** (session copy ≠ truth). Do not verify against other research sessions. Consistency is not truth. ≥1 of the ≥5 must be multi-period series or historical stress anchor (not five lines from the same EX-99.1 only). Also ≥3 re-checks against S/data/raw_sec/*.txt.
 2b–2d. Deep-dive structure + re-checks; hooks consumption; market_context hooks + intensity gate (high intensity all-noted_only is FAIL-quality). When `operating_path_brief.json` exists: non-empty `operating_path_hooks` that are not all-`noted_only`. Machine check_session enforces non-empty filing_deep_dive_hooks when FDD exists (F8) and medium/high all-noted_only — still grade *substance* of use/reject.
 2c+. If filing_deep_dive was created during Phase 5 after valuation with empty material hooks → major FAIL (backfill-without-revalue is not PASS) unless re-value or explicit README waive that FV did not consume FDD. **You must not author missing FDD or rewrite valuation as auditor.**
 2e–2g. Decision-grade handoffs (four sections); research_brief coverage; news URL sample.
-2h. **Agent 4 isolation:** technical.json / handoffs/4* must not cite fundamental paths (valuation_model, filing_deep_dive, background, latest_quarter, market_context, sec_filings, sp_financials, street_estimates). Machine may FAIL under --full; confirm independence of TA lens.
+2h. **Agent 4 isolation:** technical.json / handoffs/4* must not cite fundamental paths (valuation_model, filing_deep_dive, background, latest_quarter, market_context, sec_filings, sp_financials, street_estimates, library_bind, archive/library). Machine may FAIL under --full; confirm independence of TA lens.
 2i. Swarm lead handoffs present (phase0_* / phase25_*); hollow “none” gaps when artifacts show problems = finding.
 
 **Band 3 — Judgment quality sample**

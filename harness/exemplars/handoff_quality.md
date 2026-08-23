@@ -38,9 +38,10 @@ SEC/local filings agent got 3 annuals + 2 interims; one prior-year annual downlo
 # 2b_sec_filings
 
 ## What I did
-- Wrote `registry/sec_filings.json` (index capped ~20k/filing) and hermetic copies under `data/raw_sec/` for FY2023–FY2025 annuals + last two interims.
+- Wrote `registry/sec_filings.json` (index capped ~20k/filing). Bind already had unique-FY FY2023–FY2025 annuals + two interims as `.txt` under `data/raw_sec/`; did not re-download those.
+- `session_missing` was the latest 8-K exhibit; fetched that only via sec-edgar MCP; write-through ingest from the session path. Left `library_gaps` (older years) in the corpus.
 - Stored latest earnings supplement uncapped at `data/latest_supplement.txt`.
-- Primary source: sec-edgar MCP; logged tool timeouts in `registry/data_fetch_log.json`.
+- Freshness in `registry/data_fetch_log.json` (`checked_at`, `index_source`, `session_missing`, `fetched_new`).
 
 ## Data issues & gaps
 - FY2022 annual primary text **failed** (MCP timeout ×2). Fallback: none usable. Strategy arc for 2e will be 3 years (2023–2025) only — mark coverage partial if 2e expects ≥3 *prior* arcs including 2022.

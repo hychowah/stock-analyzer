@@ -822,6 +822,34 @@ def check_roic_identity_session(session: Path) -> None:
         record("SKIPPED", "roic_identity", "valuation_model.json missing")
 
 
+def check_library_session(session: Path, *, full: bool = False) -> None:
+    """Library bind / freshness / no live-library citations. SKIPPED on legacy."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.library import (  # noqa: WPS433
+        check_library_gates,
+        check_library_path_citations,
+        check_transcript_freshness,
+        session_enforces_library,
+        BIND_REL,
+    )
+
+    if not session_enforces_library(session) and not (session / BIND_REL).is_file():
+        record(
+            "SKIPPED",
+            "library_bind",
+            "legacy/slim (no library_bind.json; harness_version < 2.19.0)",
+        )
+        return
+    for status, check, detail in check_library_gates(session):
+        record(status, check, detail)
+    if full:
+        for status, check, detail in check_library_path_citations(session, full=True):
+            record(status, check, detail)
+        for status, check, detail in check_transcript_freshness(session):
+            record(status, check, detail)
+
+
 def check_street_bind_session(session: Path) -> None:
     """New-runtime Street fetch + Agent 5 calibration bind; SKIPPED on legacy."""
     if str(PROJECT_ROOT) not in sys.path:
@@ -1206,6 +1234,7 @@ def main() -> int:
     check_research_brief(session)
     check_phase_status(session)
     check_session_isolation(session, full=bool(args.full))
+    check_library_session(session, full=bool(args.full))
     check_meta_artifacts(session)
     # FDD hooks / Agent 4: always evaluate when files present; severity for Agent 4 depends on --full
     check_filing_deep_dive_hooks_session(session)

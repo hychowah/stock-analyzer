@@ -5,7 +5,7 @@
 **Not the goal:** token thrift or shorter runs for their own sake.
 
 **Mode A (this map):** equity research pipeline → writes `archive/research/`.  
-**Mode B (product eng):** `eng/AGENTS.md` + `eng/HARNESS_MAP.md` — features/UI/catalog API; **reads** archive only.  
+**Mode B (product eng):** `eng/AGENTS.md` + `eng/HARNESS_MAP.md` — features/UI/catalog API; immutable `archive/research` + `archive/outcomes`; may **append** `archive/library/`.  
 Catalog read API: `packages/catalog_api` (`python3 -m packages.catalog_api health`).
 
 Normative rules: **`harness/RESEARCH_AGENTS.md`** (Mode A full law). Root `AGENTS.md` is dual-mode **router only**. Subagent templates: `harness/agent_prompts.md`. Pipeline design: `harness/design_phase_status_and_exemplars.md`. Industry research notes: `harness/research/`.
@@ -15,12 +15,14 @@ Normative rules: **`harness/RESEARCH_AGENTS.md`** (Mode A full law). Root `AGENT
 ## 1. Session layout
 
 ```text
-archive/research/<TICKER>/<YYYY-MM-DD>/
-  reports/   README + fundamental + technical
-  data/      financials, prices, valuation_model.json, compute/, raw_sec/, transcripts/
-  charts/
-  registry/  configs, evidence JSON, phase_status, handoffs/, raw/
-  meta/      run_manifest, prediction_snapshot
+archive/
+  library/<TICKER>/   # reusable filings/transcripts (harness/library.md) — not a session
+  research/<TICKER>/<YYYY-MM-DD>/
+    reports/   README + fundamental + technical
+    data/      financials, prices, valuation_model.json, compute/, raw_sec/, transcripts/
+    charts/
+    registry/  configs, evidence JSON, phase_status, handoffs/, raw/, library_bind.json
+    meta/      run_manifest, prediction_snapshot
 ```
 
 Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --orchestrator-model <id>`  
@@ -30,7 +32,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 
 **LLM identity (every new run):** `--orchestrator-model` (required) + optional `--subagent-model` → `run_manifest.orchestrator_model` / `default_subagent_model` at **scaffold only**. Preflight FAILs without it. Do not backfill from chat memory after Phase 0+.  
 
-**Isolation:** same session agents share `S/`. New run: **do not** open other `session_key`s first (`registry/session_isolation.json`). Resume only if user names the folder.  
+**Isolation:** same session agents share `S/`. New run: **do not** open other `session_key`s first (`registry/session_isolation.json`). Resume only if user names the folder. Document library: bind into `S` from `archive/library/<T>/`; do not mine the live library (except 2b unlabeled). See `harness/library.md`.  
 
 **Git (Mode A, light):** Prefer a clean tree at **finalize** so stamped `harness_git_sha` is meaningful (`harness_dirty=false`). Mid-phase WIP may stay uncommitted; durable resume is `registry/phase_status.json` + handoffs, not chat. **Never `git commit` without explicit user agreement** (same bar as Mode B). Optional post-finalize commit only if the user asks. Coding/product commits: **`eng/AGENTS.md` Git discipline**.
 
@@ -42,7 +44,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 |-------|--------|-------------------------|------------------|
 | **orch** | main | `sector_config.json`, `market_context.json`, `research_brief.json` (new sessions) | Scope, sector model family, intensity, investment questions. **§5 identity; modules advisory** (detection lists do not classify). |
 | **0** | background swarm | `background.json`, `raw/phase0_*.json`, handoff | Valuation/risk themes; `risk_candidate` list; brief coverage gaps |
-| **1_parallel** | 2a, 2b, 2c | financials CSV, `street_estimates.json` (new runtime ≥ 2.7.0), `sec_filings` + `raw_sec/`, `news_sentiment`, fetch log, handoffs | Actuals, primary text, catalysts |
+| **1_parallel** | 2a, 2b, 2c | financials CSV, `street_estimates.json` (≥ 2.7.0), orchestrator `library_bind.json` then 2b `sec_filings` + `raw_sec/` + index + `data_fetch_log.freshness` (≥ 2.19.0), `news_sentiment`, handoffs | Actuals, primary text, catalysts |
 | **1b** | 2d | `latest_quarter.json` + evidence_log | Overrides input for Agent 5; risks for 2.5 |
 | **1c** | year-readers + 2e merger | `raw/fdd_year_*.json` (new runtime) + excerpt check + `filing_deep_dive.json` (+ transcripts if any) | Footnotes, strategy_arc, scorecard for valuation hooks |
 | **1d** | 1d_rev ∥ 1d_ind ∥ 1d_ol then 1d_merge | `raw/oppath_*.json` + `operating_path_brief.json` (new runtime ≥ 2.6.0) | Growth/industry/leverage facts + conflict map for Agent 5 |
@@ -55,7 +57,7 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 
 **Dependency rule of thumb:** do not start **2** without 1b+1c evidence (and **1d** on harness ≥ 2.6.0); do not start **4** without valuation+risk_bridge+technical+tsr; do not claim **done** without audit PASS.
 
-**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts. When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`). When `street_estimates.json` exists (harness ≥ 2.7.0), Agent 5 logs `street_bind` / `street_hooks`. On ≥ **2.18.0** Street FY+1 is the **base Y1 start** (`used_as:fy1_baseline`; |delta|>5% FAIL); destock analog in **bear** while Street is usable; `4d` does **not** win `4e`. Version-banded destock/Street machines: `RESEARCH_AGENTS.md` §13. On harness ≥ 2.8.0, Agent 5 writes `roic_identity` (same-script NOPAT/IC vs WACC; legal exits; cheap_claim) — Agent 12 stays parallel. On harness ≥ 2.9.0, `check_session --full` also runs Wave 1 decision-quality gates (template masses, named-dial PFP, `decision_usefulness` on wide cones, ROC-vs-cheap_claim, F21 identity, branded-CPG-not-growth). On ≥ 2.10.0, Agent 5 writes `registry/decision.json` (`pass` is legal; `initiate` blocked on a useless cone) and Agent 4 may emit `side=pass`. On ≥ 2.11.0, update mode needs a facts-only changelog (no prior FV). On ≥ 2.13.0 mid-cycle construction is required; last-year/peak SOI cannot license `franchise_mos` / `above_wacc`. On ≥ 2.14.0 the duration verb is provisional in Phase 2 and the orchestrator lead reopens `decision.json` after 2.5 (Agent 5 single-writer; do not spawn `5` in `2_5`). On ≥ 2.15.0 latest-quarter `cash_quality` is required gather (Agent 5 reads it). On ≥ 2.16.0 README leads with `duration.action` before FV/MoS. On ≥ 2.17.0 growth-module decay/TAM-penetration is not a paste path; low classification confidence does not force `standard`. Audit PASS is process completeness, not a buy list. Catalog projects `decision_action` and kill triggers.
+**Specialist quality (machine + process):** enforce **outcomes** (hooks, isolation, handoffs, phase↔disk) — not Task/subagent API IDs. Agent 5 stays **single-writer**. Do **not** fan out multi-valuer or parallel report-section authorship. Agent 4 must not read/cite fundamental artifacts (including `library_bind` / live library). When FDD exists, valuation must log `filing_deep_dive_hooks`. When `operating_path_brief.json` exists, valuation must log `operating_path_hooks` (not all `noted_only`). When `street_estimates.json` exists (harness ≥ 2.7.0), Agent 5 logs `street_bind` / `street_hooks`. On ≥ **2.18.0** Street FY+1 is the **base Y1 start** (`used_as:fy1_baseline`; |delta|>5% FAIL); destock analog in **bear** while Street is usable; `4d` does **not** win `4e`. Version-banded destock/Street machines: `RESEARCH_AGENTS.md` §13. On harness ≥ 2.8.0, Agent 5 writes `roic_identity` (same-script NOPAT/IC vs WACC; legal exits; cheap_claim) — Agent 12 stays parallel. On harness ≥ 2.9.0, `check_session --full` also runs Wave 1 decision-quality gates (template masses, named-dial PFP, `decision_usefulness` on wide cones, ROC-vs-cheap_claim, F21 identity, branded-CPG-not-growth). On ≥ 2.10.0, Agent 5 writes `registry/decision.json` (`pass` is legal; `initiate` blocked on a useless cone) and Agent 4 may emit `side=pass`. On ≥ 2.11.0, update mode needs a facts-only changelog (no prior FV). On ≥ 2.13.0 mid-cycle construction is required; last-year/peak SOI cannot license `franchise_mos` / `above_wacc`. On ≥ 2.14.0 the duration verb is provisional in Phase 2 and the orchestrator lead reopens `decision.json` after 2.5 (Agent 5 single-writer; do not spawn `5` in `2_5`). On ≥ 2.15.0 latest-quarter `cash_quality` is required gather (Agent 5 reads it). On ≥ 2.16.0 README leads with `duration.action` before FV/MoS. On ≥ 2.17.0 growth-module decay/TAM-penetration is not a paste path; low classification confidence does not force `standard`. Audit PASS is process completeness, not a buy list. Catalog projects `decision_action` and kill triggers.
 
 ---
 
@@ -66,6 +68,8 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 | `sector_config` or `market_context` | Phase 0 / 1 | Orchestrator classification |
 | `research_brief` (new sessions) | Phase 0 fan-out | Write brief after classification |
 | `sp_financials.csv` or `sec_filings` / raw_sec | 1b / 1c / 2 | Agents 2a / 2b |
+| `library_bind.json` (new runtime ≥ 2.19.0) | 1_parallel / 2b | Orchestrator `bind_library.py` (never a finished session) |
+| `filing_index.json` / `ir_listing.json` + `data_fetch_log.freshness` | 1_parallel complete | Agent 2b (fetch only `session_missing[]`) |
 | `latest_quarter` or `filing_deep_dive` | Phase 2 valuation | 2d / 1c (year-readers + 2e) |
 | `operating_path_brief` (new runtime) | Agent 5 | 1d workers + 1d_merge |
 | `street_estimates.json` (new runtime ≥ 2.7.0) | Agent 5 bind | Agent 2a fetch (or explicit fetch-fail + widen range) |
@@ -131,6 +135,7 @@ Details: `harness/agent_prompts.md` conventions + `harness/exemplars/`.
 | Sector methodology | `sector_*.md` (advisory) |
 | Region methodology | `region_*.md` (advisory) |
 | Filing deep-dive method | `harness/filing_deep_dive.md` |
+| Ticker document library | `harness/library.md` |
 | Resume map design | `harness/design_phase_status_and_exemplars.md` |
 | Judgment exemplars | `harness/exemplars/` |
 

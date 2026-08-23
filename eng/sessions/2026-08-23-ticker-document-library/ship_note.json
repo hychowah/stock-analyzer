@@ -1,0 +1,18 @@
+{
+  "summary": "Harness 2.19.0: archive/library ticker document corpus. Ingest/bind/harvest CLIs; Mode A library-first required-set copy + mechanical freshness; isolation scoped to code + 2b unlabeled; completed sessions cannot be rebound.",
+  "verify_commands_run": [
+    "python -m pytest scripts/tests/test_library.py scripts/tests/test_doc_text.py scripts/tests/test_year_dive.py scripts/tests/test_street_bind.py -q",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Run harvest_library.py on live tickers only if the user asks (do not seed archive/library in this change set).",
+    "Install pypdf for PDF conversion (optional; HTML always works).",
+    "No analysis-web library browser in v1."
+  ],
+  "risks": [
+    "First Mode A run on 2.19.0 must bind before 1_parallel preflight; empty library is legal.",
+    "Concurrent ingest on the same ticker uses a lock file; do not delete _manifest.lock by hand mid-run.",
+    "Scanned HK PDFs may fail conversion; 2b must retry HTML/exchange text."
+  ],
+  "intended_commit_subject": "Add ticker document library (archive/library) and harness 2.19.0 bind/freshness gates"
+}

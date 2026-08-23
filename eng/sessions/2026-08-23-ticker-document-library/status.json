@@ -1,0 +1,9 @@
+{
+  "slug": "ticker-document-library",
+  "session_key": "2026-08-23-ticker-document-library",
+  "status": "complete",
+  "created_at": "2026-08-23T12:32:59Z",
+  "updated_at": "2026-08-23T16:00:00Z",
+  "work_type": "W1",
+  "resume_hint": "Shipped 2.19.0 library; harvest live archive only if the user asks."
+}

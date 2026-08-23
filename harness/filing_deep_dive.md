@@ -11,10 +11,10 @@ Phase **1c**: one **year-reader** per annual on disk, then Agent **2e** merges i
 ## Shape
 
 ```text
-2b stores N annuals (cleaned .txt)
-  → N year-readers (isolated; section-walk on disk)
+2b stores N annuals (cleaned .txt; ≥ 2.19.0 after library bind of unique-FY required set)
+  → N year-readers (isolated; section-walk on disk — session .txt only, never archive/library)
   → excerpt-in-source machine check
-  → 2e merger (single FDD writer) + transcripts
+  → 2e merger (single FDD writer) + transcripts from S/data/transcripts/ (bound first; still secondary)
 ```
 
 Year-readers write `registry/raw/fdd_year_FY{yyyy}.json`. They see **one year only**. They do **not** call `promise_vs_actual.py`. They do **not** ingest the full file into the prompt — line-range read + search. Required `sections_walked`: business, risk_factors, legal, md_and_a, notes, related_party.

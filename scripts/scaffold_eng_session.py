@@ -64,6 +64,7 @@ def scaffold(
             "apps/",
             "programs/",
             "scripts/",
+            "archive/library/",
         ],
         "write_denylist": [
             "archive/research/**",

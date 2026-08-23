@@ -468,6 +468,8 @@ AGENT4_FORBIDDEN_TOKENS = (
     "operating_leverage.json",
     "street_estimates",
     "street_bind",
+    "archive/library",
+    "library_bind",
 )
 
 # Primary artifacts for phase_status complete / lag checks (agent_id -> rel paths).
@@ -809,6 +811,15 @@ def entry_checks(
         )
     )
 
+    if phase_id == "1_parallel":
+        from scripts.kd_research.library import (  # noqa: WPS433
+            check_library_gates,
+            session_enforces_library,
+        )
+
+        if session_enforces_library(session):
+            results.extend(check_library_gates(session, phase="1_parallel_entry"))
+
     required = PHASE_ENTRY_REQUIRED.get(phase_id, [])
     for rel in required:
         if rel == "reports":
@@ -1002,9 +1013,14 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
         from scripts.kd_research.street_bind import check_street_fetch  # noqa: WPS433
 
         out.extend(check_street_fetch(session))
+        from scripts.kd_research.library import check_library_gates  # noqa: WPS433
+
+        out.extend(check_library_gates(session, phase="1_parallel_complete"))
         return out
     if phase_id == "1c":
-        return check_1c_year_dive_complete(session)
+        from scripts.kd_research.library import check_transcript_freshness  # noqa: WPS433
+
+        return check_1c_year_dive_complete(session) + check_transcript_freshness(session)
     if phase_id == "1d":
         from scripts.kd_research.operating_path import check_1d_complete  # noqa: WPS433
 

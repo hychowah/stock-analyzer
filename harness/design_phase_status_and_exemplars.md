@@ -33,13 +33,13 @@ This is the equity-research analogue of Anthropic’s feature list + progress fi
 
 ### A.3 Phase IDs (stable enum)
 
-Align with `AGENTS.md` §8. Use these exact strings:
+Align with `harness/RESEARCH_AGENTS.md` §8. Use these exact strings:
 
 | `phase_id` | Meaning | Completeness gate (required artifacts) |
 |------------|---------|----------------------------------------|
 | `orch` | Sector + market_context classification + research brief (new sessions) | `sector_config.json`, `market_context.json`, `research_brief.json` (new sessions; legacy OK without) |
 | `0` | Background research (swarm) | `background.json`, ≥1 `raw/phase0_*.json`, handoff; preflight `--mode complete` (downstream_relevance on raws) |
-| `1_parallel` | 2a + 2b + 2c | `sp_financials.csv`, `sec_filings.json`, `news_sentiment.json`, 3 handoffs; `data_fetch_log.json` preferred |
+| `1_parallel` | 2a + 2b + 2c | `sp_financials.csv`, `sec_filings.json`, `news_sentiment.json`, 3 handoffs; `data_fetch_log.json` preferred. **≥ 2.19.0:** orchestrator `library_bind.json` at **entry**; 2b `raw/filing_index.json` or `ir_listing.json` + `data_fetch_log.freshness` at complete |
 | `1b` | Latest quarter (2d) | `latest_quarter.json`, handoff |
 | `1c` | Filing deep dive (year-readers + 2e merger) | `filing_deep_dive.json`, handoff; **new runtime:** `raw/fdd_year_*.json` + excerpt check + `verify_rechecks`. Legacy without year-files: FDD only |
 | `1d` | Operating-path evidence (1d_rev ∥ 1d_ind ∥ 1d_ol + 1d_merge) | **new runtime ≥ 2.6.0:** `raw/oppath_*.json` + `operating_path_brief.json` + `verify_rechecks`. Legacy: SKIPPED |
@@ -139,7 +139,7 @@ Per-agent rows (inside a phase) use the same status set.
         {
           "agent_id": "2b",
           "status": "complete",
-          "artifacts": ["registry/sec_filings.json", "data/raw_sec/"],
+          "artifacts": ["registry/sec_filings.json", "data/raw_sec/", "registry/library_bind.json"],
           "handoff": "registry/handoffs/2b_sec_filings.md"
         },
         {

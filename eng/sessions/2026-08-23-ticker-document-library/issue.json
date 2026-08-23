@@ -1,0 +1,39 @@
+{
+  "goal": "Ticker document library so Mode A reuses converted filings/transcripts, still checks for newer prints, and users can drop files into an inbox.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not add an analysis-web library browser",
+    "Do not harvest the live archive unless the user asks after ship",
+    "Do not bind the entire corpus into a session (1c year-reader explosion)"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "harness/VERSION is 2.19.0 in the same change set",
+    "archive/library/<TICKER>/ ingest + bind required set + harvest CLI exist",
+    "2.19 sessions require library_bind + on-disk index + data_fetch_log.freshness",
+    "legacy sessions SKIPPED",
+    "Agent 4 cannot cite archive/library or library_bind"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "templates/",
+    "harness/",
+    "archive/README.md",
+    ".gitignore",
+    "AGENTS.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

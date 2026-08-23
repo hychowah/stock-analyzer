@@ -60,6 +60,14 @@ class Agent4IsolationTests(unittest.TestCase):
         self.assertEqual(out[0][0], "FAIL")
         self.assertIn("street_estimates", out[0][2])
 
+    def test_library_bind_fails_full(self):
+        session = self._session(
+            {"ticker": "TEST"},
+            "I read registry/library_bind.json and archive/library/META/filings.\n",
+        )
+        out = check_agent4_isolation(session, full=True)
+        self.assertEqual(out[0][0], "FAIL")
+
     def test_skipped_when_no_files(self):
         session = self._session(None, None)
         out = check_agent4_isolation(session, full=True)

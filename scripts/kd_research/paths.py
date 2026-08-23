@@ -49,6 +49,7 @@ ROOT_RESERVED_NAMES = frozenset(
         "tests",
         "meta",
         "research",  # reserved if research law moves to top-level folder
+        "library",  # document corpus lives under archive/library/, never a ticker
     }
 )
 
@@ -93,6 +94,16 @@ def catalog_root(output_dir: Path | str | None = None) -> Path:
 
 def outcomes_root(output_dir: Path | str | None = None) -> Path:
     return archive_root(output_dir) / "outcomes"
+
+
+def library_root(output_dir: Path | str | None = None) -> Path:
+    """Return archive/library/ — reusable primary documents, not research runs."""
+    return archive_root(output_dir) / "library"
+
+
+def ticker_library(ticker: str, output_dir: Path | str | None = None) -> Path:
+    """Return archive/library/<TICKER>/."""
+    return library_root(output_dir) / str(ticker).strip().upper()
 
 
 def parse_session_key(session_key: str) -> tuple[str, str | None]:
@@ -345,13 +356,14 @@ def safe_path(*parts: Any) -> Path:
 
 
 def ensure_archive_tree(output_dir: Path | str | None = None) -> dict[str, Path]:
-    """Create archive/{research,catalog,outcomes} if missing."""
+    """Create archive/{research,catalog,outcomes,library} if missing."""
     ar = archive_root(output_dir)
     dirs = {
         "archive": ar,
         "research": ar / "research",
         "catalog": ar / "catalog",
         "outcomes": ar / "outcomes",
+        "library": ar / "library",
     }
     for d in dirs.values():
         d.mkdir(parents=True, exist_ok=True)

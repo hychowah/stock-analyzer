@@ -18,7 +18,7 @@ from scripts.kd_research.paths import (  # noqa: E402
 
 class ReservedNamesTests(unittest.TestCase):
     def test_product_roots_reserved(self):
-        for name in ("eng", "packages", "apps", "programs", "docs", "build", "dist"):
+        for name in ("eng", "packages", "apps", "programs", "docs", "build", "dist", "library"):
             self.assertIn(name, ROOT_RESERVED_NAMES, msg=f"missing reserved {name}")
 
     def test_eng_sessions_not_scanned_as_research(self):

@@ -29,6 +29,7 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 3. Write `registry/market_context.json` (intensity gate is load-bearing).
 4. Write `registry/research_brief.json` (new sessions) before Phase 0. Material commodity-input / protein-supply beta on a standard name must appear in `must_cover_risks`.
 5. **Do not** open prior session folders (valuation, reports, handoffs, snapshots) for any phase inputs. Intra-session sharing only under current `S`.
+5b. **Document library (harness ≥ 2.19.0):** after the brief (may overlap Phase 0), run `python3 scripts/bind_library.py --ticker T --date D`. Bind **refuses** completed sessions (`prediction_snapshot` or finalized `run_manifest`) — never re-bind finished history. Preflight `1_parallel` FAILs without `registry/library_bind.json`. Spawn 2b with `session_missing` from bind/index. Read `harness/library.md` (you and 2b only). Do **not** run `harvest_library.py`. Do **not** inject the live library path or `library.md` into any subagent except 2b. Year-reader paths = `S/data/raw_sec/*.txt` only.
 
 ## Phase graph + subagents (mandatory)
 

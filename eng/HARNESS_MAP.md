@@ -8,7 +8,7 @@
 | Mode | Entry | Writes | Reads |
 |------|-------|--------|-------|
 | A Research | root `AGENTS.md` + research pipeline | new `archive/research/<T>/<D>/` | sources, MCP |
-| B Build | `eng/AGENTS.md` | eng/packages/apps/programs/scripts | **archive/** read-only |
+| B Build | `eng/AGENTS.md` | eng/packages/apps/programs/scripts; append `archive/library/` | immutable `archive/research` + `archive/outcomes`; catalog; library corpus |
 
 ## Work type → paths → verify
 
@@ -24,9 +24,10 @@
 
 ```text
 archive/
-  research/   # SoR sessions
-  outcomes/   # marks
+  research/   # SoR sessions (immutable)
+  outcomes/   # marks (immutable)
   catalog/    # sqlite + indexes (rebuildable)
+  library/    # reusable primary documents (append-only)
 ```
 
 Default: `ARCHIVE_ROOT=<project>/archive`.  

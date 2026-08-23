@@ -6,6 +6,7 @@ All equity research **records** live under this tree. Harness code stays at the 
 
 ```text
 archive/
+├── library/<TICKER>/         # reusable filings/transcripts (see harness/library.md)
 ├── catalog/
 │   ├── runs_index.json           # thin path index (rebuildable)
 │   ├── tickers_index.json        # per-ticker latest + history
@@ -38,6 +39,10 @@ archive/
 ## Common commands
 
 ```bash
+# Document library (drop PDFs in archive/library/META/_inbox/ first)
+python3 scripts/ingest_library.py --ticker META
+python3 scripts/bind_library.py --ticker META --date $(date +%F)  # in-progress session only; refuses finalized runs
+
 # New session (orchestrator-model required — stamped at scaffold)
 python3 scripts/scaffold_session.py --ticker META --date $(date +%F) --orchestrator-model grok-4.5
 

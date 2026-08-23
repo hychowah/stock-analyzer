@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.18.1",
+  "harness_version": "2.19.0",
   "harness_spec": "v2",
-  "notes": "2.18.1: current destock/Street law-surface freeze (no machine change). 2.18.0: Street FY+1 is base Y1; destock analog in bear while Street is usable. 2.17.0: Wave 9 stop-the-plug. 2.16.0: README CIO."
+  "notes": "2.19.0: ticker document library (archive/library) — bind required set, mechanical freshness, write-through. 2.18.1: destock/Street law-surface freeze. 2.18.0: Street FY+1 is base Y1."
 }

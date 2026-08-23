@@ -144,13 +144,19 @@ def _write_session_isolation(
             "intra_session_share": True,
             "prior_valuation_as_input": False,
             "prior_for_post_audit_compare": True,
+            "library_bind_into_session": True,
+            "library_direct_read": False,
+            "prior_session_documents_as_input": False,
         },
         "notes": (
             "Agents within this session share registry/handoffs/data. "
             "Do not open or list other session_keys under archive/research/ "
             "(including yesterday) unless the user explicitly resumes that folder "
             "or asks for post-finalize compare. "
-            "Prior FV/MoS/probs/WACC/thesis are not inputs to any phase."
+            "Prior FV/MoS/probs/WACC/thesis are not inputs to any phase. "
+            "Filings and transcripts for this run live under S/data/raw_sec and "
+            "S/data/transcripts (bound by orchestrator code). Do not mine other "
+            "archive trees for documents or judgments."
         ),
     }
     path = root / "registry" / "session_isolation.json"

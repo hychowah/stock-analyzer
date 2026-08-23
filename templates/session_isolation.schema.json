@@ -27,7 +27,19 @@
       "properties": {
         "intra_session_share": { "type": "boolean" },
         "prior_valuation_as_input": { "type": "boolean" },
-        "prior_for_post_audit_compare": { "type": "boolean" }
+        "prior_for_post_audit_compare": { "type": "boolean" },
+        "library_bind_into_session": {
+          "type": "boolean",
+          "description": "Code may copy archive/library required set into this session"
+        },
+        "library_direct_read": {
+          "type": "boolean",
+          "description": "Agents other than 2b unlabeled must not mine archive/library in place"
+        },
+        "prior_session_documents_as_input": {
+          "type": "boolean",
+          "description": "Must be false: do not harvest other sessions during Mode A"
+        }
       }
     },
     "notes": { "type": "string" }

@@ -22,8 +22,9 @@ Product eng (Mode B): `eng/AGENTS.md` — do not mix with research phases.
 | Filing deep-dive method | `harness/filing_deep_dive.md` |
 | Judgment exemplars | `harness/exemplars/` |
 | Industry research notes | `harness/research/` |
+| Ticker document library | `harness/library.md` (bind/ingest; inject orch + 2b only) |
 
-**Orchestrator order (new sessions):** scaffold → classify sector + market_context → write `registry/research_brief.json` → Phase 0… → **preflight** before Phase 2 / 2.5 / 4 / 5 → audit → prediction snapshot + catalog. Checklist: `harness/orchestrator_runbook.md` (includes `data/price_snapshot.json` freeze before Phase 2).
+**Orchestrator order (new sessions):** scaffold → classify sector + market_context → write `registry/research_brief.json` → `bind_library.py` (may overlap Phase 0; must finish before 2b) → Phase 0… → **preflight** before Phase 1 (library_bind on ≥ 2.19.0), 2 / 2.5 / 4 / 5 → audit → prediction snapshot + catalog. Checklist: `harness/orchestrator_runbook.md` (includes `data/price_snapshot.json` freeze before Phase 2). Library law: `harness/library.md`.
 
 Also: `harness/region_integration.md`, `scripts/` helpers, `_archive/` (retired v1 — never follow).
 
@@ -44,6 +45,7 @@ Research sessions are **archived records** under `archive/research/` (not at the
 archive/
 ├── catalog/                 # runs_index.json, tickers_index.json (rebuildable)
 ├── outcomes/                # optional later: realized marks + scorecards (never edit research)
+├── library/<TICKER>/        # reusable primary documents (filings, transcripts); see harness/library.md
 └── research/
     └── <TICKER>/<YYYY-MM-DD>/   # one folder per research session, never overwritten
         ├── reports/   00_<TICKER>_README.md, 01_<TICKER>_fundamental.md, 02_<TICKER>_technical.md
@@ -71,6 +73,7 @@ Rules:
    - **Do not** open, list, or “check whether yesterday’s SOFI/META/… run is complete and usable” before scaffolding a new run. That is contamination and waste. Scaffold today’s `S`, then work only under `S`.  
    - Prior sessions must **not** supply FV, MoS, scenario probabilities, WACC, thesis text, or handoffs as inputs to any phase (not only Agent 5).  
    - Optional compare to a prior run is **post-audit / post-finalize only**, and only if the user asked. Policy: `registry/session_isolation.json` (scaffolded).  
+   - **Document library (harness ≥ 2.19.0):** `archive/library/<TICKER>/` is reusable **source documents**, not prior research. Orchestrator runs `bind_library.py` after the brief and before Agent 2b (copies the **required set** into `S`). Agents other than 2b unlabeled must **not** open the live library. Do **not** harvest other sessions from Mode A. Canonical rules: `harness/library.md`.  
 5. After Phase 5 (audit): run `python3 scripts/finalize_session.py --ticker <T> --date <D_or_session_key>` (snapshot + compare SQLite + thin catalog). Finalize **always** stamps `harness_version` (from `harness/VERSION`) + `harness_git_sha` (+ dirty flag) into `meta/run_manifest.json` and `prediction_snapshot.provenance` — never leave these null. It **preserves** scaffold-time `orchestrator_model` / `default_subagent_model` into the compare DB (does not invent them). Use full `session_key` when the folder is `date__rN`.
 6. Path resolution (`scripts/kd_research/paths.py`): prefer `archive/research/...`; fall back to legacy root `<TICKER>/<DATE>/` during migration only. **New-run orientation does not include browsing other session folders.**
 7. Repo root holds harness code only (`harness/`, `scripts/`, `templates/`, sector/region modules, MCP packages) — not ticker session trees.
@@ -85,9 +88,10 @@ Confirm or infer before starting: ticker, company name, market region/exchange, 
 
 | Layer | Tool | Use for |
 |---|---|---|
-| Primary fundamentals & SEC | `kimi-datasource` plugin (`sp_data`, `sec_edgar`, `yahoo_finance` sources) | Financial statements, estimates, filings |
+| Ticker library (harness ≥ 2.19.0) | `bind_library.py` + `doc_text.py` (orchestrator / 2b). Agents read **session** copies | Required-set `.txt` in `S/data/raw_sec/` and `S/data/transcripts/`. Fetch only `session_missing[]`. Who-table: `harness/library.md`. |
+| Primary fundamentals & SEC | `kimi-datasource` plugin (`sp_data`, `sec_edgar`, `yahoo_finance` sources) | Financial statements, estimates, **session_missing** filings |
 | Local MCPs | `yfinance`, `sec-edgar`, `web-fetch` (wired in `.mcp.json`) | Prices/technicals, filing text fallback, page fetches |
-| Web | WebSearch / FetchURL | News, sentiment, **earnings-call transcripts** (secondary to filings), investor materials |
+| Web | WebSearch / FetchURL | News, sentiment, **new** earnings-call transcripts (secondary to filings), investor materials |
 
 Fallback rule: if a primary source is unavailable or errors, state the failure in the registry file, use the fallback source, and note the substitution. Never silently proceed on partial data — degraded data must widen the valuation range (§12). Transcripts are **secondary** for management-promise tracking: if none can be obtained, record `sources.transcripts` as missing/empty, set scorecard `data_quality` degraded, and widen uncertainty — never invent quotes.
 
@@ -169,9 +173,9 @@ Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Desig
 |---|---|---|---|
 | Orchestrator | lead (not a phase subagent) | — | `registry/sector_config.json`, `registry/market_context.json`, `registry/research_brief.json` (new sessions), maintains `registry/phase_status.json`; **MUST** run `scripts/preflight_phase.py --phase … [--subagent …]` before entering a phase / spawning that subagent |
 | 0 — Background | swarm × research rounds (`explore`) | sector_config, market_context, research_brief (when present) | main agent merges → `registry/background.json`; coverage vs brief + risk_candidates in handoff |
-| 1 — Data (parallel) | 2a fundamentals, 2b SEC filings, 2c news & sentiment (`coder`) | sector_config, market_context | `data/sp_financials.csv` (+ peers), `registry/street_estimates.json` (2a; new runtime ≥ 2.7.0), `registry/sec_filings.json` + `data/raw_sec/` (+ multi-year annuals), `registry/news_sentiment.json` |
+| 1 — Data (parallel) | 2a fundamentals, 2b SEC filings, 2c news & sentiment (`coder`) | sector_config, market_context; **≥ 2.19.0** orchestrator `bind_library.py` before 2b | `data/sp_financials.csv` (+ peers), `registry/street_estimates.json` (2a; ≥ 2.7.0), `registry/library_bind.json` (orchestrator bind), `registry/sec_filings.json` + `data/raw_sec/` + `raw/filing_index.json` or `ir_listing.json` + `data_fetch_log.freshness` (2b), `registry/news_sentiment.json` |
 | 1b — Latest quarter | 2d integrator (`coder`) | 2a, 2b | `registry/latest_quarter.json` |
-| 1c — Filing deep dive | year-readers (`coder`) then 2e merger (`coder`) | 2b (and 2a when actuals needed); reads market_context for ownership depth | `registry/raw/fdd_year_*.json` (new runtime) + excerpt-in-source; `registry/filing_deep_dive.json`; may add `data/transcripts/*` |
+| 1c — Filing deep dive | year-readers (`coder`) then 2e merger (`coder`) | 2b (and 2a when actuals needed); reads market_context for ownership depth | `registry/raw/fdd_year_*.json` (new runtime) + excerpt-in-source; `registry/filing_deep_dive.json`; `data/transcripts/*` (bound + `session_missing` only) + `data_fetch_log.transcript_freshness` (≥ 2.19.0) |
 | 1d — Operating path | 1d_rev, 1d_ind, 1d_ol then 1d_merge (`coder`) | 1b + 1c (new runtime ≥ 2.6.0) | `registry/raw/oppath_*.json`; `registry/operating_path_brief.json` (single merger writer) |
 | 2 — Modeling (parallel) | 4 technical, 5 valuation, 12 TSR (`coder`) | 1, 1b, **1c**, **1d** on new runtime (valuation reads FDD + market_context + operating_path_brief; technical does not) | `registry/technical.json`, `data/valuation_model.json`, `registry/tsr_validation.json` |
 | 2.5 — Stress | swarm × 5 scenarios (`coder`) | valuation model + deep dive + market_context | main agent merges → `registry/risk_bridge.json` |
@@ -226,7 +230,7 @@ Read the module named in `market_context.module_file` before valuation: `region_
 
 ## 10b. Filing deep dive (multi-year notes, strategy, credibility)
 
-Phase **1c** is a gather/merge: **N year-readers** write `registry/raw/fdd_year_FY{yyyy}.json` (one annual each; schema `templates/filing_year_dive.schema.json`); a machine **excerpt-in-source** check; then Agent **2e** is the **single writer** of `registry/filing_deep_dive.json` per `templates/filing_deep_dive.schema.json` (methodology: `harness/filing_deep_dive.md`). Year-readers must not call `promise_vs_actual.py` or see other years. 2e merges, rehydrates numbers, fetches transcripts, and fail-closes on silent ownership at medium/high intensity. Agent 13 still evaluates FDD substance. Required FDD blocks:
+Phase **1c** is a gather/merge: **N year-readers** write `registry/raw/fdd_year_FY{yyyy}.json` (one annual each; schema `templates/filing_year_dive.schema.json`); a machine **excerpt-in-source** check; then Agent **2e** is the **single writer** of `registry/filing_deep_dive.json` per `templates/filing_deep_dive.schema.json` (methodology: `harness/filing_deep_dive.md`). Year-readers must not call `promise_vs_actual.py` or see other years. 2e merges, rehydrates numbers, uses bound `S/data/transcripts/` (fetch only `session_missing` latest-window slots into `S`), and fail-closes on silent ownership at medium/high intensity. Agent 13 still evaluates FDD substance. Required FDD blocks:
 
 1. **Footnotes** — targeted note extractions (revenue disaggregation, segments, SBC unrecognized, debt/leases, contingencies/legal, tax, commitments, related-party/dual-class) with status `extracted|missing|not_applicable|partial` and short excerpts. Prefer code helpers in `scripts/kd_research/note_extract.py`. Full note text stays in `data/raw_sec/`; do **not** dump uncapped 10-K prose into `sec_filings.json`.
 2. **Strategy arc** — typically **≥3 annual reports** (Item 1 + MD&A priorities): stated priorities by year, continuity score `{value, rationale, basis}`, pivot flags, capital-allocation story, implied model hooks.
@@ -319,7 +323,8 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 | Harness ≥ 2.16.0: README must quote duration.action (FAIL if missing) before fair value vs price / margin of safety. Legacy quote-miss is WARN. | `[machine]` `check_session --full` + `4_parallel` complete |
 | Harness ≥ 2.17.0: confidence <0.70 still requires manual review but does **not** force `primary_sector=standard`; growth module has no canned decay/TAM-penetration path. Legacy confidence gate still requires standard. | `[machine]` `check_session` identity gate |
 | Harness ≥ 2.18.0: Street FY+1 is base Y1 (`used_as:fy1_baseline`; \|delta\|>5% FAIL); destock analog in bear while Street usable; Wave 3 unresolved destock + Street Y1 is not silent-duration FAIL if destock is in bear. Legacy 2.7–2.17 Street/destock machines unchanged. | `[machine]` `check_session --full` |
-| Agent 4 isolation: `technical.json` + `handoffs/4*` must not cite fundamental paths (FDD, valuation, background, latest_quarter, market_context, sec_filings, sp_financials, street_estimates) | `[machine]` WARN default / FAIL `--full` |
+| Harness ≥ 2.19.0: `library_bind.json` at 1_parallel **entry** (orchestrator `bind_library.py`); on-disk `filing_index.json` or `ir_listing.json` + `data_fetch_log.freshness` at 1_parallel complete; `data_fetch_log.transcript_freshness` at 1c complete. FDD/year-dives/valuation citing live library paths FAIL `--full`. Legacy / missing version → SKIPPED | `[machine]` `check_session --full` + `1_parallel` / `1c` preflight |
+| Agent 4 isolation: `technical.json` + `handoffs/4*` must not cite fundamental paths (FDD, valuation, background, latest_quarter, market_context, sec_filings, sp_financials, street_estimates, library_bind, archive/library) | `[machine]` WARN default / FAIL `--full` |
 | Handoffs ≥300B for specialists **and** swarm leads (`phase0_*`, `phase25_*` aliases); four section headers | `[machine]` size FAIL `--full`; headers **WARN** |
 | `phase_status` complete ⇒ primary artifacts on disk; pending/in_progress with artifact on disk → lag | `[machine]` FAIL complete-without-artifact; **WARN** lag |
 | Reports non-stub; report numbers match registry AND data layer; ≥5 filing-grade numbers verified externally; rationales substantive with scripted intermediates; scripts rerun deterministically; no lost findings | `[audit]` Phase 5 agent |

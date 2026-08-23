@@ -311,8 +311,9 @@ class CatalogApi:
     Parameters
     ----------
     archive_root:
-        Directory that **contains** research/, catalog/, outcomes/
-        (i.e. project archive/ or eng/fixtures/archive).
+        Directory that **contains** research/, catalog/, outcomes/, library/
+        (i.e. project archive/ or eng/fixtures/archive). Library is a document
+        corpus, not a run index — CatalogApi does not open library artifacts.
     """
 
     archive_root: Path
@@ -339,6 +340,10 @@ class CatalogApi:
         return self.archive_root / "outcomes"
 
     @property
+    def library_dir(self) -> Path:
+        return self.archive_root / "library"
+
+    @property
     def db_path(self) -> Path:
         return self.catalog_dir / "research_compare.sqlite"
 
@@ -360,6 +365,7 @@ class CatalogApi:
             "db_path": str(self.db_path),
             "db_exists": self.db_path.is_file(),
             "research_exists": self.research_dir.is_dir(),
+            "library_exists": self.library_dir.is_dir(),
             "schema_version": None,
             "run_count": None,
             "max_exported_at": None,

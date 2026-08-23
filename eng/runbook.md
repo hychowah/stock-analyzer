@@ -4,7 +4,7 @@
 
 | Variable | Meaning | Default |
 |----------|---------|---------|
-| `ARCHIVE_ROOT` | Dir containing `research/`, `catalog/`, `outcomes/` | `<project>/archive` |
+| `ARCHIVE_ROOT` | Dir containing `research/`, `catalog/`, `outcomes/`, `library/` | `<project>/archive` |
 
 Fixtures: set `ARCHIVE_ROOT` to the absolute path of `eng/fixtures/archive` for offline CI.
 

@@ -24,7 +24,7 @@ REQUIRED_YEAR_SECTIONS: tuple[str, ...] = (
 )
 
 _ANNUAL_FORM = re.compile(
-    r"(10-?K|20-?F|40-?F|annual|integrated\s*report|yuho)",
+    r"(10-?K|20-?F|40-?F|annual|integrated\s*report|yuho|(?:^|_|-)AR(?:_|-|$))",
     re.IGNORECASE,
 )
 _NOT_ANNUAL = re.compile(r"(10-?Q|8-?K|6-?K|tanshin|interim|quarter)", re.IGNORECASE)

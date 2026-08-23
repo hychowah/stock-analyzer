@@ -52,6 +52,8 @@ out.log
 # Catalog JSON indexes + archive/README.md remain tracked; SQLite is rebuildable.
 archive/research/
 archive/outcomes/
+archive/library/
+eng/fixtures/archive/library/**
 archive/catalog/*.sqlite
 archive/catalog/*.sqlite-*
 

@@ -10,6 +10,7 @@ eng/fixtures/                 # fixture *project* root
       research_compare.sqlite # re-exported from fixture sessions only
       runs_index.json
     outcomes/…                # optional slim copies
+    library/                  # empty (do not copy live PDFs)
 ```
 
 ## Refresh from live archive

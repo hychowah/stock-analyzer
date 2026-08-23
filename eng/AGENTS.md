@@ -1,7 +1,7 @@
 # Mode B — Product Engineering Harness
 
 **Mode:** BUILD (product eng) — not equity research.  
-**Data plane:** `archive/` is system of record (read-only for Mode B).  
+**Data plane:** `archive/` is system of record. **`archive/research/**` and `archive/outcomes/**` are immutable.** Catalog is rebuildable. **`archive/library/**` is append-only** (ingest / harvest / Mode A write-through). Mode B still never authors FV/MoS.  
 **This file:** normative for work under `eng/`, `packages/`, `apps/`, `programs/`.
 
 ## Purpose
@@ -26,7 +26,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 | W2 | Platform / catalog API | tests + rebuild notes |
 | W3 | Analysis program | deterministic CLI on archive/fixtures |
 | W4 | Product UI | smoke against ARCHIVE_ROOT |
-| W5 | Ops / quality | eng_verify green; no archive mutation |
+| W5 | Ops / quality | eng_verify green; no mutation of `archive/research/**` or `archive/outcomes/**` (library append is allowed) |
 
 ## Hard constraints
 
@@ -58,6 +58,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 ## Write allowlist (default)
 
 - `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `templates/`, `harness/` (when W1), `sector_*.md` / `region_*.md` (when W1)  
+- **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
 - **Deny:** `archive/research/**`, `archive/outcomes/**` (completed history)
 
 ## Verify

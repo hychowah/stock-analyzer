@@ -93,6 +93,7 @@
     │   ├── tickers_index.json                # per-ticker: latest, all run_ids, pointers
     │   └── schema_version
     │
+    ├── library/<TICKER>/                     # reusable primary documents (harness 2.19.0; see harness/library.md)
     ├── research/                             # immutable full sessions
     │   └── <TICKER>/
     │       └── <YYYY-MM-DD>/                 # same internal layout as today

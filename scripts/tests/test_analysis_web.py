@@ -35,15 +35,16 @@ def _mini_archive(base: Path) -> Path:
           fv_bear REAL, fv_base REAL, fv_bull REAL, fv_weighted REAL,
           p_bear REAL, p_base REAL, p_bull REAL, margin_of_safety_pct REAL,
           model_name TEXT, tech_signal TEXT, tech_regime TEXT,
-          exported_at TEXT, harness_git_sha TEXT, orchestrator_model TEXT
+          exported_at TEXT, harness_version TEXT, harness_git_sha TEXT, orchestrator_model TEXT
         );
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path, experiment_id,
-          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct, exported_at
+          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
+          harness_version, exported_at
         ) VALUES (
           'research:META:2026-08-03', 'META', '2026-08-03', '2026-08-03',
           'archive/research/META/2026-08-03', 'exp-demo',
-          'PASS', 'growth', 'us', 500.0, 12.5, '2026-08-10T00:00:00Z'
+          'PASS', 'growth', 'us', 500.0, 12.5, '2.5.0', '2026-08-10T00:00:00Z'
         );
         """
     )
@@ -61,6 +62,7 @@ def _insert_run(
     mos: float,
     sector: str = "growth",
     audit: str = "PASS",
+    harness_version: str | None = None,
 ) -> None:
     db = archive / "catalog" / "research_compare.sqlite"
     conn = sqlite3.connect(str(db))
@@ -68,8 +70,9 @@ def _insert_run(
         """
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path, experiment_id,
-          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct, exported_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
+          harness_version, exported_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             f"research:{ticker}:{session_key}",
@@ -83,6 +86,7 @@ def _insert_run(
             "us",
             fv_base,
             mos,
+            harness_version,
             "2026-08-10T00:00:00Z",
         ),
     )
@@ -116,6 +120,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"META", r.content)
         self.assertIn(b"500", r.content)
+        self.assertIn(b"Harness", r.content)
+        self.assertIn(b"2.5.0", r.content)
 
     def test_health(self):
         r = self.client.get("/health")
@@ -134,6 +140,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"FV", r.content)
         self.assertIn(b"12.5", r.content)
+        self.assertIn(b"2.5.0", r.content)
 
     def test_legacy_run_redirect(self):
         r = self.client.get(
@@ -223,6 +230,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'name="mos_min"', r.content)
         self.assertIn(b'name="sector"', r.content)
         self.assertIn(b"<select name=\"sector\"", r.content)
+        self.assertIn(b'name="harness_version"', r.content)
+        self.assertIn(b"<select name=\"harness_version\"", r.content)
         self.assertIn(b"/static/runs.js", r.content)
         self.assertIn(b'data-live-partial="1"', r.content)
 
@@ -247,9 +256,31 @@ class AnalysisWebQueryTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.archive = _mini_archive(Path(self._td.name))
-        _insert_run(self.archive, ticker="JPM", session_key="2026-07-25", fv_base=200.0, mos=-5.0, sector="bank")
-        _insert_run(self.archive, ticker="MSFT", session_key="2026-08-01", fv_base=400.0, mos=20.0)
-        _insert_run(self.archive, ticker="MELI", session_key="2026-08-16", fv_base=1800.0, mos=8.0)
+        _insert_run(
+            self.archive,
+            ticker="JPM",
+            session_key="2026-07-25",
+            fv_base=200.0,
+            mos=-5.0,
+            sector="bank",
+            harness_version="2.7.0",
+        )
+        _insert_run(
+            self.archive,
+            ticker="MSFT",
+            session_key="2026-08-01",
+            fv_base=400.0,
+            mos=20.0,
+            harness_version="2.17.0",
+        )
+        _insert_run(
+            self.archive,
+            ticker="MELI",
+            session_key="2026-08-16",
+            fv_base=1800.0,
+            mos=8.0,
+            harness_version="2.17.0",
+        )
         os.environ["ARCHIVE_ROOT"] = str(self.archive)
 
         import importlib
@@ -358,6 +389,63 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertEqual(r.status_code, 400)
         api = self.client.get("/api/runs", params={"mos_min": "nope"})
         self.assertEqual(api.status_code, 400)
+
+    def test_html_harness_version_filter(self):
+        r = self.client.get("/", params={"harness_version": "2.17.0"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"MSFT", r.content)
+        self.assertIn(b"MELI", r.content)
+        self.assertNotIn(b"JPM", r.content)
+        self.assertNotIn(b">META<", r.content)
+        self.assertIn(b'<option value="2.17.0" selected>', r.content)
+        self.assertIn(b'<option value="2.7.0"', r.content)
+        self.assertIn(b'<option value="2.5.0"', r.content)
+        # semver order in the dropdown: 2.7.0 after 2.5.0 and before 2.17.0
+        idx_25 = r.text.find('option value="2.5.0"')
+        idx_27 = r.text.find('option value="2.7.0"')
+        idx_217 = r.text.find('option value="2.17.0"')
+        self.assertLess(idx_25, idx_27)
+        self.assertLess(idx_27, idx_217)
+
+    def test_fragment_harness_version(self):
+        r = self.client.get("/fragments/runs", params={"harness_version": "2.5.0"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"META", r.content)
+        self.assertNotIn(b"MSFT", r.content)
+        self.assertNotIn(b"JPM", r.content)
+        self.assertIn(b"2.5.0", r.content)
+        self.assertIn(b"version-filter", r.content)
+
+    def test_sort_harness_version_semver(self):
+        r = self.client.get(
+            "/",
+            params={"sort": "harness_version", "dir": "asc"},
+        )
+        self.assertEqual(r.status_code, 200)
+        text = r.text
+        i_meta = text.find(">META<")
+        i_jpm = text.find("JPM")
+        i_meli = text.find("MELI")
+        self.assertGreater(i_meta, 0)
+        self.assertGreater(i_jpm, i_meta)
+        self.assertGreater(i_meli, i_jpm)
+        desc = self.client.get(
+            "/",
+            params={"sort": "harness_version", "dir": "desc"},
+        )
+        self.assertEqual(desc.status_code, 200)
+        dtext = desc.text
+        self.assertLess(dtext.find("MELI"), dtext.find("JPM"))
+        self.assertLess(dtext.find("JPM"), dtext.find(">META<"))
+
+    def test_api_harness_version(self):
+        r = self.client.get("/api/runs", params={"harness_version": "2.17.0"})
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        tickers = {row["ticker"] for row in data["runs"]}
+        self.assertEqual(tickers, {"MELI", "MSFT"})
+        self.assertEqual(data["total"], 2)
+        self.assertTrue(all(row["harness_version"] == "2.17.0" for row in data["runs"]))
 
 
 if __name__ == "__main__":

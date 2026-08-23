@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md, fill issue.json, baseline eng_verify, record git log",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria; progress.md notes baseline verify"
+    },
+    {
+      "id": "catalog-harness-filter",
+      "description": "CatalogApi exact harness_version filter + facet + allowlisted sort; CLI --harness-version; legacy sqlite without the column stays safe",
+      "passes": true,
+      "verify": "python -m pytest scripts/tests/test_catalog_api.py -q"
+    },
+    {
+      "id": "runs-list-harness",
+      "description": "Runs table column + Harness dropdown; shared runs_list_q; no-JS GET and live fragment",
+      "passes": true,
+      "verify": "python -m pytest scripts/tests/test_analysis_web.py -q"
+    },
+    {
+      "id": "docs-verify",
+      "description": "README + runbook document harness_version query param and column",
+      "passes": true,
+      "verify": "README lists harness_version among runs-list params"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

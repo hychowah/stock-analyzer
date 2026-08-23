@@ -34,8 +34,8 @@ python3 -m packages.catalog_api list-runs --limit 5
 python3 -m apps.analysis_web
 # or: bash apps/analysis_web/init.sh
 # → http://127.0.0.1:8765/
-# Runs list: ticker_prefix, sector/region dropdowns, session/MoS/price/FV ranges, column sort
-# JSON: python3 -m packages.catalog_api list-runs --ticker-prefix M --mos-min 0 --session-date-from 2026-08-01
+# Runs list: ticker_prefix, sector/region/harness dropdowns, session/MoS/price/FV ranges, column sort
+# JSON: python3 -m packages.catalog_api list-runs --ticker-prefix M --harness-version 2.17.0 --mos-min 0 --session-date-from 2026-08-01
 
 # Experiment summary program
 python3 programs/experiment_summary.py

@@ -70,6 +70,7 @@ RUN_SORT_COLUMNS: frozenset[str] = frozenset(
         "margin_of_safety_pct",
         "audit_verdict",
         "tech_signal",
+        "harness_version",
     }
 )
 
@@ -104,6 +105,7 @@ _FACET_COLUMNS: tuple[tuple[str, str], ...] = (
     ("sector", "primary_sector"),
     ("region", "region"),
     ("tech_signal", "tech_signal"),
+    ("harness_version", "harness_version"),
 )
 
 
@@ -112,6 +114,31 @@ def _blank(value: str | None) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _semver_sort_key(value: str) -> tuple:
+    """Tuple key so 2.17.0 sorts after 2.7.0 (lexicographic sqlite ORDER BY does not)."""
+    parts: list[tuple[int, int | str]] = []
+    for token in value.split("."):
+        try:
+            parts.append((0, int(token)))
+        except ValueError:
+            parts.append((1, token))
+    return tuple(parts)
+
+
+def _sql_semver_components(column: str) -> tuple[str, str, str]:
+    """SQLite expressions for major, minor, patch. ``column`` must be allowlisted."""
+    major = f"CAST({column} AS INTEGER)"
+    after_major = f"substr({column}, instr({column} || '.', '.') + 1)"
+    minor = f"CAST({after_major} AS INTEGER)"
+    after_minor = f"substr({after_major}, instr({after_major} || '.', '.') + 1)"
+    patch = f"CAST({after_minor} AS INTEGER)"
+    return major, minor, patch
+
+
+def _missing_optional_column(exc: BaseException, column: str) -> bool:
+    return column.lower() in str(exc).lower()
 
 
 def escape_like_prefix(prefix: str) -> str:
@@ -175,6 +202,7 @@ def _runs_filter_sql(
     experiment_id: str | None = None,
     audit_verdict: str | None = None,
     tech_signal: str | None = None,
+    harness_version: str | None = None,
     session_date_from: str | None = None,
     session_date_to: str | None = None,
     mos_min: Any = None,
@@ -194,6 +222,7 @@ def _runs_filter_sql(
     experiment_id = _blank(experiment_id)
     audit_verdict = _blank(audit_verdict)
     tech_signal = _blank(tech_signal)
+    harness_version = _blank(harness_version)
     date_from = _parse_date("session_date_from", session_date_from)
     date_to = _parse_date("session_date_to", session_date_to)
     if ticker:
@@ -217,6 +246,9 @@ def _runs_filter_sql(
     if tech_signal:
         clauses.append("tech_signal = ?")
         params.append(tech_signal)
+    if harness_version:
+        clauses.append("harness_version = ?")
+        params.append(harness_version)
     if date_from is not None and date_to is not None and date_from > date_to:
         raise ValueError("session_date_from must be <= session_date_to")
     if date_from is not None:
@@ -252,7 +284,16 @@ def _runs_order_sql(sort: str | None, direction: str | None) -> str:
     if sort not in RUN_SORT_COLUMNS:
         raise ValueError(f"invalid sort: {sort!r}")
     dir_sql = "DESC" if (direction or "asc").lower() == "desc" else "ASC"
-    parts = [f"{sort} {dir_sql}"]
+    if sort == "harness_version":
+        major, minor, patch = _sql_semver_components("harness_version")
+        parts = [
+            "CASE WHEN harness_version IS NULL OR TRIM(harness_version) = '' THEN 1 ELSE 0 END ASC",
+            f"{major} {dir_sql}",
+            f"{minor} {dir_sql}",
+            f"{patch} {dir_sql}",
+        ]
+    else:
+        parts = [f"{sort} {dir_sql}"]
     for col, tie_dir in _TIEBREAK:
         if col != sort:
             parts.append(f"{col} {tie_dir}")
@@ -355,6 +396,7 @@ class CatalogApi:
         experiment_id: str | None = None,
         audit_verdict: str | None = None,
         tech_signal: str | None = None,
+        harness_version: str | None = None,
         session_date_from: str | None = None,
         session_date_to: str | None = None,
         mos_min: Any = None,
@@ -381,6 +423,7 @@ class CatalogApi:
             experiment_id=experiment_id,
             audit_verdict=audit_verdict,
             tech_signal=tech_signal,
+            harness_version=harness_version,
             session_date_from=session_date_from,
             session_date_to=session_date_to,
             mos_min=mos_min,
@@ -411,7 +454,15 @@ class CatalogApi:
             try:
                 rows = conn.execute(sql_v2, params).fetchall()
             except sqlite3.OperationalError:
-                rows = conn.execute(sql, params).fetchall()
+                try:
+                    rows = conn.execute(sql, params).fetchall()
+                except sqlite3.OperationalError as e:
+                    if _missing_optional_column(e, "harness_version"):
+                        if _blank(harness_version):
+                            return []
+                        if sort == "harness_version":
+                            raise ValueError("invalid sort: 'harness_version'") from e
+                    raise
         return [_row_to_dict(r) for r in rows]
 
     def count_runs(
@@ -424,6 +475,7 @@ class CatalogApi:
         experiment_id: str | None = None,
         audit_verdict: str | None = None,
         tech_signal: str | None = None,
+        harness_version: str | None = None,
         session_date_from: str | None = None,
         session_date_to: str | None = None,
         mos_min: Any = None,
@@ -442,6 +494,7 @@ class CatalogApi:
             experiment_id=experiment_id,
             audit_verdict=audit_verdict,
             tech_signal=tech_signal,
+            harness_version=harness_version,
             session_date_from=session_date_from,
             session_date_to=session_date_to,
             mos_min=mos_min,
@@ -454,7 +507,12 @@ class CatalogApi:
         )
         sql = f"SELECT COUNT(*) FROM runs {where}"
         with self._connect() as conn:
-            row = conn.execute(sql, params).fetchone()
+            try:
+                row = conn.execute(sql, params).fetchone()
+            except sqlite3.OperationalError as e:
+                if harness_version and _missing_optional_column(e, "harness_version"):
+                    return 0
+                raise
         return int(row[0] if row is not None else 0)
 
     def list_run_facets(self) -> dict[str, list[str]]:
@@ -462,12 +520,18 @@ class CatalogApi:
         out: dict[str, list[str]] = {key: [] for key, _col in _FACET_COLUMNS}
         with self._connect() as conn:
             for key, col in _FACET_COLUMNS:
-                rows = conn.execute(
-                    f"SELECT DISTINCT {col} FROM runs "
-                    f"WHERE {col} IS NOT NULL AND TRIM({col}) != '' "
-                    f"ORDER BY {col}"
-                ).fetchall()
-                out[key] = [str(r[0]) for r in rows]
+                try:
+                    rows = conn.execute(
+                        f"SELECT DISTINCT {col} FROM runs "
+                        f"WHERE {col} IS NOT NULL AND TRIM({col}) != '' "
+                        f"ORDER BY {col}"
+                    ).fetchall()
+                except sqlite3.OperationalError:
+                    continue
+                values = [str(r[0]) for r in rows]
+                if key == "harness_version":
+                    values.sort(key=_semver_sort_key)
+                out[key] = values
         return out
 
     def get_run(self, run_id: str) -> dict[str, Any]:

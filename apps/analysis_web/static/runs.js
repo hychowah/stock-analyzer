@@ -19,6 +19,7 @@
     asof_price: true,
     fv_base: true,
     margin_of_safety_pct: true,
+    harness_version: true,
   };
 
   function trim(value) {
@@ -92,6 +93,16 @@
   }
 
   results.addEventListener("click", function (ev) {
+    var verLink = ev.target && ev.target.closest ? ev.target.closest("a.version-filter") : null;
+    if (verLink && results.contains(verLink)) {
+      ev.preventDefault();
+      var sel = form.querySelector('[name="harness_version"]');
+      if (sel) {
+        sel.value = verLink.getAttribute("data-version") || "";
+      }
+      fetchTable();
+      return;
+    }
     var a = ev.target && ev.target.closest ? ev.target.closest("a.sort") : null;
     if (!a || !results.contains(a)) {
       return;

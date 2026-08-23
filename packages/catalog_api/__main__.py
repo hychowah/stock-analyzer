@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     p_list.add_argument("--experiment-id")
     p_list.add_argument("--audit-verdict")
     p_list.add_argument("--tech-signal")
+    p_list.add_argument("--harness-version", help="Exact harness_version stamp")
     p_list.add_argument("--session-date-from", help="Inclusive YYYY-MM-DD")
     p_list.add_argument("--session-date-to", help="Inclusive YYYY-MM-DD")
     p_list.add_argument("--mos-min", type=float)
@@ -83,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
                 experiment_id=args.experiment_id,
                 audit_verdict=args.audit_verdict,
                 tech_signal=args.tech_signal,
+                harness_version=args.harness_version,
                 session_date_from=args.session_date_from,
                 session_date_to=args.session_date_to,
                 mos_min=args.mos_min,

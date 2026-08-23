@@ -36,19 +36,19 @@ Or: `bash apps/analysis_web/init.sh`
 | `/api/portfolio` | JSON portfolio summary + positions |
 | `/health` | Catalog health probe |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
-| `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `sort`/`dir`) |
+| `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
 | `/api/fingerprint` | Poll fallback token for live reload |
 
-Runs list (`/`): type in Ticker to filter **starts-with** (`ticker_prefix`). Sector / region / tech are dropdowns of catalog values. Session date, MoS %, price, and FV base take **inclusive ranges**. All of that updates live; click headers to sort.
+Runs list (`/`): type in Ticker to filter **starts-with** (`ticker_prefix`). Sector / region / tech / harness are dropdowns of catalog values. Session date, MoS %, price, and FV base take **inclusive ranges**. All of that updates live; click headers to sort.
 
-Shareable query example: `/?ticker_prefix=M&sector=growth&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`.
+Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`.
 
 | Param | Meaning |
 |-------|---------|
 | `ticker` | Exact ticker (legacy bookmarks) |
 | `ticker_prefix` | Ticker starts-with |
-| `sector`, `region`, `audit_verdict`, `tech_signal`, `experiment_id` | Exact |
+| `sector`, `region`, `audit_verdict`, `tech_signal`, `harness_version`, `experiment_id` | Exact |
 | `session_date_from`, `session_date_to` | Inclusive `YYYY-MM-DD` |
 | `mos_min`, `mos_max` | Inclusive MoS % |
 | `price_min`, `price_max` | Inclusive as-of price |

@@ -1,0 +1,15 @@
+{
+  "summary": "Research runs list shows each run's harness_version and filters to an exact catalog version via a dropdown. Same exact filter on HTML, fragment, JSON /api/runs, and catalog CLI. Legacy sqlite without the column does not 500.",
+  "verify_commands_run": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_catalog_api.py scripts/tests/test_analysis_web.py -q"
+  ],
+  "follow_ups": [
+    "No Playwright browser driver in this environment; TestClient + HTTP smoke only",
+    "Restart a long-lived UI on :8765 to pick up the templates"
+  ],
+  "risks": [
+    "archive/catalog JSON indexes and other eng sessions were already dirty — do not include them in this UI commit"
+  ],
+  "intended_commit_subject": "Show harness version on the runs list and filter by exact catalog version"
+}

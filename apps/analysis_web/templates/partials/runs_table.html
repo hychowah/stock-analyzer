@@ -17,6 +17,7 @@
       <tr>
         {{ sort_th('ticker', 'Ticker') }}
         {{ sort_th('session_date', 'Session') }}
+        {{ sort_th('harness_version', 'Harness') }}
         {{ sort_th('primary_sector', 'Sector') }}
         {{ sort_th('region', 'Region') }}
         {{ sort_th('asof_price', 'Price', 'num') }}
@@ -32,6 +33,7 @@
         <tr>
           <td><a class="mono" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
           <td class="mono">{{ r.session_key }}</td>
+          <td class="mono">{% if r.harness_version %}<a class="version-filter" data-version="{{ r.harness_version }}" href="{{ filter_href(harness_version=r.harness_version) }}">{{ r.harness_version }}</a>{% endif %}</td>
           <td>{{ r.primary_sector or '' }}</td>
           <td>{{ r.region or '' }}</td>
           <td class="num">{{ r.asof_price | fmt_num }}</td>
@@ -42,7 +44,7 @@
         </tr>
         {% endfor %}
       {% else %}
-        <tr><td colspan="9" class="muted">No runs</td></tr>
+        <tr><td colspan="10" class="muted">No runs</td></tr>
       {% endif %}
     </tbody>
   </table>

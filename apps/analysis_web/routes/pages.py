@@ -23,11 +23,12 @@ from apps.analysis_web.templating import fmt_num
 router = APIRouter(tags=["pages"])
 
 _NUMERIC_SORT = frozenset(
-    {"session_date", "asof_price", "fv_base", "margin_of_safety_pct"}
+    {"session_date", "asof_price", "fv_base", "margin_of_safety_pct", "harness_version"}
 )
 _SORT_HEADERS = (
     "ticker",
     "session_date",
+    "harness_version",
     "primary_sector",
     "region",
     "asof_price",
@@ -64,6 +65,7 @@ _FILTER_HREF_KEYS = (
     "region",
     "experiment_id",
     "tech_signal",
+    "harness_version",
     "session_date_from",
     "session_date_to",
     "mos_min",
@@ -106,7 +108,7 @@ def _sort_links(q: dict[str, Any]) -> dict[str, str]:
 
 
 def _load_facets(api: CatalogApi) -> dict[str, list[str]]:
-    empty = {"sector": [], "region": [], "tech_signal": []}
+    empty = {"sector": [], "region": [], "tech_signal": [], "harness_version": []}
     try:
         return api.list_run_facets()
     except DbMissing:
@@ -138,6 +140,7 @@ def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], i
         "runs": runs,
         "total": total,
         "sort_links": _sort_links(q),
+        "filter_href": lambda **overrides: _filter_href(q, **overrides),
         "facets": _load_facets(api),
         "error": error,
     }

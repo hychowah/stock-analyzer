@@ -1,0 +1,9 @@
+{
+  "slug": "runs-list-harness-version",
+  "session_key": "2026-08-23-runs-list-harness-version",
+  "status": "complete",
+  "created_at": "2026-08-23T00:00:00Z",
+  "updated_at": "2026-08-23T12:00:00Z",
+  "work_type": "W4",
+  "resume_hint": "Feature complete; commit only after user agreement. Restart the UI process to load the new templates."
+}

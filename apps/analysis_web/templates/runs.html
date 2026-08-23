@@ -30,6 +30,7 @@
         </select>
       </label>
       <label>Tech{{ facet_select('tech_signal', tech_signal, facets.tech_signal) }}</label>
+      <label>Harness{{ facet_select('harness_version', harness_version, facets.harness_version) }}</label>
       <label>Experiment<input name="experiment_id" value="{{ experiment_id or '' }}"/></label>
       <label>Limit<input name="limit" type="number" min="1" max="200" value="{{ limit }}" style="min-width:4rem"/></label>
     </div>

@@ -353,6 +353,68 @@ class CatalogQueryTests(unittest.TestCase):
         self.assertEqual(set(facets["sector"]), {"bank", "growth"})
         self.assertIn("us", facets["region"])
         self.assertEqual(facets["tech_signal"], [])
+        self.assertEqual(facets["harness_version"], [])
+
+    def test_harness_version_filter_without_column_empty(self):
+        self.assertEqual(self.api.list_runs(harness_version="2.17.0", limit=50), [])
+        self.assertEqual(self.api.count_runs(harness_version="2.17.0"), 0)
+        self.assertEqual(self.api.list_runs(limit=50)[0]["ticker"], "JPM")
+        with self.assertRaises(ValueError):
+            self.api.list_runs(sort="harness_version", limit=50)
+
+    def test_harness_version_exact_and_facet(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        conn.execute("ALTER TABLE runs ADD COLUMN harness_version TEXT")
+        conn.execute("UPDATE runs SET harness_version = '2.5.0' WHERE ticker = 'META'")
+        conn.execute("UPDATE runs SET harness_version = '2.4.0' WHERE ticker = 'JPM'")
+        conn.execute(
+            "UPDATE runs SET harness_version = '2.17.0' WHERE ticker IN ('MSFT', 'MELI')"
+        )
+        conn.commit()
+        conn.close()
+
+        rows = self.api.list_runs(harness_version="2.17.0", limit=50)
+        self.assertEqual({r["ticker"] for r in rows}, {"MSFT", "MELI"})
+        self.assertTrue(all(r["harness_version"] == "2.17.0" for r in rows))
+        self.assertEqual(self.api.count_runs(harness_version="2.17.0"), 2)
+        self.assertEqual(self.api.list_runs(harness_version="9.9.9", limit=50), [])
+        self.assertEqual(
+            {r["ticker"] for r in self.api.list_runs(harness_version="2.5.0", limit=50)},
+            {"META"},
+        )
+        facets = self.api.list_run_facets()
+        self.assertEqual(facets["harness_version"], ["2.4.0", "2.5.0", "2.17.0"])
+
+    def test_harness_version_semver_sort(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        conn.execute("ALTER TABLE runs ADD COLUMN harness_version TEXT")
+        conn.execute("UPDATE runs SET harness_version = '2.7.0' WHERE ticker = 'META'")
+        conn.execute("UPDATE runs SET harness_version = '2.4.0' WHERE ticker = 'JPM'")
+        conn.execute(
+            "UPDATE runs SET harness_version = '2.17.0' WHERE ticker IN ('MSFT', 'MELI')"
+        )
+        conn.commit()
+        conn.close()
+
+        asc = [
+            r["harness_version"]
+            for r in self.api.list_runs(sort="harness_version", dir="asc", limit=50)
+        ]
+        self.assertEqual(asc, ["2.4.0", "2.7.0", "2.17.0", "2.17.0"])
+        desc = [
+            r["harness_version"]
+            for r in self.api.list_runs(sort="harness_version", dir="desc", limit=50)
+        ]
+        self.assertEqual(desc[0], "2.17.0")
+        self.assertEqual(desc[-1], "2.4.0")
+        self.assertNotEqual(desc, sorted(desc, reverse=True))
+        tickers_asc = [
+            r["ticker"]
+            for r in self.api.list_runs(sort="harness_version", dir="asc", limit=50)
+        ]
+        self.assertEqual(tickers_asc, ["JPM", "META", "MELI", "MSFT"])
 
     def test_null_fv_quarantined_from_comparable_list(self):
         db = self.archive / "catalog" / "research_compare.sqlite"

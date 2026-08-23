@@ -27,6 +27,7 @@
         <tr><th>Audit</th><td>{{ run.audit_verdict | verdict_badge }}</td></tr>
         <tr><th>Tech</th><td>{{ run.tech_signal or '' }} · {{ run.tech_regime or '' }}</td></tr>
         <tr><th>Experiment</th><td class="mono">{{ run.experiment_id or '' }}</td></tr>
+        <tr><th>Harness</th><td class="mono">{{ run.harness_version or '' }}</td></tr>
         <tr><th>Exported</th><td class="mono">{{ run.exported_at or '' }}</td></tr>
       </table>
     </div>

@@ -1,0 +1,38 @@
+{
+  "goal": "Show harness version on the research runs list and filter by a specific catalog version",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent fair values in the UI",
+    "Do not start a React SPA or add an HTMX library",
+    "Do not collapse to unique/latest ticker",
+    "Do not implement contains-match, version ranges, or pagination UI",
+    "Do not change portfolio, experiments, or calibration pages",
+    "Do not change list_runs return type",
+    "Do not bump harness/VERSION"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Runs list table shows each run's harness_version",
+    "Harness dropdown lists distinct catalog versions; selecting one exact-matches sqlite",
+    "Same exact filter on HTML, fragment, JSON /api/runs, and catalog CLI",
+    "Missing harness_version column (legacy sqlite) does not 500; filter returns empty",
+    "eng_verify.py passes",
+    "pytest scripts/tests/test_catalog_api.py scripts/tests/test_analysis_web.py pass",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/catalog_api/",
+    "apps/analysis_web/",
+    "scripts/tests/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_catalog_api.py scripts/tests/test_analysis_web.py -q"
+  ]
+}

@@ -31,13 +31,13 @@ Used by: Agent 5 (write), Agent 13 (grade).
       "applies_in": "base",
       "old": "Y1 Street duration; destock analog lives in bear only",
       "new": "Y1 destock/quality-reset on the base path (run-rate ex destock); duration only in bull",
-      "reason": "Unresolved flatten-vs-destock; destock default is base until cash/channel prove demand."
+      "reason": "Y1 destock while Street FY+1 is usable."
     }
   ]
 }
 ```
 
-**Why bad:** Street FY+1 is the required Y1 start. Putting a destock analog in **base** while Street is usable is the Session B failure. Wave 3/4 on ≥ 2.18 FAIL destock-in-base. (On 2.12–2.17 this pairing was the GOOD example.)
+**Why bad:** Street FY+1 is the required Y1 start. Putting a destock analog in **base** while Street is usable is the Session B failure. Wave 3/4 on ≥ 2.18 FAIL destock-in-base. (On 2.12–2.17 this pairing was the GOOD example: destock default was base until cash/channel proved demand. That wording belongs in this caption, not in a live `reason` field.)
 
 ### GOOD
 

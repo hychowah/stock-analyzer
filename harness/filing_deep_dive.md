@@ -26,7 +26,7 @@ Year-readers write `registry/raw/fdd_year_FY{yyyy}.json`. They see **one year on
 - Do not raise `sec_filings.json` caps to dump full 10-Ks into every agent.
 - Do not paste a full 10-K into the parent **or** a year-reader prompt.
 - Do not invent transcript quotes when IR/transcript hosts fail — mark `missing` and degrade scorecard quality.
-- Missing transcripts **widen valuation range**; they do **not** license dropping IR / 8-K CEO dollar outlooks (EX-99.1) from Agent 5’s independent base path.
+- Missing transcripts **widen valuation range**. IR / 8-K CEO dollar outlooks (EX-99.1) remain first-class: a printed remaining-period company-box **low** is a same-period floor in base; a miss of an unprinted guide is bear. They do **not** replace Street FY+1 as Y1 when Street is usable (`RESEARCH_AGENTS.md` §10c).
 - Do not auto-map hit-rate → WACC or probabilities. Valuation **reads** the deep dive and judges.
 - Do not treat extra fiscal years as a substitute for ownership/control depth.
 

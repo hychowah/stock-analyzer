@@ -1,0 +1,39 @@
+{
+  "goal": "Freeze current destock/Street law surfaces at harness 2.18.1 (no machine change)",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not change destock/Street/DU/5b gates or Y2–Y8 destock clawback",
+    "Do not rewrite test_wave4 2.12 stamps",
+    "Do not strip Agent 13 4-street historical grading",
+    "Do not ship catalog_du",
+    "Do not collapse session_is_* version helpers"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "harness/VERSION is 2.18.1 in the same change set",
+    "Live Agent 5 4d/4e and §10c do not teach destock-in-base or never-copy-Street as current law",
+    "§13 ≥2.11 row no longer unbounded-copies Street FAIL / destock-in-base; TV/RP/changelog remain current",
+    "HARNESS_MAP specialist paragraph has no '4d wins 4e'; points version-banded destock/Street at §13",
+    "Pair 0 BAD reason is not 2.12 destock-default-is-base; F28 stamped 2.11–2.17; F30 is 2.18 destock-in-base",
+    "Wave 3/4/10 machines unchanged on 2.12.0 and 2.18.0 fixtures",
+    "pytest scripts/tests/test_law_surface_freeze.py scripts/tests/test_wave10_street_y1.py scripts/tests/test_wave4_destock_default.py scripts/tests/test_wave3_epistemology.py scripts/tests/test_street_bind.py scripts/tests/test_sector_classification_law.py -q",
+    "python scripts/eng_verify.py"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "harness/",
+    "templates/",
+    "scripts/",
+    "packages/",
+    "apps/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest scripts/tests/test_law_surface_freeze.py scripts/tests/test_wave10_street_y1.py scripts/tests/test_wave4_destock_default.py scripts/tests/test_wave3_epistemology.py scripts/tests/test_street_bind.py scripts/tests/test_sector_classification_law.py -q",
+    "python scripts/eng_verify.py"
+  ]
+}

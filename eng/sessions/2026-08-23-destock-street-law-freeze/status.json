@@ -1,0 +1,9 @@
+{
+  "slug": "destock-street-law-freeze",
+  "session_key": "2026-08-23-destock-street-law-freeze",
+  "status": "in_progress",
+  "created_at": "2026-08-23T03:15:25Z",
+  "updated_at": "2026-08-23T03:30:00Z",
+  "work_type": "W1",
+  "resume_hint": "law_surface_freeze implemented; verifier should run issue.json verify_commands then flip passes."
+}

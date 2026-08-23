@@ -1,8 +1,11 @@
 """Wave 3 epistemology gates (harness >= 2.11.0).
 
-Unresolved destock cannot be silent duration-in-base. Related-party
-concentration cannot hide at intensity=low. Changelog of earning-power
-facts must not copy prior FV/MoS/WACC (F14/F16).
+Related-party concentration cannot hide at intensity=low. Changelog of
+earning-power facts must not copy prior FV/MoS/WACC (F14/F16).
+
+Destock: 2.12–2.17 destock-in-base (cannot park destock in bear while
+duration stays in base). >= 2.18 destock-in-bear while Street FY+1 is
+usable (destock-in-base FAIL). See check_destock_* y1_street branches.
 """
 
 from __future__ import annotations
@@ -559,7 +562,12 @@ def _duration_legal_fields(session: Path, vm: dict[str, Any]) -> tuple[str, str]
 
 
 def check_destock_default(session: Path) -> list[tuple[str, str, str]]:
-    """Wave 4: destock conflict of any status cannot park destock in bear."""
+    """Wave 4 destock default.
+
+    2.12–2.17: destock conflict cannot park destock in bear (destock-in-base /
+    DU=low / pass). >= 2.18 while Street usable: destock analog in bear;
+    destock-in-base FAIL. Branch on session_is_street_y1_runtime + street_y1_usable.
+    """
     if not session_is_wave4_runtime(session):
         return [
             (

@@ -1,5 +1,7 @@
 # Wave 4 plan — destock default (harness 2.12.0)
 
+**HISTORICAL (2.12.0).** Superseded by harness 2.18.0 §10c (Street Y1; destock analog in bear) and 2.18.1 law-surface freeze. Do not re-apply `4d wins 4e` on current prompts.
+
 Persona pack item 1. Tightens Wave 3 E1; does not replace it.
 
 ## Goal

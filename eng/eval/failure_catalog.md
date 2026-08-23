@@ -33,7 +33,8 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F25 | Wide FV cone still presented as a target; `inside` band on 6× span | `decision_usefulness` prompt-only; outcomes scored `inside` | W1 — DU required on width trigger; `fv_band_at_mark=ineligible` when span>100% |
 | F26 | Audit PASS used as buy-list / calibration default | `CatalogApi.calibration(pass_only=True)`; `/calibration` default yes | W1 — defaults false; UI label says completeness not a buy list |
 | F27 | Always-long technical setup; no pass action; README invents a second verdict | Agent 4 required stop-below-entry; no decision.json | W1 — 2.10.0 `side=pass` legal; duration.action including pass; initiate blocked on useless cone |
-| F28 | Destock parked in bear; base still duration (unresolved **or** marked resolved) | 1d_merge + Pair 0 taught destock-in-bear; 4e required printed guide in base | W1 — 2.11.0 destock_base FAIL on unresolved; 2.12.0 destock_default FAIL on any-status destock-in-bear unless destock-in-base / DU=low / pass |
+| F28 | Destock parked in bear; base still duration (unresolved **or** marked resolved) | 1d_merge + Pair 0 taught destock-in-bear; 4e required printed guide in base | W1 — **2.11–2.17 machine.** 2.11.0 destock_base FAIL on unresolved; 2.12.0 destock_default FAIL on destock-in-bear unless destock-in-base / DU=low / pass. On ≥2.18 destock-in-bear + Street Y1 is legal (see F30). |
 | F29 | Update run copies yesterday’s FV | Isolation vs amnesia | W1 — changelog facts only; prior FV/MoS/WACC keys FAIL |
+| F30 | Destock analog in **base** while Street FY+1 is usable | 2.12 destock-in-base teaching left in live prompts/exemplars after 2.18 inverted Y1 | W1 — 2.18.0 `check_destock_*` y1_street branch FAILs destock-in-base; Street is Y1 (`used_as:fy1_baseline`) |
 
 Add rows when audits or production incidents recur.

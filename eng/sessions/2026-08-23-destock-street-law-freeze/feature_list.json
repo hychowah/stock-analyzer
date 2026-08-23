@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has 2.18.1 freeze success_criteria and W1 write_allowlist includes harness/"
+    },
+    {
+      "id": "law_surface_freeze",
+      "description": "Current destock/Street law in §10c + Agent 5 4d/4e + map; historical in §13 / Agent 13 / F28 (2.18.1)",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_law_surface_freeze.py scripts/tests/test_wave10_street_y1.py scripts/tests/test_wave4_destock_default.py scripts/tests/test_wave3_epistemology.py scripts/tests/test_street_bind.py scripts/tests/test_sector_classification_law.py -q; python scripts/eng_verify.py"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

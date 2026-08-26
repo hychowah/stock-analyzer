@@ -1,0 +1,35 @@
+{
+  "goal": "UI: select two same-ticker sessions, spawn session-valuation-audit in the background, show README + synthesis when complete.",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not insert fair values into research_compare.sqlite or invent a blended FV",
+    "Do not reimplement the six auditor personas in Python",
+    "Do not bump harness/VERSION (not Mode A runtime)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Two same-ticker completed sessions can be selected in the UI and start a compare job",
+    "Job writes only under archive/comparisons/; research sessions untouched",
+    "headline.json is available immediately; 99_synthesis.md is the completion gate",
+    "UI shows README + synthesis when complete (markdown sanitizer)",
+    "Tests use a fake spawn backend; CI does not call Grok",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/comparisons/",
+    ".grok/skills/session-valuation-audit/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

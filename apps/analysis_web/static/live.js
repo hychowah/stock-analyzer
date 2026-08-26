@@ -27,13 +27,16 @@
     }
   }
 
-  function reloadSoon() {
+  function reloadSoon(kind) {
     if (!wantsReload()) return;
-    if (document.body && document.body.getAttribute("data-live-partial") === "1") {
+    if (kind === "compare" && document.body.getAttribute("data-live-compare") !== "1") {
+      return;
+    }
+    if (kind !== "compare" && document.body && document.body.getAttribute("data-live-partial") === "1") {
       document.dispatchEvent(new CustomEvent("catalog-changed"));
       return;
     }
-    flash("Catalog updated — refreshing…");
+    flash(kind === "compare" ? "Compare updated — refreshing…" : "Catalog updated — refreshing…");
     setTimeout(function () {
       window.location.reload();
     }, 400);
@@ -82,6 +85,18 @@
           onToken(data.token, "change");
         } catch (e) {
           reloadSoon();
+        }
+      });
+      es.addEventListener("compare_changed", function (ev) {
+        sseOk = true;
+        if (document.body && document.body.getAttribute("data-live-compare") !== "1") {
+          return;
+        }
+        try {
+          var data = JSON.parse(ev.data);
+          onToken(data.token, "compare");
+        } catch (e) {
+          reloadSoon("compare");
         }
       });
       es.onerror = function () {

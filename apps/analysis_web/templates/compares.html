@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Compares{% endblock %}
+{% block body_attrs %}data-live-reload="1" data-live-compare="1"{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Session compares</h1>
+  <p class="muted">Packets under archive/comparisons/ · Grok audit, not a blended fair value</p>
+  <form class="filters" method="get" action="/compares">
+    <div class="filters-row">
+      <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="META"/></label>
+      <button type="submit">Filter</button>
+      <a class="btn secondary" href="/compares/new">New compare</a>
+    </div>
+  </form>
+</div>
+<div class="card">
+  {% if jobs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>A vs B</th>
+        <th>As-of</th>
+        <th>Status</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td class="mono"><a href="/compares/{{ j.compare_id }}">{{ j.ticker }}</a></td>
+        <td class="mono">{{ j.session_a }} vs {{ j.session_b }}</td>
+        <td class="mono">{{ j.asof }}</td>
+        <td><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
+        <td class="mono muted">{{ j.updated_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No compare packets yet. Select two same-ticker runs and hit Compare.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -2,7 +2,7 @@
 {% block title %}{{ relpath }}{% endblock %}
 {% block content %}
 <div class="card">
-  <p><a href="/runs/{{ run_id | urlencode }}">← Run</a></p>
+  <p><a href="{{ back_href or ('/runs/' ~ run_id) }}">← {{ back_label or 'Run' }}</a></p>
   <h1 class="mono">{{ relpath }}</h1>
   <pre>{{ text }}</pre>
 </div>

@@ -242,12 +242,23 @@ def page_run(
             }
         )
 
+    siblings: list[dict[str, Any]] = []
+    ticker = str(run.get("ticker") or "").strip()
+    if ticker:
+        try:
+            for row in api.list_runs(ticker=ticker, limit=50, comparable_only=True):
+                if row.get("run_id") != run_id:
+                    siblings.append(row)
+        except (DbMissing, ValueError):
+            siblings = []
+
     return _render(
         request,
         "run_detail.html",
         run=run,
         report_links=report_links,
         artifact_index=artifact_index,
+        siblings=siblings,
     )
 
 

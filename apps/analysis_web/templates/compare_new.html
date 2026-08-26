@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}New compare{% endblock %}
+{% block content %}
+<div class="card">
+  <p><a href="/compares">← Compares</a></p>
+  <h1>Compare two sessions</h1>
+  <p class="muted">Same ticker required. Starts a Grok session-valuation-audit in the background (six personas + synthesis). Instant headline from prediction snapshots; deep memos when complete. Does not edit either research session.</p>
+  {% if error %}<p class="flash err">{{ error }}</p>{% endif %}
+  <form method="post" action="/compares/new" class="compare-form"
+        onsubmit="return confirm('Start a Grok valuation audit of these two sessions? It can take 15–40 minutes.');">
+    <label>Session A
+      <select name="run_id_a" required>
+        <option value="">(choose)</option>
+        {% for r in runs %}
+        <option value="{{ r.run_id }}" {% if r.run_id == run_id_a %}selected{% endif %}>{{ r.ticker }} {{ r.session_key }} · FV {{ r.fv_base | fmt_num }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Session B
+      <select name="run_id_b" required>
+        <option value="">(choose)</option>
+        {% for r in runs %}
+        <option value="{{ r.run_id }}" {% if r.run_id == run_id_b %}selected{% endif %}>{{ r.ticker }} {{ r.session_key }} · FV {{ r.fv_base | fmt_num }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <p><button type="submit">Compare</button></p>
+  </form>
+</div>
+{% endblock %}

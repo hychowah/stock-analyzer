@@ -33,6 +33,25 @@
     </div>
   </div>
 </div>
+{% if siblings %}
+<div class="card">
+  <h2>Compare with another {{ run.ticker }} session</h2>
+  <p class="muted">Starts a Grok valuation audit (six personas). Writes under archive/comparisons/. Does not edit either session.</p>
+  <form method="post" action="/compares/new" class="compare-form"
+        onsubmit="return confirm('Start a Grok valuation audit of these two sessions? It can take 15–40 minutes.');">
+    <input type="hidden" name="run_id_a" value="{{ run.run_id }}"/>
+    <label>Other session
+      <select name="run_id_b" required>
+        <option value="">(choose)</option>
+        {% for s in siblings %}
+        <option value="{{ s.run_id }}">{{ s.session_key }} · FV {{ s.fv_base | fmt_num }} · MoS {{ s.margin_of_safety_pct | fmt_num(1) }}%</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">Compare</button>
+  </form>
+</div>
+{% endif %}
 <div class="card">
   <h2>Primary reports</h2>
   <ul>

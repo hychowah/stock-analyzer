@@ -24,10 +24,11 @@
 
 ```text
 archive/
-  research/   # SoR sessions (immutable)
-  outcomes/   # marks (immutable)
-  catalog/    # sqlite + indexes (rebuildable)
-  library/    # reusable primary documents (append-only)
+  research/      # SoR sessions (immutable)
+  outcomes/      # marks (immutable)
+  catalog/       # sqlite + indexes (rebuildable)
+  library/       # reusable primary documents (append-only)
+  comparisons/   # session-valuation-audit packets (append-only)
 ```
 
 Default: `ARCHIVE_ROOT=<project>/archive`.  

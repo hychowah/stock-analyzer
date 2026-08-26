@@ -3,7 +3,7 @@
 {% block content %}
 <div class="card">
   <p>
-    <a href="/runs/{{ run_id }}">← Run</a>
+    <a href="{{ back_href or ('/runs/' ~ run_id) }}">← {{ back_label or 'Run' }}</a>
     · <a href="/artifact?run_id={{ run_id | urlencode }}&amp;path={{ relpath | urlencode }}&amp;raw=1">Raw source</a>
   </p>
   <h1 class="mono">{{ relpath }}</h1>

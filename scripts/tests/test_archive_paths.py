@@ -12,6 +12,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
+from packages.compare_jobs.paths import (  # noqa: E402
+    allocate_compare_key,
+    compare_id,
+    comparisons_root,
+    make_compare_packet_key,
+    parse_compare_id,
+)
 from scripts.kd_research.paths import (  # noqa: E402
     allocate_session_key,
     ensure_archive_tree,
@@ -80,6 +87,33 @@ class PathsTests(unittest.TestCase):
             dirs = ensure_archive_tree(td)
             self.assertTrue(dirs["library"].is_dir())
             self.assertEqual(library_root(td), Path(td) / "archive" / "library")
+            self.assertEqual(comparisons_root(td), Path(td) / "archive" / "comparisons")
+
+    def test_compare_id_and_packet_key(self):
+        self.assertEqual(
+            make_compare_packet_key("2026-08-26", "2026-08-03", "2026-08-10"),
+            "2026-08-26__2026-08-03_vs_2026-08-10",
+        )
+        self.assertEqual(
+            make_compare_packet_key("2026-08-26", "2026-08-03", "2026-08-10", replicate=2),
+            "2026-08-26__2026-08-03_vs_2026-08-10__r2",
+        )
+        cid = compare_id("meta", "2026-08-26__2026-08-03_vs_2026-08-10")
+        self.assertEqual(cid, "compare:META:2026-08-26__2026-08-03_vs_2026-08-10")
+        t, k = parse_compare_id(cid)
+        self.assertEqual(t, "META")
+        self.assertEqual(k, "2026-08-26__2026-08-03_vs_2026-08-10")
+
+    def test_allocate_compare_key_collision(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            key1 = allocate_compare_key("META", "2026-08-03", "2026-08-10", asof="2026-08-26", output_dir=root)
+            self.assertEqual(key1, "2026-08-26__2026-08-03_vs_2026-08-10")
+            p = comparisons_root(root) / "META" / key1
+            p.mkdir(parents=True)
+            (p / "job.json").write_text("{}", encoding="utf-8")
+            key2 = allocate_compare_key("META", "2026-08-03", "2026-08-10", asof="2026-08-26", output_dir=root)
+            self.assertEqual(key2, "2026-08-26__2026-08-03_vs_2026-08-10__r2")
 
     def test_session_root_default_under_archive(self):
         with tempfile.TemporaryDirectory() as td:

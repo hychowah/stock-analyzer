@@ -59,6 +59,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 
 - `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `templates/`, `harness/` (when W1), `sector_*.md` / `region_*.md` (when W1)  
 - **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
+- **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
 - **Deny:** `archive/research/**`, `archive/outcomes/**` (completed history)
 
 ## Verify

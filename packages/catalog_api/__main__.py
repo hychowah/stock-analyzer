@@ -10,6 +10,7 @@ from pathlib import Path
 
 from packages.catalog_api.client import (
     CatalogApi,
+    CompareNotFound,
     DbMissing,
     RunNotFound,
     default_archive_root,
@@ -69,6 +70,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Deprecated: including all audits is now the default",
     )
 
+    p_lc = sub.add_parser("list-compares", help="List compare packets on disk")
+    p_lc.add_argument("--ticker")
+    p_lc.add_argument("--limit", type=int, default=50)
+
+    p_gc = sub.add_parser("get-compare", help="Get one compare packet by compare_id")
+    p_gc.add_argument("compare_id")
+
     args = ap.parse_args(argv)
     api = _api_from_env()
     try:
@@ -117,12 +125,27 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
             return 0
+        if args.cmd == "list-compares":
+            print(
+                json.dumps(
+                    api.list_compares(ticker=args.ticker, limit=args.limit),
+                    indent=2,
+                    default=str,
+                )
+            )
+            return 0
+        if args.cmd == "get-compare":
+            print(json.dumps(api.get_compare(args.compare_id), indent=2, default=str))
+            return 0
     except DbMissing as e:
         print(f"DB missing: {e}", file=sys.stderr)
         return 2
     except RunNotFound as e:
         print(f"Run not found: {e}", file=sys.stderr)
         return 3
+    except CompareNotFound as e:
+        print(f"Compare not found: {e}", file=sys.stderr)
+        return 4
     except Exception as e:  # noqa: BLE001
         print(f"ERROR: {e}", file=sys.stderr)
         return 1

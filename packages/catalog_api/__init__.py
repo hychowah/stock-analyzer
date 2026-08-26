@@ -9,17 +9,21 @@ from __future__ import annotations
 from packages.catalog_api.client import (  # noqa: F401
     ArtifactDenied,
     CatalogApi,
+    CompareNotFound,
     DbMissing,
     RunNotFound,
     default_archive_root,
+    parse_compare_id,
     parse_run_id,
 )
 
 __all__ = [
     "CatalogApi",
     "ArtifactDenied",
+    "CompareNotFound",
     "DbMissing",
     "RunNotFound",
     "default_archive_root",
+    "parse_compare_id",
     "parse_run_id",
 ]

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ job.ticker }} {{ job.session_a }} vs {{ job.session_b }}{% endblock %}
+{% block body_attrs %}data-live-reload="1" data-live-compare="1" data-compare-id="{{ job.compare_id }}" data-compare-status="{{ job.status }}"{% endblock %}
+{% block content %}
+<div class="card">
+  <p><a href="/compares">← Compares</a></p>
+  {% if complete %}
+  <p class="flash">Compare complete. Read the synthesis first.</p>
+  {% endif %}
+  <h1 class="mono">{{ job.ticker }} · {{ job.session_a }} vs {{ job.session_b }}</h1>
+  <p class="mono muted">{{ job.compare_id }}</p>
+  <p>
+    Status <span class="badge status-{{ job.status }}">{{ job.status }}</span>
+    {% if job.degraded %}<span class="badge">degraded headline</span>{% endif %}
+  </p>
+  <table>
+    <tr><th>A</th><td class="mono"><a href="/runs/{{ job.run_id_a }}">{{ job.run_id_a }}</a></td></tr>
+    <tr><th>B</th><td class="mono"><a href="/runs/{{ job.run_id_b }}">{{ job.run_id_b }}</a></td></tr>
+    <tr><th>Packet</th><td class="mono">{{ job.out_dir }}</td></tr>
+    {% if job.error %}
+    <tr><th>Error</th><td class="err">{{ job.error }}</td></tr>
+    {% endif %}
+  </table>
+  {% if job.status == 'running' or job.status == 'queued' %}
+  <p class="muted">Grok audit running. Headline numbers below are the snapshot helper, not the audit. This page refreshes when the packet changes.</p>
+  <form method="post" action="/compare-cancel">
+    <input type="hidden" name="compare_id" value="{{ job.compare_id }}"/>
+    <button type="submit" class="secondary">Cancel</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if headline %}
+<div class="card">
+  <h2>Headline (prediction snapshots)</h2>
+  <p class="muted">Helper only. Do not treat this as a blended fair value.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Field</th>
+        {% for key in headline.sessions %}
+        <th class="mono">{{ key }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in headline.fields %}
+      <tr>
+        <th>{{ row.field }}</th>
+        {% for key in headline.sessions %}
+        <td class="num">{{ row.values[key] }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if synthesis_html %}
+<div class="card">
+  <h2>Synthesis</h2>
+  <div class="report-body">{{ synthesis_html | safe }}</div>
+</div>
+{% endif %}
+
+{% if readme_html %}
+<div class="card">
+  <h2>README</h2>
+  <div class="report-body">{{ readme_html | safe }}</div>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Packet files</h2>
+  {% if artifact_index %}
+  <table>
+    <thead><tr><th>File</th><th>Size</th></tr></thead>
+    <tbody>
+      {% for item in artifact_index %}
+      <tr>
+        <td><a href="{{ item.href }}">{{ item.name }}</a></td>
+        <td class="num muted">{% if item.size_bytes is not none %}{{ item.size_bytes }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No allowlisted files yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/compare_detail.js" defer></script>
+{% endblock %}

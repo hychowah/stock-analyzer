@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 import sys
@@ -13,12 +14,50 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 
+def _write_session(archive: Path, ticker: str, key: str, *, fv: float) -> None:
+    research = archive / "research" / ticker / key
+    (research / "reports").mkdir(parents=True, exist_ok=True)
+    (research / "meta").mkdir(parents=True, exist_ok=True)
+    (research / "data").mkdir(parents=True, exist_ok=True)
+    (research / "reports" / f"00_{ticker}_README.md").write_text(
+        f"# Hello {ticker}\n", encoding="utf-8"
+    )
+    (research / "data" / "valuation_model.json").write_text(
+        '{"name":"dcf"}', encoding="utf-8"
+    )
+    (research / "meta" / "prediction_snapshot.json").write_text(
+        json.dumps(
+            {
+                "asof_price": fv * 0.8,
+                "fair_value": {"base": fv, "bear": fv * 0.7, "bull": fv * 1.3},
+                "margin_of_safety_pct": 12.5,
+                "audit_verdict": "PASS",
+                "verdict_line": "pass",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def _mini_archive(base: Path) -> Path:
     archive = base / "archive"
     research = archive / "research" / "META" / "2026-08-03"
     (research / "reports").mkdir(parents=True)
     (research / "meta").mkdir(parents=True)
+    (research / "data").mkdir(parents=True)
     (research / "reports" / "00_META_README.md").write_text("# Hello META\n", encoding="utf-8")
+    (research / "data" / "valuation_model.json").write_text('{"name":"dcf"}', encoding="utf-8")
+    (research / "meta" / "prediction_snapshot.json").write_text(
+        json.dumps(
+            {
+                "asof_price": 400.0,
+                "fair_value": {"base": 500.0, "bear": 350.0, "bull": 650.0},
+                "margin_of_safety_pct": 12.5,
+                "audit_verdict": "PASS",
+            }
+        ),
+        encoding="utf-8",
+    )
     catalog = archive / "catalog"
     catalog.mkdir(parents=True)
     db = catalog / "research_compare.sqlite"
@@ -448,5 +487,123 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertTrue(all(row["harness_version"] == "2.17.0" for row in data["runs"]))
 
 
+class AnalysisWebCompareTests(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.archive = _mini_archive(Path(self._td.name))
+        _write_session(self.archive, "META", "2026-08-10", fv=600.0)
+        _write_session(self.archive, "JPM", "2026-07-25", fv=200.0)
+        _insert_run(
+            self.archive,
+            ticker="META",
+            session_key="2026-08-10",
+            fv_base=600.0,
+            mos=8.0,
+        )
+        _insert_run(
+            self.archive,
+            ticker="JPM",
+            session_key="2026-07-25",
+            fv_base=200.0,
+            mos=-5.0,
+            sector="bank",
+        )
+        os.environ["ARCHIVE_ROOT"] = str(self.archive)
+        os.environ["COMPARE_SPAWN"] = "fake"
+
+        import importlib
+
+        import apps.analysis_web.app as app_mod
+
+        importlib.reload(app_mod)
+        self._app = app_mod.create_app()
+        from fastapi.testclient import TestClient
+
+        self.client = TestClient(self._app)
+
+    def tearDown(self):
+        self.client.close()
+        os.environ.pop("COMPARE_SPAWN", None)
+        self._td.cleanup()
+
+    def test_nav_and_picker_chrome(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'href="/compares"', r.content)
+        self.assertIn(b"compare-pick", r.content)
+        self.assertIn(b"compare-btn", r.content)
+        self.assertIn(b"/static/compares.js", r.content)
+
+    def test_api_start_and_detail(self):
+        r = self.client.post(
+            "/api/compares",
+            json={
+                "run_id_a": "research:META:2026-08-03",
+                "run_id_b": "research:META:2026-08-10",
+            },
+        )
+        self.assertEqual(r.status_code, 202, r.text)
+        job = r.json()
+        self.assertEqual(job["status"], "complete")
+        cid = job["compare_id"]
+        page = self.client.get(f"/compares/{cid}")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b"Compare complete", page.content)
+        self.assertIn(b"Synthesis", page.content)
+        listed = self.client.get("/compares")
+        self.assertEqual(listed.status_code, 200)
+        self.assertIn(b"META", listed.content)
+
+    def test_different_tickers_400(self):
+        r = self.client.post(
+            "/api/compares",
+            json={
+                "run_id_a": "research:META:2026-08-03",
+                "run_id_b": "research:JPM:2026-07-25",
+            },
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_form_start(self):
+        r = self.client.post(
+            "/compares/new",
+            data={
+                "run_id_a": "research:META:2026-08-03",
+                "run_id_b": "research:META:2026-08-10",
+            },
+            follow_redirects=False,
+        )
+        self.assertEqual(r.status_code, 303)
+        self.assertIn("/compares/compare:", r.headers.get("location", ""))
+
+    def test_compare_artifact_deny_log(self):
+        r = self.client.post(
+            "/api/compares",
+            json={
+                "run_id_a": "research:META:2026-08-03",
+                "run_id_b": "research:META:2026-08-10",
+            },
+        )
+        cid = r.json()["compare_id"]
+        denied = self.client.get(
+            "/compare-artifact",
+            params={"compare_id": cid, "path": "grok.log"},
+        )
+        self.assertEqual(denied.status_code, 403)
+        ok = self.client.get(
+            "/compare-artifact",
+            params={"compare_id": cid, "path": "99_synthesis.md"},
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertIn(b"Synthesis", ok.content)
+
+    def test_run_detail_has_compare_form(self):
+        r = self.client.get("/runs/research:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"Compare with another META session", r.content)
+        self.assertIn(b"research:META:2026-08-10", r.content)
+
+
 if __name__ == "__main__":
     unittest.main()
+

@@ -7,6 +7,7 @@ All equity research **records** live under this tree. Harness code stays at the 
 ```text
 archive/
 ├── library/<TICKER>/         # reusable filings/transcripts (see harness/library.md)
+├── comparisons/<TICKER>/<packet>/  # session-valuation-audit packets (append-only)
 ├── catalog/
 │   ├── runs_index.json           # thin path index (rebuildable)
 │   ├── tickers_index.json        # per-ticker latest + history
@@ -34,7 +35,8 @@ archive/
 5. **Comparison DB** — after Phase 5, export with `python3 scripts/export_compare_db.py` (see below). Plan: `harness/plan_research_compare_db.md`.
 6. **Outcomes** record whether past calls were right; they never rewrite valuation JSON.
 7. Design plan (layout): `harness/plan_research_archive_layout.md`.
-8. **Not in git:** `archive/research/`, `archive/outcomes/`, and `*.sqlite` under catalog. Session trees are large. Commit harness code + thin catalog JSON, not full sessions or the SQLite binary.
+8. **Not in git:** `archive/research/`, `archive/outcomes/`, `archive/comparisons/`, and `*.sqlite` under catalog. Session trees are large. Commit harness code + thin catalog JSON, not full sessions, compare packets, or the SQLite binary.
+9. **Compares** are post-finalize audits of two named sessions. They never rewrite research folders. UI: `/compares`. CLI: `python -m packages.compare_jobs`.
 
 ## Common commands
 

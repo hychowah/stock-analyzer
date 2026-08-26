@@ -53,6 +53,7 @@ out.log
 archive/research/
 archive/outcomes/
 archive/library/
+archive/comparisons/
 eng/fixtures/archive/library/**
 archive/catalog/*.sqlite
 archive/catalog/*.sqlite-*

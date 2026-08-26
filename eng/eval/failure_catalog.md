@@ -36,5 +36,6 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F28 | Destock parked in bear; base still duration (unresolved **or** marked resolved) | 1d_merge + Pair 0 taught destock-in-bear; 4e required printed guide in base | W1 — **2.11–2.17 machine.** 2.11.0 destock_base FAIL on unresolved; 2.12.0 destock_default FAIL on destock-in-bear unless destock-in-base / DU=low / pass. On ≥2.18 destock-in-bear + Street Y1 is legal (see F30). |
 | F29 | Update run copies yesterday’s FV | Isolation vs amnesia | W1 — changelog facts only; prior FV/MoS/WACC keys FAIL |
 | F30 | Destock analog in **base** while Street FY+1 is usable | 2.12 destock-in-base teaching left in live prompts/exemplars after 2.18 inverted Y1 | W1 — 2.18.0 `check_destock_*` y1_street branch FAILs destock-in-base; Street is Y1 (`used_as:fy1_baseline`) |
+| F31 | UI compare writes under `archive/research/<T>/tmp/` | Skill default OUT inside immutable research | W2/W4 — packets live in `archive/comparisons/`; UI passes absolute OUT |
 
 Add rows when audits or production incidents recur.

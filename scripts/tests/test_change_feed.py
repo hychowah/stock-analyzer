@@ -34,6 +34,20 @@ class ChangeFeedUnitTests(unittest.TestCase):
             events = classify_change(fp1, fp2)
             self.assertIn("catalog_changed", events)
 
+    def test_compare_packet_classified(self):
+        from apps.analysis_web.services.change_feed import classify_change, fingerprint
+
+        with tempfile.TemporaryDirectory() as td:
+            ar = Path(td) / "archive"
+            (ar / "catalog").mkdir(parents=True)
+            fp1 = fingerprint(root=ar)
+            packet = ar / "comparisons" / "META" / "2026-08-26__a_vs_b"
+            packet.mkdir(parents=True)
+            (packet / "job.json").write_text('{"status":"running"}', encoding="utf-8")
+            fp2 = fingerprint(root=ar)
+            self.assertNotEqual(fp1["token"], fp2["token"])
+            self.assertIn("compare_changed", classify_change(fp1, fp2))
+
     def test_portfolio_change_classified(self):
         from apps.analysis_web.services import change_feed as cf
 

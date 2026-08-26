@@ -1,0 +1,52 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md, fill issue.json, baseline eng_verify, record git log",
+      "passes": false,
+      "verify": "issue.json has non-empty success_criteria; progress.md notes baseline verify"
+    },
+    {
+      "id": "data-plane",
+      "description": "archive/comparisons/ helpers, gitignore, README/HARNESS_MAP/AGENTS allowlist, skill OUT path",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_archive_paths.py -q"
+    },
+    {
+      "id": "job-runner",
+      "description": "Validate pair, allocate packet, headline, fake+real spawn, status machine, cancel",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_compare_jobs.py -q"
+    },
+    {
+      "id": "catalog-read",
+      "description": "CatalogApi list/get/open compare packets with containment allowlist",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_catalog_api.py -q"
+    },
+    {
+      "id": "ui-picker",
+      "description": "Two-select on runs list + run-detail dropdown + POST /api/compares and no-JS form",
+      "passes": false,
+      "verify": "pytest scripts/tests/test_analysis_web.py -q"
+    },
+    {
+      "id": "ui-status-results",
+      "description": "Compare list/detail pages, rendered README + synthesis, SSE/poll, nav",
+      "passes": false,
+      "verify": "GET /compares/{id} shows synthesis HTML after fake complete; path escape denied"
+    },
+    {
+      "id": "docs-verify",
+      "description": "analysis_web README, runbook one-liner, failure_catalog row",
+      "passes": false,
+      "verify": "README documents /compares and archive/comparisons/"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

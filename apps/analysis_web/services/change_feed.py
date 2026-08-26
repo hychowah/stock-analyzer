@@ -53,6 +53,28 @@ def fingerprint(*, root: Path | None = None) -> dict[str, Any]:
     else:
         parts.append(f"portfolio={book_st[0]}:{book_st[1]}")
 
+    comparisons = ar / "comparisons"
+    if not comparisons.is_dir():
+        parts.append("comparisons=missing")
+    else:
+        n = 0
+        for ticker_dir in comparisons.iterdir():
+            if not ticker_dir.is_dir():
+                continue
+            for packet in ticker_dir.iterdir():
+                job = packet / "job.json"
+                st = _stat_tuple(job)
+                if st is None:
+                    continue
+                parts.append(f"compare:{ticker_dir.name}:{packet.name}={st[0]}:{st[1]}")
+                n += 1
+                if n >= 200:
+                    break
+            if n >= 200:
+                break
+        if n == 0:
+            parts.append("comparisons=empty")
+
     blob = "|".join(parts)
     digest = hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
     return {
@@ -86,6 +108,12 @@ def classify_change(prev: dict[str, Any] | None, cur: dict[str, Any]) -> list[st
         events.append("catalog_changed")
     if prev_parts.get("portfolio") != cur_parts.get("portfolio"):
         events.append("portfolio_changed")
+    compare_keys = set()
+    for k in list(prev_parts.keys()) + list(cur_parts.keys()):
+        if k == "comparisons" or k.startswith("compare:"):
+            compare_keys.add(k)
+    if any(prev_parts.get(k) != cur_parts.get(k) for k in compare_keys):
+        events.append("compare_changed")
     if not events and prev.get("token") != cur.get("token"):
         events.append("catalog_changed")
     return events

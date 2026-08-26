@@ -15,8 +15,10 @@ sys.path.insert(0, str(ROOT))
 from packages.catalog_api.client import (  # noqa: E402
     ArtifactDenied,
     CatalogApi,
+    CompareNotFound,
     DbMissing,
     RunNotFound,
+    parse_compare_id,
     parse_run_id,
 )
 
@@ -156,6 +158,11 @@ class ParseRunIdTests(unittest.TestCase):
     def test_parse_slug(self):
         t, k = parse_run_id("research:META:2026-08-03__r1")
         self.assertEqual(k, "2026-08-03__r1")
+
+    def test_parse_compare_id(self):
+        t, k = parse_compare_id("compare:META:2026-08-26__2026-08-03_vs_2026-08-10")
+        self.assertEqual(t, "META")
+        self.assertEqual(k, "2026-08-26__2026-08-03_vs_2026-08-10")
 
 
 class CatalogApiTests(unittest.TestCase):
@@ -431,6 +438,43 @@ class CatalogQueryTests(unittest.TestCase):
 
         params = inspect.signature(CatalogApi.calibration).parameters
         self.assertFalse(params["pass_only"].default)
+
+    def test_compare_packet_read_and_deny(self):
+        packet = (
+            self.archive
+            / "comparisons"
+            / "META"
+            / "2026-08-26__2026-08-03_vs_2026-08-10"
+        )
+        packet.mkdir(parents=True)
+        (packet / "job.json").write_text(
+            json.dumps(
+                {
+                    "compare_id": "compare:META:2026-08-26__2026-08-03_vs_2026-08-10",
+                    "ticker": "META",
+                    "status": "complete",
+                    "session_a": "2026-08-03",
+                    "session_b": "2026-08-10",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (packet / "99_synthesis.md").write_text("# Synthesis\n\nOk.\n", encoding="utf-8")
+        (packet / "grok.log").write_text("secret-log", encoding="utf-8")
+        cid = "compare:META:2026-08-26__2026-08-03_vs_2026-08-10"
+        job = self.api.get_compare(cid)
+        self.assertEqual(job["ticker"], "META")
+        self.assertTrue(job["synthesis_ready"])
+        rows = self.api.list_compares(ticker="META")
+        self.assertEqual(len(rows), 1)
+        data = self.api.open_compare_artifact(cid, "99_synthesis.md")
+        self.assertIn(b"Synthesis", data)
+        with self.assertRaises(ArtifactDenied):
+            self.api.open_compare_artifact(cid, "grok.log")
+        with self.assertRaises(ArtifactDenied):
+            self.api.open_compare_artifact(cid, "../research/META/2026-08-03/reports/00_META_README.md")
+        with self.assertRaises(CompareNotFound):
+            self.api.get_compare("compare:META:nope")
 
 
 class LiveArchiveSmokeTests(unittest.TestCase):

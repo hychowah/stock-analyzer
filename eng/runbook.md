@@ -36,6 +36,8 @@ python3 -m apps.analysis_web
 # → http://127.0.0.1:8765/
 # Runs list: ticker_prefix, sector/region/harness dropdowns, session/MoS/price/FV ranges, column sort
 # JSON: python3 -m packages.catalog_api list-runs --ticker-prefix M --harness-version 2.17.0 --mos-min 0 --session-date-from 2026-08-01
+# Session compare (Grok audit → archive/comparisons/): UI /compares or
+#   COMPARE_SPAWN=fake python -m packages.compare_jobs start --run-a research:META:2026-08-03 --run-b research:META:DATE2
 
 # Experiment summary program
 python3 programs/experiment_summary.py

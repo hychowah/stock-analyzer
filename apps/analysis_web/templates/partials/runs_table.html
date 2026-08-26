@@ -15,6 +15,7 @@
   <table class="runs-table">
     <thead>
       <tr>
+        <th class="pick"></th>
         {{ sort_th('ticker', 'Ticker') }}
         {{ sort_th('session_date', 'Session') }}
         {{ sort_th('harness_version', 'Harness') }}
@@ -31,6 +32,10 @@
       {% if runs %}
         {% for r in runs %}
         <tr>
+          <td class="pick">
+            <input type="checkbox" class="compare-pick" value="{{ r.run_id }}"
+                   data-ticker="{{ r.ticker }}" aria-label="Select {{ r.ticker }} {{ r.session_key }}"/>
+          </td>
           <td><a class="mono" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
           <td class="mono">{{ r.session_key }}</td>
           <td class="mono">{% if r.harness_version %}<a class="version-filter" data-version="{{ r.harness_version }}" href="{{ filter_href(harness_version=r.harness_version) }}">{{ r.harness_version }}</a>{% endif %}</td>
@@ -44,7 +49,7 @@
         </tr>
         {% endfor %}
       {% else %}
-        <tr><td colspan="10" class="muted">No runs</td></tr>
+        <tr><td colspan="11" class="muted">No runs</td></tr>
       {% endif %}
     </tbody>
   </table>

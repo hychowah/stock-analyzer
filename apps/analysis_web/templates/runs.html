@@ -71,6 +71,11 @@
       <a class="btn secondary" href="/">Reset</a>
     </div>
   </form>
+  <div id="compare-bar" class="compare-bar">
+    <button type="button" id="compare-btn" disabled>Compare selected</button>
+    <span id="compare-hint" class="muted">Select two sessions of the same ticker.</span>
+    <a class="btn secondary" href="/compares/new">Compare form</a>
+  </div>
 </div>
 <div id="runs-results">
   {% include "partials/runs_table.html" %}
@@ -78,4 +83,5 @@
 {% endblock %}
 {% block scripts %}
 <script src="/static/runs.js" defer></script>
+<script src="/static/compares.js" defer></script>
 {% endblock %}

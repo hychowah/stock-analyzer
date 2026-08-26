@@ -38,6 +38,10 @@ class RunNotFound(KeyError):
     pass
 
 
+class CompareNotFound(KeyError):
+    pass
+
+
 class ArtifactDenied(PermissionError):
     pass
 
@@ -55,6 +59,20 @@ def parse_run_id(run_id: str) -> tuple[str, str]:
     if not m:
         raise ValueError(f"invalid run_id: {run_id!r}")
     return m.group("ticker").upper(), m.group("session_key")
+
+
+COMPARE_ID_RE = re.compile(
+    r"^compare:(?P<ticker>[^:]+):(?P<packet_key>.+)$", re.IGNORECASE
+)
+
+COMPARE_ALLOW_NAMES = frozenset({"job.json", "headline.json"})
+
+
+def parse_compare_id(compare_id: str) -> tuple[str, str]:
+    m = COMPARE_ID_RE.match(compare_id.strip())
+    if not m:
+        raise ValueError(f"invalid compare_id: {compare_id!r}")
+    return m.group("ticker").upper(), m.group("packet_key")
 
 
 # Allowlisted ORDER BY identifiers (never interpolate untrusted text).
@@ -344,6 +362,10 @@ class CatalogApi:
         return self.archive_root / "library"
 
     @property
+    def comparisons_dir(self) -> Path:
+        return self.archive_root / "comparisons"
+
+    @property
     def db_path(self) -> Path:
         return self.catalog_dir / "research_compare.sqlite"
 
@@ -366,6 +388,7 @@ class CatalogApi:
             "db_exists": self.db_path.is_file(),
             "research_exists": self.research_dir.is_dir(),
             "library_exists": self.library_dir.is_dir(),
+            "comparisons_exists": self.comparisons_dir.is_dir(),
             "schema_version": None,
             "run_count": None,
             "max_exported_at": None,
@@ -774,6 +797,127 @@ class CatalogApi:
         if not target.is_file():
             raise FileNotFoundError(str(target))
 
+        limit = max_bytes if max_bytes is not None else self.max_artifact_bytes
+        data = target.read_bytes()
+        if len(data) > limit:
+            raise ArtifactDenied(
+                f"artifact exceeds max_bytes={limit} (size={len(data)})"
+            )
+        return data
+
+    # --- compares (disk packets under archive/comparisons/) -------------------
+
+    def get_compare_root(self, compare_id: str) -> Path:
+        ticker, packet_key = parse_compare_id(compare_id)
+        candidate = (self.comparisons_dir / ticker / packet_key).resolve()
+        try:
+            candidate.relative_to(self.comparisons_dir.resolve())
+        except ValueError as e:
+            raise ArtifactDenied(f"escapes comparisons root: {compare_id!r}") from e
+        if not candidate.is_dir():
+            raise CompareNotFound(compare_id)
+        return candidate
+
+    def get_compare(self, compare_id: str) -> dict[str, Any]:
+        root = self.get_compare_root(compare_id)
+        job_path = root / "job.json"
+        if not job_path.is_file():
+            raise CompareNotFound(compare_id)
+        data = json.loads(job_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise CompareNotFound(compare_id)
+        data["packet_dir"] = str(root)
+        data["synthesis_ready"] = (root / "99_synthesis.md").is_file()
+        data["readme_ready"] = (root / "README.md").is_file()
+        data["headline_ready"] = (root / "headline.json").is_file()
+        return data
+
+    def list_compares(
+        self,
+        *,
+        ticker: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        if limit < 1 or limit > 1000:
+            raise ValueError("limit must be 1..1000")
+        root = self.comparisons_dir
+        if not root.is_dir():
+            return []
+        want = _blank(ticker)
+        if want:
+            want = want.upper()
+        rows: list[dict[str, Any]] = []
+        for ticker_dir in sorted(root.iterdir()):
+            if not ticker_dir.is_dir():
+                continue
+            name = ticker_dir.name.upper()
+            if want and name != want:
+                continue
+            for packet in ticker_dir.iterdir():
+                job = packet / "job.json"
+                if not job.is_file():
+                    continue
+                cid = f"compare:{name}:{packet.name}"
+                try:
+                    rows.append(self.get_compare(cid))
+                except (CompareNotFound, OSError, json.JSONDecodeError):
+                    continue
+        rows.sort(
+            key=lambda j: (str(j.get("updated_at") or ""), str(j.get("compare_id") or "")),
+            reverse=True,
+        )
+        return rows[:limit]
+
+    def _assert_compare_allowlisted(self, norm: str) -> None:
+        if "/" in norm:
+            raise ArtifactDenied(f"compare artifacts must be packet-root files: {norm}")
+        lower = norm.lower()
+        if lower in COMPARE_ALLOW_NAMES or lower.endswith(".md"):
+            return
+        raise ArtifactDenied(f"compare artifact not allowlisted: {norm}")
+
+    def list_compare_artifacts(
+        self,
+        compare_id: str,
+        *,
+        max_files: int = 50,
+    ) -> list[dict[str, Any]]:
+        root = self.get_compare_root(compare_id)
+        out: list[dict[str, Any]] = []
+        for path in sorted(root.iterdir()):
+            if not path.is_file():
+                continue
+            rel = path.name
+            try:
+                self._assert_compare_allowlisted(rel)
+            except ArtifactDenied:
+                continue
+            try:
+                size = path.stat().st_size
+            except OSError:
+                size = None
+            out.append({"relpath": rel, "name": rel, "size_bytes": size})
+            if len(out) >= max_files:
+                break
+        return out
+
+    def open_compare_artifact(
+        self,
+        compare_id: str,
+        relpath: str,
+        *,
+        max_bytes: int | None = None,
+    ) -> bytes:
+        norm = self._normalize_relpath(relpath)
+        self._assert_compare_allowlisted(norm)
+        root = self.get_compare_root(compare_id)
+        target = (root / norm).resolve()
+        try:
+            target.relative_to(root)
+        except ValueError as e:
+            raise ArtifactDenied(f"escapes compare packet: {relpath!r}") from e
+        if not target.is_file():
+            raise FileNotFoundError(str(target))
         limit = max_bytes if max_bytes is not None else self.max_artifact_bytes
         data = target.read_bytes()
         if len(data) > limit:

@@ -37,5 +37,6 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F29 | Update run copies yesterday’s FV | Isolation vs amnesia | W1 — changelog facts only; prior FV/MoS/WACC keys FAIL |
 | F30 | Destock analog in **base** while Street FY+1 is usable | 2.12 destock-in-base teaching left in live prompts/exemplars after 2.18 inverted Y1 | W1 — 2.18.0 `check_destock_*` y1_street branch FAILs destock-in-base; Street is Y1 (`used_as:fy1_baseline`) |
 | F31 | UI compare writes under `archive/research/<T>/tmp/` | Skill default OUT inside immutable research | W2/W4 — packets live in `archive/comparisons/`; UI passes absolute OUT |
+| F32 | Orchestrator authors valuation/filings/reports itself when spawn_subagent fails or is skipped | `orchestrator_inline` was allowed; no spawn ledger | W1 — 2.20.0 spawn-or-abandon: `registry/spawns.json` required; spawn fail writes `abandon.json` and stops the run |
 
 Add rows when audits or production incidents recur.

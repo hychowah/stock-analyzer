@@ -1,0 +1,9 @@
+{
+  "slug": "spawn-required-abandon",
+  "session_key": "2026-08-28-spawn-required-abandon",
+  "status": "complete",
+  "created_at": "2026-08-28T07:41:12Z",
+  "updated_at": "2026-08-28T08:20:00Z",
+  "work_type": "W1",
+  "resume_hint": "Shipped 2.20.0 spawn-or-abandon. Propose commit after user agreement."
+}

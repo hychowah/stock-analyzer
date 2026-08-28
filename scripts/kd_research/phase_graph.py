@@ -15,6 +15,7 @@ Enforces harness HARNESS_MAP / phase_status design mechanically:
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,13 @@ ORCHESTRATOR_ALIASES = frozenset(
         "lead",
     }
 )
+
+# Dynamic 1c year-readers (not in PHASE_AGENTS; one per annual on disk).
+YEAR_READER_RE = re.compile(
+    r"^(?:2e[_-]?fy|fdd_year[_-]?fy?|year_reader[_-]?fy?|year[_-]?)(\d{4})$",
+    re.IGNORECASE,
+)
+PHASE0_ROUND_RE = re.compile(r"^phase0[_-]?(?:r|round)[_-]?(\d+)$", re.IGNORECASE)
 
 
 def load_phase_status(session: Path) -> tuple[dict[str, Any] | None, str | None]:
@@ -150,6 +158,13 @@ def normalize_subagent_id(subagent_id: str) -> str:
         "oppath": "1d_merge",
         "operating_path": "1d_merge",
     }
+    compact = raw.replace(" ", "").replace("-", "_")
+    ym = YEAR_READER_RE.match(compact)
+    if ym:
+        return f"2e_fy{ym.group(1)}"
+    pr = PHASE0_ROUND_RE.match(compact)
+    if pr:
+        return f"phase0_r{pr.group(1)}"
     if raw in SUBAGENT_TO_PHASE:
         return raw
     if raw.lower() in ORCHESTRATOR_ALIASES:
@@ -166,6 +181,20 @@ def normalize_subagent_id(subagent_id: str) -> str:
 normalize_agent_id = normalize_subagent_id
 
 
+def home_phase_for_subagent(subagent_id: str) -> str | None:
+    """Graph home phase for a specialist (None = orchestrator / unknown)."""
+    sid = normalize_subagent_id(subagent_id)
+    if sid == "orchestrator" or sid in ORCHESTRATOR_ALIASES:
+        return None
+    if sid.startswith("2e_fy"):
+        return "1c"
+    if sid.startswith("phase0"):
+        return "0"
+    if sid.startswith("phase25") or sid.startswith("stress"):
+        return "2_5"
+    return SUBAGENT_TO_PHASE.get(sid)
+
+
 def subagent_allowed_in_phase(subagent_id: str, phase_id: str) -> tuple[bool, str]:
     """Whether this subagent may be spawned while working phase_id."""
     sid = normalize_subagent_id(subagent_id)
@@ -176,7 +205,9 @@ def subagent_allowed_in_phase(subagent_id: str, phase_id: str) -> tuple[bool, st
     allowed = PHASE_TO_SUBAGENTS[phase_id]
     if sid in allowed:
         return True, f"subagent {sid} belongs to phase {phase_id}"
-    home = SUBAGENT_TO_PHASE.get(sid)
+    home = home_phase_for_subagent(sid)
+    if home == phase_id:
+        return True, f"subagent {sid} belongs to phase {phase_id}"
     if home:
         return False, f"subagent {sid} belongs to phase {home}, not {phase_id}"
     return False, f"unknown subagent_id={subagent_id!r} (not on phase graph)"
@@ -368,7 +399,7 @@ def check_phase_status_graph(session: Path) -> list[tuple[str, str, str]]:
     for sid, (pid, _st) in subagent_status_map(data).items():
         if sid == "orchestrator":
             continue
-        home = SUBAGENT_TO_PHASE.get(sid)
+        home = home_phase_for_subagent(sid)
         if home and home != pid:
             results.append(
                 (

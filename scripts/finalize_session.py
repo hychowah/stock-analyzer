@@ -22,7 +22,7 @@ from scripts.kd_research.paths import resolve_session  # noqa: E402
 from scripts.rebuild_catalog import patch_run_into_catalog, rebuild  # noqa: E402
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--ticker")
     ap.add_argument("--date", help="Session date or session_key")
@@ -38,7 +38,7 @@ def main() -> int:
         action="store_true",
         help="With full rebuild, also scan legacy root sessions",
     )
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
     if args.session_dir:
         session = Path(args.session_dir)
@@ -50,6 +50,34 @@ def main() -> int:
         session = found
     else:
         ap.error("pass --session-dir or --ticker and --date")
+
+    if not Path(session).is_dir():
+        print(f"Session not found: {session}", file=sys.stderr)
+        return 2
+
+    from scripts.kd_research.spawn_gate import (  # noqa: WPS433
+        check_spawn_discipline,
+        session_enforces_spawn,
+        session_is_abandoned,
+    )
+
+    if session_is_abandoned(session):
+        print(
+            "REFUSED: session abandoned (specialist spawn failed). "
+            "Do not finalize; scaffold a new session_key if the ticker is still in scope.",
+            file=sys.stderr,
+        )
+        return 2
+    if session_enforces_spawn(session):
+        spawn_fails = [r for r in check_spawn_discipline(session) if r[0] == "FAIL"]
+        if spawn_fails:
+            print(
+                "REFUSED: spawn discipline FAIL — specialist work without subagent spawn.",
+                file=sys.stderr,
+            )
+            for _status, check_id, detail in spawn_fails:
+                print(f"  FAIL     {check_id}: {detail}", file=sys.stderr)
+            return 1
 
     snap = build_for_session(session, force=True)
     prov = (snap.get("snapshot") or {}).get("provenance") or {}

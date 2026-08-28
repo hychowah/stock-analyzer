@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria and W1 spawn-or-abandon goal"
+    },
+    {
+      "id": "implement",
+      "description": "Spawn ledger + abandon path + Mode A law 2.20.0",
+      "passes": true,
+      "verify": "python -m pytest scripts/tests/test_spawn_gate.py -q; python scripts/eng_verify.py PASS"
+    },
+    {
+      "id": "review-follow-up",
+      "description": "Reviewer follow-up: Agent 13, execution/5b, launch-before-return, per-raw swarm, year-reader graph home, schema checks",
+      "passes": true,
+      "verify": "50 passed on spawn/phase/law tests; eng_verify PASS (196 tests)"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "ship_note.json matches eng/templates/ship_note.schema.json; no archive/research mutation"
+    }
+  ]
+}

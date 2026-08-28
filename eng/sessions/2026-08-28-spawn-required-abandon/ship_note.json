@@ -1,0 +1,17 @@
+{
+  "summary": "Harness 2.20.0: specialist spawn required; spawn failure abandons the session. Review follow-up: launch-before-return, per-raw swarm rows, Agent 13/5b execution law, year-reader graph home.",
+  "verify_commands_run": [
+    "python -m pytest scripts/tests/test_spawn_gate.py scripts/tests/test_phase_graph.py scripts/tests/test_gates_preflight.py scripts/tests/test_phase_status.py scripts/tests/test_law_surface_freeze.py -q",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Ledger remains orchestrator-written telemetry (not Task-API proof). A specialist-written nonce/ack would be a later increment.",
+    "When committing, stage only allowlisted W1 paths. Leave archive/catalog indexes unstaged."
+  ],
+  "risks": [
+    "A lead can still fake launch+return after inline work; the gate fail-closes when the ledger is missing or return has no launch.",
+    "First --event fail is terminal (abandon). Retry spawn_subagent without recording fail.",
+    "Pre-existing dirty archive/catalog files must not ride this commit."
+  ],
+  "intended_commit_subject": "Require specialist subagent spawn; abandon the session if spawn fails"
+}

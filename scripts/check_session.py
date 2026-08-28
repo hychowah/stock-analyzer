@@ -850,6 +850,49 @@ def check_library_session(session: Path, *, full: bool = False) -> None:
             record(status, check, detail)
 
 
+def check_spawn_session(session: Path) -> None:
+    """Specialist spawn ledger / abandon. SKIPPED on harness < 2.20.0."""
+    if str(PROJECT_ROOT) not in sys.path:
+        sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.kd_research.spawn_gate import (  # noqa: WPS433
+        ABANDON_REL,
+        SPAWNS_REL,
+        check_abandon,
+        check_spawn_discipline,
+        session_enforces_spawn,
+        session_is_abandoned,
+    )
+
+    if (session / SPAWNS_REL).is_file():
+        check_file(
+            session,
+            SPAWNS_REL,
+            "spawns",
+            ["schema_version", "ticker", "session_date", "spawns"],
+        )
+    if (session / ABANDON_REL).is_file():
+        check_file(
+            session,
+            ABANDON_REL,
+            "abandon",
+            ["schema_version", "abandoned", "reason", "at"],
+        )
+
+    if session_is_abandoned(session):
+        for status, check, detail in check_abandon(session):
+            record(status, check, detail)
+        return
+    if not session_enforces_spawn(session):
+        record(
+            "SKIPPED",
+            "spawn",
+            "legacy/slim (no spawns.json; harness_version < 2.20.0)",
+        )
+        return
+    for status, check, detail in check_spawn_discipline(session):
+        record(status, check, detail)
+
+
 def check_street_bind_session(session: Path) -> None:
     """New-runtime Street fetch + Agent 5 calibration bind; SKIPPED on legacy."""
     if str(PROJECT_ROOT) not in sys.path:
@@ -1235,6 +1278,7 @@ def main() -> int:
     check_phase_status(session)
     check_session_isolation(session, full=bool(args.full))
     check_library_session(session, full=bool(args.full))
+    check_spawn_session(session)
     check_meta_artifacts(session)
     # FDD hooks / Agent 4: always evaluate when files present; severity for Agent 4 depends on --full
     check_filing_deep_dive_hooks_session(session)

@@ -1,0 +1,32 @@
+{
+  "goal": "Fail-closed specialist spawn: Mode A orchestrator must launch subagents per the harness; spawn failure abandons the session instead of the lead doing the work inline.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not claim cryptographic Task-API spawn proof (ledger is process telemetry)",
+    "Do not split Agent 5 / multi-valuer"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "harness/VERSION is 2.20.0 in the same change set",
+    "New-runtime specialist artifacts without a returned registry/spawns.json row FAIL",
+    "spawn fail writes registry/abandon.json; later preflight and finalize refuse",
+    "orchestrator_inline specialist work is FAIL, not a fallback",
+    "legacy sessions SKIPPED"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "templates/",
+    "harness/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest scripts/tests/test_spawn_gate.py scripts/tests/test_phase_graph.py scripts/tests/test_gates_preflight.py scripts/tests/test_phase_status.py -q"
+  ]
+}

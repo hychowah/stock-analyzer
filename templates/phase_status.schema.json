@@ -104,7 +104,12 @@
           "type": "string",
           "description": "Required when status=skipped."
         },
-        "notes": { "type": "string" }
+        "notes": { "type": "string" },
+        "execution": {
+          "type": "string",
+          "enum": ["subagent", "orchestrator_lead", "spawn_failed", "orchestrator_inline"],
+          "description": "How the work was produced. Specialists must be subagent after a returned spawn. orchestrator_lead is only for agent_id=orchestrator (classification/merge/5b). orchestrator_inline on a specialist is a machine FAIL (harness >= 2.20.0). 5b must not retag Agent 5."
+        }
       }
     },
     "phase": {

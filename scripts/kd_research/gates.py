@@ -445,7 +445,7 @@ def check_latest_quarter_risk_mapping(session: Path) -> list[tuple[str, str, str
     return out
 
 
-# --- Specialist-quality process gates (outcomes, not spawn APIs) ---
+# --- Specialist-quality outcomes (hooks, Agent 4, handoffs). Spawn discipline: spawn_gate.py ---
 
 HOOK_REQUIRED_KEYS = ("from", "action", "reason")
 HOOK_REASON_MIN_LEN = 10
@@ -800,6 +800,18 @@ def entry_checks(
     results: list[tuple[str, str, str]] = []
     # LLM identity first: must be on disk from scaffold (avoids late hallucination)
     results.extend(check_llm_model_identity(session, strict=True))
+    from scripts.kd_research.spawn_gate import (  # noqa: WPS433
+        check_abandon,
+        check_spawn_discipline,
+        session_enforces_spawn,
+        session_is_abandoned,
+    )
+
+    results.extend(check_abandon(session))
+    if session_is_abandoned(session):
+        return results
+    if session_enforces_spawn(session):
+        results.extend(check_spawn_discipline(session))
     # Phase graph: order + allowed subagent (before file evidence)
     from scripts.kd_research.phase_graph import check_phase_graph_entry  # noqa: WPS433
 
@@ -999,8 +1011,22 @@ def check_1c_year_dive_complete(session: Path) -> list[tuple[str, str, str]]:
 
 def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
     """Checks before marking a phase complete (merge/coverage)."""
+    from scripts.kd_research.spawn_gate import (  # noqa: WPS433
+        check_abandon,
+        check_spawn_discipline,
+        session_enforces_spawn,
+        session_is_abandoned,
+    )
+
+    prefix: list[tuple[str, str, str]] = []
+    prefix.extend(check_abandon(session))
+    if session_is_abandoned(session):
+        return prefix
+    if session_enforces_spawn(session):
+        prefix.extend(check_spawn_discipline(session, phase_id=phase_id, mode="complete"))
+
     if phase_id == "0":
-        return check_phase0_coverage(session)
+        return prefix + check_phase0_coverage(session)
     if phase_id == "1_parallel":
         out: list[tuple[str, str, str]] = []
         for rel in (
@@ -1016,15 +1042,15 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
         from scripts.kd_research.library import check_library_gates  # noqa: WPS433
 
         out.extend(check_library_gates(session, phase="1_parallel_complete"))
-        return out
+        return prefix + out
     if phase_id == "1c":
         from scripts.kd_research.library import check_transcript_freshness  # noqa: WPS433
 
-        return check_1c_year_dive_complete(session) + check_transcript_freshness(session)
+        return prefix + check_1c_year_dive_complete(session) + check_transcript_freshness(session)
     if phase_id == "1d":
         from scripts.kd_research.operating_path import check_1d_complete  # noqa: WPS433
 
-        return check_1d_complete(session)
+        return prefix + check_1d_complete(session)
     if phase_id == "2_parallel":
         out = []
         for rel in (
@@ -1067,9 +1093,9 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
             out.extend(check_destock_not_silent_duration(session))
         if session_is_wave4_runtime(session):
             out.extend(check_destock_default(session))
-        return out
+        return prefix + out
     if phase_id == "2_5":
-        return check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)
+        return prefix + check_stress_coverage(session) + check_latest_quarter_risk_mapping(session)
     if phase_id == "4_parallel":
         t = _infer_ticker(session)
         out = check_reports(session, t)
@@ -1085,8 +1111,8 @@ def complete_checks(session: Path, phase_id: str) -> list[tuple[str, str, str]]:
 
             out.extend(check_readme_quotes_decision(session))
         out.extend(check_wave6_reopen(session))
-        return out
-    return [("SKIPPED", "complete_checks", f"no merge gate for phase {phase_id}")]
+        return prefix + out
+    return prefix + [("SKIPPED", "complete_checks", f"no merge gate for phase {phase_id}")]
 
 
 def _infer_ticker(session: Path) -> str:

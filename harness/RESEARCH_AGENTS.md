@@ -166,6 +166,7 @@ Subagent prompt templates for every phase are in `harness/agent_prompts.md`. Tra
 4. Never set `phase.status = complete` if a required artifact path is missing on disk or a required handoff is missing/stub. For Phase 0 and 2.5, also pass merge/coverage preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase 0|2_5 --mode complete`.
 5. Keep `resume_hint` as one plain-English sentence for the next shift; set `updated_at` from the `date` command (UTC ISO-8601).
 6. Before starting Phase `2_parallel`, `2_5`, `4_parallel`, or `5`, run entry preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase <id>`. FAIL → fix upstream; do not invent evidence.
+7. **Spawn-or-abandon (harness ≥ 2.20.0):** every specialist on the phase graph (each 1c year-reader; each Phase 0 / 2.5 raw) **must** be launched with `spawn_subagent`. Record `python3 scripts/record_spawn.py --ticker T --date D --subagent <id> --phase <phase> --event launch` then `--event return` (return without launch FAILs). Retry spawn without recording fail if the tool glitched. `--event fail --reason …` only when you cannot launch and would otherwise work inline (writes `registry/abandon.json`) — then **stop**. Do **not** write that specialist’s artifacts as the lead. Inline specialist work is a machine FAIL, not a fallback. Agent 5 `execution` stays `subagent` after 5b. Orchestrator-lead work remains: sector/market/brief, `bind_library.py`, `price_snapshot`, `phase_status`, Phase 0 / 2.5 **merge**, Agent 5 **5b** reopen.
 
 Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Design + agent pre-fill: `harness/design_phase_status_and_exemplars.md`, schema `templates/phase_status.schema.json`. Legacy sessions without the file are OK (`check_session` → SKIPPED).
 
@@ -296,10 +297,11 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 - Conflicting lenses → do not force one verdict; present bull/base/bear and state which perspective dominates under which assumption.
 - Pre-revenue/binary companies → milestone-based scenarios per `sector_growth.md`.
 - A tool/API failure → record it in the artifact, use the fallback source (§4), flag degraded quality in the README.
+- **`spawn_subagent` failure / unavailable (harness ≥ 2.20.0)** → **abandon** (`record_spawn.py --event fail` or `abandon_session.py`). Do **not** author specialist artifacts as the orchestrator. Scaffold a new `session_key` if the user still wants the ticker researched.
 
 ## 13. Quality gates
 
-**Process principle:** enforce **specialist outcomes** (isolation, hooks, handoffs, phase↔disk), not Task/subagent API spawn IDs. Valuation stays **single-writer** (Agent 5). Parallel fan-out is for independent gather (Phase 0, 1 data, stress), not multi-valuer or parallel report-section authorship.
+**Process principle:** specialists **must** run as isolated subagents (`spawn_subagent`). The orchestrator lead does **not** author specialist artifacts inline. If spawn fails or the tool is unavailable, **abandon** the session (`scripts/abandon_session.py` / `record_spawn.py --event fail`) — do not “just do it yourself.” Valuation stays **single-writer** (Agent 5). Parallel fan-out is for independent gather (Phase 0, 1 data, stress), not multi-valuer or parallel report-section authorship. Outcomes (hooks, isolation, handoffs, phase↔disk) still apply; spawn is now also a machine gate (ledger + abandon).
 
 | Gate | Enforced by |
 |---|---|
@@ -341,7 +343,8 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 | Reverse-engineering done; priced-for-perfection explicitly flagged true/false with rationale | `[audit]` Phase 5 agent |
 | SBC/dilution at critical intensity for growth / is_also_growth | `[audit]` Phase 5 agent |
 | No fabricated numbers: every number sourced or justified | `[audit]` Phase 5 agent |
-| Subagent *API* spawn proof / token counts | **Not machine-enforced** (optional process telemetry later) |
+| Harness ≥ 2.20.0: every designed specialist (each 1c year-reader; each Phase 0 / 2.5 raw) must have a **launch-then-return** `registry/spawns.json` row before artifacts / phase complete; `execution=orchestrator_inline` on a specialist FAILs; `orchestrator_lead` is orch-row only (do not retag Agent 5 at 5b). Spawn `--event fail` → `registry/abandon.json` (terminal). Finalize and later-phase preflight refuse. Legacy / missing version → SKIPPED | `[machine]` `record_spawn.py` + `check_session` + preflight + `finalize_session` |
+| Subagent Task-API cryptographic spawn proof / token counts | **Not available** (ledger is process telemetry the orchestrator must write around `spawn_subagent`; faking it is a harness violation) |
 | Manual-review flag acted on when confidence < 0.70 | `[human]` |
 
 ## 14. Quick start
@@ -355,4 +358,4 @@ python3 scripts/preflight_phase.py --ticker JPM --date $(date +%F) --phase 2_par
 python3 scripts/check_session.py --ticker JPM --date $(date +%F) --full --write-acceptance
 ```
 
-The **orchestrator** (lead): scaffolds the session (§2, including `registry/phase_status.json`), classifies the sector (§5) and market/region context (§5b), writes `registry/research_brief.json`, then executes Phases 0–5 **in graph order**, spawning only the **subagents** for the current phase (templates in `harness/agent_prompts.md`). Update `phase_status` after each subagent return. **MUST** run `preflight_phase.py --phase …` (and `--subagent …` when spawning a specialist) before entering a phase — FAIL means do not spawn. Finish with `check_session.py --full` (optionally `--write-acceptance`). See `harness/HARNESS_MAP.md`.
+The **orchestrator** (lead): scaffolds the session (§2, including `registry/phase_status.json`), classifies the sector (§5) and market/region context (§5b), writes `registry/research_brief.json`, then executes Phases 0–5 **in graph order**, spawning only the **subagents** for the current phase (templates in `harness/agent_prompts.md`). **MUST** call `scripts/record_spawn.py --event launch` then `spawn_subagent`; `--event return` after return. If spawn fails: `--event fail` (writes `abandon.json`) and **stop**. Update `phase_status` after each subagent return. **MUST** run `preflight_phase.py --phase …` (and `--subagent …` when spawning a specialist) before entering a phase — FAIL means do not spawn. Finish with `check_session.py --full` (optionally `--write-acceptance`). See `harness/HARNESS_MAP.md`.

@@ -41,7 +41,13 @@ Every template already carries the justification contract — do not strip it. S
 
 ## Orchestrator
 
-**You are the orchestrator (lead), not a phase specialist subagent.** Follow `ROOT/harness/orchestrator_runbook.md` (phase graph order, phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent.  
+**You are the orchestrator (lead), not a phase specialist subagent.** Follow `ROOT/harness/orchestrator_runbook.md` (phase graph order, phase_status flips, preflight, **price_snapshot freeze before Phase 2**, merges, no audit-authored FDD). Do not paste the full runbook into every subagent.
+
+**HARD RULE — spawn or abandon (harness ≥ 2.20.0):** Every specialist (Phase 0 swarm, 2a/2b/2c, 2d, each year-reader, 2e, 1d workers+merge, 4/5/12, 2.5 swarm, 6, 7/8/11, 13) **must** be launched with `spawn_subagent`. You do **not** write their artifacts. Before each spawn:
+
+`python3 scripts/record_spawn.py --ticker T --date D --subagent <id> --phase <phase> --event launch`
+
+After the subagent returns: `--event return` (illegal without a prior launch). Set `execution=subagent` on that agent row. Retry `spawn_subagent` without recording fail if the first launch glitched. **`--event fail` only when you cannot launch and would otherwise do the work yourself** (writes `registry/abandon.json`) and STOP the mission. Do not “do Agent 5 / 2b / reports yourself.” That breaks the harness. Inline specialist work is a machine FAIL.
 
 **Phase graph:** Spawn **subagents** only for the current phase (see HARNESS_MAP). Before each phase:
 
@@ -356,7 +362,7 @@ SELF-CHECK before handoff: (1) abs(pct − 100×frac) < 0.05; (2) ≥3 rationale
 Write S/registry/handoffs/5_valuation.md.
 ```
 
-**5b — decision reopen (orchestrator lead, after Phase 2.5 complete; harness ≥ 2.14.0):** You are still Agent 5, the **single writer** of `decision.json`. Do **not** rewrite `valuation_model.json` or compute scripts. Do **not** reset phase `2_parallel` / Agent 5 to pending. Do **not** spawn subagent id `5` in phase `2_5` (not allowed). Read `S/registry/risk_bridge.json` and `S/registry/tsr_validation.json` (Agent 12 already wrote TSR in 2_parallel). Update `duration.action` if stress or TSR flags change the verb. Set `reopened_after_stress: true`. If `tsr_validation.json` exists set `tsr_seen: true` (`tsr_missing` is illegal when that file exists). Optional handoff `S/registry/handoffs/5b_decision_reopen.md`.
+**5b — decision reopen (orchestrator lead, after Phase 2.5 complete; harness ≥ 2.14.0):** You are still Agent 5, the **single writer** of `decision.json`. Do **not** rewrite `valuation_model.json` or compute scripts. Do **not** reset phase `2_parallel` / Agent 5 to pending. Do **not** spawn subagent id `5` in phase `2_5` (not allowed). Do **not** retag Agent 5 `execution` — keep `subagent` from the Phase 2 spawn; 5b is orchestrator-lead work recorded on the orch row / `5b_decision_reopen` handoff, not `execution=orchestrator_lead` on Agent 5. Read `S/registry/risk_bridge.json` and `S/registry/tsr_validation.json` (Agent 12 already wrote TSR in 2_parallel). Update `duration.action` if stress or TSR flags change the verb. Set `reopened_after_stress: true`. If `tsr_validation.json` exists set `tsr_seen: true` (`tsr_missing` is illegal when that file exists). Optional handoff `S/registry/handoffs/5b_decision_reopen.md`.
 
 ### Agent 12 — TSR & dilution validation (`coder`)
 
@@ -507,7 +513,7 @@ Checks (ordered bands — do not skip later bands after early PASS items):
 7–8b. Cross-artifact inputs; **sector fit vs identity** (not consistency with the chosen module); region fit. Challenge the **lead module vs identity**. Tripwire: GICS Consumer Defensive / Farm Products / Packaged Foods **and** branded retail mix **and** `primary_sector=cyclical` → **major** (machine FAIL on harness ≥ 2.9.0) unless a majority of revenue is realized at spot/index/posted producer prices. Lead `module_file` vs identity mismatch → finding. Do not PASS on schema-valid `sector_fit`. Branded CPG with a protein/feed shock is a 2.5 overlay, not proof that `sector_cyclical.md` should lead. Branded consumer / CPG / staples with `primary_sector=growth` → **major** (use native module + `is_also_growth`; do not infer this from FCF alone). Template 30/45/25 without method+counterfactual, mechanical PFP (price≷base only), or wide cone without `decision_usefulness` → **major** on ≥ 2.9.0. README that treats Audit PASS as investable without the completeness disclaimer → **major**. README that leads with fair value vs price / margin of safety **before** quoting duration.action is **major** on ≥ 2.16.0 (any action). Agent 12 `roc_vs_cost_of_capital=fail` next to `franchise_mos` without `quality_bucket=above_wacc` → **major**. After Phase 2.5, `decision.json` with `reopened_after_stress` false/missing is **major** on ≥ 2.14.0 (5b not run). Missing `latest_quarter.cash_quality` on ≥ 2.15.0 is **major**.
 11. Merge integrity (raw counts; no invented merge numbers).
 12. phase_status lag (pending agents with files on disk) = minor (machine WARN); phase complete without primary artifact = major if not waived; do not author missing FDD yourself as auditor.
-13. Process note: multi-agent *spawn API* is not required for PASS; decision-grade specialist *artifacts* and isolation are.
+13. Process note (harness ≥ 2.20.0): missing/failed `registry/spawns.json` row, `execution=orchestrator_inline` on a specialist, or `registry/abandon.json` is **major** (machine FAIL / terminal). Do not PASS “isolation” from artifacts alone. Cryptographic Task-API proof is still unavailable; require the ledger to exist, launch-then-return, and match designed specialists / year-readers / swarm raws. Agent 5 `execution` stays `subagent` after 5b.
 
 Write S/registry/audit.json per ROOT/templates/audit.schema.json: verdict PASS only if no critical/major issues; list every issue with severity, location, and concrete fix.
 ```

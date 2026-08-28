@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.20.0",
+  "harness_version": "2.21.0",
   "harness_spec": "v2",
-  "notes": "2.20.0: specialist spawn required; spawn failure abandons the session (no orchestrator_inline fallback). 2.19.0: ticker document library. 2.18.0: Street FY+1 is base Y1."
+  "notes": "2.21.0: Mode A aborts scaffold if the ticker is not a real market symbol and has no obvious match. 2.20.0: specialist spawn required. 2.19.0: ticker document library."
 }

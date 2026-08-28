@@ -1,0 +1,31 @@
+{
+  "goal": "Mode A aborts before scaffold when the typed symbol is not a real market ticker and there is no obvious match.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not auto-remap the user's ticker",
+    "Do not change analysis-web catalog 404 behavior"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "harness/VERSION is 2.21.0 in the same change set",
+    "Unknown ticker with no match aborts scaffold (no folder)",
+    "Typo/alias with one obvious match aborts and prints the match",
+    "Real tickers (including META) still scaffold",
+    "Python scaffold API default does not hit the network (tests)",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "scripts/",
+    "harness/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest scripts/tests/test_ticker_lookup.py -q"
+  ]
+}

@@ -17,7 +17,7 @@
   <h1>Research runs</h1>
   <p class="muted">source: catalog sqlite
     · <span title="SSE /api/events with 5s poll fallback">live</span></p>
-  <form id="runs-filters" class="filters" method="get" action="/" data-runs-live="1">
+  <form id="runs-filters" class="filters{% if error_kind == 'ticker_not_found' %} is-abort{% endif %}" method="get" action="/" data-runs-live="1">
     <div class="filters-row">
       <label>Ticker<input name="ticker_prefix" value="{{ ticker_prefix or '' }}" placeholder="M…" autocomplete="off" spellcheck="false"/></label>
       <label>Sector{{ facet_select('sector', sector, facets.sector) }}</label>

@@ -14,6 +14,7 @@ from packages.catalog_api.client import (
     CatalogApi,
     DbMissing,
     RunNotFound,
+    TickerNotFound,
 )
 
 from apps.analysis_web.deps import get_api
@@ -117,11 +118,14 @@ def _load_facets(api: CatalogApi) -> dict[str, list[str]]:
 
 def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], int]:
     error = None
+    error_kind = None
+    ticker_query = None
     runs: list[dict[str, Any]] = []
     total: int | None = None
     status = 200
     filters = catalog_filters(q)
     try:
+        api.require_ticker(ticker=q.get("ticker"), ticker_prefix=q.get("ticker_prefix"))
         runs = api.list_runs(
             sort=q["sort"],
             dir=q["dir"],
@@ -130,6 +134,11 @@ def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], i
             **filters,
         )
         total = api.count_runs(**filters)
+    except TickerNotFound as e:
+        error = str(e)
+        error_kind = "ticker_not_found"
+        ticker_query = e.query
+        status = 404
     except ValueError as e:
         error = str(e)
         status = 400
@@ -143,6 +152,8 @@ def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], i
         "filter_href": lambda **overrides: _filter_href(q, **overrides),
         "facets": _load_facets(api),
         "error": error,
+        "error_kind": error_kind,
+        "ticker_query": ticker_query,
     }
     return ctx, status
 

@@ -19,6 +19,11 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 
 ## Before Phase 0 (new run)
 
+0. **Ticker check (harness ≥ 2.21.0):** `python3 scripts/verify_ticker.py --ticker T`  
+   - Real quote → continue to scaffold.  
+   - Not real, **obvious match** printed → STOP; tell the user to re-run with that symbol. Do **not** auto-remap.  
+   - Not real, **no obvious match** → STOP. Do not scaffold, do not invent a company.  
+   - `scaffold_session.py` runs this by default. `--skip-ticker-check` is tests/offline only.
 1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D --orchestrator-model <id>`  
    - **Required:** `--orchestrator-model` (e.g. `grok-4.5`) or env `RESEARCH_ORCHESTRATOR_MODEL`. Confirm CLI prints both model fields.  
    - Note printed `session_key` (may be `D__r2` if same-day re-run).  

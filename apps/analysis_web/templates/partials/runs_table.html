@@ -6,8 +6,14 @@
 </th>
 {% endmacro %}
 {% if error %}
-<div class="card err"><p>{{ error }}</p>
+<div class="card err" role="alert">
+  {% if error_kind == 'ticker_not_found' %}
+  <p><strong>Aborted.</strong> {{ error }}</p>
+  <p>Typed ticker <code>{{ ticker_query }}</code> is not in the catalog. Fix the symbol — do not continue as if the list were empty.</p>
+  {% else %}
+  <p>{{ error }}</p>
   <p>Rebuild with <code>python3 scripts/export_compare_db.py --all</code></p>
+  {% endif %}
 </div>
 {% else %}
 <div class="card">

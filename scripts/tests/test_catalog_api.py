@@ -264,6 +264,19 @@ class CatalogQueryTests(unittest.TestCase):
         self.assertEqual(self.api.list_runs(ticker="M"), [])
         self.assertEqual(len(self.api.list_runs(ticker="META")), 1)
 
+    def test_require_ticker_aborts_unknown(self):
+        from packages.catalog_api.client import TickerNotFound
+
+        self.api.require_ticker(ticker="META")
+        self.api.require_ticker(ticker_prefix="M")
+        with self.assertRaises(TickerNotFound) as ctx:
+            self.api.require_ticker(ticker="M")
+        self.assertEqual(ctx.exception.kind, "ticker")
+        with self.assertRaises(TickerNotFound):
+            self.api.require_ticker(ticker_prefix="ZZZ")
+        self.assertTrue(self.api.ticker_in_catalog(ticker="META"))
+        self.assertFalse(self.api.ticker_in_catalog(ticker="NOPE"))
+
     def test_ticker_prefix_starts_with(self):
         rows = self.api.list_runs(ticker_prefix="M", limit=50)
         tickers = {r["ticker"] for r in rows}

@@ -71,10 +71,15 @@
       headers: { Accept: "text/html" },
     })
       .then(function (r) {
-        return r.text();
+        return r.text().then(function (html) {
+          return { html: html, status: r.status };
+        });
       })
-      .then(function (html) {
-        results.innerHTML = html;
+      .then(function (payload) {
+        results.innerHTML = payload.html;
+        if (form.classList) {
+          form.classList.toggle("is-abort", payload.status === 404);
+        }
         history.replaceState(null, "", shareablePath(sp));
         bindDone();
       })

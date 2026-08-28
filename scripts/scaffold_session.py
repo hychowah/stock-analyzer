@@ -50,6 +50,7 @@ from scripts.kd_research.provenance import (  # noqa: E402
     capture_harness_provenance,
     resolve_scaffold_models,
 )
+from scripts.kd_research.ticker_lookup import require_market_ticker  # noqa: E402
 
 SUBDIRS = [
     "reports",
@@ -180,11 +181,21 @@ def scaffold(
     default_subagent_model: str | None = None,
     notes: str | None = None,
     auto_replicate: bool = True,
+    verify_ticker: bool = False,
+    ticker_backend: Any | None = None,
 ) -> Path:
     try:
         orch_id, sub_id = resolve_scaffold_models(orchestrator_model, default_subagent_model)
     except ValueError as e:
         raise SystemExit(str(e)) from e
+
+    if verify_ticker:
+        try:
+            ticker = require_market_ticker(ticker, backend=ticker_backend)
+        except ValueError as e:
+            raise SystemExit(f"TICKER CHECK ABORTED: {e}") from e
+        except RuntimeError as e:
+            raise SystemExit(f"TICKER CHECK ABORTED: {e}") from e
 
     # Allow passing full session_key as --date for convenience
     if "__" in session_date and slug is None:
@@ -311,6 +322,11 @@ def main() -> None:
         help="Do not auto-allocate __rN; refuse if bare date folder exists",
     )
     ap.add_argument("--force", action="store_true")
+    ap.add_argument(
+        "--skip-ticker-check",
+        action="store_true",
+        help="Skip market-ticker lookup (tests/offline only). New Mode A runs must not pass this.",
+    )
     args = ap.parse_args()
     root = scaffold(
         args.ticker,
@@ -326,6 +342,7 @@ def main() -> None:
         default_subagent_model=args.default_subagent_model,
         notes=args.notes,
         auto_replicate=not args.no_auto_replicate,
+        verify_ticker=not args.skip_ticker_check,
     )
     sk = root.name
     man_path = root / "meta" / "run_manifest.json"

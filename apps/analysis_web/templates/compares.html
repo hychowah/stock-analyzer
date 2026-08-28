@@ -5,13 +5,16 @@
 <div class="card">
   <h1>Session compares</h1>
   <p class="muted">Packets under archive/comparisons/ · Grok audit, not a blended fair value</p>
-  <form class="filters" method="get" action="/compares">
+  <form class="filters{% if error %} is-abort{% endif %}" method="get" action="/compares">
     <div class="filters-row">
       <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="META"/></label>
       <button type="submit">Filter</button>
       <a class="btn secondary" href="/compares/new">New compare</a>
     </div>
   </form>
+  {% if error %}
+  <p class="err" role="alert"><strong>Aborted.</strong> {{ error }}</p>
+  {% endif %}
 </div>
 <div class="card">
   {% if jobs %}

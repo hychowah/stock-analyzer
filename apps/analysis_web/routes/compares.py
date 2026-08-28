@@ -14,6 +14,7 @@ from packages.catalog_api.client import (
     CatalogApi,
     CompareNotFound,
     DbMissing,
+    TickerNotFound,
 )
 from packages.compare_jobs.jobs import (
     CompareBusy,
@@ -78,6 +79,19 @@ def page_compares(
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     ticker = (ticker or "").strip().upper()
+    error = None
+    jobs: list[dict[str, Any]] = []
+    if ticker:
+        try:
+            api.require_ticker(ticker=ticker)
+        except TickerNotFound as e:
+            html = _templates(request).get_template("compares.html").render(
+                jobs=[],
+                ticker=ticker,
+                health=api.health(),
+                error=str(e),
+            )
+            return HTMLResponse(html, status_code=404)
     jobs = list_compares(archive_root(), ticker=ticker or None)
     return _render(
         request,
@@ -85,6 +99,7 @@ def page_compares(
         jobs=jobs,
         ticker=ticker,
         health=api.health(),
+        error=error,
     )
 
 

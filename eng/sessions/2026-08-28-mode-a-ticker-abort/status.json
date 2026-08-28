@@ -1,0 +1,7 @@
+{
+  "slug": "mode-a-ticker-abort",
+  "session_key": "2026-08-28-mode-a-ticker-abort",
+  "status": "complete",
+  "work_type": "W1",
+  "resume_hint": "Shipped 2.21.0 ticker abort. Commit only after user agreement."
+}

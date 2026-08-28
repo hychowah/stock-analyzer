@@ -157,6 +157,11 @@ pre {
   padding: 0.75rem;
   border-radius: 6px;
 }
+form.filters.is-abort input[name="ticker_prefix"],
+form.filters.is-abort input[name="ticker"] {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
 .compare-bar {
   display: flex;
   flex-wrap: wrap;

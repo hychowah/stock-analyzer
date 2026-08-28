@@ -279,10 +279,25 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"META", r.content)
 
-    def test_api_ticker_m_still_exact_empty(self):
+    def test_api_unknown_exact_ticker_aborts(self):
         r = self.client.get("/api/runs", params={"ticker": "M"})
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()["count"], 0)
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("not in the catalog", r.json()["detail"])
+
+    def test_html_unknown_ticker_aborts(self):
+        r = self.client.get("/", params={"ticker": "NOPE"})
+        self.assertEqual(r.status_code, 404)
+        self.assertIn(b"Aborted", r.content)
+        self.assertIn(b"NOPE", r.content)
+        self.assertNotIn(b"No runs", r.content)
+
+    def test_html_unknown_prefix_aborts(self):
+        r = self.client.get("/", params={"ticker_prefix": "ZZZ"})
+        self.assertEqual(r.status_code, 404)
+        self.assertIn(b"Aborted", r.content)
+        frag = self.client.get("/fragments/runs", params={"ticker_prefix": "ZZZ"})
+        self.assertEqual(frag.status_code, 404)
+        self.assertIn(b"Aborted", frag.content)
 
     def test_invalid_sort_http_400(self):
         r = self.client.get("/", params={"sort": "1;DROP TABLE runs"})
@@ -413,6 +428,12 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertNotIn(b"MSFT", r.content)
         self.assertIn(b'<option value="bank" selected>', r.content)
         self.assertIn(b'<option value="growth"', r.content)
+
+    def test_known_ticker_empty_other_filters_is_no_runs(self):
+        r = self.client.get("/", params={"ticker": "META", "sector": "bank"})
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"No runs", r.content)
+        self.assertNotIn(b"Aborted", r.content)
 
     def test_api_combined_filters(self):
         r = self.client.get(
@@ -553,6 +574,12 @@ class AnalysisWebCompareTests(unittest.TestCase):
         listed = self.client.get("/compares")
         self.assertEqual(listed.status_code, 200)
         self.assertIn(b"META", listed.content)
+
+    def test_compares_unknown_ticker_aborts(self):
+        r = self.client.get("/compares", params={"ticker": "NOPE"})
+        self.assertEqual(r.status_code, 404)
+        self.assertIn(b"Aborted", r.content)
+        self.assertIn(b"NOPE", r.content)
 
     def test_different_tickers_400(self):
         r = self.client.post(

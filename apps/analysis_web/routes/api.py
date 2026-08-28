@@ -7,7 +7,13 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from packages.catalog_api.client import CatalogApi, CompareNotFound, DbMissing, RunNotFound
+from packages.catalog_api.client import (
+    CatalogApi,
+    CompareNotFound,
+    DbMissing,
+    RunNotFound,
+    TickerNotFound,
+)
 from packages.compare_jobs.jobs import (
     CompareBusy,
     CompareError,
@@ -40,6 +46,7 @@ def api_list_runs(
 ) -> dict[str, Any]:
     filters = catalog_filters(q)
     try:
+        api.require_ticker(ticker=q.get("ticker"), ticker_prefix=q.get("ticker_prefix"))
         rows = api.list_runs(
             sort=q["sort"],
             dir=q["dir"],
@@ -48,6 +55,8 @@ def api_list_runs(
             **filters,
         )
         total = api.count_runs(**filters)
+    except TickerNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except DbMissing as e:

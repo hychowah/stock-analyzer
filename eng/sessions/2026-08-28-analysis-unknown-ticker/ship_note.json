@@ -1,0 +1,15 @@
+{
+  "summary": "Analysis aborts with HTTP 404 when the user types a ticker or prefix that is not in the catalog, instead of a silent empty runs table.",
+  "verify_commands_run": [
+    "python -m pytest scripts/tests/test_analysis_web.py scripts/tests/test_catalog_api.py -q",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Mode A research-start ticker lookup (yfinance) is a separate W1 if wanted."
+  ],
+  "risks": [
+    "Exact ticker=M now 404s (it is not a catalog ticker). Prefix M still lists META/MELI/MSFT.",
+    "No browser driver; verified TestClient + live HTTP on :8767 fixtures."
+  ],
+  "intended_commit_subject": "Abort analysis when the typed ticker is not in the catalog"
+}

@@ -1,0 +1,14 @@
+{
+  "summary": "Harness 2.21.0: Mode A aborts before scaffold when the typed symbol is not a real market ticker and has no obvious match. Typos/aliases abort with the printed match; do not auto-remap.",
+  "verify_commands_run": [
+    "python -m pytest scripts/tests/test_ticker_lookup.py -q",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [],
+  "risks": [
+    "Yahoo junk quotes (APPL as empty MUTUALFUND) are rejected; APPL suggests AAPL and APP.",
+    "CLI scaffold now needs network/yfinance; tests use the Python API (verify off) or FakeBackend.",
+    "Does not silently rewrite BRK.B → BRK-B; user must re-run with the match."
+  ],
+  "intended_commit_subject": "Abort Mode A when the ticker is not a real market symbol"
+}

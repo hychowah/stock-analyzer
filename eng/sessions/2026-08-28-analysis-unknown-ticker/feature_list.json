@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has W4 unknown-ticker abort goal"
+    },
+    {
+      "id": "implement",
+      "description": "Abort analysis UI/API on unknown catalog ticker",
+      "passes": true,
+      "verify": "pytest test_analysis_web + test_catalog_api; HTTP 404 on ZZZNOPE / NOPE"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "eng_verify PASS; ship_note.json present"
+    }
+  ]
+}

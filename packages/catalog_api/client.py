@@ -38,6 +38,19 @@ class RunNotFound(KeyError):
     pass
 
 
+class TickerNotFound(LookupError):
+    """Typed ticker/prefix is not in the catalog. Analysis should abort."""
+
+    def __init__(self, query: str, *, kind: str = "ticker"):
+        self.query = query
+        self.kind = kind  # ticker | ticker_prefix
+        if kind == "ticker_prefix":
+            msg = f"No catalog ticker starts with {query!r}. Aborted."
+        else:
+            msg = f"Ticker {query} is not in the catalog. Aborted."
+        super().__init__(msg)
+
+
 class CompareNotFound(KeyError):
     pass
 
@@ -543,6 +556,37 @@ class CatalogApi:
                     return 0
                 raise
         return int(row[0] if row is not None else 0)
+
+    def ticker_in_catalog(
+        self,
+        *,
+        ticker: str | None = None,
+        ticker_prefix: str | None = None,
+    ) -> bool:
+        """True if any catalog run matches the ticker identity (other filters ignored)."""
+        ticker = _blank(ticker)
+        ticker_prefix = _blank(ticker_prefix)
+        if ticker:
+            return self.count_runs(ticker=ticker, comparable_only=False) > 0
+        if ticker_prefix:
+            return self.count_runs(ticker_prefix=ticker_prefix, comparable_only=False) > 0
+        return True
+
+    def require_ticker(
+        self,
+        *,
+        ticker: str | None = None,
+        ticker_prefix: str | None = None,
+    ) -> None:
+        """Abort when the typed ticker/prefix is not in the catalog."""
+        ticker = _blank(ticker)
+        ticker_prefix = _blank(ticker_prefix)
+        if ticker:
+            if not self.ticker_in_catalog(ticker=ticker):
+                raise TickerNotFound(ticker.upper(), kind="ticker")
+            return
+        if ticker_prefix and not self.ticker_in_catalog(ticker_prefix=ticker_prefix):
+            raise TickerNotFound(ticker_prefix, kind="ticker_prefix")
 
     def list_run_facets(self) -> dict[str, list[str]]:
         """Distinct non-empty values for filter dropdowns (sqlite projection)."""

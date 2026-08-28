@@ -1,0 +1,30 @@
+{
+  "goal": "Analysis UI/API abort when the user types a ticker that is not in the catalog, instead of a silent empty list.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent FV/MoS",
+    "Do not bump Mode A harness/VERSION (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Unknown exact ticker and unknown prefix return HTTP 404 + Aborted copy",
+    "Known ticker with other filters yielding zero rows stays 200 No runs",
+    "Catalog list_runs(ticker=M) still returns [] (data layer unchanged)",
+    "eng_verify.py and analysis_web/catalog tests pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "scripts/tests/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest scripts/tests/test_analysis_web.py scripts/tests/test_catalog_api.py -q"
+  ]
+}

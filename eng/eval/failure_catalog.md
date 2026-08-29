@@ -38,6 +38,6 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | F30 | Destock analog in **base** while Street FY+1 is usable | 2.12 destock-in-base teaching left in live prompts/exemplars after 2.18 inverted Y1 | W1 — 2.18.0 `check_destock_*` y1_street branch FAILs destock-in-base; Street is Y1 (`used_as:fy1_baseline`) |
 | F31 | UI compare writes under `archive/research/<T>/tmp/` | Skill default OUT inside immutable research | W2/W4 — packets live in `archive/comparisons/`; UI passes absolute OUT |
 | F32 | Orchestrator authors valuation/filings/reports itself when spawn_subagent fails or is skipped | `orchestrator_inline` was allowed; no spawn ledger | W1 — 2.20.0 spawn-or-abandon: `registry/spawns.json` required; spawn fail writes `abandon.json` and stops the run |
-| F33 | Mode A researches a typed garbage/typo ticker | Scaffold did not check the market quote | W1 — 2.21.0 `verify_ticker.py`; abort if not real and no obvious match; do not auto-remap |
+| F33 | Mode A researches a typed garbage ticker | Scaffold did not check the market quote | W1 — 2.21.0 `verify_ticker.py`; abort if Yahoo has no quote and no search listings. 2.26.0 orchestrator stamps `quote_symbol` then `verify_listing.py`; abandon if the stamp does not quote |
 
 Add rows when audits or production incidents recur.

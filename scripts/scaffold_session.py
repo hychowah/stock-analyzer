@@ -32,6 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from packages.kd_research.scaffold import SUBDIRS, scaffold  # noqa: E402
+from packages.kd_research.ticker_lookup import live_ticker_check  # noqa: E402
 
 
 def main() -> None:
@@ -105,9 +106,18 @@ def main() -> None:
         help="Skip market-ticker lookup (tests/offline only). New Mode A runs must not pass this.",
     )
     args = ap.parse_args()
+    ticker = args.ticker.strip().upper()
+    if not args.skip_ticker_check:
+        try:
+            checked = live_ticker_check(args.ticker)
+        except RuntimeError as e:
+            raise SystemExit(f"TICKER CHECK ABORTED: {e}") from e
+        if not checked.ok:
+            raise SystemExit(f"TICKER CHECK ABORTED: {checked.reason}")
+        ticker = checked.typed
     try:
         root = scaffold(
-            args.ticker,
+            ticker,
             args.date,
             args.output_dir,
             args.force,
@@ -119,7 +129,6 @@ def main() -> None:
             default_subagent_model=args.default_subagent_model,
             notes=args.notes,
             auto_replicate=not args.no_auto_replicate,
-            verify_ticker=not args.skip_ticker_check,
         )
     except (ValueError, RuntimeError, FileExistsError) as e:
         raise SystemExit(str(e)) from e
@@ -128,6 +137,7 @@ def main() -> None:
     man = json.loads(man_path.read_text(encoding="utf-8")) if man_path.is_file() else {}
     print(f"Session scaffolded: {root}")
     print(f"  session_key={sk}")
+    print(f"  quote_symbol={man.get('quote_symbol')!r} (orchestrator stamps after tools)")
     print(f"  orchestrator_model={man.get('orchestrator_model')}")
     print(f"  default_subagent_model={man.get('default_subagent_model')}")
     for sub in SUBDIRS:

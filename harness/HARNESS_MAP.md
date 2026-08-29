@@ -25,7 +25,7 @@ archive/
     meta/      run_manifest, prediction_snapshot
 ```
 
-**Ticker check (harness ≥ 2.21.0):** `python3 scripts/verify_ticker.py --ticker T` before scaffold (default on `scaffold_session.py`). Unknown symbol with no obvious match → abort. Typo/alias match → abort and re-run with the printed symbol. Do not auto-remap.
+**Ticker check (harness ≥ 2.21.0; listing via tools ≥ 2.26.0):** `python3 scripts/verify_ticker.py --ticker T` then scaffold writes typed `ticker` with `quote_symbol` null. Live quote **or** Yahoo search listings → ok (typed folder). No quote and no listings → abort. Orchestrator confirms the listing with tools, stamps `quote_symbol`, then `scripts/verify_listing.py`. Specialists and outcomes read the stamp only (no ticker fallback).
 
 Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --orchestrator-model <id>`  
 → folder `archive/research/T/<SESSION_KEY>/` where `SESSION_KEY` is `YYYY-MM-DD` or auto `YYYY-MM-DD__r2` if that day already has a run (`--slug` for named runs).
@@ -67,8 +67,8 @@ Scaffold: `python3 scripts/scaffold_session.py --ticker T --date YYYY-MM-DD --or
 
 | Missing / broken | Do not start | Fix first |
 |------------------|--------------|-----------|
-| Ticker not a real market quote and no obvious match (harness ≥ 2.21.0) | scaffold / Phase 0 | Abort; do not invent a company |
-| Typed ticker is a typo/alias of one real symbol | scaffold | Re-run with the printed match — do not auto-remap |
+| Ticker not a real market quote and Yahoo search has no listings (harness ≥ 2.21.0) | scaffold / Phase 0 | Abort; do not invent a company |
+| Typed ticker has no live quote but Yahoo search has listings | Phase 0 | Scaffold the typed folder; stamp `quote_symbol` then `verify_listing.py` before Phase 0 |
 | `sector_config` or `market_context` | Phase 0 / 1 | Orchestrator classification |
 | `research_brief` (new sessions) | Phase 0 fan-out | Write brief after classification |
 | `sp_financials.csv` or `sec_filings` / raw_sec | 1b / 1c / 2 | Agents 2a / 2b |

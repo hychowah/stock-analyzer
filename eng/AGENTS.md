@@ -61,7 +61,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 - **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
 - **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
 - **Allow append:** `archive/research_jobs/**` (Analyze control plane; never a catalog source)  
-- **Allow create:** new empty `archive/research/<T>/<new-key>/` via in-process `packages.kd_research.scaffold.scaffold` (`force=False`, `verify_ticker=False` after `check_ticker`)  
+- **Allow create:** new empty `archive/research/<T>/<new-key>/` via in-process `packages.kd_research.scaffold.scaffold` (`force=False` after `check_ticker`; scaffold writes the typed ticker; `quote_symbol` stays null until the orchestrator stamps a confirmed listing)  
 - **Allow:** `registry/abandon.json` **and** `registry/phase_status.json` mutation via `spawn_gate.write_abandon` only for (a) spawn-fail-after-scaffold or (b) UI Discard of a session with **no** `meta/prediction_snapshot.json`  
 - **Deny:** `write_abandon` / `phase_status` edits when `prediction_snapshot.json` exists or `run_manifest.immutable` / status completed  
 - **Deny:** rewrite of completed `archive/research/**` and `archive/outcomes/**`  

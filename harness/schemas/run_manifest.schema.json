@@ -10,6 +10,10 @@
     "run_id": { "type": "string" },
     "product": { "type": "string" },
     "ticker": { "type": "string" },
+    "quote_symbol": {
+      "type": ["string", "null"],
+      "description": "Confirmed Yahoo listing after orchestrator tool lookup + verify_listing.py. Null at scaffold. Session folder stays ticker."
+    },
     "session_date": { "type": "string" },
     "created_at": { "type": "string" },
     "completed_at": { "type": "string" },

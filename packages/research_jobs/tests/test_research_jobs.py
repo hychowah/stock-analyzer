@@ -29,7 +29,10 @@ from packages.research_jobs.jobs import (
     start_analyze,
 )
 from packages.research_jobs.prompt import (
+    ABANDON_IF_UNREAL,
     ALREADY_SCAFFOLDED,
+    LISTING_JUDGE,
+    LISTING_VERIFY,
     NO_LIST_SIBLINGS,
     NO_RE_SCAFFOLD,
     R2_WARNING,
@@ -118,17 +121,82 @@ class ResearchJobsTests(unittest.TestCase):
         self.assertIn(NO_RE_SCAFFOLD, prompt)
         self.assertIn(NO_LIST_SIBLINGS, prompt)
         self.assertIn(R2_WARNING, prompt)
+        self.assertIsNone(job.get("quote_symbol"))
+        self.assertNotIn("yahoo_search_hits", job)
+        self.assertIn("YAHOO_QUOTE_SYMBOL: unset", prompt)
+        self.assertIn(LISTING_JUDGE, prompt)
+        self.assertIn(LISTING_VERIFY, prompt)
+        self.assertIn(ABANDON_IF_UNREAL, prompt)
+        man = json.loads(
+            (Path(job["session_root"]) / "meta" / "run_manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertIsNone(man.get("quote_symbol"))
+
+    def test_start_sends_typed_ticker_when_only_search_hits(self) -> None:
+        be = FakeBackend(
+            quotes={"ADYEN.AS": _q("ADYEN.AS")},
+            search_hits={"ADYEN": [_q("ADYEN.AS")]},
+        )
+        job = start_analyze(
+            self.archive,
+            "ADYEN",
+            orchestrator_model="grok-4.5",
+            spawn=self.fake,
+            ticker_backend=be,
+        )
+        self.assertEqual(job["ticker"], "ADYEN")
+        self.assertIsNone(job.get("quote_symbol"))
+        self.assertNotIn("yahoo_search_hits", job)
+        man = json.loads(
+            (Path(job["session_root"]) / "meta" / "run_manifest.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertIsNone(man.get("quote_symbol"))
+        prompt = (Path(job["job_dir"]) / "prompt.md").read_text(encoding="utf-8")
+        self.assertNotIn("ADYEN.AS", prompt)
+        self.assertIn(LISTING_JUDGE, prompt)
+        self.assertIn(LISTING_VERIFY, prompt)
+        self.assertIn("session folder and catalog ticker stay TICKER", prompt)
+
+    def test_refresh_copies_quote_symbol_from_manifest(self) -> None:
+        job = self._start()
+        man_path = Path(job["session_root"]) / "meta" / "run_manifest.json"
+        man = json.loads(man_path.read_text(encoding="utf-8"))
+        man["quote_symbol"] = "COHR"
+        man_path.write_text(json.dumps(man) + "\n", encoding="utf-8")
+        refreshed = get_analyze(self.archive, job["analyze_id"])
+        self.assertEqual(refreshed["quote_symbol"], "COHR")
+
+    def test_resume_prompt_repeats_listing_when_unstamped(self) -> None:
+        text = build_prompt(
+            {
+                "ticker": "ADYEN",
+                "quote_symbol": None,
+                "session_key": "2026-08-29",
+                "session_root": "/tmp/S",
+                "project_root": "/tmp",
+                "orchestrator_model": "grok-4.5",
+                "subagent_model": "grok-4.5",
+                "session_date": "2026-08-29",
+            },
+            resume=True,
+        )
+        self.assertIn(LISTING_JUDGE, text)
+        self.assertIn("NOT stamped", text)
 
     def test_ticker_unknown(self) -> None:
         with self.assertRaises(AnalyzeTickerError) as ctx:
             self._start("ZZZNOPE")
         self.assertEqual(ctx.exception.status, "abort_unknown")
 
-    def test_ticker_match_keeps_matches(self) -> None:
-        with self.assertRaises(AnalyzeTickerError) as ctx:
-            self._start("APPL")
-        self.assertEqual(ctx.exception.status, "abort_match")
-        self.assertIn("AAPL", ctx.exception.matches)
+    def test_search_evidence_still_starts_typed(self) -> None:
+        job = self._start("APPL")
+        self.assertEqual(job["ticker"], "APPL")
+        self.assertIsNone(job.get("quote_symbol"))
+        self.assertNotIn("AAPL", (Path(job["job_dir"]) / "prompt.md").read_text(encoding="utf-8"))
 
     def test_ticker_reserved(self) -> None:
         with self.assertRaises(AnalyzeTickerError) as ctx:
@@ -292,6 +360,9 @@ class ResearchJobsTests(unittest.TestCase):
             }
         )
         self.assertIn("UI-scheduled runs (read this first)", text)
+        self.assertIn("YAHOO_QUOTE_SYMBOL: unset", text)
+        self.assertIn(LISTING_JUDGE, text)
+        self.assertIn(LISTING_VERIFY, text)
 
     def test_runbook_ui_scheduled_heading_before_new_run(self) -> None:
         text = (ROOT / "harness" / "orchestrator_runbook.md").read_text(encoding="utf-8")

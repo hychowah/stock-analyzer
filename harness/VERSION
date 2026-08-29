@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.25.0",
+  "harness_version": "2.26.0",
   "harness_spec": "v2",
-  "notes": "2.25.0: live path strings + tests + ARCHIVE_ROOT callers match the 2.23/2.24 tree; leftover TEMPLATES/scripts.kd_research strings and unused test ROOT imports cleaned. 2.24.0: harness/schemas and harness/modules. 2.23.0: packages/kd_research + env-aware archive_root."
+  "notes": "2.26.0: Python ticker check is Yahoo existence only (quoted or search_evidence). quote_symbol is null until the orchestrator stamps a listing and verify_listing.py confirms it quotes. No suffix map, no API-key judge, no abort_match remap. 2.25.0: live path strings. 2.24.0: harness/schemas and harness/modules. 2.23.0: packages/kd_research + env-aware archive_root."
 }

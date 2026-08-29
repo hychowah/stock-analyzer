@@ -95,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(reconcile_analyze_jobs(root), indent=2, default=str))
             return 0
     except AnalyzeTickerError as e:
-        print(json.dumps({"status": e.status, "reason": e.reason, "matches": e.matches}))
+        print(json.dumps({"status": e.status, "reason": e.reason}))
         return 2
     except AnalyzeValidationError as e:
         print(f"invalid: {e}", file=sys.stderr)

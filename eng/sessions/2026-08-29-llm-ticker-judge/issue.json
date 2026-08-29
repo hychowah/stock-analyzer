@@ -1,0 +1,36 @@
+{
+  "goal": "Python existence-check only (Yahoo quote or search listings). Scaffold the typed ticker with quote_symbol null. Orchestrator confirms the listing with tools, stamps quote_symbol, and verify_listing.py must quote it. No hardcoded map, no API-key judge, no abort_match remap.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not auto-rename the archive folder to a different issuer (APPL must not become AAPL)",
+    "Do not add per-ticker Yahoo maps",
+    "Do not call xAI HTTP or XAI_API_KEY for ticker identity"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "harness/VERSION is 2.26.0 in the same change set",
+    "No YAHOO_SYMBOL_MAP / alias_candidates / abort_match suggestion UI",
+    "check_ticker statuses are quoted | search_evidence | aborts; no quote_symbol on TickerCheck",
+    "scaffold writes quote_symbol null; orchestrator is the only writer of a confirmed listing",
+    "verify_listing.py quotes the stamp; fail closed if missing",
+    "quote_symbol_from_session does not fall back to ticker",
+    "Analyze prompt does not leak Yahoo search hits",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "scripts/",
+    "harness/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/kd_research/tests/test_ticker_lookup.py packages/research_jobs/tests/test_research_jobs.py apps/analysis_web/tests/test_analysis_web.py -q"
+  ]
+}

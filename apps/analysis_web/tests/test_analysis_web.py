@@ -675,7 +675,7 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         def _check(raw, backend=None):
             t = (raw or "").strip().upper()
             if t == "COHR":
-                return TickerCheck(typed=t, status="ok", canonical="COHR")
+                return TickerCheck(typed=t, status="quoted")
             return TickerCheck(typed=t, status="abort_unknown", reason="not a market ticker")
 
         with patch("packages.research_jobs.jobs.check_ticker", side_effect=_check):
@@ -724,7 +724,8 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
             self.assertIn(r.status_code, (200, 400))
             self.assertIn(b"not a market ticker", r.content)
 
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_new_form_has_no_listing_picker(self):
+        r = self.client.get("/analyze/new")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn(b"Start with a market listing instead", r.content)
 

@@ -187,7 +187,7 @@ def api_start_analyze(body: AnalyzeStartBody) -> dict[str, Any]:
     except AnalyzeTickerError as e:
         raise HTTPException(
             status_code=400,
-            detail={"status": e.status, "reason": e.reason, "matches": e.matches},
+            detail={"status": e.status, "reason": e.reason},
         ) from e
     except AnalyzeValidationError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

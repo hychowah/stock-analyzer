@@ -61,7 +61,7 @@ archive/
 Rules:
 
 1. Ticker uppercase. Date from the `date` command (never let an agent compute it).
-2. **Ticker check (harness ≥ 2.21.0):** before scaffolding, `python3 scripts/verify_ticker.py --ticker <T>` (also the default on `scaffold_session.py`). If the symbol is **not a real market ticker** and there is **no obvious match**, **abort** — do not scaffold, do not invent a company, do not start Phase 0. If it is not real but one obvious match exists (typo / `BRK.B`→`BRK-B` / HK zero-pad), abort and tell the user to re-run with that symbol — **do not auto-remap**. `--skip-ticker-check` is tests/offline only.
+2. **Ticker check (harness ≥ 2.21.0; listing via tools ≥ 2.26.0):** before scaffolding, `python3 scripts/verify_ticker.py --ticker <T>` (`scaffold_session.py` existence-checks then writes). Live Yahoo quote **or** Yahoo search listings → ok; session ticker is typed; `quote_symbol` stays **null**. No quote and no search listings → **abort** — do not scaffold, do not invent a company. After scaffold, the orchestrator **confirms the Yahoo listing with tools**, stamps `quote_symbol`, then `python3 scripts/verify_listing.py --ticker T --date <session_key>`. Non-zero → abandon and STOP before Phase 0. `--skip-ticker-check` is tests/offline only. Price consumers **read the stamp** (no ticker fallback).
 3. Scaffold with: `python3 scripts/scaffold_session.py --ticker <T> --date <D> --orchestrator-model <id>` — creates `archive/research/<T>/<SESSION_KEY>/`.  
    - **`session_date`** = as-of `YYYY-MM-DD` (economics / price freeze).  
    - **`session_key`** = unique folder: plain `YYYY-MM-DD` for the first run that day, then auto **`YYYY-MM-DD__r2`**, `__r3`, … if that folder is taken; or explicit `--slug`.  
@@ -298,7 +298,7 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 - Conflicting lenses → do not force one verdict; present bull/base/bear and state which perspective dominates under which assumption.
 - Pre-revenue/binary companies → milestone-based scenarios per `sector_growth.md`.
 - A tool/API failure → record it in the artifact, use the fallback source (§4), flag degraded quality in the README.
-- **Unknown ticker (harness ≥ 2.21.0)** → `verify_ticker.py` / scaffold ticker check **aborts**. Do not scaffold. If an obvious match is printed, ask the user to re-run with that symbol — do not auto-remap and do not invent a company.
+- **Unknown ticker (harness ≥ 2.21.0; listing via tools ≥ 2.26.0)** → `verify_ticker.py` **aborts** (no scaffold) when Yahoo has no quote **and** no search listings. If listings exist, scaffold the typed ticker (`quote_symbol` null). The orchestrator confirms the listing with tools, stamps `quote_symbol`, and must pass `verify_listing.py`. Fail → abandon and STOP. Do not invent a company. Do not keep a per-ticker Yahoo map.
 - **`spawn_subagent` failure / unavailable (harness ≥ 2.20.0)** → **abandon** (`record_spawn.py --event fail` or `abandon_session.py`). Do **not** author specialist artifacts as the orchestrator. Scaffold a new `session_key` if the user still wants the ticker researched.
 
 ## 13. Quality gates
@@ -345,7 +345,7 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 | Reverse-engineering done; priced-for-perfection explicitly flagged true/false with rationale | `[audit]` Phase 5 agent |
 | SBC/dilution at critical intensity for growth / is_also_growth | `[audit]` Phase 5 agent |
 | No fabricated numbers: every number sourced or justified | `[audit]` Phase 5 agent |
-| Harness ≥ 2.21.0: new-run ticker must be a real market quote (`verify_ticker.py`; default on `scaffold_session.py`). Not real + no obvious match → abort (no session). Not real + obvious match → abort with that symbol (do not auto-remap). `--skip-ticker-check` tests/offline only. | `[machine]` `scripts/verify_ticker.py` + scaffold |
+| Harness ≥ 2.21.0: new-run ticker must exist on Yahoo (`verify_ticker.py`; default on `scaffold_session.py`). ≥ 2.26.0: quote **or** search listings → scaffold typed ticker with `quote_symbol` null; orchestrator stamps listing then `verify_listing.py`; no quote and no listings → abort. `--skip-ticker-check` tests/offline only. | `[machine]` `scripts/verify_ticker.py` + `scripts/verify_listing.py` + scaffold |
 | Harness ≥ 2.20.0: every designed specialist (each 1c year-reader; each Phase 0 / 2.5 raw) must have a **launch-then-return** `registry/spawns.json` row before artifacts / phase complete; `execution=orchestrator_inline` on a specialist FAILs; `orchestrator_lead` is orch-row only (do not retag Agent 5 at 5b). Spawn `--event fail` → `registry/abandon.json` (terminal). Finalize and later-phase preflight refuse. Legacy / missing version → SKIPPED | `[machine]` `record_spawn.py` + `check_session` + preflight + `finalize_session` |
 | Subagent Task-API cryptographic spawn proof / token counts | **Not available** (ledger is process telemetry the orchestrator must write around `spawn_subagent`; faking it is a harness violation) |
 | Manual-review flag acted on when confidence < 0.70 | `[human]` |

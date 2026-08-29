@@ -12,6 +12,7 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 Mode B Analyze already scaffolded this session. `S` is on disk. `meta/run_manifest.json` already has `orchestrator_model`.
 
 - Do **not** run `scripts/verify_ticker.py` or `scripts/scaffold_session.py`. A same-day scaffold **auto-allocates `__r2`** and desyncs `archive/research_jobs/`. Session is **already scaffolded**.
+- **First action:** confirm the Yahoo listing with tools (yfinance / Yahoo MCP). Stamp `S/meta/run_manifest.json` `quote_symbol` (folder stays `TICKER`). Then `python3 scripts/verify_listing.py --ticker T --date <session_key>`. Non-zero → `scripts/abandon_session.py` then **STOP** before classification / Phase 0. Do not invent a company.
 - Work only under `S`. Do not list `archive/research/<TICKER>/` except this `session_key`. Isolation file + `run_manifest.notes` repeat this.
 - `archive/research_jobs/` is Mode B control; ignore it.
 - `finalize_session.py --date` is the **full session_key** (`YYYY-MM-DD__r2` / slug), not the bare date if they differ.
@@ -32,11 +33,11 @@ Mode B Analyze already scaffolded this session. `S` is on disk. `meta/run_manife
 
 ## Before Phase 0 (new run)
 
-0. **Ticker check (harness ≥ 2.21.0):** `python3 scripts/verify_ticker.py --ticker T`  
-   - Real quote → continue to scaffold.  
-   - Not real, **obvious match** printed → STOP; tell the user to re-run with that symbol. Do **not** auto-remap.  
-   - Not real, **no obvious match** → STOP. Do not scaffold, do not invent a company.  
-   - `scaffold_session.py` runs this by default. `--skip-ticker-check` is tests/offline only.
+0. **Ticker check (harness ≥ 2.21.0; listing via tools ≥ 2.26.0):** `python3 scripts/verify_ticker.py --ticker T`  
+   - Live Yahoo quote **or** Yahoo search listings → continue to scaffold. Session ticker is what was typed.  
+   - No quote and **no** search listings → STOP. Do not scaffold, do not invent a company.  
+   - Do **not** remap the folder. After scaffold, **you** confirm the Yahoo listing with tools, stamp `quote_symbol`, and run `scripts/verify_listing.py`. Non-zero or not a real issuer → abandon and STOP before Phase 0.  
+   - `scaffold_session.py` runs the existence check by default. `--skip-ticker-check` is tests/offline only.
 1. Scaffold: `python3 scripts/scaffold_session.py --ticker T --date D --orchestrator-model <id>`  
    - **Required:** `--orchestrator-model` (e.g. `grok-4.5`) or env `RESEARCH_ORCHESTRATOR_MODEL`. Confirm CLI prints both model fields.  
    - Note printed `session_key` (may be `D__r2` if same-day re-run).  
@@ -67,7 +68,7 @@ FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. val
 
 6. Update `registry/phase_status.json` **before** next spawn: `status`, `artifacts[]`, `handoff` path; re-check paths on disk **under current `S` only**. Never mark phase `complete` if primary artifacts or required handoffs are missing (`check_session` FAILs complete-without-artifact).
 7. **MUST spawn specialists** (isolated prompts) for Phase 0 swarm (one spawn per `registry/raw/phase0_*.json`), 2a∥2b∥2c, 2d, each 1c year-reader, 2e, 1d workers+merge, 4∥5∥12, 2.5 swarm (one spawn per `stress_*.json`), 6, 7∥8∥11, 13. Ritual: `record_spawn.py --event launch` → `spawn_subagent` → `--event return` (return without launch FAILs). Set `phase_status.agents[].execution=subagent`. Retry spawn without recording fail if the tool glitched. **`--event fail` (or `abandon_session.py`) only when you cannot launch and would otherwise work inline — then STOP.** Do **not** write that specialist’s artifacts yourself. Inline specialist work is a FAIL (`orchestrator_inline` forbidden; do not retag Agent 5 as `orchestrator_lead` at 5b). Orchestrator-lead work only: classification, brief, bind_library, price_snapshot, phase_status, Phase 0/2.5 merge, 5b reopen.
-8. Subagent spawn must include: conventions header + subagent body + runtime injection (`TICKER`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for technical subagent 4, exemplar paths, subagent id). On-disk `phase_status.agents[].agent_id` stores the **subagent id**.
+8. Subagent spawn must include: conventions header + subagent body + runtime injection (`TICKER`, `YAHOO_QUOTE_SYMBOL` from `S/meta/run_manifest.json` `quote_symbol`, `DATE`, `ROOT`, `S`, peers, benchmarks, currency, intensity, research_depth, earnings_date for technical subagent 4, exemplar paths, subagent id). On-disk `phase_status.agents[].agent_id` stores the **subagent id**.
 
 ## Before Phase 2 parallel (subagents 4 ∥ 5 ∥ 12)
 
@@ -85,6 +86,7 @@ FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. val
 ```
 
    - **No** FV, MoS, WACC, peers fundamentals, or CoC in this file.  
+   - Fetch the close via `meta/run_manifest.json` `quote_symbol` (Yahoo listing), not a hardcoded suffix map. Session ticker may differ (`ADYEN` vs `ADYEN.AS`).  
    - Inject path into Agent 4 / 5 / 12 prompts.  
    - Do **not** re-freeze mid-Phase 2. Agents use `close` for “current price” / MoS; history series still from `prices_*.csv`.
 

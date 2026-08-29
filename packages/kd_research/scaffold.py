@@ -23,7 +23,6 @@ from packages.kd_research.paths import (
 )
 from packages.kd_research.phase_status import write_phase_status_skeleton
 from packages.kd_research.provenance import capture_harness_provenance, resolve_scaffold_models
-from packages.kd_research.ticker_lookup import require_market_ticker
 
 SUBDIRS = [
     "reports",
@@ -59,6 +58,7 @@ def _write_manifest_stub(
         "run_id": rid,
         "product": "research",
         "ticker": ticker.upper(),
+        "quote_symbol": None,
         "session_date": session_date,
         "session_key": session_key,
         "created_at": now,
@@ -153,23 +153,16 @@ def scaffold(
     default_subagent_model: str | None = None,
     notes: str | None = None,
     auto_replicate: bool = True,
-    verify_ticker: bool = False,
-    ticker_backend: Any | None = None,
 ) -> Path:
     """Create archive/research/<TICKER>/<SESSION_KEY>/ and stamp the manifest.
+
+    Callers existence-check the ticker first. This function only writes.
+    quote_symbol stays null until the orchestrator confirms a live listing.
 
     Raises ValueError / RuntimeError / FileExistsError on validation failures
     (never SystemExit — callers map to CLI codes).
     """
     orch_id, sub_id = resolve_scaffold_models(orchestrator_model, default_subagent_model)
-
-    if verify_ticker:
-        try:
-            ticker = require_market_ticker(ticker, backend=ticker_backend)
-        except ValueError as e:
-            raise ValueError(f"TICKER CHECK ABORTED: {e}") from e
-        except RuntimeError as e:
-            raise RuntimeError(f"TICKER CHECK ABORTED: {e}") from e
 
     if "__" in session_date and slug is None:
         session_date, slug = parse_session_key(session_date)

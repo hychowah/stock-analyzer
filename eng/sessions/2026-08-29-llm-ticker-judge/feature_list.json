@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json: existence-only ticker check; listing stamp via tools + verify_listing",
+      "passes": true,
+      "verify": "issue.json W1 2.26.0 no XAI_API_KEY judge"
+    },
+    {
+      "id": "implement",
+      "description": "quoted/search_evidence, null quote_symbol, verify_listing.py, delete abort_match UI",
+      "passes": false,
+      "verify": "pytest test_ticker_lookup.py test_research_jobs.py; no abort_match"
+    },
+    {
+      "id": "verify",
+      "description": "eng_verify after VERSION 2.26.0",
+      "passes": false,
+      "verify": "eng_verify PASS"
+    }
+  ]
+}

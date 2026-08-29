@@ -41,24 +41,7 @@ from packages.kd_research.paths import (  # noqa: E402
     iter_research_sessions,
     resolve_session,
 )
-
-
-# Session ticker → yfinance symbol when they differ.
-YAHOO_SYMBOL_MAP = {
-    "ADYEN": "ADYEN.AS",
-    "02618.HK": "2618.HK",
-    "MC.PA": "MC.PA",
-}
-
-
-def yahoo_symbol(ticker: str) -> str:
-    t = ticker.upper()
-    if t in YAHOO_SYMBOL_MAP:
-        return YAHOO_SYMBOL_MAP[t]
-    # HKEX sessions sometimes zero-pad (02618.HK → 2618.HK)
-    if t.endswith(".HK") and t[0] == "0":
-        return t.lstrip("0") if t.lstrip("0") else t
-    return t
+from packages.kd_research.ticker_lookup import quote_symbol_from_session  # noqa: E402
 
 
 def _import_yfinance():
@@ -93,12 +76,11 @@ def _close_on_or_after(hist, target: date) -> tuple[date | None, float | None]:
     return None, None
 
 
-def fetch_price_series(ticker: str, start: date, end: date):
+def fetch_price_series(symbol: str, start: date, end: date):
     yf = _import_yfinance()
     # yfinance end is exclusive-ish; pad one day
     end_excl = end + timedelta(days=2)
-    sym = yahoo_symbol(ticker)
-    t = yf.Ticker(sym)
+    t = yf.Ticker(symbol)
     hist = t.history(start=start.isoformat(), end=end_excl.isoformat(), auto_adjust=True)
     return hist
 
@@ -149,11 +131,16 @@ def build_marks_for_session(
     if due_targets and not dry_run:
         start = min(due_targets) - timedelta(days=5)
         end = max(due_targets) + timedelta(days=10)
-        try:
-            hist = fetch_price_series(ticker, start, end)
-        except Exception as e:  # noqa: BLE001
-            gaps.append(f"yfinance history failed for {ticker}: {e}")
+        qsym = quote_symbol_from_session(session)
+        if not qsym:
+            gaps.append("quote_symbol not stamped on run_manifest; skip price fetch")
             hist = None
+        else:
+            try:
+                hist = fetch_price_series(qsym, start, end)
+            except Exception as e:  # noqa: BLE001
+                gaps.append(f"yfinance history failed for {ticker} (quote {qsym}): {e}")
+                hist = None
         if bench_sym:
             try:
                 bench_hist = fetch_price_series(bench_sym, start, end)

@@ -11,32 +11,66 @@ ALREADY_SCAFFOLDED = "Session is ALREADY scaffolded"
 NO_RE_SCAFFOLD = "Do not run scripts/scaffold_session.py"
 NO_LIST_SIBLINGS = "Do not list archive/research/"
 R2_WARNING = "WILL allocate __r2"
+LISTING_JUDGE = "Confirm the Yahoo listing with tools"
+LISTING_VERIFY = "scripts/verify_listing.py"
+ABANDON_IF_UNREAL = "If TICKER is not a real market issuer, write registry/abandon.json and STOP"
 
 
 def build_prompt(job: dict[str, Any], *, resume: bool = False) -> str:
     ticker = job["ticker"]
+    stamp = job.get("quote_symbol")
+    stamp_s = str(stamp).strip().upper() if stamp else ""
     session_key = job["session_key"]
     session_root = job["session_root"]
     project_root = job["project_root"]
     orch = job.get("orchestrator_model") or "grok-4.5"
     sub = job.get("subagent_model") or orch
     session_date = job.get("session_date") or session_key.split("__", 1)[0]
-    stop = (
-        "RESUME the named folder S only. Read registry/phase_status.json and resume_hint.\n"
-        "Do not re-run agents already complete (5b carve-out after 2.5 still applies).\n"
-        "Do not browse other session_keys. Do not scaffold. Do not verify_ticker.\n"
-        if resume
-        else (
-            "Start at orchestrator classification (sector_config + market_context + research_brief).\n"
+    listing_block = (
+        f"BEFORE classification: {LISTING_JUDGE} (yfinance / Yahoo MCP / web). "
+        "Write the live listing into S/meta/run_manifest.json quote_symbol "
+        "(JSON string; do not use TICKER as a guess if it does not quote). "
+        "Do not rename the archive folder. Then run "
+        f"python3 {LISTING_VERIFY} --ticker {ticker} --date {session_key} . "
+        "Non-zero exit → "
+        f"{ABANDON_IF_UNREAL} before Phase 0 — do not invent a company.\n"
+    )
+    if resume:
+        if stamp_s:
+            stop = (
+                "RESUME the named folder S only. Read registry/phase_status.json and resume_hint.\n"
+                f"quote_symbol is already stamped as {stamp_s}. Do not re-run listing unless it is wrong.\n"
+                "Do not re-run agents already complete (5b carve-out after 2.5 still applies).\n"
+                "Do not browse other session_keys. Do not scaffold. Do not verify_ticker.\n"
+            )
+        else:
+            stop = (
+                "RESUME the named folder S only. Read registry/phase_status.json and resume_hint.\n"
+                "quote_symbol is NOT stamped yet. "
+                + listing_block
+                + "Then continue incomplete phases. Do not browse other session_keys. "
+                "Do not scaffold. Do not verify_ticker.\n"
+            )
+    else:
+        stop = (
+            listing_block
+            + "Then start orchestrator classification (sector_config + market_context + research_brief).\n"
             "phase_status.json is pending. Stop when finalize_session succeeds, or when you\n"
             "write registry/abandon.json.\n"
+        )
+    listing_line = (
+        f"YAHOO_QUOTE_SYMBOL: {stamp_s} (stamped; inject this into specialists)\n"
+        if stamp_s
+        else (
+            "YAHOO_QUOTE_SYMBOL: unset until you stamp run_manifest.quote_symbol and "
+            f"{LISTING_VERIFY} succeeds.\n"
         )
     )
     return (
         "You are the Mode A research orchestrator for a UI-scheduled run.\n\n"
         "Open and follow, in this order, before Phase 0:\n"
         f"1. harness/orchestrator_runbook.md — read \"{UI_SCHEDULED_HEADING}\" FIRST\n"
-        "2. harness/RESEARCH_AGENTS.md (full law) — do NOT re-verify/re-scaffold; that already happened\n"
+        "2. harness/RESEARCH_AGENTS.md (full law) — do NOT re-scaffold; Python already did existence check\n"
         "3. harness/HARNESS_MAP.md\n"
         "4. harness/agent_prompts.md (when spawning; slice per subagent — do not dump into children)\n\n"
         "This prompt is a map, not a substitute for those files.\n\n"
@@ -68,6 +102,9 @@ def build_prompt(job: dict[str, Any], *, resume: bool = False) -> str:
         "- Do not write archive/outcomes or archive/research_jobs (ignore them).\n"
         "  Job control is Mode B's file.\n\n"
         f"TICKER: {ticker}\n"
+        f"{listing_line}"
+        "The session folder and catalog ticker stay TICKER "
+        "(do not rename the archive folder).\n"
         f"session_date: {session_date}\n"
         f"session_key: {session_key}\n"
         f"S: {session_root}\n"

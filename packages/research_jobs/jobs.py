@@ -1,4 +1,4 @@
-"""Analyze job lifecycle: verify ticker, scaffold, spawn, refresh, cancel."""
+"""Analyze job lifecycle: existence-check ticker, scaffold, spawn, refresh, cancel."""
 
 from __future__ import annotations
 
@@ -48,16 +48,9 @@ class AnalyzeValidationError(AnalyzeError):
 
 
 class AnalyzeTickerError(AnalyzeValidationError):
-    def __init__(
-        self,
-        status: str,
-        reason: str,
-        *,
-        matches: list[str] | None = None,
-    ) -> None:
+    def __init__(self, status: str, reason: str) -> None:
         super().__init__(reason)
         self.status = status
-        self.matches = list(matches or [])
         self.reason = reason
 
 
@@ -225,6 +218,13 @@ def refresh_analyze(
             if job_dir:
                 _atomic_write_json(job_dir / JOB_NAME, job)
         return job
+
+    man_early = _read_json(session / "meta" / "run_manifest.json") or {}
+    qsym = man_early.get("quote_symbol") if isinstance(man_early, dict) else None
+    qnorm = str(qsym).strip().upper() if qsym else None
+    if job.get("quote_symbol") != qnorm:
+        job["quote_symbol"] = qnorm
+        changed = True
 
     if snap is not None and snap.is_file():
         if job.get("status") != "complete" or not job.get("snapshot_ready"):
@@ -396,14 +396,13 @@ def start_analyze(
         raise AnalyzeTickerError(
             checked.status,
             checked.reason or f"ticker {ticker!r} rejected",
-            matches=checked.matches,
         )
-    canonical = str(checked.canonical or ticker).strip().upper()
+    session_ticker = str(checked.typed or ticker).strip().upper()
     asof = session_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     orch = orchestrator_model or "grok-4.5"
     sub = subagent_model or orch
     proj = str((project_root or PROJECT_ROOT).resolve())
-    note = notes or NOTES_UI.format(ticker=canonical)
+    note = notes or NOTES_UI.format(ticker=session_ticker)
     backend = spawn or default_analyze_spawn()
 
     if isinstance(backend, GrokSpawnBackend):
@@ -420,7 +419,7 @@ def start_analyze(
         with claim_start(archive_root, "analyze"):
             try:
                 session = scaffold(
-                    canonical,
+                    session_ticker,
                     asof,
                     output_dir=archive_root,
                     force=False,
@@ -429,23 +428,23 @@ def start_analyze(
                     default_subagent_model=sub,
                     notes=note,
                     auto_replicate=True,
-                    verify_ticker=False,
                 )
             except (ValueError, RuntimeError, FileExistsError) as e:
                 raise AnalyzeValidationError(str(e)) from e
 
             session_key = session.name
-            job_dir = analyze_job_dir(canonical, session_key, archive_root)
+            job_dir = analyze_job_dir(session_ticker, session_key, archive_root)
             job_dir.mkdir(parents=True, exist_ok=True)
-            cid = analyze_id(canonical, session_key)
+            cid = analyze_id(session_ticker, session_key)
             job: dict[str, Any] = {
                 "schema_version": 1,
                 "kind": "analyze",
                 "analyze_id": cid,
-                "ticker": canonical,
+                "ticker": session_ticker,
+                "quote_symbol": None,
                 "session_date": asof,
                 "session_key": session_key,
-                "run_id": f"research:{canonical}:{session_key}",
+                "run_id": f"research:{session_ticker}:{session_key}",
                 "session_root": str(session.resolve()),
                 "job_dir": str(job_dir.resolve()),
                 "out_dir": str(job_dir.resolve()),

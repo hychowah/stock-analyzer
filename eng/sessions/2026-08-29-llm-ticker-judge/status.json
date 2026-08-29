@@ -1,0 +1,9 @@
+{
+  "slug": "llm-ticker-judge",
+  "session_key": "2026-08-29-llm-ticker-judge",
+  "status": "in_progress",
+  "created_at": "2026-08-29T10:39:16Z",
+  "updated_at": "2026-08-29T14:00:00Z",
+  "work_type": "W1",
+  "resume_hint": "Python existence only. Orchestrator stamps quote_symbol then verify_listing.py. Do not resurrect an HTTP LLM judge."
+}

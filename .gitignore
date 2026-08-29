@@ -54,6 +54,7 @@ archive/research/
 archive/outcomes/
 archive/library/
 archive/comparisons/
+archive/research_jobs/
 eng/fixtures/archive/library/**
 archive/catalog/*.sqlite
 archive/catalog/*.sqlite-*

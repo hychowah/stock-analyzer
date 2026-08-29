@@ -8,7 +8,7 @@
 | Mode | Entry | Writes | Reads |
 |------|-------|--------|-------|
 | A Research | root `AGENTS.md` + research pipeline | new `archive/research/<T>/<D>/` | sources, MCP |
-| B Build | `eng/AGENTS.md` | eng/packages/apps/programs/scripts; append `archive/library/` | immutable `archive/research` + `archive/outcomes`; catalog; library corpus |
+| B Build | `eng/AGENTS.md` | eng/packages/apps/programs/scripts; append `archive/library/`, `archive/comparisons/`, `archive/research_jobs/`; may create a new empty research session via Analyze initializer | immutable completed `archive/research` + `archive/outcomes`; catalog; library corpus |
 
 ## Work type → paths → verify
 
@@ -29,6 +29,7 @@ archive/
   catalog/       # sqlite + indexes (rebuildable)
   library/       # reusable primary documents (append-only)
   comparisons/   # session-valuation-audit packets (append-only)
+  research_jobs/ # Analyze control plane (append-only; not a catalog source)
 ```
 
 Default: `ARCHIVE_ROOT=<project>/archive`.  

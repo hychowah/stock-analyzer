@@ -35,7 +35,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 3. **Mode B home is `eng/`** — never use a top-level folder named `build/` (gitignored).  
 4. **Do not produce investment FV/MoS judgments** in Mode B.  
 5. **Fixtures** live at `eng/fixtures/archive/` (same shape as `archive/`).  
-6. **App state** under `apps/<name>/.local/` only.  
+6. **App state** under `apps/<name>/.local/` only. **Archive job planes** (`archive/comparisons/`, `archive/research_jobs/`) are append-only data-plane packets next to `archive/`, not app-local state.  
 7. **W1 changes** must run research unit tests, not only `eng_verify`.  
 8. Gen ≠ eval: implementer does not mark `passes: true`.  
 9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `scripts/kd_research/`, research scripts, `templates/`, root `sector_*.md` / `region_*.md`), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  
@@ -60,7 +60,13 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 - `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `templates/`, `harness/` (when W1), `sector_*.md` / `region_*.md` (when W1)  
 - **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
 - **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
-- **Deny:** `archive/research/**`, `archive/outcomes/**` (completed history)
+- **Allow append:** `archive/research_jobs/**` (Analyze control plane; never a catalog source)  
+- **Allow create:** new empty `archive/research/<T>/<new-key>/` via in-process `scaffold_session.scaffold` (`force=False`, `legacy=False`, `verify_ticker=False` after `check_ticker`)  
+- **Allow:** `registry/abandon.json` **and** `registry/phase_status.json` mutation via `spawn_gate.write_abandon` only for (a) spawn-fail-after-scaffold or (b) UI Discard of a session with **no** `meta/prediction_snapshot.json`  
+- **Deny:** `write_abandon` / `phase_status` edits when `prediction_snapshot.json` exists or `run_manifest.immutable` / status completed  
+- **Deny:** rewrite of completed `archive/research/**` and `archive/outcomes/**`  
+- **Deny:** Mode B writes of `valuation_model.json`, reports, `audit.json`, `prediction_snapshot.json`  
+- **Deny:** `scaffold(..., force=True)` / `--legacy` from Analyze
 
 ## Verify
 

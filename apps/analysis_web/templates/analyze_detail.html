@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ job.ticker }} {{ job.session_key }}{% endblock %}
+{% block body_attrs %}data-live-reload="1" data-live-analyze="1" data-analyze-id="{{ job.analyze_id }}" data-analyze-status="{{ job.status }}"{% endblock %}
+{% block content %}
+<div class="card">
+  <p><a href="/analyze">← Analyze</a></p>
+  <h1>{{ job.ticker }} <span class="mono">{{ job.session_key }}</span></h1>
+  <p><span class="badge status-{{ job.status }}">{{ job.status }}</span>
+     {% if job.abandoned %}<span class="badge">abandoned</span>{% endif %}
+     phase {{ job.phase_current or '—' }}</p>
+  {% if job.error %}<p class="err">{{ job.error }}</p>{% endif %}
+  {% if complete %}
+  <p>Job complete (finalize snapshot on disk). Audit: {{ job.audit_verdict or '—' }}. This is not a buy list.
+     {% if job.catalog_run_ready %}<a href="/runs/{{ job.run_id }}">Open catalog run</a>{% endif %}
+  </p>
+  {% else %}
+  <p class="muted">No FV numbers until the finalize snapshot exists. Report/chart names below are sizes only until then.</p>
+  {% endif %}
+  <p class="muted">mode={{ job.mode }} · pid={{ job.pid or '—' }} · spawned {{ job.spawned_at or '—' }}</p>
+  <div>
+    {% if job.status in ['running', 'queued'] %}
+    <form method="post" action="/analyze-cancel" style="display:inline">
+      <input type="hidden" name="analyze_id" value="{{ job.analyze_id }}"/>
+      <button type="submit">Cancel (keep session)</button>
+    </form>
+    {% endif %}
+    {% if job.status in ['failed', 'cancelled'] and not job.abandoned and not snapshot_ready %}
+    <form method="post" action="/analyze/{{ job.analyze_id }}/resume" style="display:inline">
+      <button type="submit">Resume</button>
+    </form>
+    <form method="post" action="/analyze-discard" style="display:inline"
+          onsubmit="return confirm('Discard abandons this session. It cannot be resumed.');">
+      <input type="hidden" name="analyze_id" value="{{ job.analyze_id }}"/>
+      <button type="submit">Discard</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+<div class="card">
+  <h2>Artifacts</h2>
+  {% if artifact_index %}
+  <ul>
+    {% for a in artifact_index %}
+    <li class="mono">
+      {% if a.href %}<a href="{{ a.href }}">{{ a.relpath }}</a>{% else %}{{ a.relpath }}{% endif %}
+      <span class="muted">{{ a.size_bytes }}{% if not a.body_ok %} · name only{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No allowlisted files yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/analyze_detail.js" defer></script>
+{% endblock %}

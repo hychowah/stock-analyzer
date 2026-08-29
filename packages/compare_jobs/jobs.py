@@ -10,6 +10,7 @@ from typing import Any
 
 from packages.catalog_api.client import parse_run_id
 from packages.compare_jobs.headline import headline_for_sessions
+from packages.agent_jobs.capacity import JobsBusy, assert_capacity
 from packages.compare_jobs.spawn import (
     SpawnBackend,
     default_spawn_backend,
@@ -301,11 +302,26 @@ def start_compare(
         return existing
 
     running = _running_jobs(archive_root)
-    if running and not (existing and existing.get("status") == "running"):
-        rid = running[0].get("compare_id")
-        raise CompareBusy(
-            f"A Grok compare is already running ({rid}). Wait or cancel it first."
-        )
+    if not (existing and existing.get("status") == "running"):
+        n_analyze = 0
+        try:
+            from packages.research_jobs.jobs import count_running_analyze
+
+            n_analyze = count_running_analyze(archive_root)
+        except ImportError:
+            n_analyze = 0
+        try:
+            assert_capacity(
+                "compare",
+                running_by_kind={"compare": len(running), "analyze": n_analyze},
+            )
+        except JobsBusy as e:
+            rid = running[0].get("compare_id") if running else None
+            raise CompareBusy(
+                f"A Grok compare is already running ({rid}). Wait or cancel it first."
+                if rid
+                else str(e)
+            ) from e
 
     backend = spawn or default_spawn_backend()
     from packages.compare_jobs.spawn import GrokSpawnBackend

@@ -506,5 +506,45 @@ class LiveArchiveSmokeTests(unittest.TestCase):
         self.assertGreaterEqual(len(rows), 1)
 
 
+class InProgressSessionFilesTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.session = Path(self._td.name) / "S"
+        (self.session / "registry" / "handoffs").mkdir(parents=True)
+        (self.session / "meta").mkdir()
+        (self.session / "data").mkdir()
+        (self.session / "reports").mkdir()
+        (self.session / "registry" / "phase_status.json").write_text("{}", encoding="utf-8")
+        (self.session / "data" / "valuation_model.json").write_text('{"fv":1}', encoding="utf-8")
+        (self.session / "reports" / "00_COHR_README.md").write_text("# hi\n", encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self._td.cleanup()
+
+    def test_running_denies_fv_and_report_bodies(self) -> None:
+        from packages.catalog_api.client import ArtifactDenied
+        from packages.catalog_api.session_files import open_session_artifact
+
+        open_session_artifact(
+            self.session, "registry/phase_status.json", snapshot_ready=False
+        )
+        with self.assertRaises(ArtifactDenied):
+            open_session_artifact(
+                self.session, "data/valuation_model.json", snapshot_ready=False
+            )
+        with self.assertRaises(ArtifactDenied):
+            open_session_artifact(
+                self.session, "reports/00_COHR_README.md", snapshot_ready=False
+            )
+
+    def test_complete_allows_report_body(self) -> None:
+        from packages.catalog_api.session_files import open_session_artifact
+
+        data = open_session_artifact(
+            self.session, "reports/00_COHR_README.md", snapshot_ready=True
+        )
+        self.assertIn(b"hi", data)
+
+
 if __name__ == "__main__":
     unittest.main()

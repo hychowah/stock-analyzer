@@ -34,6 +34,39 @@ class ChangeFeedUnitTests(unittest.TestCase):
             events = classify_change(fp1, fp2)
             self.assertIn("catalog_changed", events)
 
+    def test_analyze_job_classified_not_catalog(self):
+        from apps.analysis_web.services.change_feed import classify_change, fingerprint
+
+        with tempfile.TemporaryDirectory() as td:
+            ar = Path(td) / "archive"
+            (ar / "catalog").mkdir(parents=True)
+            fp1 = fingerprint(root=ar)
+            packet = ar / "research_jobs" / "COHR" / "2026-08-29"
+            packet.mkdir(parents=True)
+            (packet / "job.json").write_text('{"status":"running"}', encoding="utf-8")
+            phase = ar / "research" / "COHR" / "2026-08-29" / "registry"
+            phase.mkdir(parents=True)
+            (phase / "phase_status.json").write_text('{"current_phase":"orch"}', encoding="utf-8")
+            fp2 = fingerprint(root=ar)
+            events = classify_change(fp1, fp2)
+            self.assertIn("analyze_changed", events)
+            self.assertNotIn("catalog_changed", events)
+
+    def test_sqlite_still_catalog_only(self):
+        from apps.analysis_web.services.change_feed import classify_change, fingerprint
+
+        with tempfile.TemporaryDirectory() as td:
+            ar = Path(td) / "archive"
+            cat = ar / "catalog"
+            cat.mkdir(parents=True)
+            db = cat / "research_compare.sqlite"
+            db.write_bytes(b"x")
+            fp1 = fingerprint(root=ar)
+            db.write_bytes(b"xy")
+            events = classify_change(fp1, fingerprint(root=ar))
+            self.assertIn("catalog_changed", events)
+            self.assertNotIn("analyze_changed", events)
+
     def test_compare_packet_classified(self):
         from apps.analysis_web.services.change_feed import classify_change, fingerprint
 

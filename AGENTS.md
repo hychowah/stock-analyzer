@@ -33,7 +33,8 @@ python3 scripts/finalize_session.py --ticker META --date $(date +%F)
 python3 scripts/scaffold_eng_session.py --slug my-feature
 python3 scripts/eng_verify.py
 python3 -m packages.catalog_api health
-python3 -m apps.analysis_web          # http://127.0.0.1:8765/
+python3 -m apps.analysis_web          # http://127.0.0.1:8765/  (Analyze + Compare)
+python3 -m packages.research_jobs start --ticker COHR   # UI-scheduled Mode A (also /analyze/new)
 ```
 
 ## Where truth lives

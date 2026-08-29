@@ -10,6 +10,7 @@
   {% if error_kind == 'ticker_not_found' %}
   <p><strong>Aborted.</strong> {{ error }}</p>
   <p>Typed ticker <code>{{ ticker_query }}</code> is not in the catalog. Fix the symbol — do not continue as if the list were empty.</p>
+  <p><a href="/analyze/new?ticker={{ ticker_query | urlencode }}">Start Mode A analysis for {{ ticker_query }}</a></p>
   {% else %}
   <p>{{ error }}</p>
   <p>Rebuild with <code>python3 scripts/export_compare_db.py --all</code></p>

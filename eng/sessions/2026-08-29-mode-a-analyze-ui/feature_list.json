@@ -1,0 +1,52 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md, fill issue.json, baseline, record git log",
+      "passes": false,
+      "verify": "issue.json has success_criteria; progress.md notes baseline"
+    },
+    {
+      "id": "agent-jobs-runtime",
+      "description": "Extract packages/agent_jobs: detach Grok, pid_alive_for_job, capacity slots; Compare fake stays compare-specific",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_agent_jobs.py scripts/tests/test_compare_jobs.py -q"
+    },
+    {
+      "id": "research-jobs",
+      "description": "packages/research_jobs initializer, reconcile, cancel=kill-only, discard, resume, gitignore/allowlist",
+      "passes": false,
+      "verify": "python -m pytest scripts/tests/test_research_jobs.py -q"
+    },
+    {
+      "id": "w1-runbook",
+      "description": "UI-scheduled subsection at top of orchestrator_runbook.md + VERSION 2.22.0",
+      "passes": false,
+      "verify": "heading before New run vs resume; harness/VERSION 2.22.0; eng_verify version gate"
+    },
+    {
+      "id": "sse-opener",
+      "description": "In-progress artifact opener (403 FV/report bodies) + SSE analyze_changed",
+      "passes": false,
+      "verify": "pytest scripts/tests/test_catalog_api.py scripts/tests/test_change_feed.py -q"
+    },
+    {
+      "id": "analyze-ui",
+      "description": "Analyze pages/API, nav, 404 CTA, lifespan reconcile, never require_ticker",
+      "passes": false,
+      "verify": "pytest scripts/tests/test_analysis_web.py -q"
+    },
+    {
+      "id": "docs",
+      "description": "README/runbook: UI kill != Grok kill, leftover grok.exe, OneDrive, GROK_JOBS_MAX",
+      "passes": false,
+      "verify": "README documents /analyze and research_jobs; AGENTS.md still <=150"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Archive Analysis UI — FastAPI over packages.catalog_api (Mode B, read-only).
+"""Archive Analysis UI — catalog over packages.catalog_api plus Grok job scheduling.
+
+Does not author research phases, fair values, or MoS. Schedules Mode A
+(Analyze → new archive/research sessions) and Mode B Compare
+(archive/comparisons/). Reads archive catalog only for completed runs.
 
 Usage:
     python3 -m apps.analysis_web
     ARCHIVE_ROOT=/path/to/archive python3 -m apps.analysis_web --port 8765
-
-Does not run research phases. Reads archive catalog only.
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Project root on path (same pattern as packages / scripts)
@@ -24,15 +27,27 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from apps.analysis_web.config import archive_root, static_dir
-from apps.analysis_web.routes import api, artifacts, compares, events, pages
+from apps.analysis_web.routes import analyze, api, artifacts, compares, events, pages
 from apps.analysis_web.templating import create_templates
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    try:
+        from packages.research_jobs.jobs import reconcile_analyze_jobs
+
+        reconcile_analyze_jobs(archive_root())
+    except Exception:
+        pass
+    yield
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Archive Analysis",
-        description="Catalog UI over research archive; compare jobs append archive/comparisons/",
-        version="2.2.0",
+        description="Catalog UI plus job scheduler: Analyze starts Mode A; Compare appends archive/comparisons/. Does not author phases or FV.",
+        version="2.3.0",
+        lifespan=_lifespan,
     )
     app.state.templates = create_templates()
 
@@ -41,6 +56,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
     app.include_router(pages.router)
+    app.include_router(analyze.router)
     app.include_router(compares.router)
     app.include_router(api.router)
     app.include_router(events.router)

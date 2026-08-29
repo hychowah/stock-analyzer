@@ -25,6 +25,24 @@ from packages.compare_jobs.jobs import (
     list_compares,
     start_compare,
 )
+from packages.research_jobs.jobs import (
+    AnalyzeBusy,
+    AnalyzeDiscardRefused,
+    AnalyzeError,
+    AnalyzeGrokMissing,
+    AnalyzeNotFound,
+    AnalyzeResumeConflict,
+    AnalyzeRunbookMissing,
+    AnalyzeTickerError,
+    AnalyzeValidationError,
+    cancel_analyze,
+    discard_analyze,
+    get_analyze,
+    refuse_http_analyze,
+    list_analyzes,
+    resume_analyze,
+    start_analyze,
+)
 
 from apps.analysis_web.config import archive_root
 from apps.analysis_web.deps import get_api
@@ -136,6 +154,106 @@ def api_get_compare(compare_id: str) -> dict[str, Any]:
         return get_compare(archive_root(), compare_id.strip())
     except (CompareNotFound, JobNotFound, ValueError) as e:
         raise HTTPException(status_code=404, detail=f"Compare not found: {compare_id}") from e
+
+
+class AnalyzeStartBody(BaseModel):
+    ticker: str = Field(..., min_length=1)
+    session_date: str | None = None
+    slug: str | None = None
+    orchestrator_model: str | None = "grok-4.5"
+    subagent_model: str | None = None
+    notes: str | None = None
+    ingest_library: bool = False
+
+
+@router.get("/analyze")
+def api_list_analyze(ticker: str | None = None) -> dict[str, Any]:
+    rows = list_analyzes(archive_root(), ticker=ticker)
+    return {"jobs": rows, "count": len(rows)}
+
+
+@router.post("/analyze", status_code=202)
+def api_start_analyze(body: AnalyzeStartBody) -> dict[str, Any]:
+    if refuse_http_analyze():
+        raise HTTPException(
+            status_code=400,
+            detail="ARCHIVE_ROOT is set and is not PROJECT_ROOT/archive",
+        )
+    try:
+        return start_analyze(
+            archive_root(),
+            body.ticker,
+            session_date=body.session_date,
+            slug=body.slug,
+            orchestrator_model=body.orchestrator_model or "grok-4.5",
+            subagent_model=body.subagent_model,
+            notes=body.notes,
+            ingest_library=body.ingest_library,
+        )
+    except AnalyzeTickerError as e:
+        raise HTTPException(
+            status_code=400,
+            detail={"status": e.status, "reason": e.reason, "matches": e.matches},
+        ) from e
+    except AnalyzeValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except AnalyzeBusy as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except (AnalyzeGrokMissing, AnalyzeRunbookMissing) as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except AnalyzeError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@router.get("/analyze/{analyze_id:path}")
+def api_get_analyze(analyze_id: str) -> dict[str, Any]:
+    try:
+        return get_analyze(archive_root(), analyze_id.strip())
+    except (AnalyzeNotFound, ValueError) as e:
+        raise HTTPException(status_code=404, detail=f"Analyze not found: {analyze_id}") from e
+
+
+@router.post("/analyze/{analyze_id:path}/cancel")
+def api_cancel_analyze(analyze_id: str) -> dict[str, Any]:
+    cid = analyze_id.strip()
+    if cid.endswith("/cancel"):
+        cid = cid[: -len("/cancel")]
+    try:
+        return cancel_analyze(archive_root(), cid)
+    except (AnalyzeNotFound, ValueError) as e:
+        raise HTTPException(status_code=404, detail=f"Analyze not found: {analyze_id}") from e
+
+
+@router.post("/analyze/{analyze_id:path}/discard")
+def api_discard_analyze(analyze_id: str) -> dict[str, Any]:
+    cid = analyze_id.strip()
+    if cid.endswith("/discard"):
+        cid = cid[: -len("/discard")]
+    try:
+        return discard_analyze(archive_root(), cid)
+    except AnalyzeDiscardRefused as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except (AnalyzeNotFound, ValueError) as e:
+        raise HTTPException(status_code=404, detail=f"Analyze not found: {analyze_id}") from e
+
+
+@router.post("/analyze/{analyze_id:path}/resume")
+def api_resume_analyze(analyze_id: str) -> dict[str, Any]:
+    cid = analyze_id.strip()
+    if cid.endswith("/resume"):
+        cid = cid[: -len("/resume")]
+    try:
+        return resume_analyze(archive_root(), cid)
+    except AnalyzeResumeConflict as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except AnalyzeBusy as e:
+        raise HTTPException(status_code=409, detail=str(e)) from e
+    except AnalyzeValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except (AnalyzeGrokMissing, AnalyzeRunbookMissing) as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (AnalyzeNotFound, ValueError) as e:
+        raise HTTPException(status_code=404, detail=f"Analyze not found: {analyze_id}") from e
 
 
 @router.post("/compares/{compare_id:path}/cancel")

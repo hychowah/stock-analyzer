@@ -1,0 +1,9 @@
+{
+  "slug": "mode-a-analyze-ui",
+  "session_key": "2026-08-29-mode-a-analyze-ui",
+  "status": "scaffolded",
+  "created_at": "2026-08-29T00:15:40Z",
+  "updated_at": "2026-08-29T00:15:40Z",
+  "work_type": "W2",
+  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+}

@@ -1,0 +1,38 @@
+{
+  "goal": "Shared Grok job runtime then Mode A Analyze scheduler in analysis_web",
+  "non_goals": [
+    "Do not run research Phases 0-5 in FastAPI",
+    "Do not mutate completed archive/research or archive/outcomes",
+    "Do not invent FV/MoS in Mode B",
+    "Do not auto-resume or auto-abandon on UI restart",
+    "Do not git commit without user agreement"
+  ],
+  "work_type": "W2",
+  "success_criteria": [
+    "packages/agent_jobs extracted; Compare tests still pass; Grok detaches from UI",
+    "research_jobs: check_ticker + scaffold + fake spawn; cancel kill-only; reconcile on restart",
+    "W1 runbook heading before New run vs resume and VERSION 2.22.0 in the same change set as that file",
+    "Analyze UI never calls require_ticker; in-progress FV/report bodies 403",
+    "eng_verify.py passes",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "archive/library/",
+    "archive/research_jobs/",
+    ".gitignore"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest scripts/tests/test_agent_jobs.py scripts/tests/test_compare_jobs.py -q"
+  ]
+}

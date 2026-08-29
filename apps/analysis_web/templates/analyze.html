@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Analyze{% endblock %}
+{% block body_attrs %}data-live-reload="1" data-live-analyze="1"{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Mode A Analyze</h1>
+  <p class="muted">Schedules a Grok research run (Phases 0–5). Does not author fair values in this UI. Catalog membership is not required.</p>
+  <form class="filters" method="get" action="/analyze">
+    <div class="filters-row">
+      <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="COHR"/></label>
+      <button type="submit">Filter</button>
+      <a class="btn secondary" href="/analyze/new">New analysis</a>
+    </div>
+  </form>
+</div>
+<div class="card">
+  {% if jobs %}
+  <table>
+    <thead>
+      <tr>
+        <th>Ticker</th>
+        <th>Session</th>
+        <th>Status</th>
+        <th>Phase</th>
+        <th>Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j in jobs %}
+      <tr>
+        <td class="mono"><a href="/analyze/{{ j.analyze_id }}">{{ j.ticker }}</a></td>
+        <td class="mono">{{ j.session_key }}</td>
+        <td><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
+        <td class="mono muted">{{ j.phase_current or '—' }}</td>
+        <td class="mono muted">{{ j.updated_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No Analyze jobs{% if ticker %} for {{ ticker }}{% endif %}.</p>
+  {% endif %}
+</div>
+{% endblock %}

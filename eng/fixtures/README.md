@@ -33,4 +33,5 @@ ARCHIVE_ROOT=$PWD/eng/fixtures/archive python3 -m apps.analysis_web
 ```
 
 **Production** always uses project `archive/`.  
-Do not point `scaffold_session` / `finalize_session` at fixtures as live research output.
+Do not point `scaffold_session` / `finalize_session` at fixtures as live research output.  
+Do **not** scaffold Analyze jobs into fixtures (`archive/research_jobs/` stays empty here). Real Grok Analyze refuses a non-default `ARCHIVE_ROOT`.

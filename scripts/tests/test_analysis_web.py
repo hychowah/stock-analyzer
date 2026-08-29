@@ -290,6 +290,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"Aborted", r.content)
         self.assertIn(b"NOPE", r.content)
         self.assertNotIn(b"No runs", r.content)
+        self.assertIn(b"/analyze/new?ticker=NOPE", r.content)
 
     def test_html_unknown_prefix_aborts(self):
         r = self.client.get("/", params={"ticker_prefix": "ZZZ"})
@@ -629,6 +630,97 @@ class AnalysisWebCompareTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Compare with another META session", r.content)
         self.assertIn(b"research:META:2026-08-10", r.content)
+
+
+class AnalysisWebAnalyzeTests(unittest.TestCase):
+    def setUp(self):
+        self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.archive = _mini_archive(Path(self._td.name))
+        os.environ["ARCHIVE_ROOT"] = str(self.archive)
+        os.environ["AGENT_SPAWN"] = "fake"
+        import importlib
+
+        import apps.analysis_web.app as app_mod
+
+        importlib.reload(app_mod)
+        self._app = app_mod.create_app()
+        from fastapi.testclient import TestClient
+
+        self.client = TestClient(self._app)
+
+    def tearDown(self):
+        self.client.close()
+        os.environ.pop("AGENT_SPAWN", None)
+        self._td.cleanup()
+
+    def test_nav_analyze(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'href="/analyze"', r.content)
+
+    def test_analyze_new_without_catalog_ticker(self):
+        r = self.client.get("/analyze/new")
+        self.assertEqual(r.status_code, 200)
+        r2 = self.client.get("/analyze", params={"ticker": "NOPE"})
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn(b"No Analyze jobs", r2.content)
+
+    def test_post_fake_and_artifact_403(self):
+        from unittest.mock import patch
+
+        from scripts.kd_research.ticker_lookup import TickerCheck
+
+        def _check(raw, backend=None):
+            t = (raw or "").strip().upper()
+            if t == "COHR":
+                return TickerCheck(typed=t, status="ok", canonical="COHR")
+            return TickerCheck(typed=t, status="abort_unknown", reason="not a market ticker")
+
+        with patch("packages.research_jobs.jobs.check_ticker", side_effect=_check):
+            html = self.client.post(
+                "/analyze/new", data={"ticker": "COHR"}, follow_redirects=False
+            )
+            self.assertEqual(html.status_code, 303, html.text)
+            loc = html.headers.get("location") or ""
+            self.assertTrue(loc.startswith("/analyze/"))
+            js = self.client.post("/api/analyze", json={"ticker": "META"})
+            self.assertEqual(js.status_code, 400)
+            page = self.client.get(loc)
+            self.assertEqual(page.status_code, 200)
+            self.assertIn(b"COHR", page.content)
+            art = self.client.get(
+                "/analyze-artifact",
+                params={
+                    "analyze_id": loc.rsplit("/", 1)[-1],
+                    "path": "data/valuation_model.json",
+                },
+            )
+            self.assertEqual(art.status_code, 403)
+            rpt = self.client.get(
+                "/analyze-artifact",
+                params={
+                    "analyze_id": loc.rsplit("/", 1)[-1],
+                    "path": "reports/00_COHR_README.md",
+                },
+            )
+            self.assertEqual(rpt.status_code, 403)
+
+    def test_post_junk_still_400(self):
+        from unittest.mock import patch
+
+        from scripts.kd_research.ticker_lookup import TickerCheck
+
+        def _check(raw, backend=None):
+            return TickerCheck(
+                typed=(raw or "").strip().upper(),
+                status="abort_unknown",
+                reason="not a market ticker",
+            )
+
+        with patch("packages.research_jobs.jobs.check_ticker", side_effect=_check):
+            r = self.client.post("/analyze/new", data={"ticker": "ZZZNOPE"})
+            self.assertIn(r.status_code, (200, 400))
+            self.assertIn(b"not a market ticker", r.content)
 
 
 if __name__ == "__main__":

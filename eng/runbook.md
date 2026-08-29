@@ -38,6 +38,11 @@ python3 -m apps.analysis_web
 # JSON: python3 -m packages.catalog_api list-runs --ticker-prefix M --harness-version 2.17.0 --mos-min 0 --session-date-from 2026-08-01
 # Session compare (Grok audit → archive/comparisons/): UI /compares or
 #   COMPARE_SPAWN=fake python -m packages.compare_jobs start --run-a research:META:2026-08-03 --run-b research:META:DATE2
+# Mode A Analyze (Grok orchestrator → new archive/research session; control plane archive/research_jobs/):
+#   AGENT_SPAWN=fake python -m packages.research_jobs start --ticker COHR
+#   python -m packages.research_jobs {list,get,cancel,discard,resume,reconcile}
+#   UI /analyze — kill UI does not kill Grok; cancel=kill-only; discard=abandon; GROK_JOBS_MAX=2
+#   Real Grok Analyze refuses non-default ARCHIVE_ROOT. Do not uvicorn --reload.
 
 # Experiment summary program
 python3 programs/experiment_summary.py

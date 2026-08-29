@@ -75,6 +75,35 @@ def fingerprint(*, root: Path | None = None) -> dict[str, Any]:
         if n == 0:
             parts.append("comparisons=empty")
 
+    jobs_root = ar / "research_jobs"
+    if not jobs_root.is_dir():
+        parts.append("research_jobs=missing")
+    else:
+        n = 0
+        for ticker_dir in jobs_root.iterdir():
+            if not ticker_dir.is_dir() or ticker_dir.name.startswith("."):
+                continue
+            for packet in ticker_dir.iterdir():
+                if not packet.is_dir():
+                    continue
+                job = packet / "job.json"
+                st = _stat_tuple(job)
+                if st is not None:
+                    parts.append(f"analyze:{ticker_dir.name}:{packet.name}={st[0]}:{st[1]}")
+                    n += 1
+                phase = (
+                    ar / "research" / ticker_dir.name / packet.name / "registry" / "phase_status.json"
+                )
+                pst = _stat_tuple(phase)
+                if pst is not None:
+                    parts.append(f"phase:{ticker_dir.name}:{packet.name}={pst[0]}:{pst[1]}")
+                if n >= 200:
+                    break
+            if n >= 200:
+                break
+        if n == 0:
+            parts.append("research_jobs=empty")
+
     blob = "|".join(parts)
     digest = hashlib.sha256(blob.encode("utf-8")).hexdigest()[:16]
     return {
@@ -114,6 +143,12 @@ def classify_change(prev: dict[str, Any] | None, cur: dict[str, Any]) -> list[st
             compare_keys.add(k)
     if any(prev_parts.get(k) != cur_parts.get(k) for k in compare_keys):
         events.append("compare_changed")
+    analyze_keys = set()
+    for k in list(prev_parts.keys()) + list(cur_parts.keys()):
+        if k == "research_jobs" or k.startswith("analyze:") or k.startswith("phase:"):
+            analyze_keys.add(k)
+    if any(prev_parts.get(k) != cur_parts.get(k) for k in analyze_keys):
+        events.append("analyze_changed")
     if not events and prev.get("token") != cur.get("token"):
         events.append("catalog_changed")
     return events

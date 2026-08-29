@@ -7,6 +7,19 @@ Use with `harness/RESEARCH_AGENTS.md` §8 and `harness/agent_prompts.md`. Root `
 
 ---
 
+## UI-scheduled runs (read this first)
+
+Mode B Analyze already scaffolded this session. `S` is on disk. `meta/run_manifest.json` already has `orchestrator_model`.
+
+- Do **not** run `scripts/verify_ticker.py` or `scripts/scaffold_session.py`. A same-day scaffold **auto-allocates `__r2`** and desyncs `archive/research_jobs/`. Session is **already scaffolded**.
+- Work only under `S`. Do not list `archive/research/<TICKER>/` except this `session_key`. Isolation file + `run_manifest.notes` repeat this.
+- `archive/research_jobs/` is Mode B control; ignore it.
+- `finalize_session.py --date` is the **full session_key** (`YYYY-MM-DD__r2` / slug), not the bare date if they differ.
+- Do not git commit.
+- All other runbook rules still apply: preflight, `bind_library.py` before 2b, `data/price_snapshot.json` freeze, Agent 5 including 5b, spawn-or-abandon, `check_session.py --full` before claiming done.
+
+---
+
 ## New run vs resume (read first)
 
 | User intent | Do this | Do **not** |

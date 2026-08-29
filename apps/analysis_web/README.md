@@ -1,6 +1,6 @@
 # Analysis Web (Mode B)
 
-Catalog UI over `packages.catalog_api` and the **live `archive/`** data plane. Research sessions stay immutable. Compare jobs **append** `archive/comparisons/` by spawning a Grok `session-valuation-audit` in the background.
+Catalog UI over `packages.catalog_api` and the **live `archive/`** data plane. Research sessions stay immutable. **Analyze** schedules a Mode A Grok orchestrator (new `archive/research/` session + `archive/research_jobs/` control plane). **Compare** appends `archive/comparisons/` with a session-valuation-audit. This app does **not author** FV/MoS.
 
 **Stack:** FastAPI + Jinja2 + static CSS (`runs.js` list search, `compares.js` two-select, SSE live reload, markdown reports).
 
@@ -33,6 +33,10 @@ Or: `bash apps/analysis_web/init.sh`
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
 | `/portfolio` | Portfolio: `.local/portfolio.json` joined to latest catalog runs |
+| `/analyze` | Mode A jobs (`archive/research_jobs/`) |
+| `/analyze/new` | Start analysis (market ticker; catalog membership not required) |
+| `/analyze/{analyze_id}` | Live phase/status; cancel = keep session; discard = abandon |
+| `/analyze-artifact?analyze_id=…&path=…` | In-progress: handoffs/phase only; FV and report bodies 403 until snapshot |
 | `/compares` | Compare packets (`archive/comparisons/`) |
 | `/compares/new` | No-JS form to start a two-session Grok audit |
 | `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete |
@@ -67,7 +71,7 @@ Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s f
 
 Runs list also has checkboxes: select **exactly two** rows of the **same ticker** and **Compare**. That POSTs `/api/compares` and redirects to the job page. Headline numbers come from `prediction_snapshot.json` immediately; completion is `99_synthesis.md` on disk.
 
-Env: `COMPARE_SPAWN=fake` writes a stub packet (tests). Default spawns `grok --prompt-file … --yolo` (`GROK_BIN` to override). One running Grok compare at a time.
+Env: `COMPARE_SPAWN=fake` writes a stub compare packet (tests). `AGENT_SPAWN=fake` is the Analyze fake (job_dir only; never writes FV). Default spawns `grok --prompt-file … --yolo` (`GROK_BIN` to override). Caps: `ANALYZE_MAX=1`, `COMPARE_MAX=1`, `GROK_JOBS_MAX=2` (set `1` on laptops). Do **not** run with uvicorn `--reload`. Killing the UI does **not** kill Grok; startup reconciles `job.json`. Cancel is kill-only (resumable); Discard writes `abandon.json`. Before resume, confirm no leftover `grok.exe`. Real Grok Analyze refuses a non-default `ARCHIVE_ROOT` (Mode A scripts ignore it). Isolation is prompt/runbook, not an OS sandbox. OneDrive may delay SSE mtimes — pause sync on `archive/` if jobs flap.
 
 ## App-local state
 
@@ -75,6 +79,7 @@ Env: `COMPARE_SPAWN=fake` writes a stub packet (tests). Default spawns `grok --p
 - Example: `portfolio.example.json` (committed)
 - **Never** store holdings under `archive/research/`
 - Compare packets: `archive/comparisons/<TICKER>/<asof>__<A>_vs_<B>/` (gitignored)
+- Analyze jobs: `archive/research_jobs/<TICKER>/<SESSION_KEY>/` (gitignored; not a catalog source)
 
 ## Security
 

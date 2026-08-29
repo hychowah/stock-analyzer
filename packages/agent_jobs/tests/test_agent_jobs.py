@@ -9,7 +9,13 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from packages.agent_jobs.capacity import JobsBusy, assert_capacity, limits
+from packages.agent_jobs.capacity import (
+    JobsBusy,
+    Limits,
+    check_slots,
+    limits,
+    running_by_kind,
+)
 from packages.agent_jobs.spawn import (
     pid_alive,
     pid_alive_for_job,
@@ -64,46 +70,81 @@ class CapacityTests(unittest.TestCase):
     def test_default_limits(self) -> None:
         for k in ("ANALYZE_MAX", "COMPARE_MAX", "GROK_JOBS_MAX"):
             os.environ.pop(k, None)
-        self.assertEqual(limits(), (1, 1, 2))
+        self.assertEqual(limits(), Limits(analyze=3, compare=1, grok=4))
+        self.assertEqual(limits().analyze_slots, 3)
+
+    def test_unset_grok_derives_from_kind_slots(self) -> None:
+        os.environ["ANALYZE_MAX"] = "5"
+        os.environ["COMPARE_MAX"] = "2"
+        os.environ.pop("GROK_JOBS_MAX", None)
+        self.assertEqual(limits(), Limits(analyze=5, compare=2, grok=7))
+
+    def test_analyze_slots_follows_tighter_global(self) -> None:
+        os.environ.pop("ANALYZE_MAX", None)
+        os.environ.pop("COMPARE_MAX", None)
+        os.environ["GROK_JOBS_MAX"] = "2"
+        self.assertEqual(limits().analyze_slots, 2)
 
     def test_compare_slot_full(self) -> None:
         os.environ.pop("COMPARE_MAX", None)
         os.environ.pop("GROK_JOBS_MAX", None)
         with self.assertRaises(JobsBusy) as ctx:
-            assert_capacity("compare", running_by_kind={"compare": 1, "analyze": 0})
+            check_slots("compare", {"compare": 1, "analyze": 0})
         self.assertIn("COMPARE_MAX", str(ctx.exception))
 
     def test_compare_slot_free(self) -> None:
-        assert_capacity("compare", running_by_kind={"compare": 0, "analyze": 0})
+        check_slots("compare", {"compare": 0, "analyze": 0})
 
     def test_analyze_slot_full(self) -> None:
-        with self.assertRaises(JobsBusy):
-            assert_capacity("analyze", running_by_kind={"compare": 0, "analyze": 1})
+        for k in ("ANALYZE_MAX", "COMPARE_MAX", "GROK_JOBS_MAX"):
+            os.environ.pop(k, None)
+        check_slots("analyze", {"compare": 0, "analyze": 2})
+        with self.assertRaises(JobsBusy) as ctx:
+            check_slots("analyze", {"compare": 0, "analyze": 3})
+        self.assertIn("ANALYZE_MAX", str(ctx.exception))
 
     def test_global_cap_blocks_second_kind(self) -> None:
         os.environ["GROK_JOBS_MAX"] = "1"
         os.environ["COMPARE_MAX"] = "1"
         os.environ["ANALYZE_MAX"] = "1"
         with self.assertRaises(JobsBusy) as ctx:
-            assert_capacity("analyze", running_by_kind={"compare": 1, "analyze": 0})
+            check_slots("analyze", {"compare": 1, "analyze": 0})
         self.assertIn("GROK_JOBS_MAX", str(ctx.exception))
 
     def test_global_cap_two_allows_one_each(self) -> None:
         os.environ["GROK_JOBS_MAX"] = "2"
         os.environ["COMPARE_MAX"] = "1"
         os.environ["ANALYZE_MAX"] = "1"
-        assert_capacity("analyze", running_by_kind={"compare": 1, "analyze": 0})
-        assert_capacity("compare", running_by_kind={"compare": 0, "analyze": 1})
+        check_slots("analyze", {"compare": 1, "analyze": 0})
+        check_slots("compare", {"compare": 0, "analyze": 1})
 
     def test_unknown_kind(self) -> None:
         with self.assertRaises(JobsBusy):
-            assert_capacity("audit", running_by_kind={"compare": 0, "analyze": 0})
+            check_slots("audit", {"compare": 0, "analyze": 0})
 
     def test_env_override(self) -> None:
-        os.environ["ANALYZE_MAX"] = "3"
+        os.environ["ANALYZE_MAX"] = "5"
         os.environ["COMPARE_MAX"] = "2"
-        os.environ["GROK_JOBS_MAX"] = "4"
-        self.assertEqual(limits(), (3, 2, 4))
+        os.environ["GROK_JOBS_MAX"] = "6"
+        self.assertEqual(limits(), Limits(analyze=5, compare=2, grok=6))
+
+    def test_three_analyze_plus_one_compare_fits(self) -> None:
+        for k in ("ANALYZE_MAX", "COMPARE_MAX", "GROK_JOBS_MAX"):
+            os.environ.pop(k, None)
+        check_slots("analyze", {"compare": 0, "analyze": 2})
+        check_slots("compare", {"compare": 0, "analyze": 3})
+        check_slots("analyze", {"compare": 1, "analyze": 2})
+        with self.assertRaises(JobsBusy):
+            check_slots("analyze", {"compare": 1, "analyze": 3})
+
+    def test_running_by_kind_empty_archive(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as td:
+            self.assertEqual(
+                running_by_kind(Path(td)),
+                {"analyze": 0, "compare": 0},
+            )
 
 
 class CompareReexportTests(unittest.TestCase):

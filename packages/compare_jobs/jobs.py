@@ -10,7 +10,7 @@ from typing import Any
 
 from packages.catalog_api.client import parse_run_id
 from packages.compare_jobs.headline import headline_for_sessions
-from packages.agent_jobs.capacity import JobsBusy, assert_capacity
+from packages.agent_jobs.capacity import JobsBusy, claim_start
 from packages.compare_jobs.spawn import (
     SpawnBackend,
     default_spawn_backend,
@@ -151,6 +151,10 @@ def _running_jobs(archive_root: Path) -> list[dict[str, Any]]:
         if job.get("status") == "running":
             running.append(job)
     return running
+
+
+def count_running_compare(archive_root: Path) -> int:
+    return len(_running_jobs(archive_root))
 
 
 def _find_pair(
@@ -301,28 +305,6 @@ def start_compare(
     if existing and existing.get("status") == "complete" and not force:
         return existing
 
-    running = _running_jobs(archive_root)
-    if not (existing and existing.get("status") == "running"):
-        n_analyze = 0
-        try:
-            from packages.research_jobs.jobs import count_running_analyze
-
-            n_analyze = count_running_analyze(archive_root)
-        except ImportError:
-            n_analyze = 0
-        try:
-            assert_capacity(
-                "compare",
-                running_by_kind={"compare": len(running), "analyze": n_analyze},
-            )
-        except JobsBusy as e:
-            rid = running[0].get("compare_id") if running else None
-            raise CompareBusy(
-                f"A Grok compare is already running ({rid}). Wait or cancel it first."
-                if rid
-                else str(e)
-            ) from e
-
     backend = spawn or default_spawn_backend()
     from packages.compare_jobs.spawn import GrokSpawnBackend
 
@@ -331,6 +313,40 @@ def start_compare(
             "Grok CLI not found. Install grok, set GROK_BIN, or set COMPARE_SPAWN=fake."
         )
 
+    try:
+        with claim_start(archive_root, "compare"):
+            existing = _find_pair(archive_root, ticker, session_a, session_b)
+            if existing and existing.get("status") == "running" and not force:
+                return existing
+            if existing and existing.get("status") == "complete" and not force:
+                return existing
+            return _spawn_compare(
+                archive_root,
+                ticker=ticker,
+                session_a=session_a,
+                session_b=session_b,
+                path_a=path_a,
+                path_b=path_b,
+                degraded=degraded,
+                backend=backend,
+                project_root=project_root,
+            )
+    except JobsBusy as e:
+        raise CompareBusy(str(e)) from e
+
+
+def _spawn_compare(
+    archive_root: Path,
+    *,
+    ticker: str,
+    session_a: str,
+    session_b: str,
+    path_a: Path,
+    path_b: Path,
+    degraded: bool,
+    backend: SpawnBackend,
+    project_root: Path | None,
+) -> dict[str, Any]:
     packet_key = allocate_compare_key(
         ticker,
         session_a,

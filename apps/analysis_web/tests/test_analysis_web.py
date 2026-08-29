@@ -661,9 +661,11 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
     def test_analyze_new_without_catalog_ticker(self):
         r = self.client.get("/analyze/new")
         self.assertEqual(r.status_code, 200)
+        self.assertIn(b"can run in parallel", r.content)
         r2 = self.client.get("/analyze", params={"ticker": "NOPE"})
         self.assertEqual(r2.status_code, 200)
         self.assertIn(b"No Analyze jobs", r2.content)
+        self.assertIn(b"can run at once", r2.content)
 
     def test_post_fake_and_artifact_403(self):
         from unittest.mock import patch

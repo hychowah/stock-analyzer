@@ -55,6 +55,7 @@ archive/outcomes/
 archive/library/
 archive/comparisons/
 archive/research_jobs/
+archive/.grok_jobs.lock
 eng/fixtures/archive/library/**
 archive/catalog/*.sqlite
 archive/catalog/*.sqlite-*

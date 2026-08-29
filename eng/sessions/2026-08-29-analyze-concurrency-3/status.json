@@ -1,0 +1,9 @@
+{
+  "slug": "analyze-concurrency-3",
+  "session_key": "2026-08-29-analyze-concurrency-3",
+  "status": "complete",
+  "created_at": "2026-08-29T10:08:01Z",
+  "updated_at": "2026-08-29T10:20:00Z",
+  "work_type": "W2",
+  "resume_hint": "Done. Restart analysis_web to pick up ANALYZE_MAX=3. No git commit until the user agrees."
+}

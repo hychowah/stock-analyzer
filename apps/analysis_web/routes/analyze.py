@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from packages.catalog_api.client import ArtifactDenied
 from packages.catalog_api.session_files import list_session_artifacts, open_session_artifact
+from packages.agent_jobs.capacity import limits
 from packages.research_jobs.jobs import (
     AnalyzeBusy,
     AnalyzeDiscardRefused,
@@ -71,6 +72,7 @@ def page_analyzes(
         jobs=jobs,
         ticker=ticker,
         error=None,
+        limits=limits(),
     )
 
 
@@ -85,6 +87,7 @@ def page_analyze_new(
         "analyze_new.html",
         ticker=(ticker or "").strip().upper(),
         error=error,
+        limits=limits(),
     )
 
 

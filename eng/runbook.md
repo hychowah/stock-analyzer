@@ -41,7 +41,7 @@ python3 -m apps.analysis_web
 # Mode A Analyze (Grok orchestrator → new archive/research session; control plane archive/research_jobs/):
 #   AGENT_SPAWN=fake python -m packages.research_jobs start --ticker COHR
 #   python -m packages.research_jobs {list,get,cancel,discard,resume,reconcile}
-#   UI /analyze — kill UI does not kill Grok; cancel=kill-only; discard=abandon; GROK_JOBS_MAX=2
+#   UI /analyze — kill UI does not kill Grok; cancel=kill-only; discard=abandon; ANALYZE_MAX=3; GROK_JOBS_MAX defaults to kind-slot sum (set 1 to serialize)
 #   Real Grok Analyze refuses non-default ARCHIVE_ROOT. Do not uvicorn --reload.
 
 # Experiment summary program

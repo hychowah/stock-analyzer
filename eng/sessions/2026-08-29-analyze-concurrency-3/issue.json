@@ -1,0 +1,33 @@
+{
+  "goal": "Allow three concurrent Mode A Analyze jobs (ANALYZE_MAX=3, GROK_JOBS_MAX=4)",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not change COMPARE_MAX (stays 1)",
+    "Do not change Mode A research-runtime law (no harness VERSION bump)"
+  ],
+  "work_type": "W2",
+  "success_criteria": [
+    "Default ANALYZE_MAX is 3; default GROK_JOBS_MAX is 4 (3 Analyze + 1 Compare)",
+    "Fourth concurrent Analyze is rejected with JobsBusy / HTTP 409",
+    "UI copy on /analyze and /analyze/new states the live Analyze slot cap",
+    "Operator docs (analysis_web README, eng/runbook) match the new defaults",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python -m pytest packages/agent_jobs/tests packages/research_jobs/tests apps/analysis_web/tests -q"
+  ]
+}

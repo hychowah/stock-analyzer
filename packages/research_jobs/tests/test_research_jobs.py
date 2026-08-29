@@ -13,6 +13,7 @@ from packages.kd_research.paths import PROJECT_ROOT as ROOT
 
 from packages.agent_jobs.spawn import GrokSpawnBackend
 from packages.research_jobs.jobs import (
+    AnalyzeBusy,
     AnalyzeDiscardRefused,
     AnalyzeRunbookMissing,
     AnalyzeTickerError,
@@ -231,6 +232,17 @@ class ResearchJobsTests(unittest.TestCase):
         self.assertEqual(refreshed.get("phase_current"), "unknown")
         rows = list_analyzes(self.archive)
         self.assertEqual(len(rows), 1)
+
+    def test_three_running_analyzes_block_fourth(self) -> None:
+        started = []
+        for i in range(3):
+            job = self._start(session_date="2026-08-29", slug=f"slot{i}")
+            self.assertEqual(job["status"], "running")
+            started.append(job["analyze_id"])
+        with self.assertRaises(AnalyzeBusy) as ctx:
+            self._start(session_date="2026-08-29", slug="slot3")
+        self.assertIn("ANALYZE_MAX", str(ctx.exception))
+        self.assertEqual(len(started), 3)
 
     def test_reconcile_dead_pid_frees_slot(self) -> None:
         job = self._start()

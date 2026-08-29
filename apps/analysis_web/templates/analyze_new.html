@@ -4,7 +4,7 @@
 <div class="card">
   <p><a href="/analyze">← Analyze</a></p>
   <h1>Start Mode A analysis</h1>
-  <p class="muted">Verifies a real market ticker, scaffolds a new session, then spawns one Grok orchestrator. Typical wall time is hours. Killing this web UI does not stop Grok.</p>
+  <p class="muted">Verifies a real market ticker, scaffolds a new session, then spawns one Grok orchestrator. Typical wall time is hours. Up to {{ limits.analyze_slots }} can run in parallel (global Grok cap {{ limits.grok }}, including Compare). Killing this web UI does not stop Grok.</p>
   {% if error %}<p class="flash err">{{ error }}</p>{% endif %}
   <form method="post" action="/analyze/new"
         onsubmit="return confirm('Start a Mode A Grok research run? This can take 2–8 hours. Cancel is kill-only (resumable); Discard abandons the session.');">

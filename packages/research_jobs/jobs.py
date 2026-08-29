@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-import sys
-from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
-from packages.agent_jobs.capacity import JobsBusy, assert_capacity
+from packages.agent_jobs.capacity import JobsBusy, claim_start
 from packages.agent_jobs.spawn import (
     GrokSpawnBackend,
     SpawnBackend,
@@ -151,42 +149,6 @@ def runbook_has_ui_scheduled_heading(project_root: Path | None = None) -> bool:
     return UI_SCHEDULED_HEADING in text
 
 
-@contextmanager
-def exclusive_job_lock(archive_root: Path) -> Iterator[None]:
-    path = research_jobs_root(archive_root) / ".lock"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fh = open(path, "a+b")
-    try:
-        fh.seek(0, os.SEEK_END)
-        if fh.tell() == 0:
-            fh.write(b"0")
-            fh.flush()
-        fh.seek(0)
-        if sys.platform == "win32":
-            import msvcrt
-
-            msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
-        yield
-    finally:
-        try:
-            if sys.platform == "win32":
-                import msvcrt
-
-                fh.seek(0)
-                msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
-        except OSError:
-            pass
-        fh.close()
-
-
 def iter_job_files(archive_root: Path) -> list[Path]:
     root = research_jobs_root(archive_root)
     if not root.is_dir():
@@ -218,16 +180,6 @@ def _session_abandon(session: Path) -> Path:
     return session / "registry" / "abandon.json"
 
 
-def _count_running_compare(archive_root: Path) -> int:
-    from packages.compare_jobs.jobs import list_compares
-
-    n = 0
-    for job in list_compares(archive_root, refresh=True):
-        if job.get("status") == "running":
-            n += 1
-    return n
-
-
 def count_running_analyze(archive_root: Path) -> int:
     n = 0
     for path in iter_job_files(archive_root):
@@ -238,13 +190,6 @@ def count_running_analyze(archive_root: Path) -> int:
         if job.get("status") == "running":
             n += 1
     return n
-
-
-def _running_by_kind(archive_root: Path) -> dict[str, int]:
-    return {
-        "compare": _count_running_compare(archive_root),
-        "analyze": count_running_analyze(archive_root),
-    }
 
 
 def _maybe_abandon(session: Path, *, reason: str, detail: str) -> None:
@@ -471,96 +416,94 @@ def start_analyze(
                 "UI-scheduled runbook heading missing; merge W1 PR 3 before real Grok Analyze"
             )
 
-    with exclusive_job_lock(archive_root):
-        try:
-            assert_capacity("analyze", running_by_kind=_running_by_kind(archive_root))
-        except JobsBusy as e:
-            raise AnalyzeBusy(str(e)) from e
+    try:
+        with claim_start(archive_root, "analyze"):
+            try:
+                session = scaffold(
+                    canonical,
+                    asof,
+                    output_dir=archive_root,
+                    force=False,
+                    slug=slug,
+                    orchestrator_model=orch,
+                    default_subagent_model=sub,
+                    notes=note,
+                    auto_replicate=True,
+                    verify_ticker=False,
+                )
+            except (ValueError, RuntimeError, FileExistsError) as e:
+                raise AnalyzeValidationError(str(e)) from e
 
-        try:
-            session = scaffold(
-                canonical,
-                asof,
-                output_dir=archive_root,
-                force=False,
-                slug=slug,
-                orchestrator_model=orch,
-                default_subagent_model=sub,
-                notes=note,
-                auto_replicate=True,
-                verify_ticker=False,
-            )
-        except (ValueError, RuntimeError, FileExistsError) as e:
-            raise AnalyzeValidationError(str(e)) from e
-
-        session_key = session.name
-        job_dir = analyze_job_dir(canonical, session_key, archive_root)
-        job_dir.mkdir(parents=True, exist_ok=True)
-        cid = analyze_id(canonical, session_key)
-        job: dict[str, Any] = {
-            "schema_version": 1,
-            "kind": "analyze",
-            "analyze_id": cid,
-            "ticker": canonical,
-            "session_date": asof,
-            "session_key": session_key,
-            "run_id": f"research:{canonical}:{session_key}",
-            "session_root": str(session.resolve()),
-            "job_dir": str(job_dir.resolve()),
-            "out_dir": str(job_dir.resolve()),
-            "status": "queued",
-            "mode": "new",
-            "orchestrator_model": orch,
-            "subagent_model": sub,
-            "notes": note,
-            "pid": None,
-            "grok_session_id": None,
-            "command": None,
-            "project_root": proj,
-            "archive_root": str(Path(archive_root).resolve()),
-            "spawned_at": None,
-            "updated_at": _utc_stamp(),
-            "error": None,
-            "mcp_status": "unknown",
-            "phase_current": "orch",
-            "resume_hint": None,
-            "snapshot_ready": False,
-            "catalog_run_ready": False,
-            "abandoned": False,
-            "audit_verdict": None,
-            "run_manifest_status": "scaffolded",
-            "library_ingest": bool(ingest_library),
-        }
-        (job_dir / "prompt.md").write_text(build_prompt(job), encoding="utf-8")
-        _atomic_write_json(job_dir / JOB_NAME, job)
-
-        try:
-            result = backend.spawn(job)
-        except FileNotFoundError as e:
-            _maybe_abandon(session, reason="spawn_fail", detail=str(e))
-            job["status"] = "failed"
-            job["abandoned"] = _session_abandon(session).is_file()
-            job["error"] = str(e)
-            job["updated_at"] = _utc_stamp()
+            session_key = session.name
+            job_dir = analyze_job_dir(canonical, session_key, archive_root)
+            job_dir.mkdir(parents=True, exist_ok=True)
+            cid = analyze_id(canonical, session_key)
+            job: dict[str, Any] = {
+                "schema_version": 1,
+                "kind": "analyze",
+                "analyze_id": cid,
+                "ticker": canonical,
+                "session_date": asof,
+                "session_key": session_key,
+                "run_id": f"research:{canonical}:{session_key}",
+                "session_root": str(session.resolve()),
+                "job_dir": str(job_dir.resolve()),
+                "out_dir": str(job_dir.resolve()),
+                "status": "queued",
+                "mode": "new",
+                "orchestrator_model": orch,
+                "subagent_model": sub,
+                "notes": note,
+                "pid": None,
+                "grok_session_id": None,
+                "command": None,
+                "project_root": proj,
+                "archive_root": str(Path(archive_root).resolve()),
+                "spawned_at": None,
+                "updated_at": _utc_stamp(),
+                "error": None,
+                "mcp_status": "unknown",
+                "phase_current": "orch",
+                "resume_hint": None,
+                "snapshot_ready": False,
+                "catalog_run_ready": False,
+                "abandoned": False,
+                "audit_verdict": None,
+                "run_manifest_status": "scaffolded",
+                "library_ingest": bool(ingest_library),
+            }
+            (job_dir / "prompt.md").write_text(build_prompt(job), encoding="utf-8")
             _atomic_write_json(job_dir / JOB_NAME, job)
-            raise AnalyzeGrokMissing(str(e)) from e
-        except Exception as e:  # noqa: BLE001
-            _maybe_abandon(session, reason="spawn_fail", detail=str(e))
-            job["status"] = "failed"
-            job["abandoned"] = _session_abandon(session).is_file()
-            job["error"] = str(e)
-            job["updated_at"] = _utc_stamp()
-            _atomic_write_json(job_dir / JOB_NAME, job)
-            raise AnalyzeError(str(e)) from e
 
-        job["pid"] = result.pid
-        job["grok_session_id"] = result.grok_session_id
-        job["command"] = result.command
-        job["status"] = "running"
-        job["spawned_at"] = _utc_stamp()
-        job["updated_at"] = job["spawned_at"]
-        _atomic_write_json(job_dir / JOB_NAME, job)
-        return refresh_analyze(archive_root, cid, job=job)
+            try:
+                result = backend.spawn(job)
+            except FileNotFoundError as e:
+                _maybe_abandon(session, reason="spawn_fail", detail=str(e))
+                job["status"] = "failed"
+                job["abandoned"] = _session_abandon(session).is_file()
+                job["error"] = str(e)
+                job["updated_at"] = _utc_stamp()
+                _atomic_write_json(job_dir / JOB_NAME, job)
+                raise AnalyzeGrokMissing(str(e)) from e
+            except Exception as e:  # noqa: BLE001
+                _maybe_abandon(session, reason="spawn_fail", detail=str(e))
+                job["status"] = "failed"
+                job["abandoned"] = _session_abandon(session).is_file()
+                job["error"] = str(e)
+                job["updated_at"] = _utc_stamp()
+                _atomic_write_json(job_dir / JOB_NAME, job)
+                raise AnalyzeError(str(e)) from e
+
+            job["pid"] = result.pid
+            job["grok_session_id"] = result.grok_session_id
+            job["command"] = result.command
+            job["status"] = "running"
+            job["spawned_at"] = _utc_stamp()
+            job["updated_at"] = job["spawned_at"]
+            _atomic_write_json(job_dir / JOB_NAME, job)
+            return refresh_analyze(archive_root, cid, job=job)
+    except JobsBusy as e:
+        raise AnalyzeBusy(str(e)) from e
 
 
 def cancel_analyze(archive_root: Path, analyze_id_value: str) -> dict[str, Any]:
@@ -631,22 +574,20 @@ def resume_analyze(
                 "UI-scheduled runbook heading missing; merge W1 PR 3 before real Grok Analyze"
             )
 
-    with exclusive_job_lock(archive_root):
-        try:
-            assert_capacity("analyze", running_by_kind=_running_by_kind(archive_root))
-        except JobsBusy as e:
-            raise AnalyzeBusy(str(e)) from e
-
-        job["mode"] = "resume"
-        job_dir = Path(str(job["job_dir"]))
-        (job_dir / "prompt.md").write_text(build_prompt(job, resume=True), encoding="utf-8")
-        result = backend.spawn(job)
-        job["pid"] = result.pid
-        job["grok_session_id"] = result.grok_session_id
-        job["command"] = result.command
-        job["status"] = "running"
-        job["error"] = None
-        job["spawned_at"] = _utc_stamp()
-        job["updated_at"] = job["spawned_at"]
-        _atomic_write_json(job_dir / JOB_NAME, job)
-        return refresh_analyze(archive_root, analyze_id_value, job=job)
+    try:
+        with claim_start(archive_root, "analyze"):
+            job["mode"] = "resume"
+            job_dir = Path(str(job["job_dir"]))
+            (job_dir / "prompt.md").write_text(build_prompt(job, resume=True), encoding="utf-8")
+            result = backend.spawn(job)
+            job["pid"] = result.pid
+            job["grok_session_id"] = result.grok_session_id
+            job["command"] = result.command
+            job["status"] = "running"
+            job["error"] = None
+            job["spawned_at"] = _utc_stamp()
+            job["updated_at"] = job["spawned_at"]
+            _atomic_write_json(job_dir / JOB_NAME, job)
+            return refresh_analyze(archive_root, analyze_id_value, job=job)
+    except JobsBusy as e:
+        raise AnalyzeBusy(str(e)) from e

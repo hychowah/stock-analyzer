@@ -139,13 +139,15 @@ class CompareJobsTests(unittest.TestCase):
             spawn=running,
         )
         _session(self.archive, "JPM", "2026-07-30", fv=210.0)
-        with self.assertRaises(CompareBusy):
+        with self.assertRaises(CompareBusy) as ctx:
             start_compare(
                 self.archive,
                 "research:JPM:2026-07-25",
                 "research:JPM:2026-07-30",
                 spawn=self.fake,
             )
+        self.assertIn("COMPARE_MAX", str(ctx.exception))
+        self.assertNotIn("already running", str(ctx.exception))
 
     def test_force_after_complete_allocates_r2(self):
         a = start_compare(

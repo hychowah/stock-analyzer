@@ -1,0 +1,15 @@
+{
+  "slug": "analyze-concurrency-3",
+  "summary": "Three concurrent Analyze jobs. Global Grok cap is derived from kind slots. Shared claim_start lock+census for Analyze and Compare.",
+  "eng_verify": "PASS (550)",
+  "verify_commands_run": [
+    "python -m pytest packages/agent_jobs/tests packages/research_jobs/tests packages/compare_jobs/tests apps/analysis_web/tests/test_analysis_web.py -q"
+  ],
+  "notes": [
+    "ANALYZE_MAX=3, COMPARE_MAX=1; unset GROK_JOBS_MAX = sum (4).",
+    "limits() is a named Limits record; UI uses limits.analyze_slots.",
+    "CompareBusy wraps JobsBusy text as-is.",
+    "claim_start is the only start gate; archive/.grok_jobs.lock is gitignored.",
+    "Restart analysis_web to pick up process defaults."
+  ]
+}

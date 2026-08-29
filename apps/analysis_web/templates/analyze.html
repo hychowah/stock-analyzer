@@ -4,7 +4,7 @@
 {% block content %}
 <div class="card">
   <h1>Mode A Analyze</h1>
-  <p class="muted">Schedules a Grok research run (Phases 0–5). Does not author fair values in this UI. Catalog membership is not required.</p>
+  <p class="muted">Schedules a Grok research run (Phases 0–5). Does not author fair values in this UI. Catalog membership is not required. Up to {{ limits.analyze_slots }} analyses can run at once (global Grok cap {{ limits.grok }}, including Compare).</p>
   <form class="filters" method="get" action="/analyze">
     <div class="filters-row">
       <label>Ticker<input name="ticker" value="{{ ticker or '' }}" placeholder="COHR"/></label>

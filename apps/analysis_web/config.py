@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from packages.catalog_api.client import default_archive_root
 
 
 def archive_root() -> Path:
-    raw = os.environ.get("ARCHIVE_ROOT")
-    if raw:
-        return Path(raw).expanduser().resolve()
     return default_archive_root()
 
 

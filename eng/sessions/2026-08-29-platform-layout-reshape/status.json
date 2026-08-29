@@ -1,0 +1,9 @@
+{
+  "slug": "platform-layout-reshape",
+  "session_key": "2026-08-29-platform-layout-reshape",
+  "status": "scaffolded",
+  "created_at": "2026-08-29T01:08:29Z",
+  "updated_at": "2026-08-29T01:08:29Z",
+  "work_type": "W1",
+  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+}

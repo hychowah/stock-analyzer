@@ -333,7 +333,7 @@ sequenceDiagram
 **In-process APIs (do not subprocess ticker lookup or scaffold CLI):**
 
 ```python
-from scripts.kd_research.ticker_lookup import check_ticker
+from packages.kd_research.ticker_lookup import check_ticker
 from scripts.scaffold_session import scaffold
 
 result = check_ticker(raw, backend=backend)  # tests: FakeBackend
@@ -502,7 +502,7 @@ Frozen-string test: heading present at file top (before “New run vs resume”)
 
 | Actor | Allowed | Forbidden |
 |-------|---------|-----------|
-| **Grok worker** | `S/**`, `harness/**`, `scripts/**`, `templates/**`, `sector_*.md`, `region_*.md`, `archive/library/<T>/` only via `bind_library.py` / 2b unlabeled rule | `archive/research/<T>/<other-key>/`, listing ticker folder “to see if yesterday is complete”, `archive/outcomes`, other tickers’ sessions |
+| **Grok worker** | `S/**`, `harness/**` (incl. `schemas/`, `modules/`), `scripts/**`, `archive/library/<T>/` only via `bind_library.py` / 2b unlabeled rule | `archive/research/<T>/<other-key>/`, listing ticker folder “to see if yesterday is complete”, `archive/outcomes`, other tickers’ sessions |
 | **FastAPI / UI** | List `archive/research_jobs`, list catalog completed runs, read **in-progress allowlist** under **this** `S` | Writing FV; showing other same-ticker sessions **to the worker**; injecting sibling paths into `prompt.md`; serving in-progress FV JSON **or report/chart bodies** |
 
 **Mechanics (not an OS sandbox):**
@@ -576,7 +576,7 @@ job["status"] = "cancelled"
 if (session / "meta" / "prediction_snapshot.json").is_file():
     raise DiscardRefused("session already finalized")  # HTTP 409
 kill_pid(job["pid"])
-from scripts.kd_research.spawn_gate import write_abandon
+from packages.kd_research.spawn_gate import write_abandon
 write_abandon(session, reason="ui_discard", detail="UI discard")
 # success predicate: abandon.json exists; do NOT use abandon_session.py exit code
 # (CLI always return 1 on successful abandon)
@@ -619,7 +619,7 @@ job["abandoned"] = True
 
 **Catalog 404 card CTA:** only when `error_kind == ticker_not_found`. Link `Start Mode A analysis for {ticker_query}` → `/analyze/new?ticker=` + URL-encoded query. POST still 400 on `ZZZNOPE`. Do not skip `check_ticker` because the user came from 404.
 
-**Reserved names:** `ROOT_RESERVED_NAMES` (`scripts/kd_research/paths.py`).
+**Reserved names:** `TICKER_BLOCKLIST` (`packages/kd_research/paths.py`).
 
 ### 9. Catalog freshness
 
@@ -798,7 +798,7 @@ archive/
 
 ### Schema / templates
 
-No `templates/*.schema.json` change in v1. Defer `templates/research_job.schema.json` (templates/ is a VERSION-bump path if treated as Mode A). Validate required `job.json` keys in Python.
+No `harness/schemas/*.schema.json` change in v1. Defer `harness/schemas/research_job.schema.json` (`harness/schemas/` is a VERSION-bump path). Validate required `job.json` keys in Python.
 
 ### Migrations
 
@@ -879,7 +879,7 @@ Deferred. v1 HTTP/CLI env-gate split-brain (K15) rather than wrapping every scri
 | `--yolo` Grok writes arbitrary repo files | **High** | Bind `127.0.0.1`; prompt forbids git commit and `archive/outcomes`; do not expose `0.0.0.0`. Same class as interactive Mode A + Compare. Dual Analyze+Compare `--yolo` is prompt-only isolation between trees. |
 | Cancel does not stop specialist Groks | **High** | Documented limitation. `taskkill /T` / `killpg` best-effort. README leftover `grok.exe` after cancel **and before resume**. Resume 409 if old pid alive. Do not claim “cancel stops Mode A.” |
 | Path traversal on `/analyze-artifact` | **High** | Containment to **this** `session_root`; in-progress FV deny list; deny `raw_sec/`, transcripts, `grok.log`. |
-| Ticker as path injection | **Med** | `TICKER_RE` + `ROOT_RESERVED_NAMES` + `SESSION_KEY_RE`. |
+| Ticker as path injection | **Med** | `TICKER_RE` + `TICKER_BLOCKLIST` + `SESSION_KEY_RE`. |
 | Unattended isolation break | **High** | Prompt + top-of-runbook + stamped notes + frozen strings. **Not** OS sandbox. Accepted residual (K16). |
 | In-progress FV via guessed URL | **Med** | 403 FV JSON **and** `reports/` / `charts/` bodies until snapshot (K8). Names+sizes OK. |
 | Catalog 404 bypass to junk symbol | **Med** | `check_ticker`; CTA still market-checks. |
@@ -947,9 +947,9 @@ See **PR Plan**. Order is load-bearing: **W1 runbook before UI spawn.**
 | PR 4 SSE + in-progress opener | W2/W4 | **No** |
 | PR 5 Analyze UI | W4 | **No** |
 | PR 6 docs | W4/W5 | **No** |
-| Optional `templates/research_job.schema.json` | deferred | would be W1 if placed under `templates/` as Mode A |
+| Optional `harness/schemas/research_job.schema.json` | deferred | would be W1 under `harness/schemas/` as Mode A |
 
-`scripts/kd_research/provenance.py` `RESEARCH_RUNTIME_PREFIXES` includes `harness/` and excludes `harness/research/`. Runbook-only **does** fail `eng_verify` without VERSION. Industry pack citations do **not** bump.
+`packages/kd_research/provenance.py` `RESEARCH_RUNTIME_PREFIXES` includes `harness/` and excludes `harness/research/`. Runbook-only **does** fail `eng_verify` without VERSION. Industry pack citations do **not** bump.
 
 Touching `scripts/scaffold_session.py` / `preflight_phase.py` / `harness/agent_prompts.md` is **out of scope**. If a PR must change them, it becomes W1 and bumps VERSION in that change set.
 
@@ -1030,7 +1030,7 @@ All other former OQs are decided:
 | ingest_library in v1? | Yes, checkbox, **default off**. |
 | in-progress file list vs phase only? | Names+sizes for reports/charts; **403 bodies** until snapshot. Handoffs/phase_status/manifest bodies OK. |
 | python3 vs py -3? | Stay `python3` (Mode A law). README note. |
-| `templates/research_job.schema.json` in v1? | **Defer.** |
+| `harness/schemas/research_job.schema.json` in v1? | **Defer.** |
 
 ---
 
@@ -1038,8 +1038,8 @@ All other former OQs are decided:
 
 - Mode A law: `harness/RESEARCH_AGENTS.md`, `harness/HARNESS_MAP.md`, `harness/orchestrator_runbook.md`, `harness/agent_prompts.md`, `harness/library.md`
 - Mode B law: `eng/AGENTS.md` (constraints 1–11, write allowlist, Git discipline), `eng/HARNESS_MAP.md`, `eng/runbook.md`
-- `write_abandon` + `_mark_phase_status_failed`: `scripts/kd_research/spawn_gate.py` (no snapshot guard; always mutates `phase_status`)
-- `check_ticker` vs `require_market_ticker`: `scripts/kd_research/ticker_lookup.py` (latter drops `matches`)
+- `write_abandon` + `_mark_phase_status_failed`: `packages/kd_research/spawn_gate.py` (no snapshot guard; always mutates `phase_status`)
+- `check_ticker` vs `require_market_ticker`: `packages/kd_research/ticker_lookup.py` (latter drops `matches`)
 - `scaffold(..., verify_ticker=, force=, notes=)`: `scripts/scaffold_session.py` (CLI has `--skip-ticker-check`, no `--backend`)
 - `abandon_session.py` always `return 1` on success
 - Catalog prefixes: `packages/catalog_api/client.py` `DEFAULT_ALLOW_PREFIXES` includes `data/valuation_model.json` and `registry/`

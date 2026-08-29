@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
 from packages.catalog_api.client import default_archive_root
 from packages.research_jobs.jobs import (
-    AnalyzeArchiveRootError,
     AnalyzeBusy,
     AnalyzeDiscardRefused,
     AnalyzeError,
@@ -23,7 +21,6 @@ from packages.research_jobs.jobs import (
     cancel_analyze,
     discard_analyze,
     get_analyze,
-    refuse_http_analyze,
     list_analyzes,
     reconcile_analyze_jobs,
     resume_analyze,
@@ -32,8 +29,7 @@ from packages.research_jobs.jobs import (
 
 
 def _archive() -> Path:
-    raw = os.environ.get("ARCHIVE_ROOT")
-    return Path(raw).expanduser().resolve() if raw else default_archive_root()
+    return default_archive_root()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -69,12 +65,6 @@ def main(argv: list[str] | None = None) -> int:
     root = _archive()
     try:
         if args.cmd == "start":
-            if refuse_http_analyze():
-                print(
-                    "invalid: ARCHIVE_ROOT is set and is not PROJECT_ROOT/archive",
-                    file=sys.stderr,
-                )
-                return 2
             job = start_analyze(
                 root,
                 args.ticker,
@@ -106,9 +96,6 @@ def main(argv: list[str] | None = None) -> int:
             return 0
     except AnalyzeTickerError as e:
         print(json.dumps({"status": e.status, "reason": e.reason, "matches": e.matches}))
-        return 2
-    except AnalyzeArchiveRootError as e:
-        print(f"invalid: {e}", file=sys.stderr)
         return 2
     except AnalyzeValidationError as e:
         print(f"invalid: {e}", file=sys.stderr)

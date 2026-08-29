@@ -27,10 +27,10 @@ from packages.research_jobs.paths import (
     research_jobs_root,
 )
 from packages.research_jobs.prompt import build_prompt
-from scripts.kd_research.paths import PROJECT_ROOT
-from scripts.kd_research.spawn_gate import write_abandon
-from scripts.kd_research.ticker_lookup import LookupBackend, check_ticker
-from scripts.scaffold_session import scaffold
+from packages.kd_research.paths import PROJECT_ROOT
+from packages.kd_research.scaffold import scaffold
+from packages.kd_research.spawn_gate import write_abandon
+from packages.kd_research.ticker_lookup import LookupBackend, check_ticker
 
 TERMINAL = frozenset({"complete", "failed", "cancelled"})
 JOB_NAME = "job.json"
@@ -76,10 +76,6 @@ class AnalyzeGrokMissing(AnalyzeError):
 
 
 class AnalyzeRunbookMissing(AnalyzeError):
-    pass
-
-
-class AnalyzeArchiveRootError(AnalyzeValidationError):
     pass
 
 
@@ -144,25 +140,6 @@ def _read_json(path: Path) -> dict[str, Any] | None:
     except (OSError, json.JSONDecodeError):
         return None
     return data if isinstance(data, dict) else None
-
-
-def env_archive_is_non_default(*, project_root: Path | None = None) -> bool:
-    raw = os.environ.get("ARCHIVE_ROOT")
-    if not raw or not str(raw).strip():
-        return False
-    root = project_root or PROJECT_ROOT
-    return Path(raw).expanduser().resolve() != (root / "archive").resolve()
-
-
-def refuse_http_analyze(*, project_root: Path | None = None) -> bool:
-    """True when a real Grok Analyze would split-brain vs ARCHIVE_ROOT.
-
-    Fake spawn (tests) may use a tmp ARCHIVE_ROOT; Mode A CLIs ignore it.
-    """
-    if not env_archive_is_non_default(project_root=project_root):
-        return False
-    mode = (os.environ.get("AGENT_SPAWN") or "grok").strip().lower()
-    return mode not in {"fake", "test"}
 
 
 def runbook_has_ui_scheduled_heading(project_root: Path | None = None) -> bool:
@@ -506,7 +483,6 @@ def start_analyze(
                 asof,
                 output_dir=archive_root,
                 force=False,
-                legacy=False,
                 slug=slug,
                 orchestrator_model=orch,
                 default_subagent_model=sub,
@@ -514,7 +490,7 @@ def start_analyze(
                 auto_replicate=True,
                 verify_ticker=False,
             )
-        except SystemExit as e:
+        except (ValueError, RuntimeError, FileExistsError) as e:
             raise AnalyzeValidationError(str(e)) from e
 
         session_key = session.name
@@ -541,6 +517,7 @@ def start_analyze(
             "grok_session_id": None,
             "command": None,
             "project_root": proj,
+            "archive_root": str(Path(archive_root).resolve()),
             "spawned_at": None,
             "updated_at": _utc_stamp(),
             "error": None,

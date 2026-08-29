@@ -6,7 +6,6 @@ FastAPI/Mode B schedules; Grok writes archive/research. Does not invent FV.
 from __future__ import annotations
 
 from packages.research_jobs.jobs import (
-    AnalyzeArchiveRootError,
     AnalyzeBusy,
     AnalyzeDiscardRefused,
     AnalyzeError,
@@ -19,9 +18,7 @@ from packages.research_jobs.jobs import (
     FakeAnalyzeSpawnBackend,
     cancel_analyze,
     discard_analyze,
-    env_archive_is_non_default,
     get_analyze,
-    refuse_http_analyze,
     list_analyzes,
     reconcile_analyze_jobs,
     resume_analyze,
@@ -29,7 +26,6 @@ from packages.research_jobs.jobs import (
 )
 
 __all__ = [
-    "AnalyzeArchiveRootError",
     "AnalyzeBusy",
     "AnalyzeDiscardRefused",
     "AnalyzeError",
@@ -42,9 +38,7 @@ __all__ = [
     "FakeAnalyzeSpawnBackend",
     "cancel_analyze",
     "discard_analyze",
-    "env_archive_is_non_default",
     "get_analyze",
-    "refuse_http_analyze",
     "list_analyzes",
     "reconcile_analyze_jobs",
     "resume_analyze",

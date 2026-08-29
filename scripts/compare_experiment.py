@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.compare_db import connect, db_path  # noqa: E402
+from packages.kd_research.compare_db import connect, db_path  # noqa: E402
 
 GROUPABLE = {
     "orchestrator_model",

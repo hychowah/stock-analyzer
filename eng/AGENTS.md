@@ -38,7 +38,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 6. **App state** under `apps/<name>/.local/` only. **Archive job planes** (`archive/comparisons/`, `archive/research_jobs/`) are append-only data-plane packets next to `archive/`, not app-local state.  
 7. **W1 changes** must run research unit tests, not only `eng_verify`.  
 8. Gen ≠ eval: implementer does not mark `passes: true`.  
-9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `scripts/kd_research/`, research scripts, `templates/`, root `sector_*.md` / `region_*.md`), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  
+9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `packages/kd_research/`, research scripts), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  
 10. **No commit without user agreement:** never run `git commit`, `git push`, amend, or force-push unless the user has **explicitly** asked or approved in this conversation (e.g. “commit”, “yes commit that”). Preparing a message or staging when asked is fine; silent commits are forbidden.  
 11. **Refactor when it pays — do not fear it.** Agentic coding makes refactors cheap; duplication, leaky workarounds, and unscalable structure are what compound. If a cleaner shape has clear long-term benefit (one home for a fact, a boundary that will scale, deleting a workaround), **do that refactor** rather than a local patch — even if the user only named the feature. Do **not** skip it to keep the diff small. Guardrails: write allowlist only; never rewrite `archive/research/**` or `archive/outcomes/**`; leave **one coherent, verify-green increment** (a large boundary move may be its own `feature_list` item, not a half-finished rewrite). Record what you refactored and why in `progress.md`.
 
@@ -57,22 +57,22 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 
 ## Write allowlist (default)
 
-- `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `templates/`, `harness/` (when W1), `sector_*.md` / `region_*.md` (when W1)  
+- `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `harness/` (when W1)  
 - **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
 - **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
 - **Allow append:** `archive/research_jobs/**` (Analyze control plane; never a catalog source)  
-- **Allow create:** new empty `archive/research/<T>/<new-key>/` via in-process `scaffold_session.scaffold` (`force=False`, `legacy=False`, `verify_ticker=False` after `check_ticker`)  
+- **Allow create:** new empty `archive/research/<T>/<new-key>/` via in-process `packages.kd_research.scaffold.scaffold` (`force=False`, `verify_ticker=False` after `check_ticker`)  
 - **Allow:** `registry/abandon.json` **and** `registry/phase_status.json` mutation via `spawn_gate.write_abandon` only for (a) spawn-fail-after-scaffold or (b) UI Discard of a session with **no** `meta/prediction_snapshot.json`  
 - **Deny:** `write_abandon` / `phase_status` edits when `prediction_snapshot.json` exists or `run_manifest.immutable` / status completed  
 - **Deny:** rewrite of completed `archive/research/**` and `archive/outcomes/**`  
 - **Deny:** Mode B writes of `valuation_model.json`, reports, `audit.json`, `prediction_snapshot.json`  
-- **Deny:** `scaffold(..., force=True)` / `--legacy` from Analyze
+- **Deny:** `scaffold(..., force=True)` from Analyze
 
 ## Verify
 
 ```bash
 python3 scripts/eng_verify.py
-python3 -m pytest scripts/tests/test_reserved_names.py scripts/tests/test_catalog_api.py scripts/tests/test_provenance.py -q
+python3 -m pytest packages apps/analysis_web/tests scripts/tests -q
 ```
 
 Mode A identity source of truth: **`harness/VERSION`** (stamped into every research `run_manifest` / snapshot + git SHA).

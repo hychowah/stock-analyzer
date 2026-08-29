@@ -19,7 +19,7 @@ python3 scripts/bind_library.py --ticker META --date YYYY-MM-DD
 python3 scripts/harvest_library.py --ticker META   # ops only; never from a new Mode A run
 ```
 
-Conversion is `scripts/kd_research/doc_text.py` (code). Do **not** write `extract_sidecars.py` in `S/data/compute/`.
+Conversion is `packages/kd_research/doc_text.py` (code). Do **not** write `extract_sidecars.py` in `S/data/compute/`.
 
 ## Isolation (canonical)
 

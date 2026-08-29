@@ -94,7 +94,7 @@ python3 scripts/sync_eng_fixtures.py --tickers META,JPM --dates 2026-08-03,2026-
 
 ```bash
 # Read current intentional version
-python3 -c "from scripts.kd_research.provenance import load_harness_identity; print(load_harness_identity())"
+python3 -c "from packages.kd_research.provenance import load_harness_identity; print(load_harness_identity())"
 
 # After changing research runtime: edit harness/VERSION harness_version (semver),
 # then eng_verify must see harness/VERSION in the same change set as runtime paths.

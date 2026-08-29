@@ -77,7 +77,7 @@ Examples: `research:META:2026-08-03__model-grok45`, `...__exp-prompt-v3_r2`.
 
 ## 5. SQLite schema (v1)
 
-See `scripts/kd_research/compare_db.py` (migrations embedded).
+See `packages/kd_research/compare_db.py` (migrations embedded).
 
 Tables:
 

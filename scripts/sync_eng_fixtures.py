@@ -65,7 +65,7 @@ def _export_fixture_sqlite(dest_project: Path, pairs: list[tuple[str, str]]) -> 
     """Export only fixture sessions into dest_project/archive/catalog/sqlite."""
     sys.path.insert(0, str(PROJECT_ROOT))
     from scripts.export_compare_db import export_session
-    from scripts.kd_research.compare_db import count_runs, open_db
+    from packages.kd_research.compare_db import count_runs, open_db
 
     conn = open_db(dest_project, rebuild=True)
     n_ok = 0

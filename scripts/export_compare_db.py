@@ -18,7 +18,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.build_prediction_snapshot import build_for_session  # noqa: E402
-from scripts.kd_research.compare_db import (  # noqa: E402
+from packages.kd_research.compare_db import (  # noqa: E402
     compute_run_metrics,
     count_runs,
     db_path,
@@ -29,14 +29,14 @@ from scripts.kd_research.compare_db import (  # noqa: E402
     upsert_run,
     utc_now,
 )
-from scripts.kd_research.roic_identity import thin_roic_metrics  # noqa: E402
-from scripts.kd_research.paths import (  # noqa: E402
+from packages.kd_research.roic_identity import thin_roic_metrics  # noqa: E402
+from packages.kd_research.paths import (  # noqa: E402
     iter_research_sessions,
     rel_to_project,
     resolve_session,
     run_id as make_run_id,
 )
-from scripts.kd_research.session_extract import extract_session_bundle  # noqa: E402
+from packages.kd_research.session_extract import extract_session_bundle  # noqa: E402
 
 
 def _payload_for_session(session: Path, *, refresh_snapshot: bool = True) -> dict[str, Any]:
@@ -175,11 +175,6 @@ def main() -> int:
         help="Do not rewrite meta/prediction_snapshot.json (use existing extract only)",
     )
     ap.add_argument(
-        "--archive-only",
-        action="store_true",
-        help="With --all, only archive/research (skip legacy root sessions)",
-    )
-    ap.add_argument(
         "--output-dir",
         type=Path,
         default=None,
@@ -194,9 +189,7 @@ def main() -> int:
 
     sessions: list[Path] = []
     if args.all:
-        for _t, _d, path in iter_research_sessions(
-            out, include_legacy=not args.archive_only
-        ):
+        for _t, _d, path in iter_research_sessions(out):
             sessions.append(path)
     elif args.session_dir:
         sessions.append(Path(args.session_dir))

@@ -16,8 +16,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.library import harvest_ticker  # noqa: E402
-from scripts.kd_research.paths import iter_research_sessions  # noqa: E402
+from packages.kd_research.library import harvest_ticker  # noqa: E402
+from packages.kd_research.paths import iter_research_sessions  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -33,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     tickers: list[str]
     if args.all:
         seen: set[str] = set()
-        for t, _k, _p in iter_research_sessions(args.output_dir, include_legacy=True):
+        for t, _k, _p in iter_research_sessions(args.output_dir):
             seen.add(t)
         tickers = sorted(seen)
     else:

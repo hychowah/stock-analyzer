@@ -1,5 +1,5 @@
 {
-  "harness_version": "2.22.0",
+  "harness_version": "2.25.0",
   "harness_spec": "v2",
-  "notes": "2.22.0: UI-scheduled Mode A runs (Analyze initializer already scaffolded). 2.21.0: Mode A aborts scaffold if the ticker is not a real market symbol and has no obvious match. 2.20.0: specialist spawn required. 2.19.0: ticker document library."
+  "notes": "2.25.0: live path strings + tests + ARCHIVE_ROOT callers match the 2.23/2.24 tree; leftover TEMPLATES/scripts.kd_research strings and unused test ROOT imports cleaned. 2.24.0: harness/schemas and harness/modules. 2.23.0: packages/kd_research + env-aware archive_root."
 }

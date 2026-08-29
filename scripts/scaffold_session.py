@@ -21,8 +21,6 @@ Same-day re-runs auto-allocate __rN when the bare date folder is taken (unless -
 ``--orchestrator-model`` is **required** (or env RESEARCH_ORCHESTRATOR_MODEL). It is
 stamped into meta/run_manifest.json at scaffold time so the model id never has to be
 recalled after a long context. Subagent model defaults to the orchestrator model.
-
-Legacy path (root/<TICKER>/<KEY>) is only used with --legacy.
 """
 
 from __future__ import annotations
@@ -30,226 +28,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.paths import (  # noqa: E402
-    allocate_session_key,
-    ensure_archive_tree,
-    make_session_key,
-    parse_session_key,
-    rel_to_project,
-    run_id as make_run_id,
-    session_dir_nonempty,
-    session_root,
-)
-from scripts.kd_research.phase_status import write_phase_status_skeleton  # noqa: E402
-from scripts.kd_research.provenance import (  # noqa: E402
-    capture_harness_provenance,
-    resolve_scaffold_models,
-)
-from scripts.kd_research.ticker_lookup import require_market_ticker  # noqa: E402
-
-SUBDIRS = [
-    "reports",
-    "data/compute",
-    "data/raw_sec",
-    "data/transcripts",
-    "charts",
-    "registry/handoffs",
-    "registry/raw",
-    "meta",
-]
-
-
-def _write_manifest_stub(
-    root: Path,
-    *,
-    ticker: str,
-    session_date: str,
-    session_key: str,
-    experiment_id: str | None,
-    experiment_label: str | None,
-    replicate: int | None,
-    orchestrator_model: str,
-    default_subagent_model: str,
-    notes: str | None,
-    layout: str,
-) -> Path:
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    prov = capture_harness_provenance()
-    rid = make_run_id(ticker, session_key)
-    manifest: dict[str, Any] = {
-        "schema_version": 2,
-        "run_id": rid,
-        "product": "research",
-        "ticker": ticker.upper(),
-        "session_date": session_date,
-        "session_key": session_key,
-        "created_at": now,
-        "completed_at": None,
-        "harness_version": prov.get("harness_version"),
-        "harness_spec": prov.get("harness_spec") or "v2",
-        "paths": {
-            "session_root": rel_to_project(root),
-            "reports": "reports/",
-            "valuation": "data/valuation_model.json",
-            "audit": "registry/audit.json",
-            "prediction_snapshot": "meta/prediction_snapshot.json",
-        },
-        "status": "scaffolded",
-        "audit_verdict": None,
-        "immutable": False,
-        "layout": layout,
-        "experiment_id": experiment_id,
-        "experiment_label": experiment_label or experiment_id,
-        "replicate": replicate,
-        "harness_git_sha": prov.get("harness_git_sha") or "unknown",
-        "harness_dirty": prov.get("harness_dirty"),
-        "agents_md_sha256": prov.get("agents_md_sha256"),
-        "research_agents_sha256": prov.get("research_agents_sha256"),
-        "prompts_sha256": prov.get("prompts_sha256"),
-        "version_file_sha256": prov.get("version_file_sha256"),
-        "orchestrator_model": orchestrator_model,
-        "default_subagent_model": default_subagent_model,
-        "model_map": None,
-        "temperature": None,
-        "seed": None,
-        "notes": notes,
-    }
-    path = root / "meta" / "run_manifest.json"
-    path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return path
-
-
-def _write_session_isolation(
-    root: Path,
-    *,
-    ticker: str,
-    session_date: str,
-    session_key: str,
-) -> Path:
-    """Default: share freely inside S/; prior sessions must not feed valuation."""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    payload = {
-        "schema_version": 1,
-        "mode": "isolated",
-        "ticker": ticker.upper(),
-        "session_date": session_date,
-        "session_key": session_key,
-        "created_at": now,
-        "allow_prior_session_keys": [],
-        "rules": {
-            "intra_session_share": True,
-            "prior_valuation_as_input": False,
-            "prior_for_post_audit_compare": True,
-            "library_bind_into_session": True,
-            "library_direct_read": False,
-            "prior_session_documents_as_input": False,
-        },
-        "notes": (
-            "Agents within this session share registry/handoffs/data. "
-            "Do not open or list other session_keys under archive/research/ "
-            "(including yesterday) unless the user explicitly resumes that folder "
-            "or asks for post-finalize compare. "
-            "Prior FV/MoS/probs/WACC/thesis are not inputs to any phase. "
-            "Filings and transcripts for this run live under S/data/raw_sec and "
-            "S/data/transcripts (bound by orchestrator code). Do not mine other "
-            "archive trees for documents or judgments."
-        ),
-    }
-    path = root / "registry" / "session_isolation.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return path
-
-
-def scaffold(
-    ticker: str,
-    session_date: str,
-    output_dir: str | None = None,
-    force: bool = False,
-    *,
-    legacy: bool = False,
-    slug: str | None = None,
-    experiment_id: str | None = None,
-    experiment_label: str | None = None,
-    replicate: int | None = None,
-    orchestrator_model: str | None = None,
-    default_subagent_model: str | None = None,
-    notes: str | None = None,
-    auto_replicate: bool = True,
-    verify_ticker: bool = False,
-    ticker_backend: Any | None = None,
-) -> Path:
-    try:
-        orch_id, sub_id = resolve_scaffold_models(orchestrator_model, default_subagent_model)
-    except ValueError as e:
-        raise SystemExit(str(e)) from e
-
-    if verify_ticker:
-        try:
-            ticker = require_market_ticker(ticker, backend=ticker_backend)
-        except ValueError as e:
-            raise SystemExit(f"TICKER CHECK ABORTED: {e}") from e
-        except RuntimeError as e:
-            raise SystemExit(f"TICKER CHECK ABORTED: {e}") from e
-
-    # Allow passing full session_key as --date for convenience
-    if "__" in session_date and slug is None:
-        session_date, slug = parse_session_key(session_date)
-
-    if not legacy:
-        ensure_archive_tree(output_dir)
-    prefer = "legacy" if legacy else "archive"
-
-    if slug:
-        session_key = make_session_key(session_date, slug)
-    else:
-        session_key = allocate_session_key(
-            ticker,
-            session_date,
-            None,
-            output_dir=output_dir,
-            prefer=prefer,
-            auto_replicate=auto_replicate and not force,
-        )
-
-    date_only, _ = parse_session_key(session_key)
-    root = session_root(ticker, session_key, output_dir, prefer=prefer)
-
-    if session_dir_nonempty(root) and not force:
-        raise SystemExit(
-            f"Refusing to overwrite existing session folder: {root}\n"
-            "Pass a free --slug, omit --slug for auto __rN on same day, "
-            "or --force only for broken empty scaffolds."
-        )
-
-    for sub in SUBDIRS:
-        (root / sub).mkdir(parents=True, exist_ok=True)
-    write_phase_status_skeleton(root, ticker, date_only)
-    _write_session_isolation(
-        root,
-        ticker=ticker,
-        session_date=date_only,
-        session_key=session_key,
-    )
-    _write_manifest_stub(
-        root,
-        ticker=ticker,
-        session_date=date_only,
-        session_key=session_key,
-        experiment_id=experiment_id,
-        experiment_label=experiment_label,
-        replicate=replicate,
-        orchestrator_model=orch_id,
-        default_subagent_model=sub_id,
-        notes=notes,
-        layout="legacy" if legacy else "archive",
-    )
-    return root
+from packages.kd_research.scaffold import SUBDIRS, scaffold  # noqa: E402
 
 
 def main() -> None:
@@ -308,13 +90,8 @@ def main() -> None:
     ap.add_argument(
         "--output-dir",
         default=None,
-        help="Project root override (default: workspace root). "
-        "Sessions are written under <root>/archive/research/ unless --legacy.",
-    )
-    ap.add_argument(
-        "--legacy",
-        action="store_true",
-        help="Write to root/<TICKER>/<KEY> instead of archive/research/ (tests/compat).",
+        help="Project root or archive path override (default: ARCHIVE_ROOT or "
+        "<workspace>/archive).",
     )
     ap.add_argument(
         "--no-auto-replicate",
@@ -328,22 +105,24 @@ def main() -> None:
         help="Skip market-ticker lookup (tests/offline only). New Mode A runs must not pass this.",
     )
     args = ap.parse_args()
-    root = scaffold(
-        args.ticker,
-        args.date,
-        args.output_dir,
-        args.force,
-        legacy=args.legacy,
-        slug=args.slug,
-        experiment_id=args.experiment_id,
-        experiment_label=args.experiment_label,
-        replicate=args.replicate,
-        orchestrator_model=args.orchestrator_model,
-        default_subagent_model=args.default_subagent_model,
-        notes=args.notes,
-        auto_replicate=not args.no_auto_replicate,
-        verify_ticker=not args.skip_ticker_check,
-    )
+    try:
+        root = scaffold(
+            args.ticker,
+            args.date,
+            args.output_dir,
+            args.force,
+            slug=args.slug,
+            experiment_id=args.experiment_id,
+            experiment_label=args.experiment_label,
+            replicate=args.replicate,
+            orchestrator_model=args.orchestrator_model,
+            default_subagent_model=args.default_subagent_model,
+            notes=args.notes,
+            auto_replicate=not args.no_auto_replicate,
+            verify_ticker=not args.skip_ticker_check,
+        )
+    except (ValueError, RuntimeError, FileExistsError) as e:
+        raise SystemExit(str(e)) from e
     sk = root.name
     man_path = root / "meta" / "run_manifest.json"
     man = json.loads(man_path.read_text(encoding="utf-8")) if man_path.is_file() else {}

@@ -19,14 +19,14 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.paths import (  # noqa: E402
+from packages.kd_research.paths import (  # noqa: E402
     iter_research_sessions,
     rel_to_project,
     resolve_session,
     run_id as make_run_id,
 )
-from scripts.kd_research.provenance import capture_harness_provenance  # noqa: E402
-from scripts.kd_research.session_extract import extract_session_bundle, load_json  # noqa: E402
+from packages.kd_research.provenance import capture_harness_provenance  # noqa: E402
+from packages.kd_research.session_extract import extract_session_bundle, load_json  # noqa: E402
 
 
 _PROVENANCE_IDENTITY_KEYS = (
@@ -229,13 +229,13 @@ def main() -> int:
     ap.add_argument("--ticker")
     ap.add_argument("--date", help="Session date or session_key (YYYY-MM-DD or YYYY-MM-DD__slug)")
     ap.add_argument("--session-dir")
-    ap.add_argument("--all", action="store_true", help="All discovered sessions (archive + legacy)")
+    ap.add_argument("--all", action="store_true", help="All archive/research sessions")
     ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
     results = []
     if args.all:
-        sessions = iter_research_sessions(include_legacy=True)
+        sessions = iter_research_sessions()
         for _t, _d, path in sessions:
             results.append(build_for_session(path, force=args.force))
     elif args.session_dir:

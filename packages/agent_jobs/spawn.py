@@ -215,11 +215,16 @@ class GrokSpawnBackend:
             session_uuid,
         ]
         log_handle = open(log_path, "ab")  # noqa: SIM115 — kept for process lifetime
+        env = os.environ.copy()
+        archive = job.get("archive_root")
+        if archive:
+            env["ARCHIVE_ROOT"] = str(archive)
         kwargs: dict[str, Any] = {
             "stdout": log_handle,
             "stderr": subprocess.STDOUT,
             "cwd": cwd,
             "stdin": subprocess.DEVNULL,
+            "env": env,
         }
         if sys.platform == "win32":
             new_group = int(getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200))

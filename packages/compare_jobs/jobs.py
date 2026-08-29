@@ -25,7 +25,7 @@ from packages.compare_jobs.paths import (
     comparisons_root,
     parse_compare_id,
 )
-from scripts.kd_research.paths import PROJECT_ROOT, resolve_session
+from packages.kd_research.paths import PROJECT_ROOT, resolve_session
 
 TERMINAL = frozenset({"complete", "failed", "cancelled"})
 SYNTHESIS_NAME = "99_synthesis.md"

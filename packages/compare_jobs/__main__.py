@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -23,8 +22,7 @@ from packages.compare_jobs.jobs import (
 
 
 def _archive() -> Path:
-    raw = os.environ.get("ARCHIVE_ROOT")
-    return Path(raw).expanduser().resolve() if raw else default_archive_root()
+    return default_archive_root()
 
 
 def main(argv: list[str] | None = None) -> int:

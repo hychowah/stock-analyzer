@@ -32,7 +32,7 @@ Year-readers write `registry/raw/fdd_year_FY{yyyy}.json`. They see **one year on
 
 ## Footnotes
 
-Prefer `scripts/kd_research/note_extract.py`:
+Prefer `packages/kd_research/note_extract.py`:
 
 - `split_notes` / `find_notes_for_checklist` / `build_footnote_items` on annual report text in `data/raw_sec/`.
 - Default checklist (standard/growth): revenue disaggregation, segment, SBC, debt/leases, contingencies/legal (Item 3 fallback), income taxes, commitments, related-party/dual-class.
@@ -51,7 +51,7 @@ From Item 1 + MD&A priority/outlook language across stored annuals:
 ## Management scorecard
 
 1. Collect promises from prior EX-99.1 outlooks, MD&A, and (secondary) transcripts.
-2. Join to actuals via `scripts/kd_research/promise_vs_actual.py` when numeric.
+2. Join to actuals via `packages/kd_research/promise_vs_actual.py` when numeric.
 3. Label every row `source_type`: `filing` | `transcript` | `filing+transcript`.
 4. Soft vision milestones → `too_early` / narrative shift — no false precision.
 5. `credibility_summary` states pattern + `valuation_implication` for Agent 5/2.5 (widen range, raise bear weight, trust guides more, etc.).

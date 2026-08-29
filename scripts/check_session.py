@@ -3,7 +3,7 @@
 
 This validates STRUCTURE and PROVENANCE, not financial truth:
   - required files exist (core set, or full set with --full)
-  - JSON files parse and validate against templates/*.schema.json
+  - JSON files parse and validate against harness/schemas/*.schema.json
     (when the `jsonschema` package is importable; otherwise hand-rolled
     key checks run and schema validation reports SKIPPED)
   - judgment numbers carry a non-empty `rationale`
@@ -29,13 +29,13 @@ if any check FAILs (WARN does not fail the process). Financial cross-checks (rep
 external fact-checking) are the audit agent's job, not this script's.
 
 Tip: run with the yfinance venv python for full schema validation:
-  yfinance-market-mcp/.venv/bin/python scripts/check_session.py ...
+  vendor/mcp/yfinance-market-mcp/.venv/bin/python scripts/check_session.py ...
 
 Usage:
     python3 scripts/check_session.py --ticker JPM --date 2026-07-25 [--full]
     python3 scripts/check_session.py --session-dir archive/research/JPM/2026-07-25 [--full]
 
-Resolves --ticker/--date via archive/research first, then legacy root/<TICKER>/<DATE>.
+Resolves --ticker/--date under archive/research/<TICKER>/<SESSION_KEY>/.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-TEMPLATES = PROJECT_ROOT / "templates"
+SCHEMAS = PROJECT_ROOT / "harness" / "schemas"
 
 # Paths into other research sessions (cross-session contamination signal)
 _OTHER_SESSION_PATH_RE = re.compile(
@@ -144,7 +144,7 @@ def check_file(session: Path, rel: str, schema_name: str, required_keys: list[st
         return
     record("PASS", f"exists+parse: {rel}")
 
-    schema_path = TEMPLATES / f"{schema_name}.schema.json"
+    schema_path = SCHEMAS / f"{schema_name}.schema.json"
     if jsonschema is not None and schema_path.exists():
         schema = json.loads(schema_path.read_text())
         errors = sorted(jsonschema.Draft7Validator(schema).iter_errors(data), key=lambda e: list(e.path))
@@ -154,7 +154,7 @@ def check_file(session: Path, rel: str, schema_name: str, required_keys: list[st
         else:
             record("PASS", f"schema: {rel}")
     else:
-        reason = "jsonschema not installed (run with yfinance-market-mcp/.venv/bin/python)" if jsonschema is None else f"no template {schema_path.name}"
+        reason = "jsonschema not installed (run with vendor/mcp/yfinance-market-mcp/.venv/bin/python)" if jsonschema is None else f"no schema {schema_path.name}"
         record("SKIPPED", f"schema: {rel}", reason)
         missing = [k for k in required_keys if k not in data]
         if missing:
@@ -195,7 +195,7 @@ def check_identity(session: Path, ticker: str, session_date: str) -> None:
     # session_date in JSON is as-of YYYY-MM-DD; folder may be date__slug
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.paths import parse_session_key  # noqa: WPS433
+    from packages.kd_research.paths import parse_session_key  # noqa: WPS433
 
     asof, _ = parse_session_key(session_date)
     if sc.get("session_date") and sc["session_date"] != asof and sc["session_date"] != session_date:
@@ -209,7 +209,7 @@ def check_identity(session: Path, ticker: str, session_date: str) -> None:
     if isinstance(conf, (int, float)) and conf < 0.70:
         if str(PROJECT_ROOT) not in sys.path:
             sys.path.insert(0, str(PROJECT_ROOT))
-        from scripts.kd_research.annuals import (  # noqa: WPS433
+        from packages.kd_research.annuals import (  # noqa: WPS433
             load_run_manifest_version,
             parse_semver,
         )
@@ -247,7 +247,7 @@ def check_risk_bridge(session: Path) -> None:
         return
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import check_scenario_probability_keys  # noqa: WPS433
+    from packages.kd_research.gates import check_scenario_probability_keys  # noqa: WPS433
 
     probs = data.get("scenario_probabilities")
     for status, check, detail in check_scenario_probability_keys(probs, extra_key_severity="WARN"):
@@ -270,7 +270,7 @@ def check_valuation_mos_units(session: Path) -> None:
     """Soft/conditional MoS unit checks — WARN does not fail the process."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import check_valuation_decision_quality  # noqa: WPS433
+    from packages.kd_research.gates import check_valuation_decision_quality  # noqa: WPS433
 
     for status, check, detail in check_valuation_decision_quality(session):
         record(status, check, detail)
@@ -336,8 +336,8 @@ HANDOFF_MIN_BYTES = 300
 def check_handoffs(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import check_handoff_headers  # noqa: WPS433
-    from scripts.kd_research.operating_path import session_enforces_1d  # noqa: WPS433
+    from packages.kd_research.gates import check_handoff_headers  # noqa: WPS433
+    from packages.kd_research.operating_path import session_enforces_1d  # noqa: WPS433
 
     d = session / "registry/handoffs"
     if not d.is_dir():
@@ -432,7 +432,7 @@ def check_market_context(session: Path) -> None:
         record("FAIL", "market_context signals", "need non-empty signals[]")
         return
 
-    schema_path = TEMPLATES / "market_context.schema.json"
+    schema_path = SCHEMAS / "market_context.schema.json"
     if jsonschema is not None and schema_path.exists():
         schema = json.loads(schema_path.read_text())
         errors = sorted(jsonschema.Draft7Validator(schema).iter_errors(data), key=lambda e: list(e.path))
@@ -443,9 +443,9 @@ def check_market_context(session: Path) -> None:
         record("PASS", "schema: market_context")
     else:
         reason = (
-            "jsonschema not installed (run with yfinance-market-mcp/.venv/bin/python)"
+            "jsonschema not installed (run with vendor/mcp/yfinance-market-mcp/.venv/bin/python)"
             if jsonschema is None
-            else f"no template {schema_path.name}"
+            else f"no schema {schema_path.name}"
         )
         record("SKIPPED", "schema: market_context", reason)
 
@@ -462,7 +462,7 @@ def check_market_context(session: Path) -> None:
         return
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import (  # noqa: WPS433
+    from packages.kd_research.gates import (  # noqa: WPS433
         check_market_context_hooks_intensity,
         validate_hooks_list,
     )
@@ -531,7 +531,7 @@ def check_research_brief(session: Path) -> None:
         record("FAIL", "research_brief rationale", "need non-empty rationale (>=20 chars)")
         return
 
-    schema_path = TEMPLATES / "research_brief.schema.json"
+    schema_path = SCHEMAS / "research_brief.schema.json"
     if jsonschema is not None and schema_path.exists():
         schema = json.loads(schema_path.read_text())
         errors = sorted(jsonschema.Draft7Validator(schema).iter_errors(data), key=lambda e: list(e.path))
@@ -542,9 +542,9 @@ def check_research_brief(session: Path) -> None:
         record("PASS", "schema: research_brief")
     else:
         reason = (
-            "jsonschema not installed (run with yfinance-market-mcp/.venv/bin/python)"
+            "jsonschema not installed (run with vendor/mcp/yfinance-market-mcp/.venv/bin/python)"
             if jsonschema is None
-            else f"no template {schema_path.name}"
+            else f"no schema {schema_path.name}"
         )
         record("SKIPPED", "schema: research_brief", reason)
 
@@ -602,8 +602,8 @@ def check_phase_status(session: Path) -> None:
     """
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.operating_path import designed_phase_ids  # noqa: WPS433
-    from scripts.kd_research.phase_status import PHASE_IDS  # noqa: WPS433
+    from packages.kd_research.operating_path import designed_phase_ids  # noqa: WPS433
+    from packages.kd_research.phase_status import PHASE_IDS  # noqa: WPS433
 
     designed = designed_phase_ids(session)
 
@@ -685,7 +685,7 @@ def check_phase_status(session: Path) -> None:
         record("FAIL", "phase_status phase coverage", f"missing phase_id(s): {missing_phases}")
         return
 
-    schema_path = TEMPLATES / "phase_status.schema.json"
+    schema_path = SCHEMAS / "phase_status.schema.json"
     if jsonschema is not None and schema_path.exists():
         schema = json.loads(schema_path.read_text())
         errors = sorted(jsonschema.Draft7Validator(schema).iter_errors(data), key=lambda e: list(e.path))
@@ -696,9 +696,9 @@ def check_phase_status(session: Path) -> None:
         record("PASS", "schema: phase_status")
     else:
         reason = (
-            "jsonschema not installed (run with yfinance-market-mcp/.venv/bin/python)"
+            "jsonschema not installed (run with vendor/mcp/yfinance-market-mcp/.venv/bin/python)"
             if jsonschema is None
-            else f"no template {schema_path.name}"
+            else f"no schema {schema_path.name}"
         )
         record("SKIPPED", "schema: phase_status", reason)
 
@@ -710,8 +710,8 @@ def check_phase_status(session: Path) -> None:
 
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import check_phase_status_disk  # noqa: WPS433
-    from scripts.kd_research.phase_graph import check_phase_status_graph  # noqa: WPS433
+    from packages.kd_research.gates import check_phase_status_disk  # noqa: WPS433
+    from packages.kd_research.phase_graph import check_phase_status_graph  # noqa: WPS433
 
     for status, check, detail in check_phase_status_disk(session, data):
         record(status, check, detail)
@@ -723,7 +723,7 @@ def check_filing_deep_dive_hooks_session(session: Path) -> None:
     """Machine gate for F8: valuation must consume FDD when deep dive exists."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import check_filing_deep_dive_hooks  # noqa: WPS433
+    from packages.kd_research.gates import check_filing_deep_dive_hooks  # noqa: WPS433
 
     for status, check, detail in check_filing_deep_dive_hooks(session):
         record(status, check, detail)
@@ -732,7 +732,7 @@ def check_filing_deep_dive_hooks_session(session: Path) -> None:
 def check_agent4_isolation_session(session: Path, *, full: bool = False) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.gates import check_agent4_isolation  # noqa: WPS433
+    from packages.kd_research.gates import check_agent4_isolation  # noqa: WPS433
 
     for status, check, detail in check_agent4_isolation(session, full=full):
         record(status, check, detail)
@@ -742,7 +742,7 @@ def check_operating_path(session: Path) -> None:
     """New-runtime 1d brief + hooks; SKIPPED on legacy/slim."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.operating_path import (  # noqa: WPS433
+    from packages.kd_research.operating_path import (  # noqa: WPS433
         check_1d_complete,
         check_operating_path_hooks,
         session_enforces_1d,
@@ -764,7 +764,7 @@ def check_operating_path(session: Path) -> None:
 def check_wave3_epistemology_session(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.epistemology import check_wave3_epistemology  # noqa: WPS433
+    from packages.kd_research.epistemology import check_wave3_epistemology  # noqa: WPS433
 
     for status, check, detail in check_wave3_epistemology(session):
         record(status, check, detail)
@@ -773,7 +773,7 @@ def check_wave3_epistemology_session(session: Path) -> None:
 def check_wave4_destock_session(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.epistemology import check_wave4_destock_default  # noqa: WPS433
+    from packages.kd_research.epistemology import check_wave4_destock_default  # noqa: WPS433
 
     for status, check, detail in check_wave4_destock_default(session):
         record(status, check, detail)
@@ -782,7 +782,7 @@ def check_wave4_destock_session(session: Path) -> None:
 def check_wave2_decision_session(session: Path) -> None:
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.decision import check_wave2_decision  # noqa: WPS433
+    from packages.kd_research.decision import check_wave2_decision  # noqa: WPS433
 
     for status, check, detail in check_wave2_decision(session):
         record(status, check, detail)
@@ -792,7 +792,7 @@ def check_decision_quality_session(session: Path) -> None:
     """Wave 1 decision-quality gates; SKIPPED on harness < 2.9.0."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.decision_quality import (  # noqa: WPS433
+    from packages.kd_research.decision_quality import (  # noqa: WPS433
         check_wave1_decision_quality,
     )
 
@@ -804,7 +804,7 @@ def check_roic_identity_session(session: Path) -> None:
     """New-runtime owner-earnings ROIC identity; SKIPPED on legacy."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.roic_identity import (  # noqa: WPS433
+    from packages.kd_research.roic_identity import (  # noqa: WPS433
         check_roic_identity,
         session_is_roic_runtime,
     )
@@ -826,7 +826,7 @@ def check_library_session(session: Path, *, full: bool = False) -> None:
     """Library bind / freshness / no live-library citations. SKIPPED on legacy."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.library import (  # noqa: WPS433
+    from packages.kd_research.library import (  # noqa: WPS433
         check_library_gates,
         check_library_path_citations,
         check_transcript_freshness,
@@ -854,7 +854,7 @@ def check_spawn_session(session: Path) -> None:
     """Specialist spawn ledger / abandon. SKIPPED on harness < 2.20.0."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.spawn_gate import (  # noqa: WPS433
+    from packages.kd_research.spawn_gate import (  # noqa: WPS433
         ABANDON_REL,
         SPAWNS_REL,
         check_abandon,
@@ -897,7 +897,7 @@ def check_street_bind_session(session: Path) -> None:
     """New-runtime Street fetch + Agent 5 calibration bind; SKIPPED on legacy."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.street_bind import (  # noqa: WPS433
+    from packages.kd_research.street_bind import (  # noqa: WPS433
         check_street_bind,
         check_street_fetch,
         session_enforces_street,
@@ -926,8 +926,8 @@ def check_year_dives(session: Path) -> None:
     """New-runtime year-reader files + excerpt-in-source; SKIPPED on legacy/slim."""
     if str(PROJECT_ROOT) not in sys.path:
         sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.kd_research.annuals import session_enforces_year_dives, year_dive_files
-    from scripts.kd_research.gates import check_1c_year_dive_complete
+    from packages.kd_research.annuals import session_enforces_year_dives, year_dive_files
+    from packages.kd_research.gates import check_1c_year_dive_complete
 
     files = year_dive_files(session)
     if not session_enforces_year_dives(session) and not files:
@@ -1169,7 +1169,7 @@ def check_meta_artifacts(session: Path) -> None:
                 )
             # LLM model identity: required at scaffold for active runs; WARN for
             # legacy completed sessions that pre-date enforcement.
-            from scripts.kd_research.gates import check_llm_model_identity  # noqa: WPS433
+            from packages.kd_research.gates import check_llm_model_identity  # noqa: WPS433
 
             legacy_done = bool(data.get("immutable")) or str(data.get("status") or "") in {
                 "completed",
@@ -1249,13 +1249,13 @@ def main() -> int:
     elif args.ticker and args.date:
         if str(PROJECT_ROOT) not in sys.path:
             sys.path.insert(0, str(PROJECT_ROOT))
-        from scripts.kd_research.paths import resolve_session  # noqa: WPS433
+        from packages.kd_research.paths import resolve_session  # noqa: WPS433
 
         resolved = resolve_session(args.ticker, args.date)
         if resolved is None:
             print(
                 f"Session folder not found for {args.ticker.upper()} {args.date} "
-                f"(checked archive/research/ and legacy root/)"
+                f"(checked archive/research/)"
             )
             return 2
         session = resolved
@@ -1291,13 +1291,13 @@ def main() -> int:
         check_roic_identity_session(session)
         check_decision_quality_session(session)
         check_wave2_decision_session(session)
-        from scripts.kd_research.decision import check_wave6_reopen  # noqa: WPS433
+        from packages.kd_research.decision import check_wave6_reopen  # noqa: WPS433
 
         for status, check, detail in check_wave6_reopen(session):
             record(status, check, detail)
         check_wave3_epistemology_session(session)
         check_wave4_destock_session(session)
-        from scripts.kd_research.cash_quality import check_cash_quality  # noqa: WPS433
+        from packages.kd_research.cash_quality import check_cash_quality  # noqa: WPS433
 
         for status, check, detail in check_cash_quality(session):
             record(status, check, detail)

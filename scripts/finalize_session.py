@@ -17,9 +17,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from scripts.build_prediction_snapshot import build_for_session  # noqa: E402
 from scripts.export_compare_db import export_session  # noqa: E402
-from scripts.kd_research.compare_db import open_db  # noqa: E402
-from scripts.kd_research.paths import resolve_session  # noqa: E402
-from scripts.rebuild_catalog import patch_run_into_catalog, rebuild  # noqa: E402
+from packages.kd_research.compare_db import open_db  # noqa: E402
+from packages.kd_research.paths import resolve_session  # noqa: E402
+from packages.kd_research.catalog_rebuild import patch_run_into_catalog, rebuild  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,11 +32,6 @@ def main(argv: list[str] | None = None) -> int:
         "--full-catalog-rebuild",
         action="store_true",
         help="Full disk scan rebuild instead of O(1) patch (recovery / migration)",
-    )
-    ap.add_argument(
-        "--include-legacy",
-        action="store_true",
-        help="With full rebuild, also scan legacy root sessions",
     )
     args = ap.parse_args(argv)
 
@@ -55,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Session not found: {session}", file=sys.stderr)
         return 2
 
-    from scripts.kd_research.spawn_gate import (  # noqa: WPS433
+    from packages.kd_research.spawn_gate import (  # noqa: WPS433
         check_spawn_discipline,
         session_enforces_spawn,
         session_is_abandoned,
@@ -101,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
         ticker = str(row.get("ticker") or session.parent.name).upper()
         session_key = str(row.get("session_key") or session.name)
         if args.full_catalog_rebuild:
-            result = rebuild(include_legacy=bool(args.include_legacy))
+            result = rebuild()
         else:
             result = patch_run_into_catalog(ticker, session_key, session)
         print(

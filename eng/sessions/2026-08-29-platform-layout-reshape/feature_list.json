@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "A",
+      "description": "packages/kd_research + one archive root + tests colocated + delete scripts/_legacy",
+      "passes": false,
+      "verify": "python3 scripts/eng_verify.py; grep empty for from scripts.kd_research, include_legacy, ROOT_RESERVED_NAMES, refuse_http_analyze, scripts/_legacy; harness/VERSION 2.23.0"
+    },
+    {
+      "id": "B",
+      "description": "Mode A schemas → harness/schemas/; sector/region modules → harness/modules/",
+      "passes": false,
+      "verify": "python3 scripts/eng_verify.py; no root sector_*.md or templates/*.schema.json; harness/VERSION 2.24.0"
+    },
+    {
+      "id": "C",
+      "description": "MCP trees → vendor/mcp/; point .mcp.json at new paths",
+      "passes": false,
+      "verify": "python3 scripts/eng_verify.py; .mcp.json commands resolve; no harness VERSION bump"
+    }
+  ]
+}

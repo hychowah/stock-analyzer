@@ -134,12 +134,12 @@ Details: `harness/agent_prompts.md` conventions + `harness/exemplars/`.
 | Dual-mode router | root `AGENTS.md` |
 | Orchestrator checklist | `harness/orchestrator_runbook.md` |
 | Prompt templates | `harness/agent_prompts.md` |
-| Schemas | `templates/*.schema.json` |
+| Schemas | `harness/schemas/*.schema.json` |
 | Structural check | `scripts/check_session.py --full` |
 | Phase preflight | `scripts/preflight_phase.py` |
 | Session acceptance | `check_session.py --full --write-acceptance` |
-| Sector methodology | `sector_*.md` (advisory) |
-| Region methodology | `region_*.md` (advisory) |
+| Sector methodology | `harness/modules/sector_*.md` (advisory) |
+| Region methodology | `harness/modules/region_*.md` (advisory) |
 | Filing deep-dive method | `harness/filing_deep_dive.md` |
 | Ticker document library | `harness/library.md` |
 | Resume map design | `harness/design_phase_status_and_exemplars.md` |

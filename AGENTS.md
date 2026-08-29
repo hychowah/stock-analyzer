@@ -45,8 +45,8 @@ python3 -m packages.research_jobs start --ticker COHR   # UI-scheduled Mode A (a
 | Phase map / preflight table | `harness/HARNESS_MAP.md` |
 | Subagent prompts | `harness/agent_prompts.md` |
 | Orchestrator checklist | `harness/orchestrator_runbook.md` |
-| Schemas | `templates/*.schema.json` |
-| Sector / region modules (advisory) | `sector_*.md`, `region_*.md` |
+| Schemas | `harness/schemas/*.schema.json` |
+| Sector / region modules (advisory) | `harness/modules/sector_*.md`, `harness/modules/region_*.md` |
 | **Mode B law** | `eng/AGENTS.md` |
 | Catalog read API | `packages/catalog_api/` |
 | Analysis UI | `apps/analysis_web/` |

@@ -19,8 +19,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.paths import resolve_session  # noqa: E402
-from scripts.kd_research.spawn_gate import record_spawn_event  # noqa: E402
+from packages.kd_research.paths import resolve_session  # noqa: E402
+from packages.kd_research.spawn_gate import record_spawn_event  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:

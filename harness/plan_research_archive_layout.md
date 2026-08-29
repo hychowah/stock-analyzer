@@ -395,7 +395,7 @@ Rebuildable anytime from disk via `scripts/rebuild_catalog.py` (scan `archive/re
 
 ## 8. Path resolution (code changes)
 
-### 8.1 New constants / helpers (`scripts/kd_research/paths.py`)
+### 8.1 New constants / helpers (`packages/kd_research/paths.py`)
 
 ```python
 ARCHIVE_ROOT = PROJECT_ROOT / "archive"

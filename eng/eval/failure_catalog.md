@@ -5,7 +5,7 @@ Systemic issues that should become eng work (W1–W5), not one-off chat fixes.
 | ID | Symptom | Suspected cause | Work type |
 |----|---------|-----------------|-----------|
 | F1 | Mode B files never in git | Top-level folder named `build/` (gitignored) | W5 |
-| F2 | Product dir scanned as ticker | `ROOT_RESERVED_NAMES` incomplete | W2 |
+| F2 | Product dir scanned as ticker | `TICKER_BLOCKLIST` incomplete | W2 |
 | F3 | UI shows empty after finalize | Catalog not exported / sqlite missing | W2 |
 | F4 | UI crashes mid-list | Non-atomic index rewrite / no readonly open | W2 |
 | F5 | Path traversal via report deep-link | Missing open_artifact containment | W2/W4 |

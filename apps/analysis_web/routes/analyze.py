@@ -25,7 +25,6 @@ from packages.research_jobs.jobs import (
     discard_analyze,
     get_analyze,
     list_analyzes,
-    refuse_http_analyze,
     resume_analyze,
     start_analyze,
 )
@@ -57,12 +56,6 @@ def _error(request: Request, message: str, status: int, title: str = "Analyze") 
         message=message,
     )
     return HTMLResponse(html, status_code=status)
-
-
-def _gate_archive() -> str | None:
-    if refuse_http_analyze():
-        return "ARCHIVE_ROOT is set and is not PROJECT_ROOT/archive. Analyze is not supported against a non-default archive."
-    return None
 
 
 @router.get("/analyze", response_class=HTMLResponse)
@@ -106,9 +99,6 @@ def post_analyze_new(
     notes: str = Form(""),
     ingest_library: str = Form("0"),
 ) -> Response:
-    gate = _gate_archive()
-    if gate:
-        return _error(request, gate, 400)
     try:
         job = start_analyze(
             archive_root(),

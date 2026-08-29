@@ -88,7 +88,7 @@ FAIL → fix upstream; do **not** spawn a subagent for the wrong phase (e.g. val
    - Inject path into Agent 4 / 5 / 12 prompts.  
    - Do **not** re-freeze mid-Phase 2. Agents use `close` for “current price” / MoS; history series still from `prices_*.csv`.
 
-11. **Phase 1c (after 2b; may overlap 2d):** list annuals (`scripts/kd_research/annuals.py`). Spawn **one year-reader per annual** (isolated prompt; cleaned `.txt` path only — do not paste the filing). After `registry/raw/fdd_year_*.json` exist, run excerpt-in-source (`excerpt_check.py`) — **do not** run `--mode complete` yet (that gate needs FDD + `verify_rechecks`). Then spawn **2e merger** only. Then `preflight --phase 1c --mode complete`. Confirm `registry/filing_deep_dive.json` (plus `verify_rechecks`) before Agent 5. After Agent 5: valuation must have non-empty `filing_deep_dive_hooks` before Phase 2.5 (`preflight --phase 2_5` / `2_parallel --mode complete`). Legacy sessions without year-files: FDD alone still completes 1c.
+11. **Phase 1c (after 2b; may overlap 2d):** list annuals (`packages/kd_research/annuals.py`). Spawn **one year-reader per annual** (isolated prompt; cleaned `.txt` path only — do not paste the filing). After `registry/raw/fdd_year_*.json` exist, run excerpt-in-source (`excerpt_check.py`) — **do not** run `--mode complete` yet (that gate needs FDD + `verify_rechecks`). Then spawn **2e merger** only. Then `preflight --phase 1c --mode complete`. Confirm `registry/filing_deep_dive.json` (plus `verify_rechecks`) before Agent 5. After Agent 5: valuation must have non-empty `filing_deep_dive_hooks` before Phase 2.5 (`preflight --phase 2_5` / `2_parallel --mode complete`). Legacy sessions without year-files: FDD alone still completes 1c.
 
 11b. **Phase 1d (after 1b+1c; new runtime ≥ 2.6.0):** spawn `1d_rev` ∥ `1d_ind` ∥ `1d_ol` (gather only). Persist `registry/raw/oppath_*.json`. Then spawn `1d_merge` only. `preflight --phase 1d --mode complete`. Confirm `registry/operating_path_brief.json` before Agent 5. Workers must not write FV or 8-year paths. Do not average flatten vs destock. Legacy sessions without 1d: skip.
 
@@ -151,9 +151,9 @@ Protocol: hold ticker + as-of date + price freeze constant; vary **one** axis; �
 Do **not** edit research folders. After enough calendar time has passed:
 
 ```bash
-yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --ticker T --date D
+vendor/mcp/yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --ticker T --date D
 # or batch:
-yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --all --horizons 1d,1w,1m
+vendor/mcp/yfinance-market-mcp/.venv/bin/python scripts/fetch_outcome_marks.py --all --horizons 1d,1w,1m
 python3 scripts/compare_experiment.py --calibration --horizon 1m --pass-only
 ```
 
@@ -168,4 +168,4 @@ Writes `archive/outcomes/<T>/<session_key>/{price_path,scorecard}.json` and upse
 | Phase graph | `harness/HARNESS_MAP.md` |
 | Subagent templates | `harness/agent_prompts.md` |
 | Valuation decision quality | `harness/exemplars/valuation_decision_quality.md` |
-| Machine gates | `scripts/check_session.py --full`, `scripts/kd_research/gates.py` |
+| Machine gates | `scripts/check_session.py --full`, `packages/kd_research/gates.py` |

@@ -29,9 +29,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.kd_research.gates import complete_checks, entry_checks  # noqa: E402
-from scripts.kd_research.paths import resolve_session, session_root  # noqa: E402
-from scripts.kd_research.phase_graph import (  # noqa: E402
+from packages.kd_research.gates import complete_checks, entry_checks  # noqa: E402
+from packages.kd_research.paths import resolve_session, session_root  # noqa: E402
+from packages.kd_research.phase_graph import (  # noqa: E402
     PHASE_ORDER,
     next_open_phase,
 )

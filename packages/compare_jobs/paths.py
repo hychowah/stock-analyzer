@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import re
 from datetime import date
 from pathlib import Path
 
-from scripts.kd_research.paths import DATE_DIR_RE, archive_root, session_dir_nonempty
-
-COMPARE_ID_RE = re.compile(
-    r"^compare:(?P<ticker>[^:]+):(?P<packet_key>.+)$", re.IGNORECASE
+from packages.kd_research.paths import (
+    COMPARE_ID_RE,
+    DATE_DIR_RE,
+    archive_root,
+    parse_compare_id,
+    session_dir_nonempty,
 )
 
 
@@ -24,13 +25,6 @@ def ticker_comparisons(ticker: str, output_dir: Path | str | None = None) -> Pat
 
 def compare_id(ticker: str, packet_key: str) -> str:
     return f"compare:{str(ticker).strip().upper()}:{packet_key}"
-
-
-def parse_compare_id(value: str) -> tuple[str, str]:
-    m = COMPARE_ID_RE.match((value or "").strip())
-    if not m:
-        raise ValueError(f"invalid compare_id: {value!r}")
-    return m.group("ticker").upper(), m.group("packet_key")
 
 
 def make_compare_packet_key(

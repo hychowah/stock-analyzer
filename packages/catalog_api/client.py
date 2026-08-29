@@ -9,11 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-# Project root: packages/catalog_api/client.py -> parents[2]
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-RUN_ID_RE = re.compile(
-    r"^research:(?P<ticker>[^:]+):(?P<session_key>.+)$", re.IGNORECASE
+from packages.kd_research.paths import (
+    PROJECT_ROOT,
+    archive_root as _archive_root,
+    parse_compare_id,
+    parse_run_id,
 )
 
 # Safe deep-link prefixes (v1)
@@ -64,28 +64,10 @@ class DbMissing(FileNotFoundError):
 
 
 def default_archive_root() -> Path:
-    return PROJECT_ROOT / "archive"
+    return _archive_root()
 
-
-def parse_run_id(run_id: str) -> tuple[str, str]:
-    m = RUN_ID_RE.match(run_id.strip())
-    if not m:
-        raise ValueError(f"invalid run_id: {run_id!r}")
-    return m.group("ticker").upper(), m.group("session_key")
-
-
-COMPARE_ID_RE = re.compile(
-    r"^compare:(?P<ticker>[^:]+):(?P<packet_key>.+)$", re.IGNORECASE
-)
 
 COMPARE_ALLOW_NAMES = frozenset({"job.json", "headline.json"})
-
-
-def parse_compare_id(compare_id: str) -> tuple[str, str]:
-    m = COMPARE_ID_RE.match(compare_id.strip())
-    if not m:
-        raise ValueError(f"invalid compare_id: {compare_id!r}")
-    return m.group("ticker").upper(), m.group("packet_key")
 
 
 # Allowlisted ORDER BY identifiers (never interpolate untrusted text).

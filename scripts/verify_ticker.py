@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.ticker_lookup import check_ticker  # noqa: E402
+from packages.kd_research.ticker_lookup import check_ticker  # noqa: E402
 
 _EXIT = {
     "ok": 0,

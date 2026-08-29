@@ -19,10 +19,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.paths import (  # noqa: E402
+from packages.kd_research.paths import (  # noqa: E402
     DATE_DIR_RE,
     PROJECT_ROOT,
-    ROOT_RESERVED_NAMES,
+    TICKER_BLOCKLIST,
     ensure_archive_tree,
     rel_to_project,
     research_root,
@@ -35,7 +35,7 @@ def discover_legacy_sessions(root: Path = PROJECT_ROOT) -> list[tuple[str, str, 
         if not ticker_dir.is_dir():
             continue
         name = ticker_dir.name
-        if name in ROOT_RESERVED_NAMES or name.startswith("."):
+        if name in TICKER_BLOCKLIST or name.startswith("."):
             continue
         # Skip if this is somehow under archive already
         if "archive" in ticker_dir.parts:

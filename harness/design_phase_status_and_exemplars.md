@@ -25,7 +25,7 @@ This is the equity-research analogue of Anthropic’s feature list + progress fi
 | Item | Value |
 |------|--------|
 | Path | `S/registry/phase_status.json` |
-| Schema | `templates/phase_status.schema.json` |
+| Schema | `harness/schemas/phase_status.schema.json` |
 | Created by | `scaffold_session.py` (initial skeleton) **or** orchestrator on first write |
 | Primary writer | **Orchestrator (main agent)** only |
 | Readers | Orchestrator on resume; Agent 13 (audit); optional `check_session.py` later |
@@ -80,7 +80,7 @@ Before marking phase `0` or `2_5` complete:
 python3 scripts/preflight_phase.py --ticker T --date D --phase 0|2_5 --mode complete
 ```
 
-Gates live in `scripts/kd_research/gates.py`. Map: `harness/HARNESS_MAP.md`.
+Gates live in `packages/kd_research/gates.py`. Map: `harness/HARNESS_MAP.md`.
 
 ### A.4 Status vocabulary
 
@@ -422,7 +422,7 @@ When audit finds a recurring soft failure:
 
 | Step | Work | Depends on design approval |
 |------|------|----------------------------|
-| 1 | Land `templates/phase_status.schema.json` | This doc |
+| 1 | Land `harness/schemas/phase_status.schema.json` | This doc |
 | 2 | Land `harness/exemplars/*` starter bank | This doc |
 | 3 | Update `scaffold_session.py` to write skeleton `phase_status.json` | Step 1 |
 | 4 | Add orchestrator resume snippet to AGENTS.md §8 (short) | Step 1 |

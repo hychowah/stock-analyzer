@@ -13,14 +13,14 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.library import (  # noqa: E402
+from packages.kd_research.library import (  # noqa: E402
     LibraryError,
     bind_to_session,
     compare_freshness,
     load_index_items,
     required_annual_count,
 )
-from scripts.kd_research.paths import resolve_session  # noqa: E402
+from packages.kd_research.paths import resolve_session  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:

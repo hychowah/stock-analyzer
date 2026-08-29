@@ -1,0 +1,45 @@
+{
+  "goal": "Reshape platform layout: kd_research package, one archive root, colocated tests, harness schemas/modules, vendor MCP",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not merge harness/ with eng/",
+    "Do not move archive/research/",
+    "Do not add src/ or empty docs/ / top-level research/ / library/",
+    "Do not keep a scripts.kd_research compatibility shim",
+    "Do not fold programs/experiment_summary.py into catalog_api",
+    "Do not rewrite completed research sessions"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "Increment A: packages/kd_research is the research runtime; scripts/ are thin CLIs; one archive_root honors ARCHIVE_ROOT; tests live with modules; _legacy gone; eng_verify green; VERSION 2.23.0",
+    "Increment B: harness/schemas + harness/modules; no root sector_*.md or templates/*.schema.json; eng_verify green; VERSION 2.24.0",
+    "Increment C: vendor/mcp holds the three MCP trees; .mcp.json updated; eng_verify green; no extra VERSION bump"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "templates/",
+    "sector_*.md",
+    "region_*.md",
+    "AGENTS.md",
+    "archive/README.md",
+    "archive/library/",
+    ".mcp.json",
+    "vendor/",
+    "sec-edgar-mcp/",
+    "web-fetch-mcp/",
+    "yfinance-market-mcp/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

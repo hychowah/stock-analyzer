@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-from scripts.kd_research.paths import resolve_session
+from packages.kd_research.paths import resolve_session
 
 _FIELD_GETTERS: list[tuple[str, Callable[[dict[str, Any]], Any]]] = [
     ("asof_price", lambda s: s.get("asof_price")),

@@ -11,7 +11,7 @@ Usage:
     python3 scripts/fetch_outcome_marks.py --all --horizons 1d,1w,1m
     python3 scripts/fetch_outcome_marks.py --all --dry-run
 
-Prefers yfinance-market-mcp/.venv/bin/python when available for yfinance.
+Prefers vendor/mcp/yfinance-market-mcp/.venv/bin/python when available for yfinance.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from scripts.kd_research.compare_db import open_db  # noqa: E402
-from scripts.kd_research.outcomes import (  # noqa: E402
+from packages.kd_research.compare_db import open_db  # noqa: E402
+from packages.kd_research.outcomes import (  # noqa: E402
     DEFAULT_HORIZONS,
     HORIZON_DAYS,
     mechanical_scorecard,
@@ -37,7 +37,7 @@ from scripts.kd_research.outcomes import (  # noqa: E402
     utc_now,
     write_json,
 )
-from scripts.kd_research.paths import (  # noqa: E402
+from packages.kd_research.paths import (  # noqa: E402
     iter_research_sessions,
     resolve_session,
 )
@@ -68,7 +68,7 @@ def _import_yfinance():
         return yf
     except ImportError as e:
         raise SystemExit(
-            "yfinance not installed. Use: yfinance-market-mcp/.venv/bin/python "
+            "yfinance not installed. Use: vendor/mcp/yfinance-market-mcp/.venv/bin/python "
             "scripts/fetch_outcome_marks.py ..."
         ) from e
 
@@ -321,7 +321,6 @@ def main() -> int:
         default=None,
         help="Override 'today' YYYY-MM-DD (testing / hermetic)",
     )
-    ap.add_argument("--archive-only", action="store_true")
     args = ap.parse_args()
 
     horizons = [h.strip() for h in args.horizons.split(",") if h.strip()]
@@ -333,7 +332,7 @@ def main() -> int:
 
     sessions: list[Path] = []
     if args.all:
-        for _t, _k, p in iter_research_sessions(include_legacy=not args.archive_only):
+        for _t, _k, p in iter_research_sessions():
             sessions.append(p)
     elif args.session_dir:
         sessions.append(Path(args.session_dir))

@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+from packages.kd_research.paths import PROJECT_ROOT as ROOT
 
 
 class RouterAgentsTests(unittest.TestCase):

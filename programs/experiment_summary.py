@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import statistics
 import sys
 from collections import defaultdict
@@ -53,8 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--limit", type=int, default=1000)
     args = ap.parse_args(argv)
 
-    raw = os.environ.get("ARCHIVE_ROOT")
-    root = Path(raw).expanduser().resolve() if raw else default_archive_root()
+    root = default_archive_root()
     api = CatalogApi(archive_root=root, readonly=True)
 
     runs = api.list_runs(

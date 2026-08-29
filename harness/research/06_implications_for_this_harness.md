@@ -14,7 +14,7 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 | Write state outside context | Registry JSON, data CSVs, raw_sec, charts |
 | Initializer vs workers | Scaffold + orchestrator classification before Phase 0; specialized agents thereafter |
 | Incremental progress | One session folder per date; agents complete discrete artifacts |
-| Mechanical gates | `templates/*.schema.json`, `scripts/check_session.py`, justification contract |
+| Mechanical gates | `harness/schemas/*.schema.json`, `scripts/check_session.py`, justification contract |
 | Isolate heavy work | Subagents by phase; 2a/2b/2c parallel; Phase 2 parallel |
 | Orchestrator–workers | Main agent merges Phase 0 / 2.5 swarms; raw returns persisted first |
 | Evaluator / audit | Phase 5 audit agent + fix loop |
@@ -63,7 +63,7 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 **Recommendations:**
 
 - Full note text stays in `data/raw_sec/` (already required). Never expand uncapped 10-K prose into `sec_filings.json` (already forbidden — keep enforced).  
-- Prefer extractors (`scripts/kd_research/note_extract.py`) that write short excerpts + offsets.  
+- Prefer extractors (`packages/kd_research/note_extract.py`) that write short excerpts + offsets.  
 - When agents read raw_sec, use line-limited reads / search, not full-file loads into the lead **or** into a year-reader. Phase 1c year-readers section-walk one cleaned `.txt` each; they do not ingest the whole filing.
 
 #### 2.4 Numeric rehydration after any summary
@@ -103,7 +103,7 @@ The harness is unusually aligned with frontier practice for a domain-specific re
 - Before Phase 4 reports, verify valuation_model + risk_bridge + technical present.  
 - This is the research equivalent of “start the server and click New Chat.”
 
-**Done:** `scripts/preflight_phase.py` + `scripts/kd_research/gates.py`; AGENTS orchestrator MUST.
+**Done:** `scripts/preflight_phase.py` + `packages/kd_research/gates.py`; AGENTS orchestrator MUST.
 
 #### 2.7 Generator vs evaluator separation for valuation
 

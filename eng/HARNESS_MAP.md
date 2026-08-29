@@ -14,7 +14,7 @@
 
 | Type | Touch | Verify |
 |------|-------|--------|
-| W1 Research runtime | `scripts/`, `templates/`, `harness/`, sector modules | `pytest scripts/tests` + preflight/check helpers |
+| W1 Research runtime | `packages/kd_research/`, `scripts/` CLIs, `harness/` (incl. `schemas/`, `modules/`) | `pytest packages apps/analysis_web/tests scripts/tests` |
 | W2 Platform | `packages/catalog_api/`, export helpers | `test_catalog_api` + live list_runs smoke |
 | W3 Programs | `programs/` | CLI on ARCHIVE_ROOT |
 | W4 UI | `apps/<name>/` | curl/smoke; fixtures in CI |

@@ -1,14 +1,14 @@
 {
   "mcpServers": {
     "yfinance": {
-      "command": "/workspace-stock-research/yfinance-market-mcp/.venv/bin/yfinance-mcp",
+      "command": "/workspace-stock-research/vendor/mcp/yfinance-market-mcp/.venv/bin/yfinance-mcp",
       "timeout": 60000,
       "env": {
         "PYTHONPATH": ""
       }
     },
     "sec-edgar": {
-      "command": "/workspace-stock-research/sec-edgar-mcp/.venv/bin/sec-edgar-mcp",
+      "command": "/workspace-stock-research/vendor/mcp/sec-edgar-mcp/.venv/bin/sec-edgar-mcp",
       "timeout": 60000,
       "env": {
         "PYTHONPATH": "",
@@ -16,7 +16,7 @@
       }
     },
     "web-fetch": {
-      "command": "/workspace-stock-research/web-fetch-mcp/.venv/bin/web-fetch-mcp",
+      "command": "/workspace-stock-research/vendor/mcp/web-fetch-mcp/.venv/bin/web-fetch-mcp",
       "timeout": 60000,
       "env": {
         "PYTHONPATH": ""

@@ -36,6 +36,7 @@ def check_eng_tree(root: Path) -> list[str]:
         root / "eng" / "HARNESS_MAP.md",
         root / "eng" / "runbook.md",
         root / "packages" / "catalog_api" / "__init__.py",
+        root / "packages" / "kd_research" / "__init__.py",
         root / "apps" / "analysis_web" / "app.py",
         root / "harness" / "RESEARCH_AGENTS.md",
         root / "harness" / "VERSION",
@@ -66,7 +67,7 @@ def check_eng_tree(root: Path) -> list[str]:
     # VERSION file must parse
     sys.path.insert(0, str(root))
     try:
-        from scripts.kd_research.provenance import load_harness_identity
+        from packages.kd_research.provenance import load_harness_identity
 
         ident = load_harness_identity(root)
         if not ident.get("harness_version") or ident["harness_version"].endswith("unversioned"):
@@ -78,16 +79,16 @@ def check_eng_tree(root: Path) -> list[str]:
     return errs
 
 
-def check_reserved_names_importable() -> list[str]:
+def check_ticker_blocklist() -> list[str]:
     errs: list[str] = []
     sys.path.insert(0, str(PROJECT_ROOT))
     try:
-        from scripts.kd_research.paths import ROOT_RESERVED_NAMES
+        from packages.kd_research.paths import TICKER_BLOCKLIST
     except Exception as e:  # noqa: BLE001
-        return [f"cannot import ROOT_RESERVED_NAMES: {e}"]
-    for name in ("eng", "packages", "apps", "programs", "docs"):
-        if name not in ROOT_RESERVED_NAMES:
-            errs.append(f"ROOT_RESERVED_NAMES missing {name!r}")
+        return [f"cannot import TICKER_BLOCKLIST: {e}"]
+    for name in ("eng", "packages", "apps", "programs", "harness", "archive", "vendor"):
+        if name not in TICKER_BLOCKLIST:
+            errs.append(f"TICKER_BLOCKLIST missing {name!r}")
     return errs
 
 
@@ -166,7 +167,7 @@ def check_harness_version_bump(root: Path) -> list[str]:
         return errs
 
     sys.path.insert(0, str(root))
-    from scripts.kd_research.provenance import (  # noqa: WPS433
+    from packages.kd_research.provenance import (  # noqa: WPS433
         VERSION_PATH_POSIX,
         paths_require_version_bump,
     )
@@ -217,12 +218,12 @@ def main(argv: list[str] | None = None) -> int:
     root = args.project_root.resolve()
 
     print("== eng_verify: structural ==")
-    errs = check_eng_tree(root) + check_reserved_names_importable()
+    errs = check_eng_tree(root) + check_ticker_blocklist()
     if errs:
         for e in errs:
             print(f"FAIL: {e}")
         return 1
-    print("OK structural + reserved names + harness/VERSION")
+    print("OK structural + ticker blocklist + harness/VERSION")
 
     print("== eng_verify: immutability policy (documented) ==")
     for p in IMMUTABLE_PREFIXES:
@@ -244,33 +245,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     print("== eng_verify: pytest ==")
-    tests = [
-        "scripts/tests/test_reserved_names.py",
-        "scripts/tests/test_catalog_api.py",
-        "scripts/tests/test_archive_paths.py",
-        "scripts/tests/test_analysis_web.py",
-        "scripts/tests/test_compare_jobs.py",
-        "scripts/tests/test_agent_jobs.py",
-        "scripts/tests/test_research_jobs.py",
-        "scripts/tests/test_render_markdown.py",
-        "scripts/tests/test_change_feed.py",
-        "scripts/tests/test_portfolio.py",
-        "scripts/tests/test_catalog_atomic.py",
-        "scripts/tests/test_router_agents.py",
-        "scripts/tests/test_sector_classification_law.py",
-        "scripts/tests/test_provenance.py",
-        "scripts/tests/test_session_isolation_check.py",
-        "scripts/tests/test_phase_graph.py",
-        "scripts/tests/test_spawn_gate.py",
-        "scripts/tests/test_ticker_lookup.py",
-        "scripts/tests/test_library.py",
-        "scripts/tests/test_doc_text.py",
-    ]
-    existing = [t for t in tests if (root / t).is_file()]
-    if not existing:
-        print("WARN: no eng-related tests found")
-        return 0
-    code = _run([sys.executable, "-m", "pytest", *existing, "-q"], cwd=root)
+    code = _run(
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "packages",
+            "apps/analysis_web/tests",
+            "scripts/tests",
+            "-q",
+        ],
+        cwd=root,
+    )
     if code != 0:
         print("eng_verify: FAIL (pytest)")
         return code

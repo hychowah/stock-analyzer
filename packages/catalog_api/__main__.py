@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
-from pathlib import Path
 
 from packages.catalog_api.client import (
     CatalogApi,
@@ -18,9 +16,7 @@ from packages.catalog_api.client import (
 
 
 def _api_from_env() -> CatalogApi:
-    raw = os.environ.get("ARCHIVE_ROOT")
-    root = Path(raw).expanduser().resolve() if raw else default_archive_root()
-    return CatalogApi(archive_root=root, readonly=True)
+    return CatalogApi(archive_root=default_archive_root(), readonly=True)
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -17,8 +17,8 @@ Product eng (Mode B): `eng/AGENTS.md` — do not mix with research phases.
 | Subagent prompts | `harness/agent_prompts.md` |
 | Phase preflight (evidence before valuation/reports) | `scripts/preflight_phase.py` |
 | Structural session check | `scripts/check_session.py --full` |
-| Schemas | `templates/*.schema.json` |
-| Sector / region methodology (advisory) | `sector_*.md`, `region_*.md` |
+| Schemas | `harness/schemas/*.schema.json` |
+| Sector / region methodology (advisory) | `harness/modules/sector_*.md`, `harness/modules/region_*.md` |
 | Filing deep-dive method | `harness/filing_deep_dive.md` |
 | Judgment exemplars | `harness/exemplars/` |
 | Industry research notes | `harness/research/` |
@@ -33,7 +33,7 @@ Also: `harness/region_integration.md`, `scripts/` helpers, `_archive/` (retired 
 1. **LLM judges, code fetches.** Sector classification, valuation model choice, discount rates, growth/margin paths, multiples, scenario probabilities, stress haircuts, position sizing — all are agent decisions made with reasoning. The harness contains **no fixed formulas, no hardcoded probabilities, no hardcoded multiples**.
 2. **Every judgment number is justified.** Any number an agent decides (rather than reads from a source) must be recorded with a `rationale` (why this value) and a `basis`/`source` (what it rests on). This is the **justification contract** (§6) and it is enforced structurally and by the audit agent.
 3. **Runtime compute scripts.** Math is done by small ad-hoc Python scripts the agent writes into `data/compute/` for that specific company, runs, and cites. Never do multi-step arithmetic in prose. Each company gets the model that fits it.
-4. **Light schemas + LLM audit.** Schemas (`templates/`) enforce structure and provenance only — they do not attempt to validate financial truth. A Phase 5 audit agent cross-checks reports against registry data.
+4. **Light schemas + LLM audit.** Schemas (`harness/schemas/`) enforce structure and provenance only — they do not attempt to validate financial truth. A Phase 5 audit agent cross-checks reports against registry data.
 5. **English only** for normative text (spec, prompts, schemas, registry keys, reports).
 6. **Decision-grade handoffs.** Each phase’s primary product is on-disk evidence the next specialist can use; handoffs state gaps that must widen uncertainty. Swarm returns are signal-dense and sourced — not raw filing dumps and not hollow schema-valid shells.
 
@@ -76,14 +76,14 @@ Rules:
    - Optional compare to a prior run is **post-audit / post-finalize only**, and only if the user asked. Policy: `registry/session_isolation.json` (scaffolded).  
    - **Document library (harness ≥ 2.19.0):** `archive/library/<TICKER>/` is reusable **source documents**, not prior research. Orchestrator runs `bind_library.py` after the brief and before Agent 2b (copies the **required set** into `S`). Agents other than 2b unlabeled must **not** open the live library. Do **not** harvest other sessions from Mode A. Canonical rules: `harness/library.md`.  
 6. After Phase 5 (audit): run `python3 scripts/finalize_session.py --ticker <T> --date <D_or_session_key>` (snapshot + compare SQLite + thin catalog). Finalize **always** stamps `harness_version` (from `harness/VERSION`) + `harness_git_sha` (+ dirty flag) into `meta/run_manifest.json` and `prediction_snapshot.provenance` — never leave these null. It **preserves** scaffold-time `orchestrator_model` / `default_subagent_model` into the compare DB (does not invent them). Use full `session_key` when the folder is `date__rN`.
-7. Path resolution (`scripts/kd_research/paths.py`): prefer `archive/research/...`; fall back to legacy root `<TICKER>/<DATE>/` during migration only. **New-run orientation does not include browsing other session folders.**
-8. Repo root holds harness code only (`harness/`, `scripts/`, `templates/`, sector/region modules, MCP packages) — not ticker session trees.
+7. Path resolution (`packages/kd_research/paths.py`): sessions live only under `archive/research/<TICKER>/<SESSION_KEY>/`. **New-run orientation does not include browsing other session folders.**
+8. Repo root holds harness code only (`harness/`, `scripts/`, `packages/`, `apps/`, MCP packages) — not ticker session trees. Mode A schemas are `harness/schemas/`; sector/region modules are `harness/modules/`.
 
 ## 3. Required inputs
 
 Confirm or infer before starting: ticker, company name, market region/exchange, reporting currency, regional benchmark index, 3–5 closest peers, latest fiscal quarter/filing date. Also establish **market/region context** (§5b): accounting basis, ownership/control hints, cost-of-capital flags, and `intensity`. Document inferences in `00_<TICKER>_README.md` and write `registry/market_context.json`.
 
-**Investment research brief (new sessions):** after sector_config + market_context and **before Phase 0**, write `registry/research_brief.json` per `templates/research_brief.schema.json`: investment objective, `must_answer_questions`, peers, benchmarks, currency, `research_depth` (`standard`|`deep`) with rationale. Phase 0 maps findings to those questions; open questions feed valuation range width and/or Phase 2.5. Legacy sessions without a brief are OK (checks SKIPPED).
+**Investment research brief (new sessions):** after sector_config + market_context and **before Phase 0**, write `registry/research_brief.json` per `harness/schemas/research_brief.schema.json`: investment objective, `must_answer_questions`, peers, benchmarks, currency, `research_depth` (`standard`|`deep`) with rationale. Phase 0 maps findings to those questions; open questions feed valuation range width and/or Phase 2.5. Legacy sessions without a brief are OK (checks SKIPPED).
 
 ## 4. Data sources
 
@@ -112,7 +112,7 @@ Run **once**, by the main agent, before anything else. There is **no scoring alg
 3. **Demand staple vs supply shock stay split.** Households still buy eggs, coffee, chocolate, packaged meat in recessions → primary **standard** on the merits (not via the confidence fallback). HPAI, flock rebuild, oversupply, farm-gate feed, competitor price-gaps → Phase 2.5 / `research_brief.must_cover_risks`. That overlay does **not** switch the lead module to `sector_cyclical.md`.
 4. Illustrative (no ticker exceptions): branded retail carton / list-promo eggs → `standard` + shock overlay; unbranded posted-price shell eggs → `cyclical`; cruise capacity / berth-days ≈ airlines/shipping → `cyclical` (a defensive GICS label is not “never cyclical”).
 5. Classify from these meanings **first**. If you consult a module detection list, treat it as hints. If considering `cyclical` and no sub-type **or cousin** fits and revenue is not majority spot-realized, that is a strong veto. Then set `module_file` (`""` is valid for `standard`).
-6. Write `registry/sector_config.json` per `templates/sector_config.schema.json`: `primary_sector`, self-assessed `confidence`, `signals` (the evidence), `rationale` (why this sector, why this confidence), `is_also_growth`, `module_file`, plus `runner_up` (second-best hypothesis + why rejected) and `disconfirming_signals` (evidence against the choice that was weighed). For genuinely borderline cases, run two independent classification passes and reconcile.
+6. Write `registry/sector_config.json` per `harness/schemas/sector_config.schema.json`: `primary_sector`, self-assessed `confidence`, `signals` (the evidence), `rationale` (why this sector, why this confidence), `is_also_growth`, `module_file`, plus `runner_up` (second-best hypothesis + why rejected) and `disconfirming_signals` (evidence against the choice that was weighed). For genuinely borderline cases, run two independent classification passes and reconcile.
 7. Confidence < 0.70 → set `requires_manual_review: true`, say so in the README, and **widen** range or `duration.action=too_hard`. Do **not** auto-fallback to ordinary DCF / `primary_sector=standard` (harness ≥ 2.17.0). Uncertain identity may keep the judged sector or run two-model (`multi_method_reconciliation`) — Agent 5 does not reclassify. That fallback is for **uncertain** names, not for branded staples (those are `standard` on the merits).
 8. If `is_also_growth`: primary sector's model still leads; add growth-module SBC/dilution analysis at critical intensity; extend the explicit forecast to 7–10 years.
 9. Material commodity-input or protein-supply beta on a `standard` name **must** appear in `research_brief.must_cover_risks` / `must_answer_questions` so Agent 5 does not freeze a peak-year margin as mid-cycle.
@@ -123,7 +123,7 @@ Run **once**, by the main agent, with sector classification (before Phase 0). Th
 
 1. Pull objective inputs: exchange / listing venue(s), reporting currency, filing form type (10-K vs 20-F / HKEX / DART / other), yfinance country, quick ownership signals (widely held, dual-class, family, SOE, VIE headlines), and whether cash flows are multi-currency.
 2. Judge `primary_region`: `us | hk_china | korea | japan | eu_uk | other` and `intensity`: `low | medium | high`.
-3. Write `registry/market_context.json` per `templates/market_context.schema.json`: `primary_region`, `intensity`, self-assessed `confidence`, `signals`, `rationale`, `module_file` (`region_us.md` | `region_hk_china.md` | `region_generic.md` or a future dedicated module), `listing`, `accounting_regime`, `cost_of_capital_flags` (**flags only** — judged Rf/ERP/FX numbers belong in valuation assumptions), `ownership`, `requires_manual_review`, plus `runner_up` / `disconfirming_signals` when useful.
+3. Write `registry/market_context.json` per `harness/schemas/market_context.schema.json`: `primary_region`, `intensity`, self-assessed `confidence`, `signals`, `rationale`, `module_file` (`region_us.md` | `region_hk_china.md` | `region_generic.md` or a future dedicated module), `listing`, `accounting_regime`, `cost_of_capital_flags` (**flags only** — judged Rf/ERP/FX numbers belong in valuation assumptions), `ownership`, `requires_manual_review`, plus `runner_up` / `disconfirming_signals` when useful.
 4. **Intensity gate (load-bearing):**
    - **low** — typical US widely-held, US GAAP, USD model: downstream may no-op with a single valuation `market_context_hooks` entry `noted_only`; do not invent country haircuts or mandatory regional stress.
    - **medium** — local rates/accounting/FX need explicit treatment; 2e ownership status enriched; regional stress expected when material.
@@ -146,7 +146,7 @@ Applies to every agent, every artifact:
 
 - Location: `SESSION_ROOT/data/compute/<descriptive_name>.py`. One script per model/task (e.g. `excess_return_jpm.py`, `technical_indicators.py`, `tsr_dilution.py`).
 - The script reads inputs from the session's data/registry files (or embeds fetched values as constants with a comment citing their source), prints/writes a JSON result, and the agent records `compute_script` in the output artifact.
-- Use the environment's `python3`. Use only installed libraries (check first; `yfinance-market-mcp/.venv` has yfinance/matplotlib/pandas).
+- Use the environment's `python3`. Use only installed libraries (check first; `vendor/mcp/yfinance-market-mcp/.venv` has yfinance/matplotlib/pandas).
 - The script is part of the deliverable: it must be reproducible — rerunning it reproduces the artifact's numbers.
 - **Hermetic rule**: fetched market/fundamental data must be snapshotted into `data/*.csv` at session time; scripts read the cached files and fetch live data only when the cache is absent. A rerun next month must produce the same numbers. Any rerun difference is data drift — investigate, never wave off as float noise.
 - **Scripted intermediates**: any number used inside an assumption build-up (realized beta, historical CAGR, ERP inputs) must come from a script in `data/compute/`, never unscripted mental math.
@@ -169,7 +169,7 @@ Subagent prompt templates for every phase are in `harness/agent_prompts.md`. Tra
 6. Before starting Phase `2_parallel`, `2_5`, `4_parallel`, or `5`, run entry preflight: `python3 scripts/preflight_phase.py --ticker T --date D --phase <id>`. FAIL → fix upstream; do not invent evidence.
 7. **Spawn-or-abandon (harness ≥ 2.20.0):** every specialist on the phase graph (each 1c year-reader; each Phase 0 / 2.5 raw) **must** be launched with `spawn_subagent`. Record `python3 scripts/record_spawn.py --ticker T --date D --subagent <id> --phase <phase> --event launch` then `--event return` (return without launch FAILs). Retry spawn without recording fail if the tool glitched. `--event fail --reason …` only when you cannot launch and would otherwise work inline (writes `registry/abandon.json`) — then **stop**. Do **not** write that specialist’s artifacts as the lead. Inline specialist work is a machine FAIL, not a fallback. Agent 5 `execution` stays `subagent` after 5b. Orchestrator-lead work remains: sector/market/brief, `bind_library.py`, `price_snapshot`, `phase_status`, Phase 0 / 2.5 **merge**, Agent 5 **5b** reopen.
 
-Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Design + agent pre-fill: `harness/design_phase_status_and_exemplars.md`, schema `templates/phase_status.schema.json`. Legacy sessions without the file are OK (`check_session` → SKIPPED).
+Statuses: `pending | in_progress | complete | failed | blocked | skipped`. Design + agent pre-fill: `harness/design_phase_status_and_exemplars.md`, schema `harness/schemas/phase_status.schema.json`. Legacy sessions without the file are OK (`check_session` → SKIPPED).
 
 | Phase | Agents (subagent type) | Depends on | Writes (single writer) |
 |---|---|---|---|
@@ -209,11 +209,11 @@ The audit agent (template in `harness/agent_prompts.md`) audits the orchestrator
 
 ### Machine check
 
-`python3 scripts/check_session.py --ticker <T> --date <D> --full` (use `yfinance-market-mcp/.venv/bin/python` for full JSON-schema validation) — structural PASS/FAIL/SKIPPED report; exits non-zero on FAIL. Verifies required files, schema validity, non-empty rationales, `compute_script` paths exist, probability sums, confidence-gate consistency, and that `audit.json.verdict == "PASS"`. **`registry/market_context.json` is optional for legacy sessions** (absent → SKIPPED); when present, it is schema-checked and valuation must carry non-empty `market_context_hooks`. **`registry/phase_status.json` is optional for legacy sessions** (absent → SKIPPED); when present, schema/keys + designed phase coverage are checked. Run after Phase 5.
+`python3 scripts/check_session.py --ticker <T> --date <D> --full` (use `vendor/mcp/yfinance-market-mcp/.venv/bin/python` for full JSON-schema validation) — structural PASS/FAIL/SKIPPED report; exits non-zero on FAIL. Verifies required files, schema validity, non-empty rationales, `compute_script` paths exist, probability sums, confidence-gate consistency, and that `audit.json.verdict == "PASS"`. **`registry/market_context.json` is optional for legacy sessions** (absent → SKIPPED); when present, it is schema-checked and valuation must carry non-empty `market_context_hooks`. **`registry/phase_status.json` is optional for legacy sessions** (absent → SKIPPED); when present, schema/keys + designed phase coverage are checked. Run after Phase 5.
 
 ## 9. Sector modules (advisory reference)
 
-Read the module for the classified sector **after** §5 identity, before valuation: `sector_banking.md`, `sector_insurance.md`, `sector_growth.md`, `sector_reit.md`, `sector_utility.md`, `sector_cyclical.md`. Empty `module_file` is valid for `standard` (ordinary CPG/industrial DCF). They contain sound methodology (excess-return for banks, float-cost framing for insurers, AFFO/NAV for REITs, through-cycle normalization for cyclicals, SBC discipline for growth). Use them to *choose and shape* the model. Their numbers are reference ranges, not mandates — justify what you pick (§6). Module “detection” / “automatic classification” / scoring-matrix sections are **diagnostic only** — they do not set `primary_sector`. If they contradict §5, §5 wins.
+Read the module for the classified sector **after** §5 identity, before valuation, from `harness/modules/`: `sector_banking.md`, `sector_insurance.md`, `sector_growth.md`, `sector_reit.md`, `sector_utility.md`, `sector_cyclical.md`. Empty `module_file` is valid for `standard` (ordinary CPG/industrial DCF). They contain sound methodology (excess-return for banks, float-cost framing for insurers, AFFO/NAV for REITs, through-cycle normalization for cyclicals, SBC discipline for growth). Use them to *choose and shape* the model. Their numbers are reference ranges, not mandates — justify what you pick (§6). Module “detection” / “automatic classification” / scoring-matrix sections are **diagnostic only** — they do not set `primary_sector`. If they contradict §5, §5 wins.
 
 ## 9b. Region modules (advisory reference)
 
@@ -221,7 +221,7 @@ Read the module named in `market_context.module_file` before valuation: `region_
 
 ## 10. Latest-quarter evidence & overrides
 
-- Agent 2d extracts the latest quarter per `templates/latest_quarter.schema.json` and logs notable changes in `evidence_log` (metric, observation, materiality, suggested rule). **2d logs evidence only.**
+- Agent 2d extracts the latest quarter per `harness/schemas/latest_quarter.schema.json` and logs notable changes in `evidence_log` (metric, observation, materiality, suggested rule). **2d logs evidence only.**
 - The **valuation agent** decides whether evidence changes assumptions and logs each applied change in `valuation_model.json.overrides_applied` (rule, old, new, reason).
 - Rules (symmetric, with materiality):
   - **Two-quarter rule**: a key metric moves >5% relative (or >100bp) in the same direction for two consecutive quarters → adjust the assumption that way. Seasonal metrics compare YoY, not QoQ. A raise that coincides with deteriorating FCF and AR/inventory belongs in **bear_only** (or is rejected) — machine WARN on harness ≥ 2.11.0. Destock inverse (harness ≥ 2.12.0 WARN, only when a destock/flatten conflict exists): a raise while FCF is ≥0 and inventory/AR are **down** (WC release) belongs in **bear_only** (or is rejected) — positive FCF is not a clean bill of health.
@@ -232,11 +232,11 @@ Read the module named in `market_context.module_file` before valuation: `region_
 
 ## 10b. Filing deep dive (multi-year notes, strategy, credibility)
 
-Phase **1c** is a gather/merge: **N year-readers** write `registry/raw/fdd_year_FY{yyyy}.json` (one annual each; schema `templates/filing_year_dive.schema.json`); a machine **excerpt-in-source** check; then Agent **2e** is the **single writer** of `registry/filing_deep_dive.json` per `templates/filing_deep_dive.schema.json` (methodology: `harness/filing_deep_dive.md`). Year-readers must not call `promise_vs_actual.py` or see other years. 2e merges, rehydrates numbers, uses bound `S/data/transcripts/` (fetch only `session_missing` latest-window slots into `S`), and fail-closes on silent ownership at medium/high intensity. Agent 13 still evaluates FDD substance. Required FDD blocks:
+Phase **1c** is a gather/merge: **N year-readers** write `registry/raw/fdd_year_FY{yyyy}.json` (one annual each; schema `harness/schemas/filing_year_dive.schema.json`); a machine **excerpt-in-source** check; then Agent **2e** is the **single writer** of `registry/filing_deep_dive.json` per `harness/schemas/filing_deep_dive.schema.json` (methodology: `harness/filing_deep_dive.md`). Year-readers must not call `promise_vs_actual.py` or see other years. 2e merges, rehydrates numbers, uses bound `S/data/transcripts/` (fetch only `session_missing` latest-window slots into `S`), and fail-closes on silent ownership at medium/high intensity. Agent 13 still evaluates FDD substance. Required FDD blocks:
 
-1. **Footnotes** — targeted note extractions (revenue disaggregation, segments, SBC unrecognized, debt/leases, contingencies/legal, tax, commitments, related-party/dual-class) with status `extracted|missing|not_applicable|partial` and short excerpts. Prefer code helpers in `scripts/kd_research/note_extract.py`. Full note text stays in `data/raw_sec/`; do **not** dump uncapped 10-K prose into `sec_filings.json`.
+1. **Footnotes** — targeted note extractions (revenue disaggregation, segments, SBC unrecognized, debt/leases, contingencies/legal, tax, commitments, related-party/dual-class) with status `extracted|missing|not_applicable|partial` and short excerpts. Prefer code helpers in `packages/kd_research/note_extract.py`. Full note text stays in `data/raw_sec/`; do **not** dump uncapped 10-K prose into `sec_filings.json`.
 2. **Strategy arc** — typically **≥3 annual reports** (Item 1 + MD&A priorities): stated priorities by year, continuity score `{value, rationale, basis}`, pivot flags, capital-allocation story, implied model hooks.
-3. **Management scorecard** — grade historical company promises (revenue/opex/capex/margins/capital returns/segment paths, plus soft milestones) against actuals. **Filings first** (prior EX-99.1 outlooks, 10-K/10-Q MD&A); **earnings-call transcripts second** (`data/transcripts/`, each scorecard row labeled `source_type`: `filing` | `transcript` | `filing+transcript`). Use `scripts/kd_research/promise_vs_actual.py` for numeric join/grades when possible. Qualitative vision promises are `too_early` / narrative_shift — never fake precision. If transcripts are unavailable, declare the gap, set degraded quality, and widen valuation uncertainty.
+3. **Management scorecard** — grade historical company promises (revenue/opex/capex/margins/capital returns/segment paths, plus soft milestones) against actuals. **Filings first** (prior EX-99.1 outlooks, 10-K/10-Q MD&A); **earnings-call transcripts second** (`data/transcripts/`, each scorecard row labeled `source_type`: `filing` | `transcript` | `filing+transcript`). Use `packages/kd_research/promise_vs_actual.py` for numeric join/grades when possible. Qualitative vision promises are `too_early` / narrative_shift — never fake precision. If transcripts are unavailable, declare the gap, set degraded quality, and widen valuation uncertainty.
 
 Valuation must record `filing_deep_dive_hooks` for material findings (or explicit reject). Deep dive does **not** auto-set WACC or probabilities — the LLM still judges. Valuation must also record `market_context_hooks` when `market_context.json` exists (intensity `low` may be a single `noted_only`). IR / 8-K CEO dollar quotes (EX-99.1) are **first-class** for AI/segment run-rate; missing transcripts **widen range** and degrade scorecard quality. A printed remaining-period company-box **low** is a **same-period floor** in base (§10c.4); a miss of an unprinted guide belongs in **bear**. They do **not** license replacing Street FY+1 as Y1 when Street is usable.
 
@@ -307,7 +307,7 @@ Document cross-lens contradictions explicitly in the fundamental report ("Perspe
 
 | Gate | Enforced by |
 |---|---|
-| Required artifacts exist, parse, validate against `templates/*.schema.json`, have non-empty rationales | `[machine]` check_session.py |
+| Required artifacts exist, parse, validate against `harness/schemas/*.schema.json`, have non-empty rationales | `[machine]` check_session.py |
 | `compute_script` paths exist; ticker/date match folder; confidence-gate consistency | `[machine]` check_session.py |
 | scenario_probabilities sums to 1.0; ≥5 stress scenarios | `[machine]` check_session.py |
 | audit verdict is PASS | `[machine]` check_session.py |

@@ -38,7 +38,6 @@ from packages.research_jobs.jobs import (
     cancel_analyze,
     discard_analyze,
     get_analyze,
-    refuse_http_analyze,
     list_analyzes,
     resume_analyze,
     start_analyze,
@@ -174,11 +173,6 @@ def api_list_analyze(ticker: str | None = None) -> dict[str, Any]:
 
 @router.post("/analyze", status_code=202)
 def api_start_analyze(body: AnalyzeStartBody) -> dict[str, Any]:
-    if refuse_http_analyze():
-        raise HTTPException(
-            status_code=400,
-            detail="ARCHIVE_ROOT is set and is not PROJECT_ROOT/archive",
-        )
     try:
         return start_analyze(
             archive_root(),

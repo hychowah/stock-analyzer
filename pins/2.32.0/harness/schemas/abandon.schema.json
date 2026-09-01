@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "abandon.schema.json",
+  "title": "Abandoned Research Session",
+  "description": "Terminal abort. Written when a required specialist subagent cannot be spawned. Do not continue the phase graph; do not write specialist artifacts as the orchestrator; do not finalize.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "abandoned", "reason", "at"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "abandoned": { "type": "boolean", "const": true },
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "reason": {
+      "type": "string",
+      "minLength": 5,
+      "description": "Machine code, usually spawn_failed"
+    },
+    "phase_id": { "type": ["string", "null"] },
+    "subagent_id": { "type": ["string", "null"] },
+    "detail": { "type": "string" },
+    "at": { "type": "string" }
+  }
+}

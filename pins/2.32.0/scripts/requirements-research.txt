@@ -1,0 +1,2 @@
+# Optional extras for Mode A document conversion (not required for eng_verify).
+pypdf>=4.0

@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "operating_path_brief.schema.json",
+  "title": "Phase 1d merger brief (Agent 5 consumption surface)",
+  "description": "Single writer 1d_merge. Recommend shapes and map conflicts. Does not bind Agent 5 numbers. Merger must not introduce a new quantitative claim.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "session_date",
+    "sources",
+    "conflicts",
+    "rejected_shapes",
+    "verify_rechecks"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "sources": {
+      "type": "object",
+      "required": ["workers"],
+      "properties": {
+        "workers": {
+          "type": "array",
+          "minItems": 3,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "claim_a", "claim_b", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "claim_a": { "type": "string" },
+          "claim_b": { "type": "string" },
+          "evidence": { "type": "string" },
+          "status": { "type": "string", "enum": ["unresolved", "resolved"] }
+        }
+      }
+    },
+    "scenario_hints": { "type": "object" },
+    "rejected_shapes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["shape", "why_rejected"],
+        "properties": {
+          "shape": { "type": "string" },
+          "why_rejected": { "type": "string" },
+          "basis": { "type": "string" }
+        }
+      }
+    },
+    "recommended_for_agent5": {
+      "description": "Qualitative + optional illustrative path labeled non-binding."
+    },
+    "verify_rechecks": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["path", "value"],
+        "properties": {
+          "path": { "type": "string" },
+          "value": {}
+        }
+      }
+    },
+    "sector_remap": { "type": "string" },
+    "analog_class": {
+      "type": "string",
+      "description": "inventory_channel | advertiser_budget | none. Required on harness >= 2.18.0 when a destock conflict exists.",
+      "enum": ["inventory_channel", "advertiser_budget", "none"]
+    },
+    "current_print_is_destock": {
+      "type": "boolean",
+      "description": "Whether THIS print matches the destock analog (not a 2022 cousin). Capex-crushed IR FCF is not destock-math."
+    }
+  }
+}

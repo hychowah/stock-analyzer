@@ -16,6 +16,10 @@
 - VERSION 2.28.0 + `publish_harness_release.py` → `pins/2.28.0/`
 - `python scripts/eng_verify.py` PASS (594 tests; pin matches VERSION)
 - Implementer did not flip `feature_list` `passes`
+- 2.29.0 committed: material stress binds duration
+- 2.30.0 committed: bind-then-classify, slim Phase 0, 1_parallel ∥ Phase 0
+- 2.31.0 committed: consume FDD/Street/1d_ind/legal $
+- 2.32.0: TSR ROC join on decision.json at 5b (FAIL); Phase 2 stays parallel
 
 ## Refactor
 

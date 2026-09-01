@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "latest_quarter.schema.json",
+  "title": "Latest Quarter Extraction (light contract)",
+  "description": "Written by the Phase 1b latest-quarter integrator. Contains EVIDENCE only; assumption changes are applied by the valuation agent and logged in valuation_model.json overrides_applied.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "fiscal_period", "filing_date", "currency", "sources"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "fiscal_period": { "type": "string", "description": "e.g. 2026-Q2. Must match the period the numbers belong to." },
+    "filing_date": { "type": "string", "format": "date" },
+    "currency": { "type": "string", "description": "ISO 4217, e.g. USD" },
+    "sources": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "string" },
+      "description": "Filing / press-release URLs or tool citations for the extraction."
+    },
+    "revenue_earnings": { "type": "object" },
+    "guidance": {
+      "type": "object",
+      "description": "Company guidance only. Analyst price targets are NOT guidance. On harness >= 2.18.0 optional typed remaining-period box: revenue_box_low / revenue_box_high / revenue_box_period (same-period floor for base).",
+      "additionalProperties": true,
+      "properties": {
+        "revenue_box_low": { "type": ["number", "null"] },
+        "revenue_box_high": { "type": ["number", "null"] },
+        "revenue_box_period": { "type": "string", "description": "e.g. Q3 — must match street_bind.intra_year[].period" }
+      }
+    },
+    "segments": { "type": "object" },
+    "sector_kpis": { "type": "object", "description": "Sector-module KPIs, e.g. NIM/CET1 for banks, AFFO for REITs." },
+    "margins_costs": { "type": "object" },
+    "balance_sheet": { "type": "object", "properties": { "currency": {"type": "string"}, "unit": {"type": "string"} } },
+    "cash_flow": { "type": "object", "properties": { "currency": {"type": "string"}, "unit": {"type": "string"} } },
+    "cash_quality": {
+      "type": "object",
+      "description": "REQUIRED on harness >= 2.15.0 when this file exists (Python gate, not schema required[]). ≥1 numeric among fcf, cfo, ni, gaap_ni, dso, dio, inventory. Agent 2d writes; Agent 5 reads.",
+      "additionalProperties": true
+    },
+    "capital_returns": { "type": "object" },
+    "management_tone": { "type": "object" },
+    "risks": { "type": "array" },
+    "evidence_log": {
+      "type": "array",
+      "description": "Notable changes vs prior assumptions, with materiality. The valuation agent decides whether to apply them.",
+      "items": {
+        "type": "object",
+        "required": ["metric", "observation", "materiality", "suggested_rule"],
+        "properties": {
+          "metric": { "type": "string" },
+          "observation": { "type": "string" },
+          "materiality": { "type": "string", "description": "e.g. '+6% YoY, exceeds 5% threshold'" },
+          "suggested_rule": {
+            "type": "string",
+            "enum": ["two_quarter_rule", "guidance_change_rule", "inflection_rule", "capital_rule", "new_risk_rule", "cash_conversion_rule", "destock_rule", "none"]
+          },
+          "source": { "type": "string" }
+        }
+      }
+    }
+  }
+}

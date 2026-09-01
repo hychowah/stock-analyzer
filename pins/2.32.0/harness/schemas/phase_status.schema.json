@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "phase_status.schema.json",
+  "title": "Session Phase Status (light contract)",
+  "description": "Written ONLY by the orchestrator (main agent). Durable resume map for a research session. Subagents write artifacts and handoffs; they do not write this file. See harness/design_phase_status_and_exemplars.md.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "session_date",
+    "schema_version",
+    "updated_at",
+    "current_phase",
+    "phases"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string", "format": "date" },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Bump when phase_id enum or gate semantics change."
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC from date command, not model-invented."
+    },
+    "current_phase": {
+      "type": "string",
+      "enum": [
+        "orch",
+        "0",
+        "1_parallel",
+        "1b",
+        "1c",
+        "1d",
+        "2_parallel",
+        "2_5",
+        "3",
+        "4_parallel",
+        "5",
+        "done"
+      ]
+    },
+    "resume_hint": {
+      "type": "string",
+      "description": "One plain-English sentence for the next orchestrator shift."
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/phase" }
+    },
+    "failures": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/failure" }
+    },
+    "waivers": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/waiver" }
+    }
+  },
+  "definitions": {
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in_progress", "complete", "failed", "blocked", "skipped"]
+    },
+    "phase_id": {
+      "type": "string",
+      "enum": [
+        "orch",
+        "0",
+        "1_parallel",
+        "1b",
+        "1c",
+        "1d",
+        "2_parallel",
+        "2_5",
+        "3",
+        "4_parallel",
+        "5",
+        "done"
+      ]
+    },
+    "agent_row": {
+      "type": "object",
+      "required": ["agent_id", "status"],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "description": "e.g. 2a, 5, phase0_swarm, orchestrator, 13"
+        },
+        "status": { "$ref": "#/definitions/status" },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths relative to session root S/."
+        },
+        "handoff": {
+          "type": ["string", "null"],
+          "description": "Path to registry/handoffs/<id>.md when required."
+        },
+        "skip_reason": {
+          "type": "string",
+          "description": "Required when status=skipped."
+        },
+        "notes": { "type": "string" },
+        "execution": {
+          "type": "string",
+          "enum": ["subagent", "orchestrator_lead", "spawn_failed", "orchestrator_inline"],
+          "description": "How the work was produced. Specialists must be subagent after a returned spawn. orchestrator_lead is only for agent_id=orchestrator (classification/merge/5b). orchestrator_inline on a specialist is a machine FAIL (harness >= 2.20.0). 5b must not retag Agent 5."
+        }
+      }
+    },
+    "phase": {
+      "type": "object",
+      "required": ["phase_id", "status", "agents"],
+      "properties": {
+        "phase_id": { "$ref": "#/definitions/phase_id" },
+        "status": { "$ref": "#/definitions/status" },
+        "started_at": { "type": ["string", "null"] },
+        "finished_at": { "type": ["string", "null"] },
+        "agents": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/agent_row" }
+        },
+        "skip_reason": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "required": ["phase_id", "error"],
+      "properties": {
+        "phase_id": { "$ref": "#/definitions/phase_id" },
+        "agent_id": { "type": "string" },
+        "at": { "type": "string" },
+        "error": { "type": "string", "minLength": 5 },
+        "fallback": { "type": "string" }
+      }
+    },
+    "waiver": {
+      "type": "object",
+      "required": ["issue", "reason"],
+      "properties": {
+        "issue": { "type": "string" },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "major", "minor"]
+        },
+        "waived_in": {
+          "type": "string",
+          "description": "Usually reports/00_*_README.md"
+        },
+        "reason": { "type": "string", "minLength": 10 }
+      }
+    }
+  }
+}

@@ -17,6 +17,13 @@
     <label>Optional slug
       <input name="slug" placeholder="leave blank for YYYY-MM-DD or __r2"/>
     </label>
+    <label>Harness
+      <select name="harness_version">
+        {% for v in harness_versions %}
+        <option value="{{ v }}" {% if v == harness_version %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <label>Orchestrator model
       <input name="orchestrator_model" value="grok-4.5"/>
     </label>

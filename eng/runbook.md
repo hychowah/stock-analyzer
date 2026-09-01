@@ -39,7 +39,9 @@ python3 -m apps.analysis_web
 # Session compare (Grok audit → archive/comparisons/): UI /compares or
 #   COMPARE_SPAWN=fake python -m packages.compare_jobs start --run-a research:META:2026-08-03 --run-b research:META:DATE2
 # Mode A Analyze (Grok orchestrator → new archive/research session; control plane archive/research_jobs/):
-#   AGENT_SPAWN=fake python -m packages.research_jobs start --ticker COHR
+#   AGENT_SPAWN=fake python -m packages.research_jobs start --ticker COHR --harness-version live
+#   python scripts/publish_harness_release.py   # snapshot live runtime → pins/<VERSION>/
+#   UI /harness — workflow + prompts for live or a published pin
 #   python -m packages.research_jobs {list,get,cancel,discard,resume,reconcile}
 #   UI /analyze — kill UI does not kill Grok; cancel=kill-only; discard=abandon; ANALYZE_MAX=3; GROK_JOBS_MAX defaults to kind-slot sum (set 1 to serialize)
 #   Real Grok Analyze refuses non-default ARCHIVE_ROOT. Do not uvicorn --reload.

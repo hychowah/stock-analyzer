@@ -657,6 +657,34 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'href="/analyze"', r.content)
+        self.assertIn(b'href="/harness"', r.content)
+
+    def test_harness_page_and_prompt(self):
+        r = self.client.get("/harness")
+        self.assertEqual(r.status_code, 200, r.text[:500])
+        self.assertIn(b"harness-lanes", r.content)
+        r404 = self.client.get("/harness", params={"version": "9.9.9"})
+        self.assertEqual(r404.status_code, 404)
+        spec = self.client.get("/api/harness/spec")
+        self.assertEqual(spec.status_code, 200)
+        body = spec.json()
+        self.assertGreaterEqual(len(body.get("phases") or []), 10)
+        self.assertTrue(any(e.get("kind") == "entry" for e in body.get("edges") or []))
+        prompt = self.client.get("/api/harness/prompt", params={"agent": "5"})
+        self.assertEqual(prompt.status_code, 200)
+        data = prompt.json()
+        self.assertTrue(data.get("found"))
+        self.assertIn("### Agent 5", data.get("title") or "")
+        self.assertNotIn("### Agent 12", data.get("body") or "")
+        pinned = self.client.get("/harness", params={"version": "2.27.0"})
+        if pinned.status_code == 200:
+            self.assertIn(b"2.27.0", pinned.content)
+
+    def test_analyze_new_has_harness_select(self):
+        r = self.client.get("/analyze/new")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'name="harness_version"', r.content)
+        self.assertIn(b'value="live"', r.content)
 
     def test_analyze_new_without_catalog_ticker(self):
         r = self.client.get("/analyze/new")

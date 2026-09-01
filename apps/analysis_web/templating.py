@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -32,4 +33,5 @@ def create_templates() -> Environment:
     )
     env.filters["fmt_num"] = fmt_num
     env.filters["verdict_badge"] = verdict_badge
+    env.filters["tojson"] = lambda v: Markup(json.dumps(v))
     return env

@@ -27,7 +27,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from apps.analysis_web.config import archive_root, static_dir
-from apps.analysis_web.routes import analyze, api, artifacts, compares, events, pages
+from apps.analysis_web.routes import analyze, api, artifacts, compares, events, harness, pages
 from apps.analysis_web.templating import create_templates
 
 
@@ -57,6 +57,7 @@ def create_app() -> FastAPI:
 
     app.include_router(pages.router)
     app.include_router(analyze.router)
+    app.include_router(harness.router)
     app.include_router(compares.router)
     app.include_router(api.router)
     app.include_router(events.router)

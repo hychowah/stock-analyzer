@@ -12,6 +12,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from packages.catalog_api.client import ArtifactDenied
 from packages.catalog_api.session_files import list_session_artifacts, open_session_artifact
 from packages.agent_jobs.capacity import limits
+from packages.harness_pin.pin import list_versions
 from packages.research_jobs.jobs import (
     AnalyzeBusy,
     AnalyzeDiscardRefused,
@@ -88,6 +89,8 @@ def page_analyze_new(
         ticker=(ticker or "").strip().upper(),
         error=error,
         limits=limits(),
+        harness_versions=list_versions(),
+        harness_version="live",
     )
 
 
@@ -101,6 +104,7 @@ def post_analyze_new(
     subagent_model: str = Form(""),
     notes: str = Form(""),
     ingest_library: str = Form("0"),
+    harness_version: str = Form("live"),
 ) -> Response:
     try:
         job = start_analyze(
@@ -112,6 +116,7 @@ def post_analyze_new(
             subagent_model=subagent_model.strip() or None,
             notes=notes.strip() or None,
             ingest_library=ingest_library not in ("", "0", "false", "False"),
+            harness_version=harness_version.strip() or "live",
         )
     except AnalyzeTickerError as e:
         return page_analyze_new(request, ticker=ticker, error=str(e))

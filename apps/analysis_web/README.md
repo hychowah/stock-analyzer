@@ -34,7 +34,9 @@ Or: `bash apps/analysis_web/init.sh`
 | `/calibration` | MoS vs outcomes |
 | `/portfolio` | Portfolio: `.local/portfolio.json` joined to latest catalog runs |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`) |
-| `/analyze/new` | Start analysis (market ticker; catalog membership not required) |
+| `/analyze/new` | Start analysis (ticker + harness version `live` or `pins/<semver>/`) |
+| `/harness` | Phase swimlanes + artifact graph + prompt inspector for a pin |
+| `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
 | `/analyze/{analyze_id}` | Live phase/status; cancel = keep session; discard = abandon |
 | `/analyze-artifact?analyze_id=…&path=…` | In-progress: handoffs/phase only; FV and report bodies 403 until snapshot |
 | `/compares` | Compare packets (`archive/comparisons/`) |

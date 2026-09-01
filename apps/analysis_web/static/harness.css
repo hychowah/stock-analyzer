@@ -1,0 +1,67 @@
+.harness-page select {
+  min-width: 8rem;
+}
+.harness-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+@media (max-width: 800px) {
+  .harness-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.harness-lanes {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.harness-lane {
+  min-width: 11rem;
+  max-width: 14rem;
+  flex: 0 0 auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem;
+  background: #f8fafc;
+}
+.harness-lane h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+}
+.harness-agent {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  color: #1a1a1a;
+  border: 1px solid #cbd5e1;
+  margin: 0.25rem 0;
+  padding: 0.35rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+.harness-agent:hover {
+  border-color: #2563eb;
+}
+.harness-inspector .report-body {
+  font-size: 0.88rem;
+}
+.harness-inspector details {
+  margin-bottom: 0.75rem;
+}
+#dag-svg {
+  min-height: 12rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+#dag-svg text {
+  font: 11px ui-monospace, monospace;
+  fill: #334155;
+}
+body:has(.harness-page) main {
+  max-width: 1280px;
+}

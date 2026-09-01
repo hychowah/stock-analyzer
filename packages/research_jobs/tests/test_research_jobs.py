@@ -347,6 +347,46 @@ class ResearchJobsTests(unittest.TestCase):
         )
         self.assertEqual(job["status"], "running")
 
+    def test_unknown_harness_version(self) -> None:
+        with self.assertRaises(AnalyzeValidationError) as ctx:
+            self._start(harness_version="9.9.9")
+        self.assertIn("pins", str(ctx.exception).lower())
+
+    def test_job_records_live_pin_and_pythonpath(self) -> None:
+        job = self._start()
+        self.assertEqual(job["pin"]["version"], "live")
+        self.assertEqual(job["spawn_env"]["PYTHONPATH"], str(ROOT))
+        self.assertEqual(job["spawn_cwd"], str(ROOT))
+        prompt = Path(job["job_dir"]).joinpath("prompt.md").read_text(encoding="utf-8")
+        self.assertNotIn("bind_library.py", prompt)
+        self.assertNotIn("preflight_phase.py", prompt)
+        self.assertIn("ROOT:", prompt)
+
+    def test_published_pin_sets_pythonpath_to_pin_root(self) -> None:
+        pin_root = ROOT / "pins" / "2.27.0"
+        if not (pin_root / "PIN.json").is_file():
+            self.skipTest("pins/2.27.0 not published")
+        job = self._start(
+            harness_version="2.27.0",
+            session_date="2026-08-29",
+            slug="pin227",
+        )
+        self.assertEqual(job["pin"]["version"], "2.27.0")
+        self.assertEqual(Path(job["spawn_env"]["PYTHONPATH"]), pin_root)
+        prompt = Path(job["job_dir"]).joinpath("prompt.md").read_text(encoding="utf-8")
+        self.assertIn(str(pin_root), prompt)
+        live = self._start(session_date="2026-08-29", slug="livejob")
+        self.assertNotEqual(live["spawn_env"]["PYTHONPATH"], job["spawn_env"]["PYTHONPATH"])
+
+    def test_two_starts_do_not_share_process_global_harness(self) -> None:
+        a = self._start(session_date="2026-08-29", slug="a")
+        b = self._start(session_date="2026-08-29", slug="b")
+        self.assertEqual(a["pin"]["version"], "live")
+        self.assertEqual(b["pin"]["version"], "live")
+        self.assertNotEqual(a["analyze_id"], b["analyze_id"])
+        os.environ.pop("HARNESS_ROOT", None)
+        self.assertNotIn("HARNESS_ROOT", os.environ)
+
     def test_prompt_build_contains_frozen_strings(self) -> None:
         text = build_prompt(
             {

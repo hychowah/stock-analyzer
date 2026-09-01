@@ -21,7 +21,7 @@
   {% else %}
   <p class="muted">No FV numbers until the finalize snapshot exists. Report/chart names below are sizes only until then.</p>
   {% endif %}
-  <p class="muted">mode={{ job.mode }} · pid={{ job.pid or '—' }} · spawned {{ job.spawned_at or '—' }}</p>
+  <p class="muted">mode={{ job.mode }} · harness={% if job.pin %}{{ job.pin.label or job.pin.version }}{% else %}live{% endif %} · pid={{ job.pid or '—' }} · spawned {{ job.spawned_at or '—' }}</p>
   <div>
     {% if job.status in ['running', 'queued'] %}
     <form method="post" action="/analyze-cancel" style="display:inline">

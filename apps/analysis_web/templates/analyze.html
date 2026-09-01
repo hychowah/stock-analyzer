@@ -20,6 +20,7 @@
       <tr>
         <th>Ticker</th>
         <th>Session</th>
+        <th>Harness</th>
         <th>Status</th>
         <th>Phase</th>
         <th>Updated</th>
@@ -30,6 +31,7 @@
       <tr>
         <td class="mono"><a href="/analyze/{{ j.analyze_id }}">{{ j.ticker }}</a></td>
         <td class="mono">{{ j.session_key }}</td>
+        <td class="mono muted">{% if j.pin %}{{ j.pin.label or j.pin.version }}{% else %}—{% endif %}</td>
         <td><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
         <td class="mono muted">{{ j.phase_current or '—' }}</td>
         <td class="mono muted">{{ j.updated_at }}</td>

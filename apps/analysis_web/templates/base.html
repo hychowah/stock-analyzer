@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>{% block title %}Archive{% endblock %} · Stock Research Archive</title>
   <link rel="stylesheet" href="/static/app.css"/>
+  {% block extra_css %}{% endblock %}
 </head>
 <body {% block body_attrs %}{% endblock %}>
   <header>
@@ -13,6 +14,7 @@
     <div style="margin-top:0.4rem">
       <a href="/">Runs</a>
       <a href="/analyze">Analyze</a>
+      <a href="/harness">Harness</a>
       <a href="/compares">Compares</a>
       <a href="/health">Health</a>
       <a href="/experiments">Experiments</a>

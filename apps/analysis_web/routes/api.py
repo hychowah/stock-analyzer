@@ -163,6 +163,7 @@ class AnalyzeStartBody(BaseModel):
     subagent_model: str | None = None
     notes: str | None = None
     ingest_library: bool = False
+    harness_version: str | None = "live"
 
 
 @router.get("/analyze")
@@ -183,6 +184,7 @@ def api_start_analyze(body: AnalyzeStartBody) -> dict[str, Any]:
             subagent_model=body.subagent_model,
             notes=body.notes,
             ingest_library=body.ingest_library,
+            harness_version=body.harness_version or "live",
         )
     except AnalyzeTickerError as e:
         raise HTTPException(

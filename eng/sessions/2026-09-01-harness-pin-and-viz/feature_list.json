@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json, feature list, baseline eng_verify, git log",
+      "passes": false,
+      "verify": "issue.json has success_criteria; progress.md notes baseline"
+    },
+    {
+      "id": "pin-runtime",
+      "description": "Deep harness_pin + workflow_spec + prompt headings + write-once identity + publish + VERSION 2.27.0 + pins/2.27.0",
+      "passes": false,
+      "verify": "pytest packages/harness_pin packages/kd_research/tests/test_workflow_spec.py packages/kd_research/tests/test_provenance.py -q"
+    },
+    {
+      "id": "jobs-bind-pin",
+      "description": "start_analyze uses only Pin API; coordinate-only map prompt; spawn_env PYTHONPATH replace",
+      "passes": false,
+      "verify": "pytest packages/research_jobs packages/agent_jobs -q"
+    },
+    {
+      "id": "analyze-and-harness-ui",
+      "description": "Analyze version select + /harness visualization from Pin.workflow_spec",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

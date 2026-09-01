@@ -1,0 +1,336 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "valuation_model.schema.json",
+  "title": "Valuation Model (light contract)",
+  "description": "Written by the valuation agent (Phase 2). The MODEL CHOICE and every assumption are agent judgment: each assumption is {value, rationale, basis}. Math must be produced by a cited runtime script in data/compute/, not mental arithmetic.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "model", "fair_value", "assumptions", "compute_script", "sensitivity"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "model": {
+      "type": "object",
+      "required": ["name", "rationale"],
+      "properties": {
+        "name": { "type": "string", "description": "e.g. excess_return, dcf, nav_ffo, ddm, sotp, or a hybrid" },
+        "rationale": { "type": "string", "minLength": 20, "description": "Why this model fits this company/sector." },
+        "module_reference": { "type": "string", "description": "Sector module section that guided the choice, if any." }
+      }
+    },
+    "fair_value": {
+      "type": "object",
+      "required": ["base", "bear", "bull"],
+      "properties": {
+        "base": { "type": "number" },
+        "bear": { "type": "number" },
+        "bull": { "type": "number" },
+        "probability_weighted": { "type": "number" },
+        "currency": { "type": "string" },
+        "margin_of_safety": {
+          "type": "number",
+          "description": "Signed fraction: 1 - price / fair_value.base (e.g. 0.292 or -0.299). Prefer writing BOTH this and margin_of_safety_pct from the compute script."
+        },
+        "margin_of_safety_pct": {
+          "type": "number",
+          "description": "Signed percent points: 100 * (1 - price / fair_value.base) (e.g. 29.2 or -29.9). NEVER store a 0-1 fraction here. Primary MoS uses base FV; disclose vs probability_weighted if they differ materially."
+        },
+        "decision_usefulness": {
+          "type": "string",
+          "description": "high|medium|low — set when (bull-bear)/base > 100% or bear < 0.4*base. When low, do not present probability_weighted FV as a precise target."
+        },
+        "posture": {
+          "type": "string",
+          "description": "One sentence: assumption stack leans conservative|neutral|aggressive overall."
+        },
+        "scenario_probabilities": {
+          "description": "Prefer per-leg {value,rationale,basis} for bear/base/bull, or bare floats. risk_bridge mirror must be bare floats only."
+        },
+        "probability_method": {
+          "type": "string",
+          "description": "How scenario masses were sized; required when weights match a common template (e.g. 30/45/25) so the mass is not a silent default."
+        }
+      }
+    },
+    "terminal_consistency": {
+      "type": "object",
+      "description": "Optional but expected when model uses Gordon/exit/residual terminal value: method, wacc_minus_g (or ke_minus_g), reinvestment/payout identity, tv_share_of_ev_base, and response if TV share is high."
+    },
+    "roic_identity": {
+      "type": "object",
+      "description": "REQUIRED on harness >= 2.8.0 when valuation exists (Python gate; not schema required[]). Same-script owner-earnings ROIC on the DCF's NOPAT/tax/lease/WACC stack, dual column residual-claim FCFF vs residual-income EV, g=0 counterfactual, legal exit when mid-cycle ROIC ≤ WACC, cheap_claim. applies:false with not_applicable_reason for banks/REITs/pre-profit growth. Example numbers are illustrative round fakes — do not copy.",
+      "additionalProperties": true,
+      "properties": {
+        "applies": { "type": "boolean" },
+        "not_applicable_reason": { "type": "string" },
+        "native_analog": { "type": ["string", "null"] },
+        "leases": {
+          "type": "string",
+          "enum": ["opex_and_out_of_ic", "capitalized_both"]
+        },
+        "wacc": { "type": "number" },
+        "spread_mid_cycle": { "type": "number" },
+        "quality_bucket": {
+          "type": "string",
+          "enum": ["above_wacc", "approx_wacc", "below_wacc"]
+        },
+        "gate": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "string",
+              "enum": [
+                "g_zero",
+                "cut_earnings_power",
+                "reinvestment_in_engine",
+                "reconciled_to_ic"
+              ]
+            },
+            "rationale": { "type": "string" }
+          }
+        },
+        "cheap_claim": {
+          "type": "object",
+          "properties": {
+            "class": {
+              "type": "string",
+              "enum": [
+                "franchise_mos",
+                "equity_near_book",
+                "residual_option",
+                "not_cheap"
+              ]
+            },
+            "rationale": { "type": "string" }
+          }
+        },
+        "mid_cycle_construction": {
+          "type": "object",
+          "description": "REQUIRED on harness >= 2.13.0 when applies:true (Python gate). window_kind ttc_cycle|multi_year_avg|last_year|peak_year|insufficient_window; years_used year list or {start,end}; print_vs_midcycle ≥20 chars. above_wacc/franchise_mos license only ttc_cycle|multi_year_avg with ≥2 years. Example numbers are illustrative — do not copy.",
+          "additionalProperties": true,
+          "properties": {
+            "window_kind": {
+              "type": "string",
+              "enum": [
+                "ttc_cycle",
+                "multi_year_avg",
+                "last_year",
+                "peak_year",
+                "insufficient_window"
+              ]
+            },
+            "years_used": {},
+            "print_vs_midcycle": { "type": "string", "minLength": 20 }
+          }
+        }
+      }
+    },
+    "multi_method_reconciliation": {
+      "type": "object",
+      "description": "Required when a material SOTP/exit-multiple/peer cross-check is run: primary_fv_for_decision, cross_check_fv, delta_pct, why_primary_wins, what_would_flip_primary. If |SOTP−DCF|/primary > 40%, set path_reopened + what_changed or gap_rationale why the gap is real — then reopen the independent volume path if it is a skill miss.",
+      "additionalProperties": true,
+      "properties": {
+        "primary_fv_for_decision": { "type": "number" },
+        "cross_check_fv": { "type": "number" },
+        "delta_pct": { "type": "number" },
+        "why_primary_wins": { "type": "string" },
+        "what_would_flip_primary": { "type": "string" },
+        "path_reopened": { "type": "boolean" },
+        "what_changed": { "type": "string" },
+        "gap_rationale": { "type": "string" }
+      }
+    },
+    "street_bind": {
+      "type": "object",
+      "description": "REQUIRED when registry/street_estimates.json exists (harness >= 2.7.0). On >= 2.18.0 base Y1 starts from Street FY+1 (used_as:fy1_baseline); |delta_pct| > 0.05 FAILs unless street_unusable. On 2.7-2.17 Street is calibration after an independent stack; copying was FAIL. delta_pct = (base − street) / street. street must match street_estimates FY+1 when numeric.",
+      "additionalProperties": true,
+      "properties": {
+        "fy_plus_1_label": { "type": "string" },
+        "guide": { "type": ["number", "null"] },
+        "guide_source": { "type": "string" },
+        "street": { "type": ["number", "null"], "description": "Must match street_estimates FY+1 revenue when that value is numeric, unless response=street_unusable. Do not set street=base to skip |delta|>20%." },
+        "street_source": { "type": "string" },
+        "base": { "type": "number", "description": "Model FY+1 revenue (same units as street). On >= 2.18.0 this starts from Street FY+1." },
+        "delta_pct": { "type": "number" },
+        "independent_construction": {},
+        "divergence_rationale": { "type": "string" },
+        "response": {
+          "type": "string",
+          "enum": [
+            "reopen_path",
+            "keep_independent_vs_street",
+            "street_unusable",
+            "guide_missing",
+            "street_baseline"
+          ]
+        },
+        "intra_year": {
+          "type": "array",
+          "description": "Optional same-period quarter paths vs a typed company box (harness >= 2.18.0).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "period": { "type": "string" },
+              "revenue": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "street_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/street_estimates.json exists. On >= 2.18.0 consume Street as used_as:fy1_baseline (revenue_path / street_mean also legal). On 2.7-2.17 used_as:calibration_check; path-copy forbidden. Not all noted_only.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": { "type": "string" },
+          "action": { "type": "string" },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "conservatism_dials": {
+      "type": "array",
+      "description": "REQUIRED on harness >= 2.7.0 when valuation exists. Keys volume_vs_guide, gaap_om_vs_guide, sbc_in_fcff, wacc_vs_buildup; applies_in base | bear_only | none. Omitting the array is silent stacking (FAIL). ≥3 in base requires stacking_justification.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string" },
+          "dial": { "type": "string" },
+          "applies_in": { "type": "string", "enum": ["base", "bear_only", "none"] },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "stacking_justification": {
+      "type": "string",
+      "description": "Required when ≥3 conservatism_dials apply in base. Silent stacking of volume + GAAP OM + SBC-as-cash + high WACC into base is FAIL-quality."
+    },
+    "fcff_identity": {
+      "type": "object",
+      "description": "Owner-earnings identity (harness >= 2.18.0). Never subtract SBC from after-SBC GAAP NOPAT.",
+      "additionalProperties": true,
+      "properties": {
+        "starting_kpi": { "type": "string" },
+        "sbc_convention": {
+          "type": "string",
+          "enum": ["leave_sbc_in_ebit", "ir_fcf_nss", "other"]
+        },
+        "bridge": { "type": "string" }
+      }
+    },
+    "discounting_convention": {
+      "type": "string",
+      "description": "Named mid_year | year_end. Disclosure required; mid_year is not mandated.",
+      "enum": ["mid_year", "year_end"]
+    },
+    "research_brief_hooks": {
+      "type": "array",
+      "description": "Optional when research_brief exists: map open must_answer_questions to used_as or unanswered_widens_range."
+    },
+    "assumptions": {
+      "type": "object",
+      "description": "Every key assumption (discount rate, growth path, margins, multiples, terminal value, probabilities).",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["value", "rationale", "basis"],
+        "properties": {
+          "value": {},
+          "rationale": { "type": "string", "minLength": 10 },
+          "basis": { "type": "string", "description": "Source, data, or reasoning the value rests on." }
+        }
+      }
+    },
+    "compute_script": { "type": "string", "description": "Path to the runtime script under data/compute/ that produced the numbers." },
+    "overrides_applied": {
+      "type": "array",
+      "description": "Latest-quarter evidence the valuation agent chose to apply (see latest_quarter.json evidence_log).",
+      "items": {
+        "type": "object",
+        "required": ["rule", "old_assumption", "new_assumption", "reason"],
+        "properties": {
+          "rule": { "type": "string" },
+          "old_assumption": { "type": "string" },
+          "new_assumption": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "filing_deep_dive_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/filing_deep_dive.json exists. How footnotes / strategy_arc / management_scorecard changed assumptions — or explicit rejects.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Path into filing_deep_dive.json (e.g. footnotes.sbc_unrecognized, management_scorecard.credibility_summary)."
+          },
+          "action": {
+            "type": "string",
+            "description": "used_as:<assumption> | rejected | noted_only"
+          },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "operating_path_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/operating_path_brief.json exists (harness >= 2.6.0). How the 1d brief changed growth/OM assumptions — used_as with old/new or rejected. noted_only only for immaterial slices; all-noted_only FAILs.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": { "type": "string" },
+          "action": { "type": "string" },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "market_context_hooks": {
+      "type": "array",
+      "description": "REQUIRED when registry/market_context.json exists. How listing/region intensity, accounting regime, local cost-of-capital flags, and ownership/control changed assumptions — or explicit rejects / noted_only no-ops. For intensity=low, a single noted_only entry is enough. Never paste region-module reference ranges as mandates without use/reject reason.",
+      "items": {
+        "type": "object",
+        "required": ["from", "action", "reason"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Path into market_context.json or region module theme (e.g. cost_of_capital_flags.use_local_rf, ownership.control_type, accounting_regime.basis)."
+          },
+          "action": {
+            "type": "string",
+            "description": "used_as:<assumption> | rejected | noted_only"
+          },
+          "old": {},
+          "new": {},
+          "reason": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "reverse_engineering": {
+      "type": "object",
+      "description": "What the current price implies vs own assumptions; flag if implied > bull case.",
+      "properties": {
+        "implied": { "type": "object" },
+        "priced_for_perfection": { "type": "boolean" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "sensitivity": {
+      "type": "object",
+      "description": "REQUIRED. Base-case FV grid over the two most judgment-dependent assumptions (e.g. discount rate x terminal profitability), so readers can see how much of the verdict is dial choice. Produced by the compute script.",
+      "properties": {
+        "grid": { "type": "object" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

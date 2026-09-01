@@ -1,0 +1,37 @@
+{
+  "goal": "In-repo pins plus Analyze version select and /harness visualization",
+  "non_goals": [
+    "Do not run research Phases 0-5 from Mode B",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not reconstruct catalog versions 2.2.1-2.25.0 as runnable pins",
+    "Do not git-archive or tag as the pin source of truth",
+    "Do not overlay host MCP into tracked pins/"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "packages/harness_pin resolve/list/run/spawn_env/workflow_spec/agent_prompt",
+    "pins/2.27.0 is a self-describing snapshot in the same change set as VERSION 2.27.0",
+    "Finalize copies scaffold identity and does not recapture from live git",
+    "Two Analyze jobs on different pins get distinct PYTHONPATH",
+    "/harness draws Pin.workflow_spec for the requested version",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "pins/",
+    "AGENTS.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

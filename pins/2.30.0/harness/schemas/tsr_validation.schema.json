@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "tsr_validation.schema.json",
+  "title": "TSR & Dilution Validation (light contract)",
+  "description": "Written by the TSR agent (Phase 2). Validates whether historical shareholder returns justify the forward thesis; SBC/dilution analysis at critical intensity for growth and is_also_growth names.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "tsr", "compute_script"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "compute_script": { "type": "string" },
+    "tsr": {
+      "type": "object",
+      "description": "Total shareholder return over chosen horizons vs benchmarks. Benchmarks chosen per region/sector, not hardcoded.",
+      "properties": {
+        "horizons": { "type": "object" },
+        "benchmarks": { "type": "array", "items": { "type": "string" } },
+        "relative_performance": { "type": "object" }
+      }
+    },
+    "dilution": {
+      "type": "object",
+      "description": "Share-count trajectory, buybacks vs issuance, compound dilution.",
+      "properties": {
+        "share_count_cagr_pct": { "type": "number" },
+        "rationale": { "type": "string" }
+      }
+    },
+    "sbc": {
+      "type": "object",
+      "description": "SBC as % revenue, SBC-adjusted FCF, Rule of 40 / Burn Multiple where relevant.",
+      "properties": {
+        "sbc_pct_revenue": { "type": ["number", "null"] },
+        "sbc_adjusted_fcf": { "type": ["number", "null"] },
+        "rule_of_40": { "type": ["number", "null"] },
+        "burn_multiple": { "type": ["number", "null"] },
+        "assessment": { "type": "string" }
+      }
+    },
+    "value_trap_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["flag", "status", "evidence"],
+        "properties": {
+          "flag": { "type": "string" },
+          "status": { "type": "string", "enum": ["pass", "warn", "fail", "unknown"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    }
+  }
+}

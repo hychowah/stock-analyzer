@@ -1,21 +1,22 @@
 {
-  "goal": "W1: gated-independent Y1 (harness 2.28.0). Street FY+1 remains the default Y1 start; independent Y1 is legal only with a resolved evidence gate; destock-in-base is legal only when this print matches the analog.",
+  "goal": "W1: five Mode A decision-quality increments (2.28–2.32). Street default Y1 with gated independent_y1; material stress binds duration; bind-then-classify + slim Phase 0; consume FDD/Street/1d_ind/legal $; TSR ROC join on decision.json without serializing Agent 5.",
   "non_goals": [
     "Do not run research Phases 0–5",
     "Do not mutate archive/research or archive/outcomes history",
-    "Do not implement plan items 2–5 (stress bind, Phase 0 slim, FDD consumption, TSR serialize) in this increment",
     "Do not author a ticker FV/MoS",
-    "Do not edit published pins/2.27.0"
+    "Do not edit published pins/2.27.0",
+    "Do not serialize Agent 5 behind Agent 12",
+    "Do not ship 06 §2.7 risk red-team, token budgets, CSV-vs-10-K recon, Agent 2c removal, Agent 6 decouple, or always-on region 2f"
   ],
   "work_type": "W1",
   "success_criteria": [
     "2.18 stamps keep 5% FAIL and destock-in-base FAIL while Street usable",
-    "2.28 street_baseline with |delta|>5% FAIL",
-    "2.28 independent_y1 + destock_this_print allows destock-in-base",
-    "2.28 destock-in-base without current_print_is_destock FAIL",
-    "2.28 ttc_midcycle is not a legal Y1 gate",
-    "eng_verify.py passes including pins/2.28.0",
-    "kd_research street/destock/law-surface tests pass"
+    "2.28 street_baseline with |delta|>5% FAIL; independent_y1 + destock_this_print allows destock-in-base; ttc_midcycle is not a Y1 gate",
+    "2.29 material stress (haircut≥0.25 and p≥0.15) forbids initiate/add; no DCF rewrite",
+    "2.30 1_parallel may start without Phase 0 complete; 1d still waits; Phase 0 complete needs ≥3 (or ≥4) raws",
+    "2.31 extracted FDD material notes need use-or-reject; 2d cites Street; 1d_ind has background_round_ids or named_gaps",
+    "2.32 franchise_mos + above_wacc + roc=fail requires decision.roc_screen_rebuttal; Phase 2 stays parallel",
+    "eng_verify.py passes including pins/2.32.0 matching VERSION"
   ],
   "write_allowlist": [
     "eng/",
@@ -31,6 +32,6 @@
   ],
   "verify_commands": [
     "python3 scripts/eng_verify.py",
-    "python3 -m pytest packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py packages/kd_research/tests/test_law_surface_freeze.py -q"
+    "python3 -m pytest packages/kd_research/tests -q"
   ]
 }

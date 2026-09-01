@@ -13,6 +13,30 @@
       "verify": "python3 -m pytest packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py packages/kd_research/tests/test_law_surface_freeze.py -q"
     },
     {
+      "id": "stress-bind-2-29",
+      "description": "2.29.0 material stress binds duration (no DCF rewrite, no override hatch); VERSION + pins/2.29.0",
+      "passes": true,
+      "verify": "python3 -m pytest packages/kd_research/tests/test_wave12_stress_bind.py packages/kd_research/tests/test_wave6_decision_reopen.py -q"
+    },
+    {
+      "id": "phase0-slim-2-30",
+      "description": "2.30.0 bind-then-classify; slim Phase 0 (3/4 rounds); 1_parallel does not wait on Phase 0; 1d still does; VERSION + pins/2.30.0",
+      "passes": true,
+      "verify": "python3 -m pytest packages/kd_research/tests/test_phase_graph.py packages/kd_research/tests/test_gates_preflight.py -q"
+    },
+    {
+      "id": "consumption-2-31",
+      "description": "2.31.0 consume FDD material notes, 2d Street cite, 1d_ind background/named_gaps, 2.5 legal-dollar cite; VERSION + pins/2.31.0",
+      "passes": true,
+      "verify": "python3 -m pytest packages/kd_research/tests/test_consumption_231.py -q"
+    },
+    {
+      "id": "tsr-join-2-32",
+      "description": "2.32.0 TSR ROC join on decision.json at 5b (FAIL); Phase 2 stays 4 || 5 || 12; VERSION + pins/2.32.0",
+      "passes": true,
+      "verify": "python3 -m pytest packages/kd_research/tests/test_wave1_decision_quality.py packages/kd_research/tests/test_wave6_decision_reopen.py packages/kd_research/tests/test_agent4_isolation_check.py -q"
+    },
+    {
       "id": "verify",
       "description": "Verifier marks features after real checks (implementer does not flip passes)",
       "passes": true,

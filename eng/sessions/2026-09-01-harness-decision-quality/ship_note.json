@@ -1,12 +1,26 @@
 {
   "session": "2026-09-01-harness-decision-quality",
-  "harness_version": "2.28.0",
-  "feature": "gated-y1-2-28",
-  "verify": "python scripts/eng_verify.py PASS (594 tests); pins/2.28.0 matches VERSION",
-  "commit_subject": "Make Street the default Y1 start and allow evidence-gated independent Y1 (2.28.0)",
+  "harness_version": "2.32.0",
+  "feature": "plan items 1–5 (2.28–2.32)",
+  "verify": "python scripts/eng_verify.py PASS on each increment; final 2.32.0 pin matches VERSION",
+  "commits": [
+    "0995b47 Make Street the default Y1 start and allow evidence-gated independent Y1 (2.28.0)",
+    "ef3fce6 Bind duration to material stress haircuts without rewriting the DCF (2.29.0)",
+    "7bed05d Bind library before classify and slim Phase 0 so filings lead the narrative (2.30.0)",
+    "6e3df4b Require valuation to consume FDD, Street, 1d industry, and legal dollars (2.31.0)",
+    "e1441e8 Join TSR ROC vs franchise cheapness on decision.json without serializing Agent 5 (2.32.0)"
+  ],
   "notes": [
-    "Street baseline still FAILs |delta|>5%. independent_y1 requires a resolved gate.",
-    "Destock-in-base legal only when destock_this_print. ttc_midcycle is not a Y1 license.",
-    "2.18 stamps unchanged. Plan items 2-5 are later increments."
+    "Ranking is methodology (investment number / PM verb), not 09 research-architecture ROI (that would order 3→4→5→2→1).",
+    "Street remains default Y1. independent_y1 needs a resolved gate. ttc_midcycle is not a Y1 license.",
+    "Material stress forbids initiate/add. No second valuer. No bear = base*(1-h*p).",
+    "Phase 2 stays 4 || 5 || 12. ROC join is on decision.json at 5b.",
+    "1d_ind consumption is a schema contract (background_round_ids or named_gaps), not a packet sniffer."
+  ],
+  "follow_ups": [
+    "Do not include archive/catalog/* (live index rebuild).",
+    "RESEARCH_AGENTS.md top orchestrator-order sentence still says classify then bind; live 2.30 law is orchestrator_runbook + §13 (bind before classify). Needs a later VERSION if rewritten.",
+    "Named background_hooks[] on Agent 5 was not added; Phase 0 risk_candidate still maps through 2.5 merge + existing Agent 5 seeds.",
+    "Deferred from the plan: 06 §2.7 risk red-team; token budgets; CSV-vs-10-K excerpt recon; structured kill triggers; Agent 2c removal; Agent 6 decouple; always-on region 2f."
   ]
 }

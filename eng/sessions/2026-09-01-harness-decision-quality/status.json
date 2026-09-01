@@ -1,9 +1,9 @@
 {
   "slug": "harness-decision-quality",
   "session_key": "2026-09-01-harness-decision-quality",
-  "status": "in_progress",
+  "status": "complete",
   "created_at": "2026-09-01T00:00:00Z",
-  "updated_at": "2026-09-01T12:00:00Z",
+  "updated_at": "2026-09-01T18:00:00Z",
   "work_type": "W1",
-  "resume_hint": "Implementer done for gated-y1-2-28; eng_verify PASS. Verifier should flip feature_list passes and write ship_note.json. Do not git commit until the user agrees. Plan items 2-5 are later increments after this lands on main."
+  "resume_hint": "Plan items 1–5 shipped as 2.28.0–2.32.0 on main (0995b47..e1441e8). Session notes closed. Leave archive/catalog/* uncommitted. No further slice in this plan."
 }

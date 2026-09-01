@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Finalize a research session for lookback: snapshot + compare DB + catalog.
+
+Run after Phase 5 audit (PASS or FAIL both exportable).
+
+Usage:
+    python3 scripts/finalize_session.py --ticker SOFI --date 2026-08-09
+    python3 scripts/finalize_session.py --session-dir archive/research/META/2026-08-03
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scripts.build_prediction_snapshot import build_for_session  # noqa: E402
+from scripts.export_compare_db import export_session  # noqa: E402
+from packages.kd_research.compare_db import open_db  # noqa: E402
+from packages.kd_research.paths import resolve_session  # noqa: E402
+from packages.kd_research.catalog_rebuild import patch_run_into_catalog, rebuild  # noqa: E402
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--ticker")
+    ap.add_argument("--date", help="Session date or session_key")
+    ap.add_argument("--session-dir")
+    ap.add_argument("--skip-catalog", action="store_true", help="Skip thin JSON catalog update")
+    ap.add_argument(
+        "--full-catalog-rebuild",
+        action="store_true",
+        help="Full disk scan rebuild instead of O(1) patch (recovery / migration)",
+    )
+    args = ap.parse_args(argv)
+
+    if args.session_dir:
+        session = Path(args.session_dir)
+    elif args.ticker and args.date:
+        found = resolve_session(args.ticker, args.date)
+        if found is None:
+            print(f"Session not found: {args.ticker} {args.date}", file=sys.stderr)
+            return 2
+        session = found
+    else:
+        ap.error("pass --session-dir or --ticker and --date")
+
+    if not Path(session).is_dir():
+        print(f"Session not found: {session}", file=sys.stderr)
+        return 2
+
+    from packages.kd_research.spawn_gate import (  # noqa: WPS433
+        check_spawn_discipline,
+        session_enforces_spawn,
+        session_is_abandoned,
+    )
+
+    if session_is_abandoned(session):
+        print(
+            "REFUSED: session abandoned (specialist spawn failed). "
+            "Do not finalize; scaffold a new session_key if the ticker is still in scope.",
+            file=sys.stderr,
+        )
+        return 2
+    if session_enforces_spawn(session):
+        spawn_fails = [r for r in check_spawn_discipline(session) if r[0] == "FAIL"]
+        if spawn_fails:
+            print(
+                "REFUSED: spawn discipline FAIL — specialist work without subagent spawn.",
+                file=sys.stderr,
+            )
+            for _status, check_id, detail in spawn_fails:
+                print(f"  FAIL     {check_id}: {detail}", file=sys.stderr)
+            return 1
+
+    snap = build_for_session(session, force=True)
+    prov = (snap.get("snapshot") or {}).get("provenance") or {}
+    print(
+        f"snapshot OK {snap['run_id']} "
+        f"harness_version={prov.get('harness_version')} "
+        f"git={prov.get('harness_git_sha')} "
+        f"dirty={prov.get('harness_dirty')}"
+    )
+
+    conn = open_db(rebuild=False)
+    row = export_session(session, conn, refresh_snapshot=False)
+    conn.commit()
+    conn.close()
+    print(
+        f"compare_db OK {row['run_id']} price={row.get('asof_price')} "
+        f"fv_base={row.get('fv_base')} audit={row.get('audit_verdict')}"
+    )
+
+    if not args.skip_catalog:
+        ticker = str(row.get("ticker") or session.parent.name).upper()
+        session_key = str(row.get("session_key") or session.name)
+        if args.full_catalog_rebuild:
+            result = rebuild()
+        else:
+            result = patch_run_into_catalog(ticker, session_key, session)
+        print(
+            f"catalog OK mode={result.get('mode')} "
+            f"{result['n_runs']} runs, {result['n_tickers']} tickers"
+        )
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json, feature list, baseline git; 2.27.0 already on main",
+      "passes": true,
+      "verify": "issue.json has success_criteria; allowlist includes harness/ and pins/"
+    },
+    {
+      "id": "gated-y1-2-28",
+      "description": "2.28.0 Street default Y1 + evidence-gated independent_y1; destock-in-base only when this print matches; VERSION + pins/2.28.0",
+      "passes": true,
+      "verify": "python3 -m pytest packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py packages/kd_research/tests/test_law_surface_freeze.py -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks (implementer does not flip passes)",
+      "passes": true,
+      "verify": "python3 scripts/eng_verify.py"
+    }
+  ]
+}

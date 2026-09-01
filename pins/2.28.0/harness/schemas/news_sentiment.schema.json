@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "news_sentiment.schema.json",
+  "title": "News & Sentiment (light contract)",
+  "description": "Written by the Phase 1 news/sentiment agent. Feeds the contrarian/catalyst lens.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "items"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "as_of": { "type": "string", "format": "date" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "headline", "source", "sentiment"],
+        "properties": {
+          "date": { "type": "string" },
+          "headline": { "type": "string" },
+          "source": { "type": "string", "description": "URL or outlet name." },
+          "sentiment": { "type": "string", "enum": ["positive", "negative", "neutral", "mixed"] },
+          "relevance": { "type": "string" }
+        }
+      }
+    },
+    "positioning": {
+      "type": "object",
+      "description": "Analyst dispersion, short interest, insider activity. Numbers need source or rationale.",
+      "properties": {
+        "analyst_consensus": { "type": "string" },
+        "short_interest": { "type": ["object", "null"] },
+        "insider_activity": { "type": ["object", "null"] }
+      }
+    },
+    "catalyst_calendar": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["event", "expected_date"],
+        "properties": {
+          "event": { "type": "string" },
+          "expected_date": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      }
+    }
+  }
+}

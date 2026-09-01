@@ -1,0 +1,36 @@
+{
+  "goal": "W1: gated-independent Y1 (harness 2.28.0). Street FY+1 remains the default Y1 start; independent Y1 is legal only with a resolved evidence gate; destock-in-base is legal only when this print matches the analog.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not implement plan items 2–5 (stress bind, Phase 0 slim, FDD consumption, TSR serialize) in this increment",
+    "Do not author a ticker FV/MoS",
+    "Do not edit published pins/2.27.0"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "2.18 stamps keep 5% FAIL and destock-in-base FAIL while Street usable",
+    "2.28 street_baseline with |delta|>5% FAIL",
+    "2.28 independent_y1 + destock_this_print allows destock-in-base",
+    "2.28 destock-in-base without current_print_is_destock FAIL",
+    "2.28 ttc_midcycle is not a legal Y1 gate",
+    "eng_verify.py passes including pins/2.28.0",
+    "kd_research street/destock/law-surface tests pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "scripts/",
+    "harness/",
+    "pins/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**",
+    "pins/2.27.0/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py packages/kd_research/tests/test_law_surface_freeze.py -q"
+  ]
+}

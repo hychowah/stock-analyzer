@@ -1,0 +1,12 @@
+{
+  "session": "2026-09-01-harness-decision-quality",
+  "harness_version": "2.28.0",
+  "feature": "gated-y1-2-28",
+  "verify": "python scripts/eng_verify.py PASS (594 tests); pins/2.28.0 matches VERSION",
+  "commit_subject": "Make Street the default Y1 start and allow evidence-gated independent Y1 (2.28.0)",
+  "notes": [
+    "Street baseline still FAILs |delta|>5%. independent_y1 requires a resolved gate.",
+    "Destock-in-base legal only when destock_this_print. ttc_midcycle is not a Y1 license.",
+    "2.18 stamps unchanged. Plan items 2-5 are later increments."
+  ]
+}

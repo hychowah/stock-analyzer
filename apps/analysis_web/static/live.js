@@ -53,6 +53,9 @@
 
   var lastToken = null;
   var sseOk = false;
+  var es = null;
+  var pollTimer = null;
+  var running = false;
 
   function onToken(token, kind) {
     if (!token) return;
@@ -70,7 +73,7 @@
   function startSSE() {
     if (!window.EventSource) return false;
     try {
-      var es = new EventSource("/api/events");
+      es = new EventSource("/api/events");
       es.addEventListener("hello", function (ev) {
         sseOk = true;
         try {
@@ -142,12 +145,33 @@
         .catch(function () {});
     }
     tick();
-    setInterval(tick, 5000);
+    pollTimer = setInterval(tick, 5000);
+  }
+
+  function stop() {
+    running = false;
+    sseOk = false;
+    if (es) {
+      es.close();
+      es = null;
+    }
+    if (pollTimer !== null) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function start() {
+    if (!wantsReload() || running) return;
+    running = true;
+    startSSE();
+    startPoll();
   }
 
   if (!wantsReload()) {
     return;
   }
-  startSSE();
-  startPoll();
+  start();
+  window.addEventListener("pagehide", stop);
+  window.addEventListener("pageshow", start);
 })();

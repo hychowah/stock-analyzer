@@ -167,6 +167,25 @@ class EventsEndpointTests(unittest.TestCase):
         self.assertIn("event: hello", text)
         self.assertIn("data:", text)
 
+    def test_event_stream_ends_on_cancel(self):
+        import asyncio
+
+        from apps.analysis_web.routes.events import _event_stream
+
+        async def run() -> None:
+            gen = _event_stream(interval_s=60.0)
+            first = await gen.__anext__()
+            self.assertIn("event: hello", first)
+            pending = asyncio.create_task(gen.__anext__())
+            await asyncio.sleep(0)
+            self.assertFalse(pending.done(), "generator should be waiting on sleep")
+            pending.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await asyncio.wait_for(pending, timeout=1.0)
+            await asyncio.wait_for(gen.aclose(), timeout=1.0)
+
+        asyncio.run(run())
+
     def test_runs_page_opt_in_live(self):
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)

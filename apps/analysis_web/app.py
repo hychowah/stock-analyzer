@@ -81,6 +81,9 @@ def create_app() -> FastAPI:
 # ASGI entry for uvicorn / tests
 app = create_app()
 
+# Open SSE must not pin the process. Grok workers are detached (agent_jobs.spawn).
+SHUTDOWN_BUDGET_S = 3
+
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
@@ -105,6 +108,7 @@ def main(argv: list[str] | None = None) -> int:
         port=args.port,
         reload=False,
         log_level="info",
+        timeout_graceful_shutdown=SHUTDOWN_BUDGET_S,
     )
     return 0
 

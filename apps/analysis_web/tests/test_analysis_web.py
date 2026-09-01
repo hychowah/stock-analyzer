@@ -667,6 +667,8 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         self.assertIn(b"Valuation", r.content)
         self.assertIn(b"Pick a specialist", r.content)
         self.assertIn(b"harness-page-model", r.content)
+        self.assertIn(b"from Orchestrator", r.content)
+        self.assertIn(b"Conventions for all agents", r.content)
         self.assertNotIn(b"pin_root", r.content)
         self.assertNotIn(b"artifact-dag", r.content)
         r404 = self.client.get("/harness", params={"version": "9.9.9"})

@@ -30,21 +30,6 @@ def _pin_or_none(version: str):
         return None
 
 
-def _conventions_text(pin) -> str:
-    """Shared preamble via Pin.agent_prompt so a published pin uses its own tree.
-
-    Extra subprocess on GET /harness until workflow_spec carries the conventions
-    body (Mode A / W1 follow-up).
-    """
-    try:
-        payload = pin.agent_prompt("orchestrator")
-    except PinError:
-        return ""
-    if not isinstance(payload, dict):
-        return ""
-    return str(payload.get("conventions") or "")
-
-
 @router.get("/harness", response_class=HTMLResponse)
 def page_harness(
     request: Request,
@@ -64,7 +49,7 @@ def page_harness(
         spec = pin.workflow_spec()
     except PinError as e:
         return _render(request, "error.html", title="Harness", message=str(e))
-    model = harness_page_model(spec, conventions=_conventions_text(pin))
+    model = harness_page_model(spec)
     return _render(
         request,
         "harness.html",

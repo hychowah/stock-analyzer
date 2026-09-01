@@ -3,17 +3,18 @@
   "non_goals": [
     "Do not run research Phases 0–5",
     "Do not mutate archive/research or archive/outcomes history",
-    "Do not change Pin.workflow_spec / agent_prompt contracts or bump harness VERSION",
+    "Do not change spawn/complete SPECIALIST_ARTIFACTS",
     "Do not add a second Handoffs/DAG view",
     "Do not invent fair values or restatement of Mode A law in the UI"
   ],
-  "work_type": "W4",
+  "work_type": "W1",
   "success_criteria": [
     "GET /harness consumes a page model (stages/phases/agents), not a decorated spec dump",
     "Pipeline shows human phase names and agent titles; compact needs chips; no pin_root chrome",
     "Inspector overview paints from the page model with no prompt fetch; Prompt is sectioned and opt-in",
-    "Conventions are page-scoped; annotations: phase / before-phase / before-agent / page-level",
+    "workflow_spec emits labels, orchestrator+2a street writes, and conventions; GET /harness does not call agent_prompt",
     "Prompt API adds sections without dropping found/title/body",
+    "harness/VERSION 2.33.0 + pins/2.33.0",
     "eng_verify.py passes"
   ],
   "write_allowlist": [
@@ -22,6 +23,8 @@
     "apps/",
     "programs/",
     "scripts/",
+    "harness/",
+    "pins/",
     "archive/library/"
   ],
   "write_denylist": [
@@ -30,6 +33,6 @@
   ],
   "verify_commands": [
     "python3 scripts/eng_verify.py",
-    "python3 -m pytest apps/analysis_web/tests -q"
+    "python3 -m pytest apps/analysis_web/tests packages/kd_research/tests/test_workflow_spec.py -q"
   ]
 }

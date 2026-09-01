@@ -263,6 +263,44 @@ class PageModelTests(unittest.TestCase):
         self.assertEqual(snap["path"], "data/price_snapshot.json")
         self.assertNotIn("producer", snap)
 
+    def test_spec_writes_name_orchestrator_as_producer(self):
+        spec = {
+            **_SPEC,
+            "conventions": _PREAMBLE,
+            "phases": [
+                {
+                    "id": "orch",
+                    "label": "Classify & brief",
+                    "stage": "setup",
+                    "purpose": "brief",
+                    "agents": [
+                        {
+                            "id": "orchestrator",
+                            "title": "### Agent orchestrator",
+                            "label": "Orchestrator",
+                            "writes": [
+                                "registry/library_bind.json",
+                                "data/price_snapshot.json",
+                            ],
+                            "prompt_present": True,
+                        }
+                    ],
+                    "entry": [],
+                },
+                _SPEC["phases"][1],
+                _SPEC["phases"][2],
+            ],
+        }
+        model = harness_page_model(spec)
+        facts = _phases(model)["1_parallel"][1]
+        bind = next(n for n in facts["needs"] if n["path"] == "registry/library_bind.json")
+        self.assertEqual(bind["producer"], "orchestrator")
+        self.assertEqual(bind["producer_label"], "Orchestrator")
+        val = _phases(model)["2_parallel"][1]
+        snap = val["needs"][0]
+        self.assertEqual(snap["producer"], "orchestrator")
+        self.assertEqual(model["conventions"]["cards"][0]["title"], "Yahoo listing")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "session_isolation.schema.json",
+  "title": "Session Isolation Policy",
+  "description": "Cross-session valuation isolation; intra-session sharing remains allowed.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "mode", "session_key", "rules"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "mode": {
+      "type": "string",
+      "enum": ["isolated", "context_meta_only", "compare_after"]
+    },
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "session_key": { "type": "string" },
+    "created_at": { "type": "string" },
+    "allow_prior_session_keys": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Only for non-valuation meta or post-audit compare; empty under isolated"
+    },
+    "rules": {
+      "type": "object",
+      "required": ["intra_session_share", "prior_valuation_as_input"],
+      "properties": {
+        "intra_session_share": { "type": "boolean" },
+        "prior_valuation_as_input": { "type": "boolean" },
+        "prior_for_post_audit_compare": { "type": "boolean" },
+        "library_bind_into_session": {
+          "type": "boolean",
+          "description": "Code may copy archive/library required set into this session"
+        },
+        "library_direct_read": {
+          "type": "boolean",
+          "description": "Agents other than 2b unlabeled must not mine archive/library in place"
+        },
+        "prior_session_documents_as_input": {
+          "type": "boolean",
+          "description": "Must be false: do not harvest other sessions during Mode A"
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

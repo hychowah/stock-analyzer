@@ -3,7 +3,7 @@
   "session_key": "2026-09-01-harness-viz-ux",
   "status": "in_progress",
   "created_at": "2026-09-01T06:12:01Z",
-  "updated_at": "2026-09-01T08:00:00Z",
-  "work_type": "W4",
-  "resume_hint": "W4 UI shipped pending verifier (passes still false). Leftover is W1: labels/orchestrator writes/conventions in workflow_spec. Leave archive/catalog/* uncommitted."
+  "updated_at": "2026-09-01T09:00:00Z",
+  "work_type": "W1",
+  "resume_hint": "Visualizer + 2.33.0 spec dump shipped pending verifier. Leave archive/catalog/* uncommitted."
 }

@@ -19,6 +19,12 @@
       "verify": "pytest apps/analysis_web/tests -q"
     },
     {
+      "id": "spec-dump",
+      "description": "workflow_spec emits labels, extra writes, conventions; drop extra Pin.agent_prompt on GET /harness; VERSION 2.33.0",
+      "passes": false,
+      "verify": "pytest packages/kd_research/tests/test_workflow_spec.py apps/analysis_web/tests -q"
+    },
+    {
       "id": "verify",
       "description": "Verifier marks features after real checks",
       "passes": false,

@@ -254,11 +254,24 @@ def structure_prompt_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _phase_meta(phase_id: str) -> dict[str, str]:
-    known = PHASE_META.get(phase_id)
-    if known:
-        return dict(known)
-    return {"label": phase_id, "stage": "other", "purpose": ""}
+def _phase_meta(phase: dict[str, Any]) -> dict[str, str]:
+    """Prefer labels on the Pin dump; PHASE_META is fallback for older pins."""
+    pid = str(phase.get("id") or "")
+    fallback = PHASE_META.get(pid)
+    spec_label = str(phase.get("label") or "").strip()
+    spec_purpose = str(phase.get("purpose") or "").strip()
+    spec_stage = str(phase.get("stage") or "").strip()
+    if fallback:
+        return {
+            "label": spec_label or fallback["label"],
+            "purpose": spec_purpose or fallback["purpose"],
+            "stage": spec_stage or fallback["stage"],
+        }
+    return {
+        "label": spec_label or pid,
+        "purpose": spec_purpose,
+        "stage": spec_stage or "other",
+    }
 
 
 def _note_text(ann: dict[str, Any]) -> str:
@@ -352,7 +365,14 @@ def _need_chip(
 
 
 def harness_page_model(spec: dict[str, Any], *, conventions: str = "") -> dict[str, Any]:
-    """Display-only tree for /harness. Callers must not need spec.edges."""
+    """Display-only tree for /harness. Callers must not need spec.edges.
+
+    `conventions` overrides spec['conventions'] when the caller already has the
+    preamble (tests). Live /harness reads it from the dump so it does not call
+    Pin.agent_prompt a second time.
+    """
+    if not conventions:
+        conventions = str(spec.get("conventions") or "")
     raw_phases = [p for p in (spec.get("phases") or []) if isinstance(p, dict)]
     phase_ids = {str(p.get("id") or "") for p in raw_phases if p.get("id")}
     agent_ids: set[str] = set()
@@ -365,7 +385,7 @@ def harness_page_model(spec: dict[str, Any], *, conventions: str = "") -> dict[s
     all_agents: list[dict[str, Any]] = []
     for phase in raw_phases:
         pid = str(phase.get("id") or "")
-        meta = _phase_meta(pid)
+        meta = _phase_meta(phase)
         agents: list[dict[str, Any]] = []
         write_chips: list[dict[str, str]] = []
         for ag in phase.get("agents") or []:
@@ -373,12 +393,14 @@ def harness_page_model(spec: dict[str, Any], *, conventions: str = "") -> dict[s
                 continue
             aid = str(ag.get("id") or "")
             parsed = parse_agent_title(ag.get("title"), aid)
+            label = str(ag.get("label") or "").strip() or parsed["label"]
+            spawn_role = str(ag.get("spawn_role") or "").strip() or parsed["spawn_role"]
             chips = [file_chip(w) for w in (ag.get("writes") or []) if isinstance(w, str)]
             write_chips.extend(chips)
             row = {
                 "id": aid,
-                "label": parsed["label"],
-                "spawn_role": parsed["spawn_role"],
+                "label": label,
+                "spawn_role": spawn_role or None,
                 "prompt_present": bool(ag.get("prompt_present")),
                 "write_chips": chips,
                 "primary_write": chips[0] if chips else None,

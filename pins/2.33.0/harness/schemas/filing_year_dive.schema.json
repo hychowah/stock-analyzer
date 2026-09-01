@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "filing_year_dive.schema.json",
+  "title": "Single-year annual report extract (light contract)",
+  "description": "Written by a Phase 1c year-reader. One fiscal year's annual only. Full text stays under data/raw_sec/; this file is structured excerpts. Cross-year joins belong to Agent 2e, not this file.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "fiscal_year",
+    "form",
+    "path",
+    "sections_walked",
+    "footnotes",
+    "key_figures"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "fiscal_year": {
+      "type": ["integer", "string"],
+      "description": "Company FY label (e.g. 2025 or FY2025)."
+    },
+    "form": { "type": "string", "description": "10-K, 20-F, annual report, integrated report, …" },
+    "path": {
+      "type": "string",
+      "description": "Session-relative cleaned text path under data/raw_sec/ (prefer .txt)."
+    },
+    "url": { "type": ["string", "null"] },
+    "sections_walked": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Required ids: business, risk_factors, legal, md_and_a, notes, related_party.",
+      "items": { "type": "string" }
+    },
+    "priorities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "outlook_promises": {
+      "type": "array",
+      "description": "This-year stated outlook/guidance only. Do not grade vs later actuals here.",
+      "items": {
+        "type": "object",
+        "required": ["stated"],
+        "properties": {
+          "promise_id": { "type": "string" },
+          "promise_class": { "type": "string" },
+          "stated": { "type": "string" },
+          "excerpt": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "risk_factor_themes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "footnotes": {
+      "type": "object",
+      "required": ["items"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "status"],
+            "properties": {
+              "id": { "type": "string" },
+              "status": {
+                "type": "string",
+                "enum": ["extracted", "missing", "not_applicable", "partial"]
+              },
+              "title": { "type": "string" },
+              "value": {},
+              "excerpt": { "type": ["string", "null"] },
+              "source": { "type": "object" },
+              "downstream_use": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "key_figures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "value", "excerpt", "source_path"],
+        "properties": {
+          "id": { "type": "string" },
+          "value": { "type": ["string", "number"] },
+          "unit": { "type": ["string", "null"] },
+          "excerpt": { "type": "string", "minLength": 8 },
+          "source_path": { "type": "string" }
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

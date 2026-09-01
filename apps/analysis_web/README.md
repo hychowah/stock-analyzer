@@ -35,7 +35,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/portfolio` | Portfolio: `.local/portfolio.json` joined to latest catalog runs |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`) |
 | `/analyze/new` | Start analysis (ticker + harness version `live` or `pins/<semver>/`) |
-| `/harness` | Phase swimlanes + artifact graph + prompt inspector for a pin |
+| `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
 | `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
 | `/analyze/{analyze_id}` | Live phase/status; cancel = keep session; discard = abandon |
 | `/analyze-artifact?analyze_id=…&path=…` | In-progress: handoffs/phase only; FV and report bodies 403 until snapshot |

@@ -1,4 +1,4 @@
-"""Harness visualization — projection of Pin.workflow_spec / agent_prompt."""
+"""Harness visualization — page model over Pin.workflow_spec / agent_prompt."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from packages.harness_pin.pin import PinError, UnknownVersion, list_versions, resolve
-from apps.analysis_web.services.render_markdown import render_markdown
+from apps.analysis_web.services.harness_view import harness_page_model, structure_prompt_payload
 
 router = APIRouter(tags=["harness"])
 
@@ -30,8 +30,28 @@ def _pin_or_none(version: str):
         return None
 
 
+def _conventions_text(pin) -> str:
+    """Shared preamble via Pin.agent_prompt so a published pin uses its own tree.
+
+    Extra subprocess on GET /harness until workflow_spec carries the conventions
+    body (Mode A / W1 follow-up).
+    """
+    try:
+        payload = pin.agent_prompt("orchestrator")
+    except PinError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return str(payload.get("conventions") or "")
+
+
 @router.get("/harness", response_class=HTMLResponse)
-def page_harness(request: Request, version: str = "live") -> HTMLResponse:
+def page_harness(
+    request: Request,
+    version: str = "live",
+    agent: str = "",
+    phase: str = "",
+) -> HTMLResponse:
     versions = list_versions()
     pin = _pin_or_none(version)
     if pin is None:
@@ -44,14 +64,16 @@ def page_harness(request: Request, version: str = "live") -> HTMLResponse:
         spec = pin.workflow_spec()
     except PinError as e:
         return _render(request, "error.html", title="Harness", message=str(e))
+    model = harness_page_model(spec, conventions=_conventions_text(pin))
     return _render(
         request,
         "harness.html",
         version=pin.version,
         label=pin.label,
         versions=versions,
-        spec=spec,
-        pin_root=str(pin.root),
+        model=model,
+        agent=agent.strip(),
+        phase=phase.strip(),
     )
 
 
@@ -84,10 +106,6 @@ def api_harness_prompt(
         payload = pin.agent_prompt(agent)
     except PinError as e:
         return JSONResponse({"error": str(e)}, status_code=500)
-    body = str(payload.get("body") or "")
-    conventions = str(payload.get("conventions") or "")
-    payload = dict(payload)
-    payload["body_html"] = render_markdown(body)
-    payload["conventions_html"] = render_markdown(conventions)
-    payload["href"] = f"/api/harness/prompt?agent={quote(agent)}&version={quote(version)}"
-    return JSONResponse(payload)
+    out = structure_prompt_payload(payload)
+    out["href"] = f"/api/harness/prompt?agent={quote(agent)}&version={quote(version)}"
+    return JSONResponse(out)

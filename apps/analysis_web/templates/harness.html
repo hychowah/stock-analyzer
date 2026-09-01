@@ -2,67 +2,110 @@
 {% block extra_css %}<link rel="stylesheet" href="/static/harness.css"/>{% endblock %}
 {% block title %}Harness {{ label }}{% endblock %}
 {% block content %}
-<div class="card harness-page" data-harness-version="{{ version }}">
-  <h1>Harness {{ label }}</h1>
-  <p class="muted">Mechanical phase / write graph for this pin. Not a restatement of every HARNESS_MAP prose row. Prompts load on click.</p>
-  <form class="filters" method="get" action="/harness">
-    <div class="filters-row">
-      <label>Version
-        <select name="version" onchange="this.form.submit()">
-          {% for v in versions %}
-          <option value="{{ v }}" {% if v == version %}selected{% endif %}>{{ v }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <button type="submit">Show</button>
-    </div>
-  </form>
-  <p class="muted mono">root {{ pin_root }} · spec {{ spec.harness_version }}</p>
-  <p>
-    <button type="button" class="secondary" id="view-lanes">Phase swimlanes</button>
-    <button type="button" class="secondary" id="view-dag">Artifact graph</button>
-  </p>
-</div>
-
-<div class="harness-layout">
-  <div class="card harness-diagram">
-    <div id="swimlanes">
-      <div class="harness-lanes">
-        {% for phase in spec.phases %}
-        <div class="harness-lane" data-phase="{{ phase.id }}">
-          <h3 class="mono">{{ phase.id }}</h3>
-          <ul class="muted" style="padding-left:1.1rem;font-size:0.8rem">
-            {% for row in phase.entry[:6] %}
-            <li>{{ row.path }}{% if row.since %} <span class="badge">≥{{ row.since }}</span>{% endif %}</li>
+<div class="harness-shell"
+     data-harness-version="{{ version }}"
+     data-open-agent="{{ agent }}"
+     data-open-phase="{{ phase }}">
+  <header class="card harness-toolbar">
+    <div class="harness-toolbar-main">
+      <div>
+        <h1>Harness</h1>
+        <p class="muted">How a Mode A run is staged — specialists, gates, and what each one writes. Click a tile to inspect.</p>
+      </div>
+      <form class="harness-version" method="get" action="/harness">
+        <label>Version
+          <select name="version" onchange="this.form.submit()">
+            {% for v in versions %}
+            <option value="{{ v }}" {% if v == version %}selected{% endif %}>{{ v }}</option>
             {% endfor %}
-          </ul>
-          {% for ag in phase.agents %}
-          <button type="button" class="harness-agent" data-agent="{{ ag.id }}">
-            <strong class="mono">{{ ag.id }}</strong>
-            <span class="muted">{% for w in ag.writes[:2] %}{{ w }}{% if not loop.last %}, {% endif %}{% endfor %}</span>
-          </button>
-          {% endfor %}
-        </div>
+          </select>
+        </label>
+      </form>
+    </div>
+    <div class="harness-toolbar-meta">
+      <span class="badge">{{ model.harness_version or label }}</span>
+      <span class="muted">{{ model.agent_count }} specialists · {{ model.phase_count }} phases</span>
+      {% if model.conventions.cards %}
+      <details class="harness-conventions">
+        <summary>Conventions for all agents</summary>
+        {% for item in model.conventions.cards %}
+        <details class="harness-convention-item">
+          <summary>{{ item.title }}</summary>
+          <div class="report-body">{{ item.html | safe }}</div>
+        </details>
+        {% endfor %}
+      </details>
+      {% elif model.conventions.html %}
+      <details class="harness-conventions">
+        <summary>Conventions for all agents</summary>
+        <div class="report-body">{{ model.conventions.html | safe }}</div>
+      </details>
+      {% endif %}
+    </div>
+    {% if model.notes %}
+    <ul class="harness-page-notes">
+      {% for note in model.notes %}
+      <li>{{ note.text }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </header>
+
+  <div class="harness-workspace">
+    <div class="card harness-diagram">
+      <div class="harness-pipeline">
+        {% for stage in model.stages %}
+        <section class="harness-stage" data-stage="{{ stage.id }}">
+          <h2 class="harness-stage-label">{{ stage.label }}</h2>
+          <div class="harness-lanes">
+            {% for phase in stage.phases %}
+            <article class="harness-phase" data-phase="{{ phase.id }}">
+              <button type="button" class="harness-phase-head" data-phase="{{ phase.id }}">
+                <span class="mono muted harness-phase-id">{{ phase.id }}</span>
+                <h3>{{ phase.label }}</h3>
+                {% if phase.purpose %}<p class="muted harness-phase-purpose">{{ phase.purpose }}</p>{% endif %}
+              </button>
+              {% if phase.needs %}
+              <ul class="harness-chips">
+                {% for n in phase.needs %}
+                <li>
+                  <span class="harness-chip{% if n.required %} is-required{% endif %}" title="{{ n.path }}">
+                    {{ n.label }}{% if n.producer_label %} <span class="muted">from {{ n.producer_label }}</span>{% endif %}
+                  </span>
+                </li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              {% for ag in phase.agents %}
+              <button type="button" class="harness-agent" data-agent="{{ ag.id }}" data-phase="{{ phase.id }}">
+                <span class="harness-agent-id mono">{{ ag.id }}</span>
+                <strong>{{ ag.label }}</strong>
+                {% if ag.spawn_role %}<span class="badge">{{ ag.spawn_role }}</span>{% endif %}
+                {% if ag.primary_write %}
+                <span class="harness-agent-write muted" title="{{ ag.primary_write.path }}">{{ ag.primary_write.label }}</span>
+                {% endif %}
+              </button>
+              {% endfor %}
+              {% for note in phase.notes %}
+              <p class="harness-phase-note">{{ note.text }}</p>
+              {% endfor %}
+            </article>
+            {% endfor %}
+          </div>
+        </section>
         {% endfor %}
       </div>
-      <p class="muted">Annotations:
-        {% for a in spec.annotations %}
-        <span class="badge">{{ a.id }}</span>
-        {% endfor %}
-      </p>
     </div>
-    <div id="artifact-dag" hidden>
-      <svg id="dag-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-      <p class="muted">Nodes are writes and phase-entry files from this pin’s workflow_spec edges.</p>
-    </div>
-  </div>
-  <div class="card harness-inspector" id="inspector">
-    <h2>Inspector</h2>
-    <p class="muted">Click a subagent for its prompt slice.</p>
-    <div id="inspector-body"></div>
+    <aside class="card harness-inspector" id="inspector">
+      <div id="inspector-empty" class="harness-empty">
+        <h2>Inspector</h2>
+        <p class="muted">Pick a specialist on the pipeline to see its job and outputs. Open Prompt only if you need the working template.</p>
+      </div>
+      <div id="inspector-body" hidden></div>
+    </aside>
   </div>
 </div>
-<script id="harness-spec" type="application/json">{{ spec | tojson }}</script>
+<script id="harness-page-model" type="application/json">{{ model | tojson }}</script>
 {% endblock %}
 {% block scripts %}
 <script src="/static/harness.js" defer></script>

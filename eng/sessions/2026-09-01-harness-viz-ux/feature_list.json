@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json, feature list, baseline eng_verify, git log",
+      "passes": false,
+      "verify": "issue.json has success_criteria; progress.md notes baseline"
+    },
+    {
+      "id": "view-model",
+      "description": "harness_page_model: display-only stages/phases/agents, truthful annotations, sectioned prompts",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_harness_view.py -q"
+    },
+    {
+      "id": "workspace-ui",
+      "description": "One pipeline map + briefing inspector (overview from model, prompt on demand)",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

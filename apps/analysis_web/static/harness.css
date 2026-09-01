@@ -1,35 +1,176 @@
-.harness-page select {
-  min-width: 8rem;
+body:has(.harness-shell) main {
+  max-width: 1440px;
 }
-.harness-layout {
+.harness-toolbar h1 {
+  margin: 0 0 0.25rem;
+}
+.harness-toolbar-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.harness-version label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.75rem;
+  color: #64748b;
+  gap: 0.25rem;
+}
+.harness-version select {
+  min-width: 8rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+.harness-toolbar-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-top: 0.65rem;
+}
+.harness-conventions {
+  font-size: 0.85rem;
+}
+.harness-conventions > summary {
+  cursor: pointer;
+  color: #2563eb;
+}
+.harness-convention-item {
+  margin: 0.4rem 0 0.4rem 0.75rem;
+}
+.harness-convention-item .report-body {
+  font-size: 0.85rem;
+  max-width: 48rem;
+}
+.harness-page-notes {
+  margin: 0.65rem 0 0;
+  padding-left: 1.1rem;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+.harness-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
   gap: 0.75rem;
   align-items: start;
 }
-@media (max-width: 800px) {
-  .harness-layout {
+@media (max-width: 900px) {
+  .harness-workspace {
     grid-template-columns: 1fr;
   }
+}
+.harness-diagram {
+  min-width: 0;
+}
+.harness-pipeline {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  align-items: stretch;
+}
+.harness-stage {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.65rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid var(--stage-accent, #94a3b8);
+  border-radius: 10px;
+}
+.harness-stage[data-stage="setup"] {
+  --stage-accent: #64748b;
+}
+.harness-stage[data-stage="gather"] {
+  --stage-accent: #0284c7;
+}
+.harness-stage[data-stage="decide"] {
+  --stage-accent: #d97706;
+}
+.harness-stage[data-stage="publish"] {
+  --stage-accent: #059669;
+}
+.harness-stage[data-stage="other"] {
+  --stage-accent: #94a3b8;
+}
+.harness-stage-label {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
 }
 .harness-lanes {
   display: flex;
   gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.5rem;
+  align-items: stretch;
 }
-.harness-lane {
-  min-width: 11rem;
-  max-width: 14rem;
+.harness-phase {
+  min-width: 12.5rem;
+  max-width: 16rem;
   flex: 0 0 auto;
+  background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 0.5rem;
-  background: #f8fafc;
+  padding: 0.45rem;
 }
-.harness-lane h3 {
-  margin: 0 0 0.35rem;
-  font-size: 0.85rem;
+.harness-phase.is-selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+.harness-phase-head {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 0.15rem 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+.harness-phase-head:hover {
+  background: #f1f5f9;
+}
+.harness-phase-id {
+  font-size: 0.7rem;
+}
+.harness-phase-head h3 {
+  margin: 0.1rem 0 0.15rem;
+  font-size: 0.92rem;
+}
+.harness-phase-purpose {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+.harness-chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 0.4rem;
+  padding: 0;
+}
+.harness-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  background: #e2e8f0;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.harness-chip.is-required {
+  background: #e0f2fe;
+  color: #075985;
 }
 .harness-agent {
   display: block;
@@ -39,29 +180,102 @@
   color: #1a1a1a;
   border: 1px solid #cbd5e1;
   margin: 0.25rem 0;
-  padding: 0.35rem 0.45rem;
+  padding: 0.4rem 0.45rem;
   border-radius: 6px;
   font-size: 0.8rem;
 }
 .harness-agent:hover {
   border-color: #2563eb;
 }
+.harness-agent.is-selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+}
+.harness-agent-id {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  margin-right: 0.25rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  font-size: 0.7rem;
+}
+.harness-agent strong {
+  display: inline;
+}
+.harness-agent .badge {
+  margin-left: 0.25rem;
+  font-weight: 400;
+}
+.harness-agent-write {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.72rem;
+}
+.harness-phase-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+.harness-inspector {
+  position: sticky;
+  top: 0.75rem;
+  min-height: 16rem;
+}
+.harness-empty h2,
+.harness-inspector h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+.harness-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.75rem;
+}
+.harness-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e2e8f0;
+  margin: 0.75rem 0;
+}
+.harness-tabs button {
+  background: transparent;
+  color: #475569;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0.4rem 0.7rem;
+}
+.harness-tabs button.is-active {
+  color: #0f172a;
+  border-bottom-color: #2563eb;
+}
+.harness-panel[hidden] {
+  display: none;
+}
+.harness-section {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+}
+.harness-section summary {
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.harness-section .report-body {
+  padding: 0 0.75rem 0.75rem;
+  max-height: 22rem;
+  overflow: auto;
+  font-size: 0.88rem;
+}
 .harness-inspector .report-body {
   font-size: 0.88rem;
 }
-.harness-inspector details {
-  margin-bottom: 0.75rem;
+.harness-source {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
 }
-#dag-svg {
-  min-height: 12rem;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-}
-#dag-svg text {
-  font: 11px ui-monospace, monospace;
-  fill: #334155;
-}
-body:has(.harness-page) main {
-  max-width: 1280px;
+.harness-source .report-body {
+  max-height: 16rem;
+  overflow: auto;
 }

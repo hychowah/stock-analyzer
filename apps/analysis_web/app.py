@@ -28,6 +28,11 @@ from fastapi.staticfiles import StaticFiles
 
 from apps.analysis_web.config import archive_root, static_dir
 from apps.analysis_web.routes import analyze, api, artifacts, compares, events, harness, pages
+from apps.analysis_web.services.price_history import (
+    HistoryService,
+    YahooHistoryBackend,
+    history_ttl_sec,
+)
 from apps.analysis_web.services.quotes import QuoteService, YahooPrintBackend, quote_ttl_sec
 from apps.analysis_web.templating import create_templates
 
@@ -52,6 +57,9 @@ def create_app() -> FastAPI:
     )
     app.state.templates = create_templates()
     app.state.quote_service = QuoteService(YahooPrintBackend(), ttl_sec=quote_ttl_sec())
+    app.state.history_service = HistoryService(
+        YahooHistoryBackend(), ttl_sec=history_ttl_sec()
+    )
 
     static_path = static_dir()
     static_path.mkdir(parents=True, exist_ok=True)

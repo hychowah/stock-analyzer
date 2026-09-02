@@ -18,6 +18,11 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
+from apps.analysis_web.services.yahoo_bars import (
+    download_close_series,
+    import_yfinance,
+)
+
 
 DEFAULT_TTL_SEC = 120
 MAX_SYMBOLS = 50
@@ -102,18 +107,6 @@ def parse_symbol_query(raw: str | None) -> list[str]:
     return unique
 
 
-def _as_float(v: Any) -> float | None:
-    if v is None:
-        return None
-    try:
-        n = float(v)
-    except (TypeError, ValueError):
-        return None
-    if n != n:  # NaN
-        return None
-    return n
-
-
 def _change_pct(price: float | None, prev_close: float | None) -> float | None:
     if price is None or prev_close is None or prev_close == 0:
         return None
@@ -162,19 +155,6 @@ def build_quote(
     return QuotePrint(symbol=sym, source=source, error="unavailable")
 
 
-def _ts_iso(ts: Any) -> str | None:
-    if ts is None:
-        return None
-    iso = getattr(ts, "isoformat", None)
-    if callable(iso):
-        try:
-            return str(iso())
-        except Exception:  # noqa: BLE001
-            pass
-    s = str(ts).strip()
-    return s or None
-
-
 class YahooPrintBackend:
     """Batch Yahoo last print via yfinance download. Listing symbols only."""
 
@@ -185,115 +165,33 @@ class YahooPrintBackend:
         if not unique:
             return []
         try:
-            yf = _import_yfinance()
+            yf = import_yfinance()
         except RuntimeError as e:
             return [
                 QuotePrint(symbol=s, source=self.source, error=str(e)) for s in unique
             ]
-        intra_map = _download_lasts(yf, unique, period="1d", interval="1m")
-        daily_map = _download_lasts(yf, unique, period="5d", interval="1d")
+        intra_map = download_close_series(yf, unique, period="1d", interval="1m")
+        daily_map = download_close_series(yf, unique, period="5d", interval="1d")
         out: list[QuotePrint] = []
         for sym in unique:
-            intra = intra_map.get(sym) or {}
-            daily = daily_map.get(sym) or {}
-            last_daily = daily.get("last")
-            prev_daily = daily.get("prev")
+            intra = intra_map.get(sym) or []
+            daily = daily_map.get(sym) or []
+            last_intra = intra[-1] if intra else (None, None)
+            last_daily = daily[-1] if daily else (None, None)
+            prev_daily = daily[-2] if len(daily) >= 2 else (None, None)
             out.append(
                 build_quote(
                     sym,
-                    last_intraday=intra.get("last"),
-                    last_daily=last_daily,
-                    prev_daily=prev_daily,
-                    as_of_intraday=intra.get("as_of"),
-                    as_of_daily=daily.get("as_of"),
+                    last_intraday=last_intra[0],
+                    last_daily=last_daily[0],
+                    prev_daily=prev_daily[0],
+                    as_of_intraday=last_intra[1],
+                    as_of_daily=last_daily[1],
                     currency=None,
                     source=self.source,
                 )
             )
         return out
-
-
-def _download_lasts(
-    yf: Any, symbols: list[str], *, period: str, interval: str
-) -> dict[str, dict[str, Any]]:
-    """symbol -> {last, prev, as_of} from a yf.download batch. Missing keys omitted."""
-    empty: dict[str, dict[str, Any]] = {s: {} for s in symbols}
-    try:
-        data = yf.download(
-            tickers=symbols,
-            period=period,
-            interval=interval,
-            group_by="ticker",
-            auto_adjust=True,
-            progress=False,
-            threads=True,
-            timeout=20,
-        )
-    except Exception:  # noqa: BLE001
-        return empty
-    frames = _split_download(data, symbols)
-    out: dict[str, dict[str, Any]] = {}
-    for sym in symbols:
-        df = frames.get(sym)
-        closes = _close_series(df)
-        if not closes:
-            out[sym] = {}
-            continue
-        last_px, last_ts = closes[-1]
-        prev_px = closes[-2][0] if len(closes) >= 2 else None
-        out[sym] = {"last": last_px, "prev": prev_px, "as_of": last_ts}
-    return out
-
-
-def _split_download(data: Any, symbols: list[str]) -> dict[str, Any]:
-    out: dict[str, Any] = {s: None for s in symbols}
-    if data is None:
-        return out
-    empty = getattr(data, "empty", True)
-    if empty:
-        return out
-    cols = getattr(data, "columns", None)
-    if cols is not None and getattr(cols, "nlevels", 1) > 1:
-        for sym in symbols:
-            try:
-                frame = data[sym]
-            except Exception:  # noqa: BLE001
-                continue
-            out[sym] = frame
-        return out
-    if len(symbols) == 1:
-        out[symbols[0]] = data
-    return out
-
-
-def _close_series(df: Any) -> list[tuple[float, str | None]]:
-    if df is None:
-        return []
-    try:
-        series = df["Close"]
-    except Exception:  # noqa: BLE001
-        return []
-    rows: list[tuple[float, str | None]] = []
-    try:
-        items = list(series.items())
-    except Exception:  # noqa: BLE001
-        return []
-    for ts, val in items:
-        px = _as_float(val)
-        if px is None:
-            continue
-        rows.append((px, _ts_iso(ts)))
-    return rows
-
-
-def _import_yfinance() -> Any:
-    try:
-        import yfinance as yf  # type: ignore
-    except ImportError as e:
-        raise RuntimeError(
-            "yfinance not installed. pip install -r apps/analysis_web/requirements.txt"
-        ) from e
-    return yf
 
 
 class QuoteService:

@@ -78,12 +78,14 @@ def _mini_archive(base: Path) -> Path:
         );
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path, experiment_id,
-          audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
+          audit_verdict, primary_sector, region, asof_price,
+          fv_bear, fv_base, fv_bull, margin_of_safety_pct,
           harness_version, exported_at
         ) VALUES (
           'research:META:2026-08-03', 'META', '2026-08-03', '2026-08-03',
           'archive/research/META/2026-08-03', 'exp-demo',
-          'PASS', 'growth', 'us', 500.0, 12.5, '2.5.0', '2026-08-10T00:00:00Z'
+          'PASS', 'growth', 'us', 400.0,
+          350.0, 500.0, 650.0, 12.5, '2.5.0', '2026-08-10T00:00:00Z'
         );
         """
     )
@@ -181,6 +183,15 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"FV", r.content)
         self.assertIn(b"12.5", r.content)
         self.assertIn(b"2.5.0", r.content)
+        self.assertIn(b'id="price-chart"', r.content)
+        self.assertIn(b'data-symbol="META"', r.content)
+        self.assertIn(b'id="price-chart-overlay"', r.content)
+        self.assertIn(b"/static/price_chart.js", r.content)
+        self.assertIn(b'data-range="1y"', r.content)
+        self.assertIn(b'"fv_bear": 350.0', r.content)
+        self.assertIn(b'"fv_base": 500.0', r.content)
+        self.assertIn(b'"fv_bull": 650.0', r.content)
+        self.assertIn(b'"asof_price": 400.0', r.content)
 
     def test_legacy_run_redirect(self):
         r = self.client.get(
@@ -246,6 +257,14 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b">Live<", r.content)
         self.assertIn(b'data-quote-symbol="META"', r.content)
         self.assertIn(b"All reports/", r.content)
+        js = Path(__file__).resolve().parents[1] / "static" / "price_chart.js"
+        text = js.read_text(encoding="utf-8")
+        self.assertIn("/api/price-history", text)
+        self.assertIn("loadGen", text)
+        self.assertIn("Price is the scale", text)
+        self.assertNotIn("vsBase", text)
+        self.assertNotIn("price vs base", text)
+        self.assertNotIn("var RANGES", text)
 
     def test_experiments(self):
         r = self.client.get("/experiments")
@@ -676,6 +695,8 @@ class AnalysisWebCompareTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Compare with another META session", r.content)
         self.assertIn(b"research:META:2026-08-10", r.content)
+        self.assertIn(b'"session_key": "2026-08-10"', r.content)
+        self.assertIn(b'"fv_base": 600.0', r.content)
 
 
 class AnalysisWebAnalyzeTests(unittest.TestCase):

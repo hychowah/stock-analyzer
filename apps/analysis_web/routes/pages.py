@@ -270,7 +270,44 @@ def page_run(
         report_links=report_links,
         artifact_index=artifact_index,
         siblings=siblings,
+        chart_overlay=_chart_overlay(run, siblings),
     )
+
+
+def _chart_num(v: Any) -> float | None:
+    if v is None or isinstance(v, bool):
+        return None
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _chart_overlay(run: dict[str, Any], siblings: list[dict[str, Any]]) -> dict[str, Any]:
+    """Catalog fields the chart may overlay. No Mode B FV."""
+    return {
+        "ticker": run.get("ticker"),
+        "session_key": run.get("session_key"),
+        "asof_date": run.get("session_date"),
+        "asof_price": _chart_num(run.get("asof_price")),
+        "fv_bear": _chart_num(run.get("fv_bear")),
+        "fv_base": _chart_num(run.get("fv_base")),
+        "fv_bull": _chart_num(run.get("fv_bull")),
+        "fv_weighted": _chart_num(run.get("fv_weighted")),
+        "currency": run.get("currency") or None,
+        "siblings": [
+            {
+                "run_id": s.get("run_id"),
+                "session_key": s.get("session_key"),
+                "asof_date": s.get("session_date"),
+                "asof_price": _chart_num(s.get("asof_price")),
+                "fv_bear": _chart_num(s.get("fv_bear")),
+                "fv_base": _chart_num(s.get("fv_base")),
+                "fv_bull": _chart_num(s.get("fv_bull")),
+            }
+            for s in siblings
+        ],
+    }
 
 
 @router.get("/run")

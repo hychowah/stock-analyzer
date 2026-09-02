@@ -44,7 +44,12 @@ from packages.research_jobs.jobs import (
 )
 
 from apps.analysis_web.config import archive_root
-from apps.analysis_web.deps import get_api, get_quote_service
+from apps.analysis_web.deps import get_api, get_history_service, get_quote_service
+from apps.analysis_web.services.price_history import (
+    HistoryService,
+    parse_history_symbol,
+    parse_range,
+)
 from apps.analysis_web.services.quotes import QuoteService, parse_symbol_query
 from apps.analysis_web.services.runs_query import catalog_filters, runs_list_q
 
@@ -116,6 +121,26 @@ def api_quotes(
         "ttl_sec": svc.ttl_sec,
         "count": len(quotes),
     }
+
+
+@router.get("/price-history")
+def api_price_history(
+    symbol: str = Query("", description="One Yahoo listing symbol"),
+    range_key: str = Query(
+        "1y", alias="range", description="1m, 3m, 6m, 1y, 2y, 5y, or max"
+    ),
+    svc: HistoryService = Depends(get_history_service),
+) -> dict[str, Any]:
+    """Daily closes for one listing. Does not accept typed catalog tickers."""
+    try:
+        listing = parse_history_symbol(symbol)
+        parsed_range = parse_range(range_key)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    hist = svc.get(listing, parsed_range)
+    body = hist.as_json()
+    body["ttl_sec"] = svc.ttl_sec
+    return body
 
 
 @router.get("/portfolio")

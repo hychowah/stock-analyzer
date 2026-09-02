@@ -27,7 +27,7 @@ Or: `bash apps/analysis_web/init.sh`
 | Path | Purpose |
 |------|---------|
 | `/` | Run list: live prefix search, filters, column sort |
-| `/runs/{run_id}` | Run detail (FV, MoS, audit, report links) |
+| `/runs/{run_id}` | Run detail (price vs analysis chart, FV, MoS, audit, report links) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
@@ -49,6 +49,8 @@ Or: `bash apps/analysis_web/init.sh`
 | `/health` | Catalog health probe |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
+| `/api/quotes` | Last print for Yahoo listing symbols (not typed catalog tickers) |
+| `/api/price-history` | Daily closes for one listing (`symbol`, `range=1m\|3m\|6m\|1y\|2y\|5y\|max`) |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
 | `/api/fingerprint` | Poll fallback token for live reload |
 

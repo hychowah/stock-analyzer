@@ -1,0 +1,17 @@
+{
+  "summary": "Run detail now has an interactive Yahoo daily-close chart with catalog bear/base/bull overlay and range buttons (1M–MAX). History is GET /api/price-history; FV still comes only from catalog. Strategic design review applied: price-primary Y scale, no live vs-base percent, stale range ignored, failures not cached, one range allowlist.",
+  "verify_commands_run": [
+    "python -m pytest packages/catalog_api/tests apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "python eng/sessions/2026-09-02-price-chart-ui/handoffs/smoke_chart.py http://127.0.0.1:8768",
+    "python eng/sessions/2026-09-02-price-chart-ui/handoffs/smoke_chart_browser.py http://127.0.0.1:8768"
+  ],
+  "follow_ups": [
+    "Ticker-level chart on the runs list when a single ticker is filtered",
+    "Intraday bars for the 1M range"
+  ],
+  "risks": [
+    "Yahoo history can fail or lag for some listings; chart still draws catalog levels",
+    "Unstamped sessions use folder ticker as quote_listing (same as Live column)"
+  ]
+}

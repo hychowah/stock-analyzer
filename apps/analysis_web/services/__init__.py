@@ -1,1 +1,1 @@
-"""UI services (render, portfolio, change feed, harness page model)."""
+"""UI services (render, portfolio, quotes, price history, change feed, harness page model)."""

@@ -1,0 +1,36 @@
+{
+  "goal": "Interactive Yahoo price-history chart on run detail, overlaid with catalog bear/base/bull (and sibling session markers).",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not persist live prices into catalog sqlite",
+    "Do not invent or recompute FV/MoS",
+    "Do not add a ticker-level page this slice",
+    "Do not add a sqlite quote_symbol column or bump harness/VERSION",
+    "Do not fetch intraday bars (daily close only)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "GET /api/price-history?symbol=&range= returns daily closes for one listing; FakeHistoryBackend in tests; cache + single-flight; invalid range/symbol is 400",
+    "Yahoo download/split/close lives in one helper used by last-print quotes and history",
+    "Run detail shows an interactive chart: range buttons 1M/3M/6M/1Y/2Y/5Y/MAX, price line, bear/base/bull levels from catalog, as-of marker, sibling session markers",
+    "Chart overlay JSON is catalog fields only (no Mode B FV)",
+    "eng_verify.py passes; no harness/VERSION bump"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/catalog_api/tests apps/analysis_web/tests -q"
+  ]
+}

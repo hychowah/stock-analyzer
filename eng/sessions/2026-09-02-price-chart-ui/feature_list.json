@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json, feature list, baseline orientation",
+      "passes": true,
+      "verify": "issue.json has success_criteria; progress.md notes plan"
+    },
+    {
+      "id": "history-api",
+      "description": "Shared Yahoo bar helper + GET /api/price-history (cache, single-flight, FakeHistoryBackend)",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_price_history.py apps/analysis_web/tests/test_quotes.py -q"
+    },
+    {
+      "id": "run-chart-ui",
+      "description": "Run detail interactive chart: range buttons, price line, catalog bear/base/bull, sibling markers",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

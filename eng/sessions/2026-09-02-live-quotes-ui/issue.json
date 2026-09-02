@@ -1,0 +1,37 @@
+{
+  "goal": "Display-only Yahoo last print on the runs list and run detail, keyed only by quote_symbol (no typed-ticker fallback).",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not persist live prices into catalog sqlite",
+    "Do not invent or recompute FV/MoS",
+    "Do not edit portfolio.html",
+    "Do not add a sqlite quote_symbol column (harness/VERSION) this slice",
+    "Do not add QUOTE_PROVIDER until a second backend exists"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "list_runs/get_run attach quote_symbol from run_manifest via quote_symbol_from_session; unstamped is null",
+    "GET /api/quotes accepts listing symbols only; FakeQuoteBackend in tests; cache + single-flight; cap 50; one row per symbol",
+    "Runs list: As-of column and Price min/max filter relabeled As-of; Live column from data-quote-symbol; unstamped is em dash",
+    "quotes.js rebinds after #runs-results swap (quotes-refresh); hidden tab does not poll",
+    "Run detail shows Live next to As-of using the stamp",
+    "eng_verify.py passes; no harness/VERSION bump"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/catalog_api/tests apps/analysis_web/tests -q"
+  ]
+}

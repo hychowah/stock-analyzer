@@ -317,6 +317,78 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     return {k: row[k] for k in row.keys()}
 
 
+def _session_dir_from_row(archive_root: Path, row: dict[str, Any]) -> Path | None:
+    """Session directory for a run row. Does not call get_run (no recursion)."""
+    research_dir = archive_root / "research"
+    ticker = str(row.get("ticker") or "")
+    session_key = str(row.get("session_key") or "")
+    if ticker and session_key:
+        cand = research_dir / ticker / session_key
+        if cand.is_dir():
+            return cand
+    rel = row.get("path")
+    if not rel:
+        return None
+    p = Path(str(rel))
+    parts = p.parts
+    if "research" in parts:
+        idx = parts.index("research")
+        tail = Path(*parts[idx + 1 :])
+        alt = (research_dir / tail).resolve()
+        if alt.is_dir():
+            return alt
+    return None
+
+
+def _snapshot_listing(session: Path) -> str | None:
+    """Yahoo listing already written on price_snapshot. Not a suffix map."""
+    path = session / "data" / "price_snapshot.json"
+    if not path.is_file():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(raw, dict):
+        return None
+    for key in ("quote_symbol", "yahoo_ticker"):
+        val = raw.get(key)
+        if val is None:
+            continue
+        s = str(val).strip().upper()
+        if s:
+            return s
+    return None
+
+
+def _attach_quote_symbol(archive_root: Path, row: dict[str, Any]) -> dict[str, Any]:
+    """Attach stamp + display listing. Stamp has no ticker fallback.
+
+    quote_symbol is the run_manifest stamp only (None if unstamped).
+    quote_listing is what the UI may send to /api/quotes: stamp, else snapshot
+    listing, else the folder ticker (display-only; completed sessions are
+    immutable and historically unstamped).
+    """
+    from packages.kd_research.ticker_lookup import quote_symbol_from_session
+
+    out = dict(row)
+    session = _session_dir_from_row(archive_root, row)
+    stamp = quote_symbol_from_session(session) if session is not None else None
+    snap = _snapshot_listing(session) if session is not None else None
+    ticker = str(out.get("ticker") or "").strip().upper() or None
+    out["quote_symbol"] = stamp
+    if stamp:
+        out["quote_listing"] = stamp
+        out["quote_listing_source"] = "stamp"
+    elif snap:
+        out["quote_listing"] = snap
+        out["quote_listing_source"] = "snapshot"
+    else:
+        out["quote_listing"] = ticker
+        out["quote_listing_source"] = "ticker" if ticker else None
+    return out
+
+
 @dataclass
 class CatalogApi:
     """Readonly catalog client.
@@ -487,7 +559,7 @@ class CatalogApi:
                         if sort == "harness_version":
                             raise ValueError("invalid sort: 'harness_version'") from e
                     raise
-        return [_row_to_dict(r) for r in rows]
+        return [_attach_quote_symbol(self.archive_root, _row_to_dict(r)) for r in rows]
 
     def count_runs(
         self,
@@ -596,7 +668,7 @@ class CatalogApi:
             ).fetchone()
         if row is None:
             raise RunNotFound(run_id)
-        return _row_to_dict(row)
+        return _attach_quote_symbol(self.archive_root, _row_to_dict(row))
 
     def get_session_root(self, run_id: str) -> Path:
         """Resolve session directory under this ARCHIVE_ROOT via run_id (not stored path)."""

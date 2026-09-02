@@ -1,0 +1,19 @@
+{
+  "session": "2026-09-02-live-quotes-ui",
+  "feature": "Display-only Yahoo last print on runs list and run detail",
+  "verify": "python scripts/eng_verify.py PASS; pytest packages/catalog_api/tests apps/analysis_web/tests 147 passed",
+  "notes": [
+    "Live quotes are a side channel. Catalog asof_price and prediction_snapshot stay frozen. No FV/MoS rewrite.",
+    "GET /api/quotes takes Yahoo listing symbols only. Server cache TTL 120s, single-flight, cap 50 unique.",
+    "quote_symbol on run rows is the run_manifest stamp only (no ticker fallback).",
+    "quote_listing for the UI: stamp, else price_snapshot listing, else folder ticker. Named constraint: existing sessions are unstamped and immutable.",
+    "quotes.js owns Live cells and rebinds after runs.js fragment swap (quotes-refresh). Hidden tab does not poll.",
+    "No harness/VERSION bump (no kd_research rebuild / compare_db schema)."
+  ],
+  "follow_ups": [
+    "Portfolio Live column + derived MoS vs live (display-only).",
+    "Catalog sqlite quote_symbol column (catalog_rebuild + harness/VERSION) then drop per-list manifest/snapshot attach.",
+    "Do not add QUOTE_PROVIDER until a second backend exists."
+  ],
+  "proposed_commit": "Add display-only Yahoo last print to the runs list and run detail"
+}

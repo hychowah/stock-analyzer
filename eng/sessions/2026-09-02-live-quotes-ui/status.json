@@ -1,0 +1,9 @@
+{
+  "slug": "live-quotes-ui",
+  "session_key": "2026-09-02-live-quotes-ui",
+  "status": "complete",
+  "created_at": "2026-09-02T12:10:38Z",
+  "updated_at": "2026-09-02T12:30:00Z",
+  "work_type": "W4",
+  "resume_hint": "Restart analysis_web to pick up Live quotes. Commit only after user agreement."
+}

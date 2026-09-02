@@ -49,11 +49,11 @@
           <input type="number" step="any" name="mos_max" value="{{ mos_max or '' }}" placeholder="max" aria-label="MoS max"/>
         </span>
       </label>
-      <label class="range">Price
+      <label class="range">As-of
         <span class="range-pair">
-          <input type="number" step="any" name="price_min" value="{{ price_min or '' }}" placeholder="min" aria-label="Price min"/>
+          <input type="number" step="any" name="price_min" value="{{ price_min or '' }}" placeholder="min" aria-label="As-of min"/>
           <span class="muted">–</span>
-          <input type="number" step="any" name="price_max" value="{{ price_max or '' }}" placeholder="max" aria-label="Price max"/>
+          <input type="number" step="any" name="price_max" value="{{ price_max or '' }}" placeholder="max" aria-label="As-of max"/>
         </span>
       </label>
       <label class="range">FV base
@@ -80,6 +80,7 @@
 <div id="runs-results">
   {% include "partials/runs_table.html" %}
 </div>
+<p id="quote-status" class="muted" hidden></p>
 {% endblock %}
 {% block scripts %}
 <script src="/static/runs.js" defer></script>

@@ -10,6 +10,8 @@
       <h3>Valuation</h3>
       <table>
         <tr><th>As-of price</th><td class="num">{{ run.asof_price | fmt_num }} {{ run.currency or '' }}</td></tr>
+        <tr><th>Live</th>
+            <td class="num quote-live" data-quote-cell{% if run.quote_listing %} data-quote-symbol="{{ run.quote_listing }}" data-quote-source="{{ run.quote_listing_source or '' }}"{% endif %}>—</td></tr>
         <tr><th>FV bear / base / bull</th>
             <td class="num">{{ run.fv_bear | fmt_num }} / {{ run.fv_base | fmt_num }} / {{ run.fv_bull | fmt_num }}</td></tr>
         <tr><th>FV weighted</th><td class="num">{{ run.fv_weighted | fmt_num }}</td></tr>

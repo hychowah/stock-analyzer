@@ -82,6 +82,7 @@
         }
         history.replaceState(null, "", shareablePath(sp));
         bindDone();
+        document.dispatchEvent(new CustomEvent("quotes-refresh"));
       })
       .catch(function (err) {
         if (err && err.name === "AbortError") {

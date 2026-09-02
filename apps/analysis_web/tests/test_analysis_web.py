@@ -54,6 +54,10 @@ def _mini_archive(base: Path) -> Path:
         ),
         encoding="utf-8",
     )
+    (research / "meta" / "run_manifest.json").write_text(
+        json.dumps({"ticker": "META", "quote_symbol": "META"}),
+        encoding="utf-8",
+    )
     catalog = archive / "catalog"
     catalog.mkdir(parents=True)
     db = catalog / "research_compare.sqlite"
@@ -238,6 +242,9 @@ class AnalysisWebTests(unittest.TestCase):
         r = self.client.get("/runs/research:META:2026-08-03")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"00_META_README.md", r.content)
+        self.assertIn(b"As-of price", r.content)
+        self.assertIn(b">Live<", r.content)
+        self.assertIn(b'data-quote-symbol="META"', r.content)
         self.assertIn(b"All reports/", r.content)
 
     def test_experiments(self):
@@ -257,6 +264,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(data["count"], 1)
         self.assertEqual(data["total"], 1)
         self.assertEqual(data["runs"][0]["ticker"], "META")
+        self.assertEqual(data["runs"][0]["quote_symbol"], "META")
 
     def test_home_ticker_prefix_field(self):
         r = self.client.get("/")
@@ -269,7 +277,46 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'name="harness_version"', r.content)
         self.assertIn(b"<select name=\"harness_version\"", r.content)
         self.assertIn(b"/static/runs.js", r.content)
+        self.assertIn(b"/static/quotes.js", r.content)
         self.assertIn(b'data-live-partial="1"', r.content)
+        self.assertIn(b"As-of", r.content)
+        self.assertIn(b'aria-label="As-of min"', r.content)
+        self.assertIn(b"Live", r.content)
+        self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertNotIn(b'aria-label="Price min"', r.content)
+
+    def test_unstamped_row_lists_folder_ticker_not_stamp(self):
+        _insert_run(
+            self.archive,
+            ticker="JPM",
+            session_key="2026-07-25",
+            fv_base=200.0,
+            mos=0.0,
+            sector="bank",
+        )
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertIn(b'data-quote-source="stamp"', r.content)
+        self.assertIn(b">JPM</a>", r.content)
+        self.assertIn(b'data-quote-symbol="JPM"', r.content)
+        api = self.client.get("/api/runs")
+        by = {row["ticker"]: row for row in api.json()["runs"]}
+        self.assertEqual(by["META"]["quote_symbol"], "META")
+        self.assertEqual(by["META"]["quote_listing"], "META")
+        self.assertIsNone(by["JPM"]["quote_symbol"])
+        self.assertEqual(by["JPM"]["quote_listing"], "JPM")
+        self.assertEqual(by["JPM"]["quote_listing_source"], "ticker")
+
+    def test_fragments_runs_keeps_quote_hooks(self):
+        r = self.client.get("/fragments/runs")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'data-quote-cell', r.content)
+        self.assertIn(b'data-quote-symbol="META"', r.content)
+
+    def test_runs_js_dispatches_quotes_refresh(self):
+        js = Path(__file__).resolve().parents[1] / "static" / "runs.js"
+        self.assertIn("quotes-refresh", js.read_text(encoding="utf-8"))
 
     def test_exact_ticker_query_still_exact(self):
         r = self.client.get("/", params={"ticker": "META"})

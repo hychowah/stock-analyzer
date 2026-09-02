@@ -184,8 +184,48 @@ class CatalogApiTests(unittest.TestCase):
         rows = self.api.list_runs(limit=10)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["ticker"], "META")
+        self.assertIsNone(rows[0].get("quote_symbol"))
+        self.assertEqual(rows[0].get("quote_listing"), "META")
+        self.assertEqual(rows[0].get("quote_listing_source"), "ticker")
         run = self.api.get_run("research:META:2026-08-03")
         self.assertEqual(run["fv_base"], 500.0)
+        self.assertIsNone(run.get("quote_symbol"))
+        self.assertEqual(run.get("quote_listing"), "META")
+
+    def test_quote_symbol_from_stamp_no_ticker_fallback(self):
+        session = self.archive / "research" / "META" / "2026-08-03"
+        (session / "meta" / "run_manifest.json").write_text(
+            json.dumps({"ticker": "META", "quote_symbol": "META"}),
+            encoding="utf-8",
+        )
+        rows = self.api.list_runs(limit=10)
+        self.assertEqual(rows[0]["quote_symbol"], "META")
+        self.assertEqual(rows[0]["quote_listing"], "META")
+        self.assertEqual(rows[0]["quote_listing_source"], "stamp")
+        run = self.api.get_run("research:META:2026-08-03")
+        self.assertEqual(run["quote_symbol"], "META")
+
+        (session / "meta" / "run_manifest.json").write_text(
+            json.dumps({"ticker": "META", "quote_symbol": "ADYEN.AS"}),
+            encoding="utf-8",
+        )
+        stamped = self.api.get_run("research:META:2026-08-03")
+        self.assertEqual(stamped["quote_symbol"], "ADYEN.AS")
+        self.assertEqual(stamped["quote_listing"], "ADYEN.AS")
+
+        (session / "meta" / "run_manifest.json").write_text(
+            json.dumps({"ticker": "META", "quote_symbol": None}),
+            encoding="utf-8",
+        )
+        (session / "data").mkdir(exist_ok=True)
+        (session / "data" / "price_snapshot.json").write_text(
+            json.dumps({"ticker": "META", "quote_symbol": "ADYEN.AS"}),
+            encoding="utf-8",
+        )
+        from_snap = self.api.get_run("research:META:2026-08-03")
+        self.assertIsNone(from_snap["quote_symbol"])
+        self.assertEqual(from_snap["quote_listing"], "ADYEN.AS")
+        self.assertEqual(from_snap["quote_listing_source"], "snapshot")
 
     def test_list_filter_ticker(self):
         self.assertEqual(self.api.list_runs(ticker="meta"), self.api.list_runs(ticker="META"))

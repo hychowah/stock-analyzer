@@ -44,7 +44,8 @@ from packages.research_jobs.jobs import (
 )
 
 from apps.analysis_web.config import archive_root
-from apps.analysis_web.deps import get_api
+from apps.analysis_web.deps import get_api, get_quote_service
+from apps.analysis_web.services.quotes import QuoteService, parse_symbol_query
 from apps.analysis_web.services.runs_query import catalog_filters, runs_list_q
 
 router = APIRouter(prefix="/api", tags=["api"])
@@ -97,6 +98,24 @@ def api_get_run(run_id: str, api: CatalogApi = Depends(get_api)) -> dict[str, An
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}") from e
     except DbMissing as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
+
+
+@router.get("/quotes")
+def api_quotes(
+    symbols: str = Query("", description="Comma-separated Yahoo listing symbols"),
+    svc: QuoteService = Depends(get_quote_service),
+) -> dict[str, Any]:
+    """Last print for listing symbols. Does not accept typed catalog tickers."""
+    try:
+        listings = parse_symbol_query(symbols)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    quotes = svc.get_many(listings)
+    return {
+        "quotes": [q.as_json() for q in quotes],
+        "ttl_sec": svc.ttl_sec,
+        "count": len(quotes),
+    }
 
 
 @router.get("/portfolio")

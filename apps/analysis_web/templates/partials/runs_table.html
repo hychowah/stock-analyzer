@@ -18,7 +18,7 @@
 </div>
 {% else %}
 <div class="card">
-  <p class="muted" aria-live="polite">{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }}</p>
+  <p class="muted" aria-live="polite">{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }} · live is Yahoo last print</p>
   <table class="runs-table">
     <thead>
       <tr>
@@ -28,7 +28,8 @@
         {{ sort_th('harness_version', 'Harness') }}
         {{ sort_th('primary_sector', 'Sector') }}
         {{ sort_th('region', 'Region') }}
-        {{ sort_th('asof_price', 'Price', 'num') }}
+        {{ sort_th('asof_price', 'As-of', 'num') }}
+        <th class="num">Live</th>
         {{ sort_th('fv_base', 'FV base', 'num') }}
         {{ sort_th('margin_of_safety_pct', 'MoS %', 'num') }}
         {{ sort_th('audit_verdict', 'Audit') }}
@@ -49,6 +50,7 @@
           <td>{{ r.primary_sector or '' }}</td>
           <td>{{ r.region or '' }}</td>
           <td class="num">{{ r.asof_price | fmt_num }}</td>
+          <td class="num quote-live" data-quote-cell{% if r.quote_listing %} data-quote-symbol="{{ r.quote_listing }}" data-quote-source="{{ r.quote_listing_source or '' }}"{% endif %}>—</td>
           <td class="num">{{ r.fv_base | fmt_num }}</td>
           <td class="num">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
           <td>{{ r.audit_verdict | verdict_badge }}</td>
@@ -56,7 +58,7 @@
         </tr>
         {% endfor %}
       {% else %}
-        <tr><td colspan="11" class="muted">No runs</td></tr>
+        <tr><td colspan="12" class="muted">No runs</td></tr>
       {% endif %}
     </tbody>
   </table>

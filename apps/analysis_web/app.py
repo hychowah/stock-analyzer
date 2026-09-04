@@ -25,6 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from apps.analysis_web.config import archive_root, static_dir
 from apps.analysis_web.routes import analyze, api, artifacts, compares, events, harness, pages
@@ -35,6 +36,15 @@ from apps.analysis_web.services.price_history import (
 )
 from apps.analysis_web.services.quotes import QuoteService, YahooPrintBackend, quote_ttl_sec
 from apps.analysis_web.templating import create_templates
+
+
+class StaticFilesNoCache(StaticFiles):
+    """Revalidate on every request so JS/CSS cannot stick after a file change."""
+
+    async def get_response(self, path: str, scope: Scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
 
 
 @asynccontextmanager
@@ -63,7 +73,7 @@ def create_app() -> FastAPI:
 
     static_path = static_dir()
     static_path.mkdir(parents=True, exist_ok=True)
-    app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+    app.mount("/static", StaticFilesNoCache(directory=str(static_path)), name="static")
 
     app.include_router(pages.router)
     app.include_router(analyze.router)

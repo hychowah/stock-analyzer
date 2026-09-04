@@ -49,7 +49,7 @@ th {
   letter-spacing: 0.03em;
   color: #64748b;
 }
-tr:hover td {
+tr:hover {
   background: #f8fafc;
 }
 .mono {
@@ -59,8 +59,7 @@ tr:hover td {
 .muted {
   color: #64748b;
 }
-/* Live cell fill from today's change. Green/red rhyme with pass/fail for scan, not shared meaning.
-   Beats tr:hover td so the fill stays on row hover. */
+/* Live cell fill from today's change. Green/red rhyme with pass/fail for scan, not shared meaning. */
 .quote-live.chg-up {
   color: #14532d;
   background: #bbf7d0;

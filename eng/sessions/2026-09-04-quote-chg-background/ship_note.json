@@ -1,10 +1,10 @@
 {
   "session": "2026-09-04-quote-chg-background",
   "feature": "Green/red Live cell fill from today's price change (runs list + run detail)",
-  "verify": "pytest apps/analysis_web/tests 121 passed; Selenium :8765 home + run detail + mobile cell fills",
+  "verify": "pytest apps/analysis_web/tests 123 passed; Selenium :8765 home + run detail + mobile cell fills",
   "notes": [
     "quotes.js fillCell puts .chg-up/.chg-down on td.quote-live (clears them on error/unstamped).",
-    "CSS .quote-live.chg-up / .chg-down: background #bbf7d0 / #fecaca. Beats tr:hover td so fill stays on row hover. Colors rhyme with badge pass/fail for scan, not shared meaning.",
+    "CSS .quote-live.chg-up / .chg-down: background #bbf7d0 / #fecaca. Hover is tr:hover (not td) so fill is not overwritten. /static is StaticFilesNoCache with Cache-Control: no-cache, must-revalidate. Colors rhyme with badge pass/fail for scan, not shared meaning.",
     "Zero change and missing/error stay unfilled default text (em dash if no print). No catalog/API/harness VERSION.",
     "Do not commit unrelated archive/catalog index dirt."
   ],

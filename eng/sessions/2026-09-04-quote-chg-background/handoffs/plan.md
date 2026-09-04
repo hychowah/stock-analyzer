@@ -1,6 +1,6 @@
 # Plan: background color on live price-change
 
-**Superseded:** the pill-on-`%` winner (A) shipped first and was not visible as a Live-column background. Shipped shape is **B for the Live cell only** (not the whole row): `quotes.js` puts `.chg-up` / `.chg-down` on `td.quote-live`; CSS fills that cell. Hover kept because `.quote-live.chg-up` beats `tr:hover td`. Zero/missing stay unfilled.
+**Superseded:** the pill-on-`%` winner (A) shipped first and was not visible as a Live-column background. Shipped shape is **B for the Live cell only** (not the whole row): `quotes.js` puts `.chg-up` / `.chg-down` on `td.quote-live`; CSS fills that cell. Hover is `tr:hover`; signed Live cells keep their own background because hover no longer paints `td`. Zero/missing stay unfilled. `/static` revalidates (`Cache-Control: no-cache, must-revalidate`).
 
 ## Goal
 

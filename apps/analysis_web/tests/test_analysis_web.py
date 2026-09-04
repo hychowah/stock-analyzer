@@ -163,6 +163,15 @@ class QuoteLiveChgCssTests(unittest.TestCase):
         self.assertIn('classList.add("chg-up")', qjs)
         self.assertIn('classList.add("chg-down")', qjs)
 
+    def test_row_hover_does_not_paint_td(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("tr:hover td", css)
+        self.assertIn("tr:hover {", css.replace("\r\n", "\n"))
+        for sel in (".quote-live.chg-up", ".quote-live.chg-down"):
+            self.assertNotIn("hover", _css_rule_bodies(css, sel), sel)
+
 
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
@@ -198,6 +207,13 @@ class AnalysisWebTests(unittest.TestCase):
         r = self.client.get("/health")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"run_count", r.content)
+
+    def test_static_files_revalidate(self):
+        r = self.client.get("/static/quotes.js")
+        self.assertEqual(r.status_code, 200)
+        cc = r.headers.get("cache-control", "")
+        self.assertIn("no-cache", cc)
+        self.assertIn("must-revalidate", cc)
 
     def test_api_health(self):
         r = self.client.get("/api/health")

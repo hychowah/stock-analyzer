@@ -56,7 +56,9 @@ Or: `bash apps/analysis_web/init.sh`
 
 Runs list (`/`): type in Ticker to filter **starts-with** (`ticker_prefix`). Sector / region / tech / harness are dropdowns of catalog values. Session date, MoS %, price, and FV base take **inclusive ranges**. All of that updates live; click headers to sort. A ticker/prefix that matches **no catalog ticker** aborts with HTTP 404 (do not treat an empty table as “keep going”). A real ticker with other filters that yield zero rows still shows **No runs** (200).
 
-Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`.
+Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`. Default `limit=50` is omitted from the query string.
+
+Header **Runs** and run-detail **← Runs** remember the last non-empty query (browser `localStorage`) so leaving to Analyze or a run and coming back keeps sort/filter. Empty `/` is still the default list (storage is not replayed). **Reset** is the only clear. A pasted query URL becomes the new memory.
 
 | Param | Meaning |
 |-------|---------|
@@ -68,6 +70,7 @@ Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0
 | `price_min`, `price_max` | Inclusive as-of price |
 | `fv_base_min`, `fv_base_max` | Inclusive FV base |
 | `sort`, `dir` | Allowlisted column + `asc`/`desc` |
+| `limit` | Page size, 1–200; default 50 is omitted from the query string |
 
 No-JS: the GET form still submits. Invalid ranges (min > max, bad date) return HTTP 400. Unknown ticker / prefix returns HTTP 404 and an abort card.
 

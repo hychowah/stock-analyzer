@@ -68,7 +68,7 @@
       <input type="hidden" name="sort" value="{{ sort or '' }}"/>
       <input type="hidden" name="dir" value="{{ dir or '' }}"/>
       <button type="submit">Filter</button>
-      <a class="btn secondary" href="/">Reset</a>
+      <a id="runs-reset" class="btn secondary" href="/">Reset</a>
     </div>
   </form>
   <div id="compare-bar" class="compare-bar">
@@ -83,6 +83,5 @@
 <p id="quote-status" class="muted" hidden></p>
 {% endblock %}
 {% block scripts %}
-<script src="/static/runs.js" defer></script>
 <script src="/static/compares.js" defer></script>
 {% endblock %}

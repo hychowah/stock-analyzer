@@ -2,7 +2,7 @@
 {% block title %}{{ run.ticker }} {{ run.session_key }}{% endblock %}
 {% block content %}
 <div class="card">
-  <p><a href="/">← Runs</a></p>
+  <p><a class="js-runs-back" href="/">← Runs</a></p>
   <h1 class="mono">{{ run.ticker }} · {{ run.session_key }}</h1>
   <p class="mono muted">{{ run.run_id }}</p>
   <section id="price-chart" class="price-chart"{% if run.quote_listing %} data-symbol="{{ run.quote_listing }}"{% endif %}>

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import tempfile
 import unittest
@@ -187,6 +188,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'data-symbol="META"', r.content)
         self.assertIn(b'id="price-chart-overlay"', r.content)
         self.assertIn(b"/static/price_chart.js", r.content)
+        self.assertIn(b'class="js-runs-back"', r.content)
+        self.assertIn(b"/static/runs.js", r.content)
         self.assertIn(b'data-range="1y"', r.content)
         self.assertIn(b'"fv_bear": 350.0', r.content)
         self.assertIn(b'"fv_base": 500.0', r.content)
@@ -296,6 +299,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'name="harness_version"', r.content)
         self.assertIn(b"<select name=\"harness_version\"", r.content)
         self.assertIn(b"/static/runs.js", r.content)
+        self.assertIn(b'id="nav-runs"', r.content)
+        self.assertIn(b'id="runs-reset"', r.content)
         self.assertIn(b"/static/quotes.js", r.content)
         self.assertIn(b'data-live-partial="1"', r.content)
         self.assertIn(b"As-of", r.content)
@@ -336,6 +341,38 @@ class AnalysisWebTests(unittest.TestCase):
     def test_runs_js_dispatches_quotes_refresh(self):
         js = Path(__file__).resolve().parents[1] / "static" / "runs.js"
         self.assertIn("quotes-refresh", js.read_text(encoding="utf-8"))
+
+    def test_runs_js_remembers_query_on_nav_links(self):
+        from apps.analysis_web.routes.pages import _FILTER_HREF_KEYS
+
+        root = Path(__file__).resolve().parents[1]
+        js = (root / "static" / "runs.js").read_text(encoding="utf-8")
+        base = (root / "templates" / "base.html").read_text(encoding="utf-8")
+        keys_m = re.search(r"var QUERY_KEYS = \[([^\]]+)\]", js)
+        self.assertIsNotNone(keys_m)
+        js_keys = re.findall(r'"([^"]+)"', keys_m.group(1))
+        self.assertEqual(
+            js_keys,
+            list(_FILTER_HREF_KEYS) + ["audit_verdict", "limit"],
+        )
+        self.assertIn("analysis_web.runs.query", js)
+        self.assertIn("js-runs-back", js)
+        self.assertIn("nav-runs", js)
+        self.assertIn("runs-reset", js)
+        self.assertIn('DEFAULT_LIMIT = "50"', js)
+        self.assertIn('key === "limit" && v === DEFAULT_LIMIT', js)
+        self.assertIn("if (s) {\n      writeStored(s);", js)
+        self.assertNotIn("window.RunsMemory", js)
+        self.assertNotIn("QUERY_KEY_SET", js)
+        self.assertIn('id="nav-runs"', base)
+        nav_at = base.index('id="nav-runs"')
+        script_at = base.index('src="/static/runs.js"')
+        self.assertLess(nav_at, script_at)
+        self.assertNotIn('<script src="/static/runs.js" defer>', base)
+        health = self.client.get("/health")
+        self.assertEqual(health.status_code, 200)
+        self.assertIn(b'id="nav-runs"', health.content)
+        self.assertIn(b"/static/runs.js", health.content)
 
     def test_exact_ticker_query_still_exact(self):
         r = self.client.get("/", params={"ticker": "META"})

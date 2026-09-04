@@ -1,0 +1,28 @@
+{
+  "goal": "Runs list Downside % overlay: (price - fv_bear) / price from as-of, live overwrite",
+  "non_goals": [
+    "Do not run research Phases 0\u20135",
+    "Do not mutate archive/research or archive/outcomes history"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Runs list and run detail show Downside % = (price - fv_bear) / price * 100 from as-of, overwritten from live print",
+    "Not a catalog sort key or /api/runs field; no sqlite column; no harness VERSION bump",
+    "pytest apps/analysis_web/tests and eng_verify.py pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

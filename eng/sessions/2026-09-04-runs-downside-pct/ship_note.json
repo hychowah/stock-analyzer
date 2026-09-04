@@ -1,0 +1,16 @@
+{
+  "session": "2026-09-04-runs-downside-pct",
+  "feature": "Downside % overlay on runs list and run detail: (price - fv_bear) / price",
+  "verify": "python scripts/eng_verify.py PASS; pytest apps/analysis_web/tests 119 passed; live-archive TestClient home/detail 200",
+  "notes": [
+    "Display-only. Catalog asof_price / fv_bear stay raw. No sqlite column, no RUN_SORT_COLUMNS key, no /api/runs field.",
+    "First paint from as-of via templating.downside_pct. quotes.js fillDownside overwrites from live print; quote error keeps as-of.",
+    "Cell title is vintage + price used + bear (e.g. live · 480.00 → bear 350.00). Header is not a sort link.",
+    "No harness/VERSION bump (UI only)."
+  ],
+  "follow_ups": [
+    "Restart the process on :8765 so it picks up the new Jinja globals (old process 500s on new templates).",
+    "Sort only if needed: catalog SQL expression map named asof_downside_pct, not a live sort."
+  ],
+  "proposed_commit": "Add Downside % overlay to the runs list and run detail"
+}

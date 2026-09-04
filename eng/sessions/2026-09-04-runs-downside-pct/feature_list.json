@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json success criteria for Downside % overlay",
+      "passes": true,
+      "verify": "issue.json has overlay criteria"
+    },
+    {
+      "id": "downside-overlay",
+      "description": "Runs list + run detail Downside % from as-of; live overwrite in quotes.js; no catalog sort or API field",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py PASS"
+    }
+  ]
+}

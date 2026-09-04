@@ -258,6 +258,9 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"00_META_README.md", r.content)
         self.assertIn(b"As-of price", r.content)
         self.assertIn(b">Live<", r.content)
+        self.assertIn(b"Downside %", r.content)
+        self.assertIn(b"data-downside-pct", r.content)
+        self.assertRegex(r.text, r'data-downside-pct[\s\S]*?>\s*12\.5')
         self.assertIn(b'data-quote-symbol="META"', r.content)
         self.assertIn(b"All reports/", r.content)
         js = Path(__file__).resolve().parents[1] / "static" / "price_chart.js"
@@ -287,6 +290,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(data["total"], 1)
         self.assertEqual(data["runs"][0]["ticker"], "META")
         self.assertEqual(data["runs"][0]["quote_symbol"], "META")
+        self.assertNotIn("downside_pct", data["runs"][0])
 
     def test_home_ticker_prefix_field(self):
         r = self.client.get("/")
@@ -306,8 +310,20 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"As-of", r.content)
         self.assertIn(b'aria-label="As-of min"', r.content)
         self.assertIn(b"Live", r.content)
+        self.assertIn(b"Downside %", r.content)
         self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertIn(b"data-downside-pct", r.content)
+        self.assertIn(b'data-fv-bear="350.0"', r.content)
+        self.assertIn(b'data-asof-price="400.0"', r.content)
+        self.assertRegex(r.text, r'data-downside-pct[\s\S]*?>\s*12\.5')
+        self.assertIn("as-of · 400.00 → bear 350.00", r.text)
+        self.assertNotIn(b'data-sort="downside_pct"', r.content)
         self.assertNotIn(b'aria-label="Price min"', r.content)
+        qjs = (Path(__file__).resolve().parents[1] / "static" / "quotes.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("fillDownside", qjs)
+        self.assertIn("data-downside-pct", qjs)
 
     def test_unstamped_row_lists_folder_ticker_not_stamp(self):
         _insert_run(
@@ -337,6 +353,9 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'data-quote-cell', r.content)
         self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertIn(b"data-downside-pct", r.content)
+        self.assertIn(b'data-fv-bear="350.0"', r.content)
+        self.assertIn(b'data-asof-price="400.0"', r.content)
 
     def test_runs_js_dispatches_quotes_refresh(self):
         js = Path(__file__).resolve().parents[1] / "static" / "runs.js"
@@ -405,6 +424,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 400)
         api = self.client.get("/api/runs", params={"sort": "not_a_column"})
         self.assertEqual(api.status_code, 400)
+        overlay = self.client.get("/api/runs", params={"sort": "downside_pct"})
+        self.assertEqual(overlay.status_code, 400)
 
 
 class AnalysisWebQueryTests(unittest.TestCase):

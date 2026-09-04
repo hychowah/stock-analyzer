@@ -1,0 +1,9 @@
+{
+  "slug": "runs-downside-pct",
+  "session_key": "2026-09-04-runs-downside-pct",
+  "status": "complete",
+  "created_at": "2026-09-04T14:02:20Z",
+  "updated_at": "2026-09-04T14:20:00Z",
+  "work_type": "W4",
+  "resume_hint": "Done. Restart analysis web on :8765 to pick up Jinja globals."
+}

@@ -45,6 +45,13 @@
         <tr><th>p bear / base / bull</th>
             <td class="num">{{ run.p_bear | fmt_num }} / {{ run.p_base | fmt_num }} / {{ run.p_bull | fmt_num }}</td></tr>
         <tr><th>MoS %</th><td class="num">{{ run.margin_of_safety_pct | fmt_num(1) }}</td></tr>
+        {% set ds_title = downside_title(run.asof_price, run.fv_bear, 'as-of') %}
+        <tr><th title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside %</th>
+            <td class="num"
+                data-downside-pct
+                {% if run.fv_bear is not none %}data-fv-bear="{{ run.fv_bear }}"{% endif %}
+                {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
+                {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ downside_pct(run.asof_price, run.fv_bear) | fmt_num(1) }}</td></tr>
         <tr><th>Model</th><td>{{ run.model_name or '' }}</td></tr>
       </table>
     </div>

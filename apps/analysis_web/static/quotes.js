@@ -1,5 +1,6 @@
 /**
  * Fill [data-quote-cell][data-quote-symbol] from GET /api/quotes.
+ * After prints land, recompute [data-downside-pct] from live (else as-of) vs data-fv-bear.
  * Listing symbols only. Rebind after #runs-results swap via quotes-refresh.
  * Pause when the tab is hidden.
  */
@@ -109,6 +110,68 @@
     }
   }
 
+  function parseAttrNum(el, name) {
+    var raw = el.getAttribute(name);
+    if (raw == null || String(raw).trim() === "") {
+      return null;
+    }
+    var n = Number(raw);
+    return n === n ? n : null;
+  }
+
+  function downsidePct(price, fvBear) {
+    if (price == null || fvBear == null || price === 0) {
+      return null;
+    }
+    return ((price - fvBear) / price) * 100;
+  }
+
+  function fmtDownside(n) {
+    if (n == null || n !== n) {
+      return "—";
+    }
+    return n.toLocaleString(undefined, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  }
+
+  function quoteSymbolFor(el) {
+    var row = el.closest("tr");
+    var live = row ? row.querySelector("[data-quote-cell][data-quote-symbol]") : null;
+    if (!live) {
+      var table = el.closest("table");
+      live = table ? table.querySelector("[data-quote-cell][data-quote-symbol]") : null;
+    }
+    if (!live) {
+      return "";
+    }
+    return String(live.getAttribute("data-quote-symbol") || "")
+      .trim()
+      .toUpperCase();
+  }
+
+  function fillDownside(by) {
+    var cells = document.querySelectorAll("[data-downside-pct]");
+    for (var i = 0; i < cells.length; i++) {
+      var el = cells[i];
+      var fvBear = parseAttrNum(el, "data-fv-bear");
+      var asof = parseAttrNum(el, "data-asof-price");
+      var s = quoteSymbolFor(el);
+      var q = s ? by[s] : null;
+      var liveOk = q && q.price != null && !q.error;
+      var price = liveOk ? q.price : asof;
+      var vintage = liveOk ? "live" : "as-of";
+      var value = downsidePct(price, fvBear);
+      el.textContent = fmtDownside(value);
+      if (value == null || price == null || fvBear == null) {
+        el.removeAttribute("title");
+        continue;
+      }
+      el.title = vintage + " · " + fmtNum(price) + " → bear " + fmtNum(fvBear);
+    }
+  }
+
   function applyQuotes(quotes) {
     var by = Object.create(null);
     (quotes || []).forEach(function (q) {
@@ -129,6 +192,7 @@
       }
       fillCell(el, by[s] || { error: "unavailable", symbol: s });
     }
+    fillDownside(by);
   }
 
   function poll() {

@@ -26,8 +26,8 @@ Or: `bash apps/analysis_web/init.sh`
 
 | Path | Purpose |
 |------|---------|
-| `/` | Run list: live prefix search, filters, column sort |
-| `/runs/{run_id}` | Run detail (price vs analysis chart, FV, MoS, audit, report links) |
+| `/` | Run list: live prefix search, filters, column sort; Downside % is (price − bear FV) / price (as-of, then live print) |
+| `/runs/{run_id}` | Run detail (price vs analysis chart, FV, MoS, Downside %, audit, report links) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |

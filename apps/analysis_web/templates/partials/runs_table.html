@@ -32,6 +32,7 @@
         <th class="num">Live</th>
         {{ sort_th('fv_base', 'FV base', 'num') }}
         {{ sort_th('margin_of_safety_pct', 'MoS %', 'num') }}
+        <th class="num" title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside %</th>
         {{ sort_th('audit_verdict', 'Audit') }}
         {{ sort_th('tech_signal', 'Tech') }}
       </tr>
@@ -53,12 +54,18 @@
           <td class="num quote-live" data-quote-cell{% if r.quote_listing %} data-quote-symbol="{{ r.quote_listing }}" data-quote-source="{{ r.quote_listing_source or '' }}"{% endif %}>—</td>
           <td class="num">{{ r.fv_base | fmt_num }}</td>
           <td class="num">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
+          {% set ds_title = downside_title(r.asof_price, r.fv_bear, 'as-of') %}
+          <td class="num"
+              data-downside-pct
+              {% if r.fv_bear is not none %}data-fv-bear="{{ r.fv_bear }}"{% endif %}
+              {% if r.asof_price is not none %}data-asof-price="{{ r.asof_price }}"{% endif %}
+              {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ downside_pct(r.asof_price, r.fv_bear) | fmt_num(1) }}</td>
           <td>{{ r.audit_verdict | verdict_badge }}</td>
           <td>{{ r.tech_signal or '' }}</td>
         </tr>
         {% endfor %}
       {% else %}
-        <tr><td colspan="12" class="muted">No runs</td></tr>
+        <tr><td colspan="13" class="muted">No runs</td></tr>
       {% endif %}
     </tbody>
   </table>

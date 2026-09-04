@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json success criteria; write plan; strategic design review; adjust plan",
+      "passes": true,
+      "verify": "issue.json + handoffs/plan.md after review"
+    },
+    {
+      "id": "chg-chip",
+      "description": "CSS chip background on .quote-live .chg-up/.chg-down; tests; browser check both pages",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py PASS"
+    }
+  ]
+}

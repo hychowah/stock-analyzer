@@ -136,6 +136,26 @@ def _insert_run(
     conn.close()
 
 
+def _css_rule_bodies(css: str, selector: str) -> str:
+    bodies = []
+    for chunk in css.split("}"):
+        if "{" not in chunk:
+            continue
+        head, body = chunk.split("{", 1)
+        if selector in " ".join(head.split()):
+            bodies.append(body)
+    return "\n".join(bodies)
+
+
+class QuoteChgChipCssTests(unittest.TestCase):
+    def test_sign_selectors_set_background(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        for sel in (".quote-live .chg-up", ".quote-live .chg-down"):
+            self.assertIn("background", _css_rule_bodies(css, sel), sel)
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)

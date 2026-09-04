@@ -1,0 +1,30 @@
+{
+  "goal": "Green/red background chip on live price-change % (runs list + run detail)",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not color whole rows, MoS, Downside, or as-of",
+    "No catalog/API field; no harness VERSION; no magnitude heatmap"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Live % on runs list and run detail is a green (up) / red (down) chip using existing .chg-up/.chg-down; 0% stays muted; missing stays em dash",
+    "CSS-only on existing quote-live classes; no JS/API/catalog/harness change unless review requires it",
+    "pytest apps/analysis_web/tests and eng_verify.py pass; browser check of up/down/flat/missing on both pages"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

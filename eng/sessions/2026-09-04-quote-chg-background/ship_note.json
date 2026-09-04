@@ -1,0 +1,13 @@
+{
+  "session": "2026-09-04-quote-chg-background",
+  "feature": "Green/red background chip on live price-change % (runs list + run detail)",
+  "verify": "python scripts/eng_verify.py PASS; pytest apps/analysis_web/tests 120 passed; Selenium :8765 home + run detail + mobile",
+  "notes": [
+    "CSS-only on existing .quote-live .chg-up / .chg-down. quotes.js sign classes unchanged.",
+    "Chip chrome grouped; per-sign background #bbf7d0 / #fecaca. Colors rhyme with badge pass/fail for scan, not shared meaning.",
+    "0% stays .muted (no chip). Missing/error stays em dash. No catalog/API/harness VERSION.",
+    "Do not commit unrelated archive/catalog index dirt."
+  ],
+  "follow_ups": [],
+  "proposed_commit": "Add a green/red chip behind live price-change percent"
+}

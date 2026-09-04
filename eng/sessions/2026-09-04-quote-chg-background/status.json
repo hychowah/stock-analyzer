@@ -3,7 +3,7 @@
   "session_key": "2026-09-04-quote-chg-background",
   "status": "complete",
   "created_at": "2026-09-04T14:29:35Z",
-  "updated_at": "2026-09-04T14:45:00Z",
+  "updated_at": "2026-09-04T15:10:00Z",
   "work_type": "W4",
-  "resume_hint": "Done. CSS-only; existing :8765 process already serving new app.css."
+  "resume_hint": "Done. Sign classes on td.quote-live; hard-refresh :8765 if an old quotes.js is cached."
 }

@@ -59,18 +59,13 @@ tr:hover td {
 .muted {
   color: #64748b;
 }
-/* Chip chrome on the live %; not .badge. Green/red rhyme with pass/fail for scan, not shared meaning. */
-.quote-live .chg-up,
-.quote-live .chg-down {
-  display: inline-block;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-}
-.quote-live .chg-up {
+/* Live cell fill from today's change. Green/red rhyme with pass/fail for scan, not shared meaning.
+   Beats tr:hover td so the fill stays on row hover. */
+.quote-live.chg-up {
   color: #14532d;
   background: #bbf7d0;
 }
-.quote-live .chg-down {
+.quote-live.chg-down {
   color: #7f1d1d;
   background: #fecaca;
 }

@@ -147,13 +147,21 @@ def _css_rule_bodies(css: str, selector: str) -> str:
     return "\n".join(bodies)
 
 
-class QuoteChgChipCssTests(unittest.TestCase):
+class QuoteLiveChgCssTests(unittest.TestCase):
     def test_sign_selectors_set_background(self):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
-        for sel in (".quote-live .chg-up", ".quote-live .chg-down"):
+        for sel in (".quote-live.chg-up", ".quote-live.chg-down"):
             self.assertIn("background", _css_rule_bodies(css, sel), sel)
+
+    def test_quotes_js_puts_sign_on_cell(self):
+        qjs = (Path(__file__).resolve().parents[1] / "static" / "quotes.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('classList.remove("chg-up", "chg-down")', qjs)
+        self.assertIn('classList.add("chg-up")', qjs)
+        self.assertIn('classList.add("chg-down")', qjs)
 
 
 class AnalysisWebTests(unittest.TestCase):

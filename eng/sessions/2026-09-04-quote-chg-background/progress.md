@@ -9,3 +9,4 @@
 - Strategic design review: from-scratch test passed. Absorbed (1) no shared `--pass-bg` tokens, (2) group chip chrome once, (3) dedicated CSS background test, not hung on the home smoke.
 - Implemented grouped chip chrome + per-sign background in `app.css`. Dedicated `QuoteChgChipCssTests`. No JS/API/catalog/harness change.
 - Verify: `pytest apps/analysis_web/tests` 120 passed; `eng_verify.py` PASS (673). Selenium on :8765: home 17 up / 29 down chips with `#bbf7d0` / `#fecaca`; hover keeps chip; 0% muted transparent; run detail 1 up chip; mobile same as desktop. 4 Live cells stayed em dash.
+- User: pill on the `%` was not visible as Live-column background. Moved fill onto `td.quote-live` (`chg-up`/`chg-down` on the cell). `quotes.js` `fillCell` sets those classes. Selenium: 22 up / 24 down cell fills; hover keeps fill; unsigned transparent; run detail + mobile ok. 121 tests passed.

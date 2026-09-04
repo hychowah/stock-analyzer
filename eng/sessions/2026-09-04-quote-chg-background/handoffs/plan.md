@@ -1,5 +1,7 @@
 # Plan: background color on live price-change
 
+**Superseded:** the pill-on-`%` winner (A) shipped first and was not visible as a Live-column background. Shipped shape is **B for the Live cell only** (not the whole row): `quotes.js` puts `.chg-up` / `.chg-down` on `td.quote-live`; CSS fills that cell. Hover kept because `.quote-live.chg-up` beats `tr:hover td`. Zero/missing stay unfilled.
+
 ## Goal
 
 Make the live `%` next to last print scannable at a glance on the **runs list** (`/`) and **run detail** (`/runs/{run_id}`). Today it is sign-colored text only (green/red). Add a green/red **background chip** on that `%` span.

@@ -66,6 +66,7 @@
   }
 
   function fillCell(el, q) {
+    el.classList.remove("chg-up", "chg-down");
     clearCell(el);
     if (!q || q.error) {
       el.textContent = "—";
@@ -76,12 +77,14 @@
     price.textContent = fmtNum(q.price);
     el.appendChild(price);
     if (q.change_pct != null) {
+      if (q.change_pct > 0) {
+        el.classList.add("chg-up");
+      } else if (q.change_pct < 0) {
+        el.classList.add("chg-down");
+      }
       el.appendChild(document.createTextNode(" "));
       var chg = document.createElement("span");
-      var up = q.change_pct > 0;
-      var down = q.change_pct < 0;
-      chg.className = up ? "chg-up" : down ? "chg-down" : "muted";
-      var sign = up ? "+" : "";
+      var sign = q.change_pct > 0 ? "+" : "";
       chg.textContent = sign + q.change_pct.toFixed(1) + "%";
       el.appendChild(chg);
     }
@@ -186,6 +189,7 @@
         .trim()
         .toUpperCase();
       if (!s) {
+        el.classList.remove("chg-up", "chg-down");
         el.textContent = "—";
         el.title = "unstamped";
         continue;

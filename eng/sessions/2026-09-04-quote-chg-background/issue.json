@@ -1,5 +1,5 @@
 {
-  "goal": "Green/red background chip on live price-change % (runs list + run detail)",
+  "goal": "Green/red background on the Live cell from today's price change (runs list + run detail)",
   "non_goals": [
     "Do not run research Phases 0–5",
     "Do not mutate archive/research or archive/outcomes history",
@@ -8,8 +8,8 @@
   ],
   "work_type": "W4",
   "success_criteria": [
-    "Live % on runs list and run detail is a green (up) / red (down) chip using existing .chg-up/.chg-down; 0% stays muted; missing stays em dash",
-    "CSS-only on existing quote-live classes; no JS/API/catalog/harness change unless review requires it",
+    "Live cells on runs list and run detail get .chg-up/.chg-down on td.quote-live; background #bbf7d0 (up) / #fecaca (down); 0% and missing stay unfilled",
+    "quotes.js fillCell sets those classes on the cell; no catalog/API/harness change",
     "pytest apps/analysis_web/tests and eng_verify.py pass; browser check of up/down/flat/missing on both pages"
   ],
   "write_allowlist": [

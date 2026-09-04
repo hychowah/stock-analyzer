@@ -8,7 +8,7 @@
     },
     {
       "id": "chg-chip",
-      "description": "CSS chip background on .quote-live .chg-up/.chg-down; tests; browser check both pages",
+      "description": "Live cell fill: quotes.js puts .chg-up/.chg-down on td.quote-live; CSS background; tests; browser check both pages",
       "passes": true,
       "verify": "pytest apps/analysis_web/tests -q"
     },

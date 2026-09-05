@@ -1,0 +1,11 @@
+{
+  "harness_version": "2.34.0",
+  "copied_from_sha": "cd717857b90c0fd571f8f19935180bc749bc93ff",
+  "copied_at": "2026-09-05T02:00:53Z",
+  "contents": [
+    "AGENTS.md",
+    "harness",
+    "packages",
+    "scripts"
+  ]
+}

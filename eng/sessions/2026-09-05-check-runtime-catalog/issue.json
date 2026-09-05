@@ -1,0 +1,39 @@
+{
+  "goal": "Stop research-runtime law piling into check_session / gates / street_bind God modules: one check catalog, check_core I/O, Street Y1 policy, knowledge homes. Same PASS/FAIL/WARN/SKIPPED outcomes.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite older pins/ (new pins/<VERSION> in this change set is required)",
+    "Do not change Mode A statute, prompts, or schemas",
+    "Do not split library.py ingest vs gates (later W1)",
+    "Do not add a plugin/entrypoint system or one-file-per-check"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "New version-banded gate is one domain function plus one catalog row; dispatchers do not grow if-ladders",
+    "Public facade names stay: entry_checks, complete_checks, check_street_bind, gates.load_json, check_mos_units, check_market_context / check_phase_status / check_session_isolation",
+    "check_core owns Check, load_json (data, err), session_since, validate_hooks_list; registry_io.load_json stays the writer API",
+    "street_bind.py has no conservatism-dials / SOTP / box-floor / destock-analog bodies; StreetY1Policy owns 2.7/2.18/2.28 bands",
+    "gates.py is path tables + check_path/check_reports + entry/complete facades",
+    "harness/VERSION is 2.34.0 in the same change set",
+    "pytest packages/kd_research packages/catalog_api apps/analysis_web/tests scripts/tests and eng_verify.py pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "pins/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/kd_research packages/catalog_api apps/analysis_web/tests scripts/tests -q"
+  ]
+}

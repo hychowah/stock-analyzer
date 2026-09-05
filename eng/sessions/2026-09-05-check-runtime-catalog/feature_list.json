@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json: no archive/pin rewrite; facade names; 2.34.0 bump; catalog not if-ladders",
+      "passes": false,
+      "verify": "issue.json has catalog/facade/VERSION criteria"
+    },
+    {
+      "id": "catalog",
+      "description": "check_core + check_catalog + thin entry_checks/complete_checks/check_session.main",
+      "passes": false,
+      "verify": "pytest packages/kd_research/tests/test_check_core.py packages/kd_research/tests/test_check_catalog.py packages/kd_research scripts/tests -q"
+    },
+    {
+      "id": "street-homes",
+      "description": "Street identity + Y1 policy; move hygiene/destock; empty gates of domain law",
+      "passes": false,
+      "verify": "pytest packages/kd_research/tests/test_street_bind.py packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py packages/kd_research/tests/test_mos_and_probs_gates.py packages/kd_research -q"
+    },
+    {
+      "id": "verify",
+      "description": "eng_verify + harness VERSION 2.34.0",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py PASS"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sec_filings.schema.json",
+  "title": "SEC Filings Extraction (light contract)",
+  "description": "Written by the Phase 1 SEC agent. Section text MUST be capped (see packages/kd_research/sec_context.py cap_context) so downstream agents can read this file in full.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "filings"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "filings": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["form", "filing_date", "url", "sections"],
+        "properties": {
+          "form": { "type": "string", "description": "10-K, 10-Q, 8-K, 6-K, ..." },
+          "filing_date": { "type": "string", "format": "date" },
+          "fiscal_period": { "type": ["string", "null"] },
+          "url": { "type": "string" },
+          "sections": {
+            "type": "object",
+            "description": "Capped excerpts (per-section marker '[... truncated ...]' when cut).",
+            "properties": {
+              "business": { "type": ["string", "null"] },
+              "risk_factors": { "type": ["string", "null"] },
+              "md_and_a": { "type": ["string", "null"] },
+              "financial_statements": { "type": ["string", "null"] },
+              "notes": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

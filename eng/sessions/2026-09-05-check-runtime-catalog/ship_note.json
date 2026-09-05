@@ -1,0 +1,7 @@
+{
+  "session_key": "2026-09-05-check-runtime-catalog",
+  "harness_version": "2.34.0",
+  "summary": "Check catalog + check_core; StreetY1Policy; hygiene/destock moved out of street_bind. Same PASS/FAIL/WARN/SKIPPED outcomes. pins/2.34.0 published.",
+  "verify": "python scripts/eng_verify.py PASS (719 pytest)",
+  "follow_up": "Remaining gates.py domain bodies (FDD, Agent 4, year-dive, LLM identity, MoS) and library.py ingest/gates split."
+}

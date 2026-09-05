@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,6 +13,7 @@ from packages.catalog_api.client import (
     CompareNotFound,
     DbMissing,
     RunNotFound,
+    RunQuery,
     SchemaStale,
     TickerNotFound,
 )
@@ -52,7 +54,7 @@ from apps.analysis_web.services.price_history import (
     parse_range,
 )
 from apps.analysis_web.services.quotes import QuoteService, parse_symbol_query
-from apps.analysis_web.services.runs_query import catalog_filters, runs_list_q
+from apps.analysis_web.services.runs_query import runs_list_q
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -64,21 +66,15 @@ def api_health(api: CatalogApi = Depends(get_api)) -> dict[str, Any]:
 
 @router.get("/runs")
 def api_list_runs(
-    q: dict[str, Any] = Depends(runs_list_q),
+    q: RunQuery = Depends(runs_list_q),
     offset: int = Query(0, ge=0),
     api: CatalogApi = Depends(get_api),
 ) -> dict[str, Any]:
-    filters = catalog_filters(q)
+    query = replace(q, offset=offset, comparable_only=False)
     try:
-        api.require_ticker(ticker=q.get("ticker"), ticker_prefix=q.get("ticker_prefix"))
-        rows = api.list_runs(
-            sort=q["sort"],
-            dir=q["dir"],
-            limit=q["limit"],
-            offset=offset,
-            **filters,
-        )
-        total = api.count_runs(**filters)
+        api.require_ticker(ticker=q.ticker, ticker_prefix=q.ticker_prefix)
+        rows = api.list_runs(query)
+        total = api.count_runs(query)
     except TickerNotFound as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except ValueError as e:
@@ -87,12 +83,12 @@ def api_list_runs(
         raise HTTPException(status_code=503, detail=str(e)) from e
     return {
         "runs": rows,
-        "limit": q["limit"],
+        "limit": q.limit,
         "offset": offset,
         "count": len(rows),
         "total": total,
-        "sort": q["sort"],
-        "dir": q["dir"],
+        "sort": q.sort,
+        "dir": q.dir,
     }
 
 

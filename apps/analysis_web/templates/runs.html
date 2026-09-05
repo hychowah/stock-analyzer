@@ -25,8 +25,8 @@
       <label>Audit
         <select name="audit_verdict">
           <option value="">(any)</option>
-          <option value="PASS" {% if audit == 'PASS' %}selected{% endif %}>PASS</option>
-          <option value="FAIL" {% if audit == 'FAIL' %}selected{% endif %}>FAIL</option>
+          <option value="PASS" {% if audit_verdict == 'PASS' %}selected{% endif %}>PASS</option>
+          <option value="FAIL" {% if audit_verdict == 'FAIL' %}selected{% endif %}>FAIL</option>
         </select>
       </label>
       <label>Tech{{ facet_select('tech_signal', tech_signal, facets.tech_signal) }}</label>

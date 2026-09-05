@@ -27,7 +27,7 @@
     {
       "id": "c4-ui-query",
       "description": "runs_list_q returns RunQuery; one key list; delete audit alias and catalog_filters",
-      "passes": false,
+      "passes": true,
       "verify": "pytest apps/analysis_web/tests -q plus browser runs/filter/compare-picker"
     }
   ]

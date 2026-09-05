@@ -32,7 +32,7 @@
     "sort",
     "dir",
     "audit_verdict",
-    "limit",
+    "limit"
   ];
 
   var NUMERIC_SORT = {

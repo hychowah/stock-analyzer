@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 from urllib.parse import quote, urlencode
 
@@ -14,12 +15,17 @@ from packages.catalog_api.client import (
     CatalogApi,
     DbMissing,
     RunNotFound,
+    RunQuery,
     SchemaStale,
     TickerNotFound,
 )
 
 from apps.analysis_web.deps import get_api
-from apps.analysis_web.services.runs_query import catalog_filters, runs_list_q
+from apps.analysis_web.services.runs_query import (
+    RUN_QUERY_KEYS,
+    query_public_map,
+    runs_list_q,
+)
 from apps.analysis_web.templating import fmt_num
 
 router = APIRouter(tags=["pages"])
@@ -60,50 +66,26 @@ def _next_dir(col: str, current_sort: str | None, current_dir: str | None) -> st
     return _first_dir(col)
 
 
-_FILTER_HREF_KEYS = (
-    "ticker",
-    "ticker_prefix",
-    "sector",
-    "region",
-    "experiment_id",
-    "tech_signal",
-    "harness_version",
-    "session_date_from",
-    "session_date_to",
-    "mos_min",
-    "mos_max",
-    "price_min",
-    "price_max",
-    "fv_base_min",
-    "fv_base_max",
-    "sort",
-    "dir",
-)
-
-
-def _filter_href(q: dict[str, Any], **overrides: Any) -> str:
-    merged = dict(q)
+def _filter_href(q: RunQuery, **overrides: Any) -> str:
+    merged = query_public_map(q)
     merged.update(overrides)
     params: dict[str, str] = {}
-    for key in _FILTER_HREF_KEYS:
+    for key in RUN_QUERY_KEYS:
         val = merged.get(key)
-        if val not in (None, ""):
-            params[key] = str(val)
-    audit = merged.get("audit")
-    if audit:
-        params["audit_verdict"] = str(audit)
-    limit = merged.get("limit")
-    if limit not in (None, 50):
-        params["limit"] = str(limit)
+        if val in (None, ""):
+            continue
+        if key == "limit" and val in (None, 50):
+            continue
+        params[key] = str(val)
     if not params:
         return "/"
     return "/?" + urlencode(params)
 
 
-def _sort_links(q: dict[str, Any]) -> dict[str, str]:
+def _sort_links(q: RunQuery) -> dict[str, str]:
     return {
         col: _filter_href(
-            q, sort=col, dir=_next_dir(col, q.get("sort"), q.get("dir"))
+            q, sort=col, dir=_next_dir(col, q.sort, q.dir)
         )
         for col in _SORT_HEADERS
     }
@@ -117,24 +99,18 @@ def _load_facets(api: CatalogApi) -> dict[str, list[str]]:
         return empty
 
 
-def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], int]:
+def _runs_context(api: CatalogApi, q: RunQuery) -> tuple[dict[str, Any], int]:
     error = None
     error_kind = None
     ticker_query = None
     runs: list[dict[str, Any]] = []
     total: int | None = None
     status = 200
-    filters = catalog_filters(q)
+    query = replace(q, comparable_only=False, offset=0)
     try:
-        api.require_ticker(ticker=q.get("ticker"), ticker_prefix=q.get("ticker_prefix"))
-        runs = api.list_runs(
-            sort=q["sort"],
-            dir=q["dir"],
-            limit=q["limit"],
-            offset=0,
-            **filters,
-        )
-        total = api.count_runs(**filters)
+        api.require_ticker(ticker=q.ticker, ticker_prefix=q.ticker_prefix)
+        runs = api.list_runs(query)
+        total = api.count_runs(query)
     except TickerNotFound as e:
         error = str(e)
         error_kind = "ticker_not_found"
@@ -148,7 +124,7 @@ def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], i
     except SchemaStale as e:
         error = str(e)
     ctx = {
-        **q,
+        **query_public_map(q),
         "runs": runs,
         "total": total,
         "sort_links": _sort_links(q),
@@ -164,7 +140,7 @@ def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], i
 @router.get("/", response_class=HTMLResponse)
 def page_runs(
     request: Request,
-    q: dict[str, Any] = Depends(runs_list_q),
+    q: RunQuery = Depends(runs_list_q),
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     ctx, status = _runs_context(api, q)
@@ -175,7 +151,7 @@ def page_runs(
 @router.get("/runs", response_class=HTMLResponse)
 def page_runs_alias(
     request: Request,
-    q: dict[str, Any] = Depends(runs_list_q),
+    q: RunQuery = Depends(runs_list_q),
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     return page_runs(request, q=q, api=api)
@@ -184,7 +160,7 @@ def page_runs_alias(
 @router.get("/fragments/runs", response_class=HTMLResponse)
 def fragment_runs(
     request: Request,
-    q: dict[str, Any] = Depends(runs_list_q),
+    q: RunQuery = Depends(runs_list_q),
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     ctx, status = _runs_context(api, q)

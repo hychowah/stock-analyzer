@@ -1,9 +1,9 @@
 {
   "slug": "law-graph-catalog-pin",
   "session_key": "2026-09-05-law-graph-catalog-pin",
-  "status": "in_progress",
+  "status": "complete",
   "created_at": "2026-09-05T09:09:19Z",
-  "updated_at": "2026-09-05T12:00:00Z",
+  "updated_at": "2026-09-05T14:00:00Z",
   "work_type": "W1",
-  "resume_hint": "C1, C5, C2, C3 done. Next is C4 UI RunQuery. See plan.md."
+  "resume_hint": "C1–C5 done. Session complete. See plan.md."
 }

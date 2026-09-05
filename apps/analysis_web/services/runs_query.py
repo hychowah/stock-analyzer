@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import Query
+
+from packages.catalog_api.client import RunQuery
+
+# One list for FastAPI hrefs and runs.js. comparable_only is a route flag, not a URL key.
+RUN_QUERY_KEYS: tuple[str, ...] = (
+    "ticker",
+    "ticker_prefix",
+    "sector",
+    "region",
+    "experiment_id",
+    "tech_signal",
+    "harness_version",
+    "session_date_from",
+    "session_date_to",
+    "mos_min",
+    "mos_max",
+    "price_min",
+    "price_max",
+    "fv_base_min",
+    "fv_base_max",
+    "sort",
+    "dir",
+    "audit_verdict",
+    "limit",
+)
 
 
 def blank(value: str | None) -> str | None:
@@ -34,47 +57,31 @@ def runs_list_q(
     sort: str | None = None,
     dir: str | None = None,
     limit: int = Query(50, ge=1, le=200),
-) -> dict[str, Any]:
-    return {
-        "ticker": blank(ticker),
-        "ticker_prefix": blank(ticker_prefix),
-        "sector": blank(sector),
-        "region": blank(region),
-        "audit": blank(audit_verdict),
-        "experiment_id": blank(experiment_id),
-        "tech_signal": blank(tech_signal),
-        "harness_version": blank(harness_version),
-        "session_date_from": blank(session_date_from),
-        "session_date_to": blank(session_date_to),
-        "mos_min": blank(mos_min),
-        "mos_max": blank(mos_max),
-        "price_min": blank(price_min),
-        "price_max": blank(price_max),
-        "fv_base_min": blank(fv_base_min),
-        "fv_base_max": blank(fv_base_max),
-        "limit": limit,
-        "sort": blank(sort),
-        "dir": blank(dir),
-    }
+) -> RunQuery:
+    return RunQuery(
+        ticker=blank(ticker),
+        ticker_prefix=blank(ticker_prefix),
+        sector=blank(sector),
+        region=blank(region),
+        audit_verdict=blank(audit_verdict),
+        experiment_id=blank(experiment_id),
+        tech_signal=blank(tech_signal),
+        harness_version=blank(harness_version),
+        session_date_from=blank(session_date_from),
+        session_date_to=blank(session_date_to),
+        mos_min=blank(mos_min),
+        mos_max=blank(mos_max),
+        price_min=blank(price_min),
+        price_max=blank(price_max),
+        fv_base_min=blank(fv_base_min),
+        fv_base_max=blank(fv_base_max),
+        sort=blank(sort),
+        dir=blank(dir),
+        limit=limit,
+        comparable_only=False,
+    )
 
 
-def catalog_filters(q: dict[str, Any]) -> dict[str, Any]:
-    """Kwargs for CatalogApi.list_runs / count_runs (no sort/limit/offset)."""
-    return {
-        "ticker": q.get("ticker"),
-        "ticker_prefix": q.get("ticker_prefix"),
-        "sector": q.get("sector"),
-        "region": q.get("region"),
-        "experiment_id": q.get("experiment_id"),
-        "audit_verdict": q.get("audit"),
-        "tech_signal": q.get("tech_signal"),
-        "harness_version": q.get("harness_version"),
-        "session_date_from": q.get("session_date_from"),
-        "session_date_to": q.get("session_date_to"),
-        "mos_min": q.get("mos_min"),
-        "mos_max": q.get("mos_max"),
-        "price_min": q.get("price_min"),
-        "price_max": q.get("price_max"),
-        "fv_base_min": q.get("fv_base_min"),
-        "fv_base_max": q.get("fv_base_max"),
-    }
+def query_public_map(q: RunQuery) -> dict[str, object]:
+    """URL/template fields from a RunQuery (no comparable_only / offset)."""
+    return {key: getattr(q, key) for key in RUN_QUERY_KEYS}

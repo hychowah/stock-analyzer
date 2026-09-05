@@ -357,6 +357,17 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(data["runs"][0]["ticker"], "META")
         self.assertEqual(data["runs"][0]["quote_symbol"], "META")
         self.assertNotIn("downside_pct", data["runs"][0])
+        self.assertIn("quote_listing", data["runs"][0])
+        self.assertNotIn("audit", data)
+
+    def test_audit_verdict_filter_keeps_selected(self):
+        r = self.client.get("/", params={"audit_verdict": "PASS"})
+        self.assertEqual(r.status_code, 200)
+        self.assertRegex(
+            r.text,
+            r'<option value="PASS" selected>',
+        )
+        self.assertIn('name="audit_verdict"', r.text)
 
     def test_home_ticker_prefix_field(self):
         r = self.client.get("/")
@@ -428,7 +439,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn("quotes-refresh", js.read_text(encoding="utf-8"))
 
     def test_runs_js_remembers_query_on_nav_links(self):
-        from apps.analysis_web.routes.pages import _FILTER_HREF_KEYS
+        from apps.analysis_web.services.runs_query import RUN_QUERY_KEYS
 
         root = Path(__file__).resolve().parents[1]
         js = (root / "static" / "runs.js").read_text(encoding="utf-8")
@@ -436,10 +447,7 @@ class AnalysisWebTests(unittest.TestCase):
         keys_m = re.search(r"var QUERY_KEYS = \[([^\]]+)\]", js)
         self.assertIsNotNone(keys_m)
         js_keys = re.findall(r'"([^"]+)"', keys_m.group(1))
-        self.assertEqual(
-            js_keys,
-            list(_FILTER_HREF_KEYS) + ["audit_verdict", "limit"],
-        )
+        self.assertEqual(js_keys, list(RUN_QUERY_KEYS))
         self.assertIn("analysis_web.runs.query", js)
         self.assertIn("js-runs-back", js)
         self.assertIn("nav-runs", js)
@@ -492,6 +500,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(api.status_code, 400)
         overlay = self.client.get("/api/runs", params={"sort": "downside_pct"})
         self.assertEqual(overlay.status_code, 400)
+        empty = self.client.get("/api/runs", params={"sort": "", "dir": ""})
+        self.assertEqual(empty.status_code, 200)
 
 
 class AnalysisWebQueryTests(unittest.TestCase):
@@ -736,6 +746,19 @@ class AnalysisWebCompareTests(unittest.TestCase):
         os.environ.pop("COMPARE_SPAWN", None)
         os.environ.pop("ARCHIVE_ROOT", None)
         self._td.cleanup()
+
+    def test_compare_picker_is_fv_only(self):
+        _insert_run(
+            self.archive,
+            ticker="AAPL",
+            session_key="2026-07-20",
+            fv_base=None,
+            mos=0.0,
+        )
+        r = self.client.get("/compares/new")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("research:META:2026-08-10", r.text)
+        self.assertNotIn("research:AAPL:2026-07-20", r.text)
 
     def test_nav_and_picker_chrome(self):
         r = self.client.get("/")

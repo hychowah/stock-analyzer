@@ -12,3 +12,4 @@
 - C5: Pin COPY_REL is Mode A only; resolve requires PIN.json; both live and published scaffold run scripts/scaffold_session.py; identity live=provenance, published=VERSION+PIN.json; deleted force=. Next: C2.
 - C2: PhaseNode DAG is the gate; derived tables; VERSION 2.38.0; published thin pins/2.38.0. Next: C3.
 - C3: Catalog RunQuery (comparable_only default False); listing columns stamped at export/rebuild; list/get read sqlite; no attach walk. Export/compare_db/ticker_lookup are Mode A paths, so VERSION 2.39.0 + thin pins/2.39.0. Next: C4.
+- C4: runs_list_q returns RunQuery; RUN_QUERY_KEYS shared with hrefs and runs.js; catalog_filters and audit alias gone; compare picker still FV-only. Viewport browser not available; TestClient covered list/api/sort/picker.

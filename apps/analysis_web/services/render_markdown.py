@@ -100,6 +100,25 @@ def _with_heading_ids(fragment: str) -> str:
     return _HEADING_RE.sub(repl, fragment)
 
 
+_MERMAID_FENCE_RE = re.compile(
+    r"<pre><code class=\"language-mermaid\">(.*?)</code></pre>",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _unwrap_mermaid_fences(fragment: str) -> str:
+    """Turn mermaid code fences into <pre class="mermaid"> for client-side draw.
+
+    Leave the source text in the node. mermaid.js reads textContent and
+    replaces the node with SVG. If JS does not run, the flowchart text stays.
+    """
+
+    def repl(match: re.Match[str]) -> str:
+        return f'<pre class="mermaid">{match.group(1)}</pre>'
+
+    return _MERMAID_FENCE_RE.sub(repl, fragment)
+
+
 def render_markdown(text: str) -> str:
     """Convert markdown to sanitized HTML (safe for untrusted research notes)."""
     raw_html = _MD.render(text or "")
@@ -118,7 +137,7 @@ def render_markdown(text: str) -> str:
         protocols=_ALLOWED_PROTOCOLS,
         strip=True,
     )
-    return _with_heading_ids(cleaned)
+    return _unwrap_mermaid_fences(_with_heading_ids(cleaned))
 
 
 def render_json_pretty(data: bytes | str | Any) -> str:

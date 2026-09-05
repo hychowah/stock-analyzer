@@ -36,7 +36,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Change-in-NAV waterfall + MTM bars |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`) |
 | `/analyze/new` | Start analysis (ticker + harness version `live` or `pins/<semver>/`) |
-| `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin) |
+| `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
 | `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
 | `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
 | `/analyze/{analyze_id}` | Live phase/status; cancel = keep session; discard = abandon |

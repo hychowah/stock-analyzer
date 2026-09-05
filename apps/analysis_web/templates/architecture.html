@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Architecture{% endblock %}
 {% block content %}
-<div class="card">
+<div class="card architecture-doc">
   <p class="muted">Human map of this system · <span class="mono">{{ source_path }}</span> (working tree, not a pin)</p>
+  <p class="muted">Drag a diagram to move it. Wheel over it to zoom. Reset fits the whole chart.</p>
   <div class="report-body">{{ body_html | safe }}</div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/mermaid_boot.js" defer></script>
 {% endblock %}

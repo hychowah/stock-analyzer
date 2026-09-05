@@ -6,8 +6,7 @@
     "smoke GET http://127.0.0.1:18765/architecture (nav, heading ids, tables)"
   ],
   "follow_ups": [
-    "Restart the usual :8765 UI to pick up the new route (auto-restart is git HEAD, not file watch).",
-    "Optional later: mermaid.js for the flowchart fences."
+    "Restart the usual :8765 UI to pick up uncommitted figure JS (auto-restart is git HEAD, not file watch)."
   ],
   "risks": [
     "Heading ids are now on all rendered markdown (reports too); existing tests that required a bare <h1> tag were updated."

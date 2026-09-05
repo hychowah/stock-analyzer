@@ -47,6 +47,27 @@ class RenderMarkdownTests(unittest.TestCase):
         self.assertIn('id="hello"', html)
         self.assertIn('id="hello-1"', html)
 
+    def test_mermaid_fence_becomes_pre_mermaid(self):
+        html = render_markdown("```mermaid\nflowchart TB\n  A-->B\n```\n")
+        self.assertIn('class="mermaid"', html)
+        self.assertIn("flowchart TB", html)
+        self.assertNotIn("language-mermaid", html)
+
+    def test_mermaid_fence_strips_html(self):
+        html = render_markdown(
+            "```mermaid\nflowchart TB\n"
+            "  A[\"<script>alert(1)</script>\"]\n"
+            "  B[<img src=x onerror=alert(1)>]\n```\n"
+        )
+        self.assertIn('class="mermaid"', html)
+        self.assertNotIn("<script>", html.lower())
+        self.assertNotIn("<img", html.lower())
+
+    def test_python_fence_stays_code(self):
+        html = render_markdown("```python\nprint(1)\n```\n")
+        self.assertIn("language-python", html)
+        self.assertNotIn('class="mermaid"', html)
+
     def test_json_pretty(self):
         out = render_json_pretty(b'{"z":1,"a":2}')
         self.assertIn('"a": 2', out)

@@ -10,3 +10,4 @@
 - Plan: one `/architecture` route; design review reshape — heading ids in `render_markdown`, own router not `pages.py`.
 - Implemented: `routes/architecture.py`, nav link, heading ids after bleach, tests, ARCHITECTURE.md / README website table.
 - Verify: analysis_web tests 165 passed; `eng_verify --quick` PASS; smoke GET http://127.0.0.1:18765/architecture 200 (nav, tables, heading ids, `/` and `/analyze` still 200). No in-app browser tools; used TestClient + curl-equivalent.
+- Figures: mermaid_boot wraps `.architecture-figure`, native size (`useMaxWidth: false`), svg-pan-zoom after await run, Reset = fit/center, wheel only on pointerenter. Dropped svg max-width squeeze.

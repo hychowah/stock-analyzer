@@ -249,7 +249,7 @@ Stack: FastAPI, Jinja templates, a little static JS (search, live reload, charts
 | `/portfolio` | IB statement (or local JSON) joined to latest catalog runs |
 | `/harness` | Pin map and briefing inspector |
 | `/experiments`, `/calibration` | Group by experiment; MoS vs later outcomes |
-| `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin) |
+| `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, Reset fits). |
 | `/health` | Catalog health + the git SHA this UI process booted at |
 
 Remaining JSON APIs, query params, and live-reload notes: `apps/analysis_web/README.md`.

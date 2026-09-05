@@ -223,6 +223,32 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'id="keeping-this-document-current"', r.content)
         self.assertIn(b"report-body", r.content)
         self.assertIn(b"ARCHITECTURE.md", r.content)
+        self.assertIn(b'class="mermaid"', r.content)
+        self.assertIn(b"/static/mermaid_boot.js", r.content)
+        self.assertIn(b"flowchart", r.content)
+        self.assertIn(b"Drag a diagram", r.content)
+        self.assertIn(b"Reset", r.content)
+
+    def test_mermaid_boot_script(self):
+        static = Path(__file__).resolve().parents[1] / "static"
+        js = (static / "mermaid_boot.js").read_text(encoding="utf-8")
+        self.assertIn("securityLevel", js)
+        self.assertIn("strict", js)
+        self.assertIn("pre.mermaid", js)
+        self.assertIn("useMaxWidth", js)
+        self.assertIn("svg-pan-zoom", js)
+        self.assertIn("Reset", js)
+        self.assertIn("pointerenter", js)
+        self.assertIn("architecture-figure", js)
+        self.assertIn(".architecture-doc pre.mermaid", js)
+        css = (static / "app.css").read_text(encoding="utf-8")
+        self.assertIn(".architecture-figure", css)
+        self.assertNotIn(
+            ".architecture-doc .mermaid svg {\n  max-width: 100%;",
+            css.replace("\r\n", "\n"),
+        )
+        r = self.client.get("/static/mermaid_boot.js")
+        self.assertEqual(r.status_code, 200)
 
     def test_nav_architecture(self):
         r = self.client.get("/")
@@ -309,6 +335,7 @@ class AnalysisWebTests(unittest.TestCase):
         # Rendered heading, not only escaped source in a bare dump
         self.assertIn(b"<h1", r.content)
         self.assertIn(b"report-body", r.content)
+        self.assertNotIn(b"mermaid_boot.js", r.content)
 
     def test_artifact_markdown_raw(self):
         r = self.client.get(

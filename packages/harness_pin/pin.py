@@ -17,6 +17,7 @@ from packages.kd_research.annuals import parse_semver
 from packages.kd_research.paths import PROJECT_ROOT
 from packages.kd_research.provenance import (
     capture_harness_provenance,
+    file_sha256,
     git_head_sha,
     load_harness_identity,
 )
@@ -26,7 +27,32 @@ PINS_DIRNAME = "pins"
 PIN_META = "PIN.json"
 SEMVER_DIR_RE = re.compile(r"^\d+\.\d+\.\d+$")
 
-COPY_REL = ("AGENTS.md", "harness", "packages", "scripts")
+# Frozen Mode A tree. Not catalog_api / research_jobs / compare_jobs /
+# agent_jobs / harness_pin, not eng scripts, not tests.
+_MODE_A_SCRIPTS: tuple[str, ...] = (
+    "scripts/scaffold_session.py",
+    "scripts/preflight_phase.py",
+    "scripts/check_session.py",
+    "scripts/finalize_session.py",
+    "scripts/bind_library.py",
+    "scripts/ingest_library.py",
+    "scripts/harvest_library.py",
+    "scripts/verify_listing.py",
+    "scripts/verify_ticker.py",
+    "scripts/abandon_session.py",
+    "scripts/record_spawn.py",
+    "scripts/build_prediction_snapshot.py",
+    "scripts/export_compare_db.py",
+    "scripts/rebuild_catalog.py",
+    "scripts/requirements-research.txt",
+)
+COPY_REL: tuple[str, ...] = (
+    "AGENTS.md",
+    "harness",
+    "packages/__init__.py",
+    "packages/kd_research",
+    *_MODE_A_SCRIPTS,
+)
 COPY_IGNORE = shutil.ignore_patterns(
     "__pycache__",
     "*.py[cod]",
@@ -35,6 +61,7 @@ COPY_IGNORE = shutil.ignore_patterns(
     ".mypy_cache",
     ".git",
     ".DS_Store",
+    "tests",
 )
 
 
@@ -61,6 +88,8 @@ def list_versions(workspace: Path | None = None) -> list[str]:
                 continue
             if not (child / "harness" / "VERSION").is_file():
                 continue
+            if not (child / PIN_META).is_file():
+                continue
             parsed = parse_semver(child.name)
             if parsed is None:
                 continue
@@ -84,9 +113,13 @@ def resolve(version: str | None, *, workspace: Path | None = None) -> Pin:
     if not SEMVER_DIR_RE.match(raw):
         raise UnknownVersion(f"not a published pin version: {raw!r}")
     root = ws / PINS_DIRNAME / raw
-    if not root.is_dir() or not (root / "harness" / "VERSION").is_file():
+    if (
+        not root.is_dir()
+        or not (root / "harness" / "VERSION").is_file()
+        or not (root / PIN_META).is_file()
+    ):
         raise UnknownVersion(
-            f"not a folder under pins/ (going-forward pins only): {raw}"
+            f"not a published pin (need pins/<semver>/PIN.json): {raw}"
         )
     meta = _read_pin_meta(root)
     return Pin(
@@ -112,7 +145,18 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def publish(workspace: Path | None = None, *, force: bool = False) -> Path:
+def _copy_rel(src: Path, dest: Path) -> None:
+    if src.is_file():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        return
+    if src.is_dir():
+        shutil.copytree(src, dest, ignore=COPY_IGNORE, dirs_exist_ok=True)
+        return
+    raise PinError(f"missing source for pin: {src}")
+
+
+def publish(workspace: Path | None = None) -> Path:
     """Copy the live Mode A runtime into pins/<harness/VERSION>/."""
     ws = _workspace(workspace)
     ident = load_harness_identity(ws)
@@ -120,20 +164,14 @@ def publish(workspace: Path | None = None, *, force: bool = False) -> Path:
     if not ver or parse_semver(ver) is None:
         raise PinError(f"cannot publish: bad harness_version {ver!r}")
     dest = ws / PINS_DIRNAME / ver
-    if dest.exists() and not force:
+    if dest.exists():
         raise PinError(f"pin already exists (immutable): {dest}")
-    if dest.exists() and force:
-        shutil.rmtree(dest)
     dest.mkdir(parents=True, exist_ok=True)
     for rel in COPY_REL:
         src = ws / rel
         if not src.exists():
             raise PinError(f"missing source for pin: {rel}")
-        target = dest / rel
-        if src.is_file():
-            shutil.copy2(src, target)
-        else:
-            shutil.copytree(src, target, ignore=COPY_IGNORE, dirs_exist_ok=True)
+        _copy_rel(src, dest / rel)
     nested = dest / PINS_DIRNAME
     if nested.exists():
         shutil.rmtree(nested)
@@ -163,22 +201,47 @@ class Pin:
 
     def identity(self) -> dict[str, Any]:
         """Write-once stamp fields. Never git-probes a published pin folder."""
-        prov = capture_harness_provenance(self.root)
-        out = {
+        if self.version == LIVE:
+            prov = capture_harness_provenance(self.root)
+            return {
+                "version": self.version,
+                "label": self.label,
+                "root": str(self.root),
+                "harness_version": prov.get("harness_version"),
+                "harness_spec": prov.get("harness_spec"),
+                "harness_git_sha": prov.get("harness_git_sha"),
+                "harness_dirty": prov.get("harness_dirty"),
+                "copied_from_sha": self.copied_from_sha,
+                "agents_md_sha256": prov.get("agents_md_sha256"),
+                "research_agents_sha256": prov.get("research_agents_sha256"),
+                "prompts_sha256": prov.get("prompts_sha256"),
+                "version_file_sha256": prov.get("version_file_sha256"),
+            }
+        ident = load_harness_identity(self.root)
+        meta = _read_pin_meta(self.root)
+        sha = (
+            str(meta.get("copied_from_sha") or self.copied_from_sha or "").strip()
+            or "unknown"
+        )
+        agents = self.root / "AGENTS.md"
+        if not agents.is_file():
+            agents = self.root / "Agents.md"
+        return {
             "version": self.version,
             "label": self.label,
             "root": str(self.root),
-            "harness_version": prov.get("harness_version"),
-            "harness_spec": prov.get("harness_spec"),
-            "harness_git_sha": prov.get("harness_git_sha"),
-            "harness_dirty": prov.get("harness_dirty"),
-            "copied_from_sha": self.copied_from_sha,
-            "agents_md_sha256": prov.get("agents_md_sha256"),
-            "research_agents_sha256": prov.get("research_agents_sha256"),
-            "prompts_sha256": prov.get("prompts_sha256"),
-            "version_file_sha256": prov.get("version_file_sha256"),
+            "harness_version": ident.get("harness_version"),
+            "harness_spec": ident.get("harness_spec"),
+            "harness_git_sha": sha,
+            "harness_dirty": False,
+            "copied_from_sha": sha,
+            "agents_md_sha256": file_sha256(agents),
+            "research_agents_sha256": file_sha256(
+                self.root / "harness" / "RESEARCH_AGENTS.md"
+            ),
+            "prompts_sha256": file_sha256(self.root / "harness" / "agent_prompts.md"),
+            "version_file_sha256": file_sha256(self.root / "harness" / "VERSION"),
         }
-        return out
 
     def spawn_env(
         self,
@@ -226,22 +289,10 @@ class Pin:
         notes: str | None = None,
         auto_replicate: bool = True,
     ) -> Path:
-        """Create a session under live archive using this pin's scaffold."""
-        if not (self.root / PIN_META).is_file():
-            from packages.kd_research.scaffold import scaffold
-
-            return scaffold(
-                ticker,
-                session_date,
-                output_dir=archive_root,
-                force=False,
-                slug=slug,
-                orchestrator_model=orchestrator_model,
-                default_subagent_model=default_subagent_model,
-                notes=notes,
-                auto_replicate=auto_replicate,
-            )
+        """Create a session under live archive using this pin's scaffold script."""
         script = self.root / "scripts" / "scaffold_session.py"
+        if not script.is_file():
+            raise PinError(f"missing scaffold script: {script}")
         argv = [
             str(script),
             "--ticker",

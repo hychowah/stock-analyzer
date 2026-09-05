@@ -7,28 +7,28 @@
       "verify": "pytest packages/kd_research/tests/test_law_surface_freeze.py packages/kd_research/tests/test_workflow_spec.py -q"
     },
     {
+      "id": "c5-pin-runtime",
+      "description": "Pin Mode A-only COPY_REL; live vs semver resolve/scaffold/identity; delete force=. Before C2 so 2.38.0 publishes thin once.",
+      "passes": true,
+      "verify": "pytest packages/harness_pin/tests packages/research_jobs/tests -q"
+    },
+    {
       "id": "c2-phase-graph",
-      "description": "Single phase_graph DAG; derived tables; VERSION 2.38.0",
+      "description": "PhaseNode DAG is the gate (priors after overlays, not PHASE_ORDER walk); derived tables; VERSION 2.38.0; publish thin pins/2.38.0 once",
       "passes": false,
       "verify": "pytest packages/kd_research/tests/test_phase_graph.py packages/kd_research/tests/test_gates_preflight.py packages/kd_research/tests/test_spawn_gate.py packages/kd_research/tests/test_workflow_spec.py packages/kd_research/tests/test_phase_status.py packages/kd_research/tests/test_check_catalog.py -q"
     },
     {
       "id": "c3-runquery",
-      "description": "Catalog RunQuery + quote_symbol stamped at rebuild",
+      "description": "Catalog RunQuery; stamp quote_symbol + quote_listing at rebuild; list/get read columns; no attach walk / v1 fallback",
       "passes": false,
       "verify": "pytest packages/catalog_api/tests -q"
     },
     {
       "id": "c4-ui-query",
-      "description": "Analysis UI runs-query consumes RunQuery",
+      "description": "runs_list_q returns RunQuery; one key list; delete audit alias and catalog_filters",
       "passes": false,
       "verify": "pytest apps/analysis_web/tests -q plus browser runs/filter/compare-picker"
-    },
-    {
-      "id": "c5-pin-runtime",
-      "description": "Pin publish Mode A-only; live vs semver execution",
-      "passes": false,
-      "verify": "pytest packages/harness_pin/tests packages/research_jobs/tests -q"
     }
   ]
 }

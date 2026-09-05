@@ -45,6 +45,41 @@ def _q(sym: str) -> Quote:
     return Quote(symbol=sym, quote_type="EQUITY", name=sym, n_fields=80, price=1.0)
 
 
+_SCAFFOLD_STUB = """\
+import argparse
+from pathlib import Path
+
+p = argparse.ArgumentParser()
+p.add_argument("--ticker")
+p.add_argument("--date")
+p.add_argument("--output-dir")
+p.add_argument("--orchestrator-model")
+p.add_argument("--skip-ticker-check", action="store_true")
+p.add_argument("--slug")
+p.add_argument("--subagent-model")
+p.add_argument("--notes")
+p.add_argument("--no-auto-replicate", action="store_true")
+args = p.parse_args()
+key = args.date if not args.slug else f"{args.date}__{args.slug}"
+root = Path(args.output_dir) / "research" / args.ticker.upper() / key
+(root / "registry").mkdir(parents=True)
+(root / "meta").mkdir(parents=True)
+(root / "registry" / "phase_status.json").write_text("{}", encoding="utf-8")
+(root / "meta" / "run_manifest.json").write_text(
+    '{"ticker": "%s", "quote_symbol": null}' % args.ticker.upper(),
+    encoding="utf-8",
+)
+print(f"Session scaffolded: {root}")
+"""
+
+
+def _write_live_scaffold_stub(project_root: Path) -> None:
+    """Minimal live pin tree so scaffold_research can run the script."""
+    scripts = project_root / "scripts"
+    scripts.mkdir(parents=True, exist_ok=True)
+    (scripts / "scaffold_session.py").write_text(_SCAFFOLD_STUB, encoding="utf-8")
+
+
 def write_stub_snapshot(session: Path, *, audit_verdict: str = "FAIL") -> None:
     """Tmp-only helper. Labeled stub — not a Mode A result."""
     meta = session / "meta"
@@ -337,13 +372,15 @@ class ResearchJobsTests(unittest.TestCase):
             )
 
     def test_fake_without_heading_allowed(self) -> None:
+        project_root = Path(self._td.name)
+        _write_live_scaffold_stub(project_root)
         job = start_analyze(
             self.archive,
             "COHR",
             orchestrator_model="grok-4.5",
             spawn=self.fake,
             ticker_backend=self.be,
-            project_root=Path(self._td.name),
+            project_root=project_root,
         )
         self.assertEqual(job["status"], "running")
 

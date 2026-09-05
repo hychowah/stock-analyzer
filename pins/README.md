@@ -1,6 +1,6 @@
 # Published harness pins
 
-Each `pins/<semver>/` folder is a **frozen** Mode A runtime (law + `packages/` + `scripts/` + `AGENTS.md`) copied when `harness/VERSION` was bumped.
+Each `pins/<semver>/` folder is a **frozen** Mode A runtime (`AGENTS.md`, `harness/`, `packages/kd_research/`, Mode A scripts) copied when `harness/VERSION` was bumped. Going-forward pins do not copy catalog/UI/eng packages or tests. `pins/2.27.0`–`2.37.0` are older full `packages/`+`scripts/` copies.
 
 - Do **not** edit a published pin after it is committed.
 - `live` Analyze uses the working tree, not these folders.

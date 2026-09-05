@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Snapshot the live Mode A runtime into pins/<harness/VERSION>/.
 
+Copies AGENTS.md, harness/, packages/kd_research/, and Mode A scripts only.
+Pins are immutable: a folder that already exists is a hard error.
+
 Usage:
     python scripts/publish_harness_release.py
 """

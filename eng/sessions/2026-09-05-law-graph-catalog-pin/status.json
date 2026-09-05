@@ -1,9 +1,9 @@
 {
   "slug": "law-graph-catalog-pin",
   "session_key": "2026-09-05-law-graph-catalog-pin",
-  "status": "scaffolded",
+  "status": "in_progress",
   "created_at": "2026-09-05T09:09:19Z",
-  "updated_at": "2026-09-05T09:09:19Z",
+  "updated_at": "2026-09-05T12:00:00Z",
   "work_type": "W1",
-  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+  "resume_hint": "C1 and C5 done. Next is C2 graph + VERSION 2.38.0 + thin pins/2.38.0 publish, then C3, then C4. See plan.md."
 }

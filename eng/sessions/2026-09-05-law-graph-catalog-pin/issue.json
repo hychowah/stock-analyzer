@@ -1,18 +1,20 @@
 {
-  "goal": "C1 live law + C2 phase graph + C3 catalog RunQuery + C4 UI query + C5 pin runtime",
+  "goal": "C1 live law + C5 thin Pin + C2 phase graph (2.38.0) + C3 catalog RunQuery + C4 UI query",
   "non_goals": [
     "Do not run research Phases 0–5",
     "Do not mutate archive/research or archive/outcomes history",
-    "Do not rewrite pins/2.27.0–2.36.0",
-    "Do not retire gates.py, rename specialists, or merge Analyze/Compare"
+    "Do not rewrite pins/2.27.0–2.37.0",
+    "Do not retire gates.py, rename specialists, or merge Analyze/Compare",
+    "Do not split C5; do not publish a fat 2.38.0"
   ],
   "work_type": "W1",
   "success_criteria": [
     "One orchestrator bind/identity sequence in live Mode A operator files",
-    "phase_graph.py is the DAG; parallel tables are derived",
-    "Catalog list_runs takes RunQuery; quote_symbol is a sqlite column",
-    "Analysis UI consumes RunQuery without audit rename",
-    "Next pin publish copies Mode A only; live vs semver is the only branch",
+    "Pin COPY_REL is Mode A only; resolve is live vs semver; no force=; both scaffolds run scripts/scaffold_session.py",
+    "phase_graph.py edges (after overlays) are the gate; parallel tables are derived; 3 || 4_parallel after 2_5 is legal",
+    "pins/2.38.0 published once, thin, with the graph inside",
+    "Catalog list_runs takes RunQuery; quote_symbol and quote_listing are sqlite columns",
+    "Analysis UI returns/passes RunQuery with audit_verdict (no audit rename)",
     "eng_verify.py passes after each slice"
   ],
   "write_allowlist": [
@@ -27,7 +29,17 @@
   "write_denylist": [
     "archive/research/**",
     "archive/outcomes/**",
-    "pins/"
+    "pins/2.27.0/**",
+    "pins/2.28.0/**",
+    "pins/2.29.0/**",
+    "pins/2.30.0/**",
+    "pins/2.31.0/**",
+    "pins/2.32.0/**",
+    "pins/2.33.0/**",
+    "pins/2.34.0/**",
+    "pins/2.35.0/**",
+    "pins/2.36.0/**",
+    "pins/2.37.0/**"
   ],
   "verify_commands": [
     "python3 scripts/eng_verify.py"

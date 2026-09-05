@@ -15,7 +15,7 @@
 </div>
 <div class="card">
   {% if jobs %}
-  <table>
+  <table class="stack-table">
     <thead>
       <tr>
         <th>Ticker</th>
@@ -29,12 +29,12 @@
     <tbody>
       {% for j in jobs %}
       <tr>
-        <td class="mono"><a href="/analyze/{{ j.analyze_id }}">{{ j.ticker }}</a></td>
-        <td class="mono">{{ j.session_key }}</td>
-        <td class="mono muted">{% if j.pin %}{{ j.pin.label or j.pin.version }}{% else %}—{% endif %}</td>
-        <td><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
-        <td class="mono muted">{{ j.phase_current or '—' }}</td>
-        <td class="mono muted">{{ j.updated_at }}</td>
+        <td class="mono" data-label="Ticker"><a href="/analyze/{{ j.analyze_id }}">{{ j.ticker }}</a></td>
+        <td class="mono" data-label="Session">{{ j.session_key }}</td>
+        <td class="mono muted" data-label="Harness">{% if j.pin %}{{ j.pin.label or j.pin.version }}{% else %}—{% endif %}</td>
+        <td data-label="Status"><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
+        <td class="mono muted" data-label="Phase">{{ j.phase_current or '—' }}</td>
+        <td class="mono muted" data-label="Updated">{{ j.updated_at }}</td>
       </tr>
       {% endfor %}
     </tbody>

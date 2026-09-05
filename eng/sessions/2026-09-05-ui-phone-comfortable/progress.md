@@ -12,3 +12,4 @@
 - strategic design review: mixed → reshape; absorbed both candidates (stack-table = entity lists only; disclose module in slice 1, slice 3 = secondary controls)
 - slice 1 chrome: Menu disclose + 44px tap targets at 800px; pytest 171, eng_verify PASS, smoke_chrome.py OK at 1200 and ~390
 - status.json in_progress; resume_hint points at stack-tables
+- slice 2 stack-tables: entity lists as cards; Health excluded; pytest 174, smoke_stack.py OK

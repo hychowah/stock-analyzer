@@ -120,7 +120,7 @@
 
 {% if view.positions %}
 <div class="card">
-  <table>
+  <table class="stack-table">
     <thead>
       <tr>
         <th>Symbol</th>
@@ -132,7 +132,7 @@
     <tbody>
       {% for p in view.positions %}
       <tr>
-        <td class="mono">
+        <td class="mono" data-label="Symbol">
           {% if p.run_id %}
             <a href="/runs/{{ p.run_id }}">{{ p.ib_symbol or p.ticker }}</a>
           {% else %}
@@ -143,19 +143,19 @@
           {% endif %}
         </td>
         {% if view.ib %}
-        <td class="muted">{{ p.listing_exch or '' }}</td>
-        <td class="num">{{ p.quantity | fmt_num(0) }}</td>
-        <td class="num">{{ p.close_price | fmt_num }}</td>
-        <td class="num">{{ p.value_base | fmt_num }}</td>
+        <td class="muted desktop-only" data-label="Exch">{{ p.listing_exch or '' }}</td>
+        <td class="num desktop-only" data-label="Qty">{{ p.quantity | fmt_num(0) }}</td>
+        <td class="num desktop-only" data-label="Close">{{ p.close_price | fmt_num }}</td>
+        <td class="num desktop-only" data-label="Value (base)">{{ p.value_base | fmt_num }}</td>
         {% endif %}
-        <td class="num">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
-        <td class="num">{{ p.asof_price | fmt_num }}</td>
-        <td class="num">{{ p.fv_base | fmt_num }}</td>
-        <td class="num">{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
-        <td>{{ p.audit_verdict | verdict_badge }}</td>
-        <td>{{ p.tech_signal or '' }}</td>
-        <td class="mono muted">{{ p.session_key or '—' }}</td>
-        <td>{{ p.primary_sector or '' }}</td>
+        <td class="num" data-label="Weight">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
+        <td class="num" data-label="Price">{{ p.asof_price | fmt_num }}</td>
+        <td class="num" data-label="FV base">{{ p.fv_base | fmt_num }}</td>
+        <td class="num" data-label="MoS %">{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
+        <td data-label="Audit">{{ p.audit_verdict | verdict_badge }}</td>
+        <td class="desktop-only" data-label="Tech">{{ p.tech_signal or '' }}</td>
+        <td class="mono muted" data-label="Session">{{ p.session_key or '—' }}</td>
+        <td class="desktop-only" data-label="Sector">{{ p.primary_sector or '' }}</td>
       </tr>
       {% endfor %}
     </tbody>

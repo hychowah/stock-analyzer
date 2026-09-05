@@ -223,6 +223,66 @@ header {
     min-height: 44px;
   }
 }
+/*
+ * .stack-table: opt-in one-entity-per-row lists (Runs, Portfolio positions,
+ * Analyze jobs, Compares, Experiments, Calibration). Not for property-row
+ * tables (Health, NAV summaries, run-detail valuation).
+ * Phone (800px): thead hidden; each tr is a card; td labeled from data-label.
+ * td.desktop-only is hidden. td[colspan] stays one muted message, no label.
+ * The wrapping page .card is not restyled.
+ */
+@media (max-width: 800px) {
+  .stack-table thead {
+    display: none;
+  }
+  .stack-table,
+  .stack-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .stack-table tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .stack-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    border-bottom: 0;
+    padding: 0.28rem 0;
+    text-align: left;
+  }
+  .stack-table td.num {
+    text-align: left;
+  }
+  .stack-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    flex: 0 0 auto;
+  }
+  .stack-table td.pick {
+    justify-content: flex-start;
+  }
+  .stack-table td.pick::before {
+    content: none;
+  }
+  .stack-table td.desktop-only {
+    display: none;
+  }
+  .stack-table td[colspan] {
+    display: block;
+  }
+  .stack-table td[colspan]::before {
+    content: none;
+  }
+}
 main {
   max-width: 1100px;
   margin: 1rem auto;

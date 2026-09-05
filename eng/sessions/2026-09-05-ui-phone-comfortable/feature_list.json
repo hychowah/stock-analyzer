@@ -15,7 +15,7 @@
     {
       "id": "stack-tables",
       "description": "Slice 2: .stack-table on entity row-lists only; data-label + desktop-only",
-      "passes": false,
+      "passes": true,
       "verify": "pytest apps/analysis_web/tests -q; fragments/runs still has compare-pick"
     },
     {

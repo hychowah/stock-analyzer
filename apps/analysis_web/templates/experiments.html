@@ -13,19 +13,19 @@
   <div class="card">
     <h2 class="mono">{{ section.eid }}</h2>
     <p class="muted">{{ section.count }} run(s)</p>
-    <table>
+    <table class="stack-table">
       <thead>
         <tr><th>Ticker</th><th>Session</th><th>FV base</th><th>MoS %</th><th>Audit</th><th>Model</th></tr>
       </thead>
       <tbody>
         {% for r in section.runs %}
         <tr>
-          <td><a href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
-          <td class="mono">{{ r.session_key }}</td>
-          <td class="num">{{ r.fv_base | fmt_num }}</td>
-          <td class="num">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
-          <td>{{ r.audit_verdict | verdict_badge }}</td>
-          <td class="mono">{{ r.orchestrator_model or '' }}</td>
+          <td data-label="Ticker"><a href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
+          <td class="mono" data-label="Session">{{ r.session_key }}</td>
+          <td class="num" data-label="FV base">{{ r.fv_base | fmt_num }}</td>
+          <td class="num" data-label="MoS %">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
+          <td data-label="Audit">{{ r.audit_verdict | verdict_badge }}</td>
+          <td class="mono" data-label="Model">{{ r.orchestrator_model or '' }}</td>
         </tr>
         {% endfor %}
       </tbody>

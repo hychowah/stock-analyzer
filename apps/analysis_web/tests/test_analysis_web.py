@@ -283,6 +283,38 @@ class PhoneChromeTests(unittest.TestCase):
         )
 
 
+class PhoneStackTableTests(unittest.TestCase):
+    def test_css_stack_table_contract(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(".stack-table", css)
+        self.assertIn("content: attr(data-label)", css)
+        self.assertIn("td.desktop-only", css)
+        self.assertIn("td[colspan]", css)
+
+    def test_runs_partial_labels(self):
+        html = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "partials"
+            / "runs_table.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("stack-table", html)
+        self.assertIn('data-label="Ticker"', html)
+        self.assertIn('data-label="Live"', html)
+        self.assertIn('data-label="MoS %"', html)
+        self.assertIn("desktop-only", html)
+        self.assertIn('data-label="Harness"', html)
+        self.assertIn("compare-pick", html)
+
+    def test_health_template_not_stack_table(self):
+        html = (
+            Path(__file__).resolve().parents[1] / "templates" / "health.html"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("stack-table", html)
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -312,6 +344,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"500", r.content)
         self.assertIn(b"Harness", r.content)
         self.assertIn(b"2.5.0", r.content)
+        self.assertIn(b"stack-table", r.content)
+        self.assertIn(b'data-label="Ticker"', r.content)
 
     def test_health(self):
         r = self.client.get("/health")
@@ -319,6 +353,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"run_count", r.content)
         self.assertIn(b"git_sha", r.content)
         self.assertIn(b"Process", r.content)
+        self.assertNotIn(b"stack-table", r.content)
 
     def test_architecture_page(self):
         r = self.client.get("/architecture")
@@ -740,6 +775,9 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertNotIn(b"<header>", r.content)
         self.assertNotIn(b"Archive Analysis", r.content)
         self.assertIn(b"runs-table", r.content)
+        self.assertIn(b"stack-table", r.content)
+        self.assertIn(b"compare-pick", r.content)
+        self.assertIn(b'data-label="Ticker"', r.content)
 
     def test_api_ticker_prefix(self):
         r = self.client.get("/api/runs", params={"ticker_prefix": "M"})

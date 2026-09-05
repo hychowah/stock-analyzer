@@ -13,3 +13,5 @@
 - slice 1 chrome: Menu disclose + 44px tap targets at 800px; pytest 171, eng_verify PASS, smoke_chrome.py OK at 1200 and ~390
 - status.json in_progress; resume_hint points at stack-tables
 - slice 2 stack-tables: entity lists as cards; Health excluded; pytest 174, smoke_stack.py OK
+- slice 3 narrow-controls: Filters disclose reuses the checkbox module; form.filters label.disclose-btn beats label {display:flex}; smoke_controls.py OK
+- eng_verify PASS (765); session complete; do not merge

@@ -21,13 +21,13 @@
     {
       "id": "narrow-controls",
       "description": "Slice 3: reuse disclose for extra Runs filters; 800px form tap-size; no leftover-page tour",
-      "passes": false,
+      "passes": true,
       "verify": "pytest apps/analysis_web/tests -q; browser 390px filters + dense pages"
     },
     {
       "id": "verify",
       "description": "Verifier marks features after real checks",
-      "passes": false,
+      "passes": true,
       "verify": "python scripts/eng_verify.py PASS"
     }
   ]

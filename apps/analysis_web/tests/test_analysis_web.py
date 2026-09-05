@@ -315,6 +315,46 @@ class PhoneStackTableTests(unittest.TestCase):
         self.assertNotIn("stack-table", html)
 
 
+class PhoneControlsTests(unittest.TestCase):
+    def test_runs_filters_disclose(self):
+        html = (
+            Path(__file__).resolve().parents[1] / "templates" / "runs.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('id="filters-open"', html)
+        self.assertIn('for="filters-open"', html)
+        self.assertIn('id="filters-extra"', html)
+        ticker_at = html.index('name="ticker_prefix"')
+        panel_at = html.index('id="filters-extra"')
+        self.assertLess(ticker_at, panel_at)
+        panel = html[panel_at:]
+        self.assertIn("facet_select('sector'", panel)
+        self.assertIn('name="experiment_id"', panel)
+        self.assertNotIn('name="ticker_prefix"', panel)
+        always = html[:panel_at]
+        self.assertIn('name="sort"', always)
+        self.assertIn('name="dir"', always)
+        self.assertIn('id="runs-reset"', always)
+
+    def test_stack_form_on_analyze_new(self):
+        html = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "analyze_new.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("stack-form", html)
+
+    def test_phone_form_css(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(".header-nav .disclose-btn", css)
+        self.assertIn("form.filters label.disclose-btn", css)
+        self.assertIn(".compare-form select", css)
+        self.assertIn(".stack-form", css)
+        self.assertIn('input:not([type="checkbox"]):not([type="hidden"])', css)
+        self.assertIn(".chart-ranges button", css)
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -580,6 +620,8 @@ class AnalysisWebTests(unittest.TestCase):
         r = self.client.get("/")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b'name="ticker_prefix"', r.content)
+        self.assertIn(b'id="filters-open"', r.content)
+        self.assertIn(b'id="filters-extra"', r.content)
         self.assertIn(b'name="session_date_from"', r.content)
         self.assertIn(b'name="mos_min"', r.content)
         self.assertIn(b'name="sector"', r.content)

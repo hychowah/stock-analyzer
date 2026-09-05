@@ -1,0 +1,17 @@
+{
+  "summary": "Phone-comfortable analysis UI on branch ui-phone-comfortable: Menu chrome, stack-table cards for entity lists, extra Runs filters behind Filters. Same DOM and JS contracts. Do not merge.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "handoffs/smoke_chrome.py, smoke_stack.py, smoke_controls.py against http://127.0.0.1:8776"
+  ],
+  "follow_ups": [
+    "Restart the usual :8765 UI if it is still an older process.",
+    "User reviews the branch; do not merge from this session."
+  ],
+  "risks": [
+    "Column sort is desktop-only (thead hidden on phone).",
+    "Secondary Runs/Portfolio columns are hidden on phone; values remain on desktop and run-detail.",
+    "form.filters label { display:flex } must stay weaker than form.filters label.disclose-btn or the Filters control shows on desktop."
+  ]
+}

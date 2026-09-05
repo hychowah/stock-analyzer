@@ -20,55 +20,59 @@
   <form id="runs-filters" class="filters{% if error_kind == 'ticker_not_found' %} is-abort{% endif %}" method="get" action="/" data-runs-live="1">
     <div class="filters-row">
       <label>Ticker<input name="ticker_prefix" value="{{ ticker_prefix or '' }}" placeholder="M…" autocomplete="off" spellcheck="false"/></label>
-      <label>Sector{{ facet_select('sector', sector, facets.sector) }}</label>
-      <label>Region{{ facet_select('region', region, facets.region) }}</label>
-      <label>Audit
-        <select name="audit_verdict">
-          <option value="">(any)</option>
-          <option value="PASS" {% if audit_verdict == 'PASS' %}selected{% endif %}>PASS</option>
-          <option value="FAIL" {% if audit_verdict == 'FAIL' %}selected{% endif %}>FAIL</option>
-        </select>
-      </label>
-      <label>Tech{{ facet_select('tech_signal', tech_signal, facets.tech_signal) }}</label>
-      <label>Harness{{ facet_select('harness_version', harness_version, facets.harness_version) }}</label>
-      <label>Experiment<input name="experiment_id" value="{{ experiment_id or '' }}"/></label>
-      <label>Limit<input name="limit" type="number" min="1" max="200" value="{{ limit }}" style="min-width:4rem"/></label>
-    </div>
-    <div class="filters-row">
-      <label class="range">Session
-        <span class="range-pair">
-          <input type="date" name="session_date_from" value="{{ session_date_from or '' }}" aria-label="Session from"/>
-          <span class="muted">–</span>
-          <input type="date" name="session_date_to" value="{{ session_date_to or '' }}" aria-label="Session to"/>
-        </span>
-      </label>
-      <label class="range">MoS %
-        <span class="range-pair">
-          <input type="number" step="any" name="mos_min" value="{{ mos_min or '' }}" placeholder="min" aria-label="MoS min"/>
-          <span class="muted">–</span>
-          <input type="number" step="any" name="mos_max" value="{{ mos_max or '' }}" placeholder="max" aria-label="MoS max"/>
-        </span>
-      </label>
-      <label class="range">As-of
-        <span class="range-pair">
-          <input type="number" step="any" name="price_min" value="{{ price_min or '' }}" placeholder="min" aria-label="As-of min"/>
-          <span class="muted">–</span>
-          <input type="number" step="any" name="price_max" value="{{ price_max or '' }}" placeholder="max" aria-label="As-of max"/>
-        </span>
-      </label>
-      <label class="range">FV base
-        <span class="range-pair">
-          <input type="number" step="any" name="fv_base_min" value="{{ fv_base_min or '' }}" placeholder="min" aria-label="FV min"/>
-          <span class="muted">–</span>
-          <input type="number" step="any" name="fv_base_max" value="{{ fv_base_max or '' }}" placeholder="max" aria-label="FV max"/>
-        </span>
-      </label>
-    </div>
-    <div class="filters-row">
       <input type="hidden" name="sort" value="{{ sort or '' }}"/>
       <input type="hidden" name="dir" value="{{ dir or '' }}"/>
       <button type="submit">Filter</button>
       <a id="runs-reset" class="btn secondary" href="/">Reset</a>
+    </div>
+    <input type="checkbox" id="filters-open" class="disclose" aria-controls="filters-extra"/>
+    <label for="filters-open" class="disclose-btn">Filters</label>
+    <div id="filters-extra" class="disclose-panel">
+      <div class="filters-row">
+        <label>Sector{{ facet_select('sector', sector, facets.sector) }}</label>
+        <label>Region{{ facet_select('region', region, facets.region) }}</label>
+        <label>Audit
+          <select name="audit_verdict">
+            <option value="">(any)</option>
+            <option value="PASS" {% if audit_verdict == 'PASS' %}selected{% endif %}>PASS</option>
+            <option value="FAIL" {% if audit_verdict == 'FAIL' %}selected{% endif %}>FAIL</option>
+          </select>
+        </label>
+        <label>Tech{{ facet_select('tech_signal', tech_signal, facets.tech_signal) }}</label>
+        <label>Harness{{ facet_select('harness_version', harness_version, facets.harness_version) }}</label>
+        <label>Experiment<input name="experiment_id" value="{{ experiment_id or '' }}"/></label>
+        <label>Limit<input name="limit" type="number" min="1" max="200" value="{{ limit }}" style="min-width:4rem"/></label>
+      </div>
+      <div class="filters-row">
+        <label class="range">Session
+          <span class="range-pair">
+            <input type="date" name="session_date_from" value="{{ session_date_from or '' }}" aria-label="Session from"/>
+            <span class="muted">–</span>
+            <input type="date" name="session_date_to" value="{{ session_date_to or '' }}" aria-label="Session to"/>
+          </span>
+        </label>
+        <label class="range">MoS %
+          <span class="range-pair">
+            <input type="number" step="any" name="mos_min" value="{{ mos_min or '' }}" placeholder="min" aria-label="MoS min"/>
+            <span class="muted">–</span>
+            <input type="number" step="any" name="mos_max" value="{{ mos_max or '' }}" placeholder="max" aria-label="MoS max"/>
+          </span>
+        </label>
+        <label class="range">As-of
+          <span class="range-pair">
+            <input type="number" step="any" name="price_min" value="{{ price_min or '' }}" placeholder="min" aria-label="As-of min"/>
+            <span class="muted">–</span>
+            <input type="number" step="any" name="price_max" value="{{ price_max or '' }}" placeholder="max" aria-label="As-of max"/>
+          </span>
+        </label>
+        <label class="range">FV base
+          <span class="range-pair">
+            <input type="number" step="any" name="fv_base_min" value="{{ fv_base_min or '' }}" placeholder="min" aria-label="FV min"/>
+            <span class="muted">–</span>
+            <input type="number" step="any" name="fv_base_max" value="{{ fv_base_max or '' }}" placeholder="max" aria-label="FV max"/>
+          </span>
+        </label>
+      </div>
     </div>
   </form>
   <div id="compare-bar" class="compare-bar">

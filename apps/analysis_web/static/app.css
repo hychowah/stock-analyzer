@@ -192,14 +192,22 @@ header {
     min-height: 44px;
     min-width: 44px;
     padding: 0.25rem 0.7rem;
-    border: 1px solid var(--header-link);
+    border: 1px solid var(--input-border);
     border-radius: 6px;
-    color: var(--header-fg);
-    background: transparent;
+    color: var(--fg);
+    background: var(--card);
     cursor: pointer;
     font-size: 0.85rem;
   }
   .disclose-btn:hover {
+    background: var(--hover);
+  }
+  .header-nav .disclose-btn {
+    border-color: var(--header-link);
+    color: var(--header-fg);
+    background: transparent;
+  }
+  .header-nav .disclose-btn:hover {
     background: rgba(148, 163, 184, 0.18);
   }
   .disclose-panel {
@@ -371,6 +379,10 @@ form.filters label {
   flex-direction: column;
   font-size: 0.75rem;
   color: var(--muted);
+}
+form.filters label.disclose-btn {
+  /* beats form.filters label { display: flex } so Filters stays hidden on desktop */
+  display: none;
 }
 form.filters input,
 form.filters select {
@@ -771,5 +783,61 @@ th.num a.sort {
   .perf-table td.perf-bar-cell {
     width: 30%;
     min-width: 4rem;
+  }
+}
+@media (max-width: 800px) {
+  form.filters label.disclose-btn {
+    display: inline-flex;
+    flex-direction: row;
+    color: var(--fg);
+    font-size: 0.85rem;
+  }
+  form.filters input:not([type="checkbox"]):not([type="hidden"]),
+  form.filters select {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  form.filters .range-pair {
+    flex-wrap: wrap;
+  }
+  form.filters .range-pair input {
+    width: auto;
+    flex: 1 1 8rem;
+  }
+  .compare-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .compare-form select {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+  .stack-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    width: 100%;
+    margin-bottom: 0.65rem;
+  }
+  .stack-form input:not([type="checkbox"]):not([type="hidden"]),
+  .stack-form select {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--fg);
+  }
+  button,
+  .btn,
+  .chart-ranges button {
+    min-height: 44px;
   }
 }

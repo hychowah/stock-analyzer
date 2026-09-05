@@ -1,0 +1,38 @@
+{
+  "goal": "Finish check-runtime homes (2.35.0): Street bind applies StreetY1Policy; move remaining gates/CLI law by knowledge; --full is exclusive session_full catalog. No session_checks/phase_coverage/agent4_isolation drawers.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite pins/2.34.0",
+    "Do not change Mode A statute, prompts, or FAIL/WARN bands",
+    "Do not split library.py ingest vs gates",
+    "Do not unify report: vs exists: check ids"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "check_street_bind applies one StreetY1Policy; no Y1_BAND/RESPONSE_ENUM imports in street_bind.py; injected non-5% fail_band is honored",
+    "gates.py defines no MoS/FDD/Agent4/year-dive/LLM/phase0/stress/isolation bodies; re-exports stay",
+    "check_session --full is only run_catalog(session_full); without --full only session_core plus SKIPPED blob; no record()/results global",
+    "No session_checks.py, phase_coverage.py, or agent4_isolation.py",
+    "harness/VERSION 2.35.0 + pins/2.35.0 in the same change set",
+    "eng_verify.py and pytest packages/kd_research packages/catalog_api apps/analysis_web/tests scripts/tests pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "pins/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/kd_research packages/catalog_api apps/analysis_web/tests scripts/tests -q"
+  ]
+}

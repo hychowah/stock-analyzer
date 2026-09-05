@@ -1,0 +1,9 @@
+{
+  "slug": "check-runtime-homes",
+  "session_key": "2026-09-05-check-runtime-homes",
+  "status": "complete",
+  "created_at": "2026-09-05T02:27:14Z",
+  "updated_at": "2026-09-05T03:20:00Z",
+  "work_type": "W1",
+  "resume_hint": "Implementer finished 2.35.0 policy/homes/session_full catalog; eng_verify PASS. feature_list passes still false (verifier). CLI-only record() leftover. Leave archive/catalog/* uncommitted."
+}

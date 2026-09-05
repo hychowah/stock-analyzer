@@ -1,0 +1,7 @@
+{
+  "session_key": "2026-09-05-check-runtime-homes",
+  "harness_version": "2.35.0",
+  "summary": "Street bind applies StreetY1Policy; gates domain law moved to knowledge homes; check_session --full is exclusive session_full catalog. CLI-only checks still record() in check_session.py. pins/2.35.0 published.",
+  "verify": "python scripts/eng_verify.py PASS (721 pytest)",
+  "follow_up": "Move remaining check_session CLI-only functions (identity/MC/brief/phase_status/isolation/handoffs/audit) into homes and drop record(). Library ingest vs gates split. Unify report: vs exists: ids."
+}

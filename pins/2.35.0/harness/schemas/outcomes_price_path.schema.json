@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "outcomes_price_path.schema.json",
+  "title": "Outcomes price path (realized marks for a research run)",
+  "description": "Append-only grading layer under archive/outcomes/. Never edits research sessions.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "run_id", "ticker", "session_date", "marks"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string" },
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "session_key": { "type": "string" },
+    "asof_price": { "type": ["number", "null"] },
+    "currency": { "type": "string" },
+    "benchmark": { "type": ["string", "null"] },
+    "built_at": { "type": "string" },
+    "marks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["horizon"],
+        "properties": {
+          "horizon": { "type": "string", "description": "1d|1w|1m|3m|6m|1y" },
+          "target_date": { "type": "string" },
+          "mark_date": { "type": ["string", "null"] },
+          "price": { "type": ["number", "null"] },
+          "total_return_pct": { "type": ["number", "null"] },
+          "benchmark_return_pct": { "type": ["number", "null"] },
+          "excess_return_pct": { "type": ["number", "null"] },
+          "status": {
+            "type": "string",
+            "description": "ok|pending|unavailable|error"
+          },
+          "source": { "type": "string" },
+          "fetched_at": { "type": ["string", "null"] },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "compute_script": { "type": "string" },
+    "gaps": { "type": "array", "items": { "type": "string" } }
+  }
+}

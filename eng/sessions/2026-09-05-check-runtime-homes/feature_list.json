@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json: 2.35.0; no new junk drawers; facades; no archive/old-pin rewrite",
+      "passes": false,
+      "verify": "issue.json has 2.35.0 / no session_checks criteria"
+    },
+    {
+      "id": "policy",
+      "description": "Bind applies StreetY1Policy; one FY+1 year-row pick; injected non-5% band test",
+      "passes": false,
+      "verify": "pytest packages/kd_research/tests/test_street_y1_policy.py packages/kd_research/tests/test_street_bind.py packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py -q"
+    },
+    {
+      "id": "homes",
+      "description": "Move remaining gates/CLI bodies by knowledge; gates re-exports",
+      "passes": false,
+      "verify": "pytest packages/kd_research -q"
+    },
+    {
+      "id": "session-cli",
+      "description": "Exclusive session_core/session_full via run_catalog; drop record()",
+      "passes": false,
+      "verify": "pytest packages/kd_research/tests/test_check_catalog.py packages/kd_research/tests/test_market_context_check.py packages/kd_research/tests/test_phase_status.py packages/kd_research/tests/test_session_isolation_check.py packages/kd_research/tests/test_handoff_structure.py -q"
+    },
+    {
+      "id": "verify",
+      "description": "eng_verify + harness VERSION 2.35.0 + pins/2.35.0",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py PASS"
+    }
+  ]
+}

@@ -4,23 +4,28 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>{% block title %}Archive{% endblock %} · Stock Research Archive</title>
+  {# no defer: set data-theme before app.css paints #}
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/app.css"/>
   {% block extra_css %}{% endblock %}
 </head>
 <body {% block body_attrs %}{% endblock %}>
   <header>
     <strong>Archive Analysis</strong>
-    <span class="muted" style="margin-left:0.75rem;color:#94a3b8;font-size:0.85rem">catalog + job scheduler · Analyze starts Mode A · Compare appends archive/comparisons/</span>
-    <div style="margin-top:0.4rem">
-      <a id="nav-runs" href="/">Runs</a>
-      <a href="/analyze">Analyze</a>
-      <a href="/architecture">Architecture</a>
-      <a href="/harness">Harness</a>
-      <a href="/compares">Compares</a>
-      <a href="/health">Health</a>
-      <a href="/experiments">Experiments</a>
-      <a href="/calibration">Calibration</a>
-      <a href="/portfolio">Portfolio</a>
+    <span class="header-tagline">catalog + job scheduler · Analyze starts Mode A · Compare appends archive/comparisons/</span>
+    <div class="header-nav">
+      <nav class="header-links">
+        <a id="nav-runs" href="/">Runs</a>
+        <a href="/analyze">Analyze</a>
+        <a href="/architecture">Architecture</a>
+        <a href="/harness">Harness</a>
+        <a href="/compares">Compares</a>
+        <a href="/health">Health</a>
+        <a href="/experiments">Experiments</a>
+        <a href="/calibration">Calibration</a>
+        <a href="/portfolio">Portfolio</a>
+      </nav>
+      <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" aria-label="Switch to night theme">Night</button>
     </div>
     <script src="/static/runs.js"></script>
   </header>

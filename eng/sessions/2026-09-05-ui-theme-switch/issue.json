@@ -1,0 +1,33 @@
+{
+  "goal": "Night/light theme switch on the analysis web UI (header toggle, localStorage, no archive writes)",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "No server cookie, no System/Light/Night three-way, no mermaid restyle",
+    "Do not tokenize Live chg, pass/fail badges, or chart series",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Header Light/Night toggle on every base.html page; choice persists in localStorage key analysis_web.theme",
+    "Light matches today's chrome; night inverts chrome via CSS variables + html[data-theme]; semantic greens/reds stay hex",
+    "First paint does not flash the wrong theme (theme.js in head before app.css); no-JS follows prefers-color-scheme",
+    "pytest apps/analysis_web/tests and eng_verify.py pass; browser check of toggle + persist on several routes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ]
+}

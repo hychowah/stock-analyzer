@@ -1,0 +1,15 @@
+{
+  "summary": "Header Night/Light switch: chrome CSS tokens + html[data-theme] + theme.js (localStorage analysis_web.theme). Semantic greens/reds and architecture paper stay as they are.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "browser smoke THEME_SMOKE_BASE=http://127.0.0.1:60360 (desktop+mobile persist, paper figure, live chips in night)"
+  ],
+  "follow_ups": [
+    "The usual :8765 UI serves templates from disk (toggle is already there) but may still be an older process for routes; restart it to pick up this working tree if architecture 404s."
+  ],
+  "risks": [
+    "First visit follows prefers-color-scheme (Edge headless is dark) until a click writes storage.",
+    "Dark token table is duplicated in html[data-theme=dark] and the no-JS media query; keep those two lists in sync."
+  ]
+}

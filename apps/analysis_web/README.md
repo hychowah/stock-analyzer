@@ -62,6 +62,8 @@ Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0
 
 Header **Runs** and run-detail **← Runs** remember the last non-empty query (browser `localStorage`) so leaving to Analyze or a run and coming back keeps sort/filter. Empty `/` is still the default list (storage is not replayed). **Reset** is the only clear. A pasted query URL becomes the new memory.
 
+Header **Night** / **Light** switches page chrome. The choice is browser-local (`localStorage` key `analysis_web.theme`), not archive. First visit follows the OS light/dark setting until you click.
+
 | Param | Meaning |
 |-------|---------|
 | `ticker` | Exact ticker (legacy bookmarks) |

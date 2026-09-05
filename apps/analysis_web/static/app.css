@@ -1,23 +1,165 @@
+/*
+ * Chrome tokens. Light table is the default. Dark table applies when
+ * data-theme is dark. No-JS dark: prefers-color-scheme dark, only when
+ * html has no data-theme. Never put the dark table on the default
+ * selector — that ties with the light table and would paint Night for
+ * a stored Light choice on a dark OS.
+ *
+ * Membership: chrome inverts (page, fg, muted, card, border, hover,
+ * header, links, inputs, buttons, pre, flash/err, chart stage/grid/ink/
+ * tooltip/range chips/this-run/hover halo, default chip). Paper does not
+ * (--paper on the light table only; architecture-figure + Reset). Semantic
+ * stays hex (Live chg, pass/fail/status badges, bear/base/bull/weighted/asof
+ * series + those swatches, perf-bar pos/neg).
+ */
 :root {
   font-family: system-ui, sans-serif;
-  color: #1a1a1a;
+  color-scheme: light;
+  color: var(--fg);
+  --bg: #f6f7f9;
+  --fg: #1a1a1a;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --card: #fff;
+  --border: #e2e8f0;
+  --hover: #f8fafc;
+  --header-bg: #0f172a;
+  --header-fg: #f8fafc;
+  --header-link: #93c5fd;
+  --input-bg: #fff;
+  --input-border: #cbd5e1;
+  --btn-bg: #2563eb;
+  --btn-fg: #fff;
+  --btn-secondary: #64748b;
+  --pre-bg: #0f172a;
+  --pre-fg: #e2e8f0;
+  --flash-bg: #fef3c7;
+  --flash-border: #f59e0b;
+  --err-bg: #fef2f2;
+  --err-border: #f87171;
+  --abort-border: #dc2626;
+  --link: #2563eb;
+  --chip-bg: #e2e8f0;
+  --chip-fg: #334155;
+  --chart-stage: #f8fafc;
+  --chart-ink: #0f172a;
+  --chart-grid: #e2e8f0;
+  --chart-tooltip-bg: #0f172a;
+  --chart-tooltip-fg: #f8fafc;
+  --paper: #fff;
 }
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --fg: #e2e8f0;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --card: #1e293b;
+  --border: #334155;
+  --hover: #334155;
+  --header-bg: #020617;
+  --header-fg: #f8fafc;
+  --header-link: #93c5fd;
+  --input-bg: #0f172a;
+  --input-border: #475569;
+  --btn-bg: #3b82f6;
+  --btn-fg: #fff;
+  --btn-secondary: #64748b;
+  --pre-bg: #020617;
+  --pre-fg: #e2e8f0;
+  --flash-bg: #422006;
+  --flash-border: #d97706;
+  --err-bg: #450a0a;
+  --err-border: #f87171;
+  --abort-border: #f87171;
+  --link: #60a5fa;
+  --chip-bg: #334155;
+  --chip-fg: #e2e8f0;
+  --chart-stage: #0f172a;
+  --chart-ink: #e2e8f0;
+  --chart-grid: #334155;
+  --chart-tooltip-bg: #020617;
+  --chart-tooltip-fg: #f8fafc;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #0b1220;
+    --fg: #e2e8f0;
+    --muted: #94a3b8;
+    --faint: #64748b;
+    --card: #1e293b;
+    --border: #334155;
+    --hover: #334155;
+    --header-bg: #020617;
+    --header-fg: #f8fafc;
+    --header-link: #93c5fd;
+    --input-bg: #0f172a;
+    --input-border: #475569;
+    --btn-bg: #3b82f6;
+    --btn-fg: #fff;
+    --btn-secondary: #64748b;
+    --pre-bg: #020617;
+    --pre-fg: #e2e8f0;
+    --flash-bg: #422006;
+    --flash-border: #d97706;
+    --err-bg: #450a0a;
+    --err-border: #f87171;
+    --abort-border: #f87171;
+    --link: #60a5fa;
+    --chip-bg: #334155;
+    --chip-fg: #e2e8f0;
+    --chart-stage: #0f172a;
+    --chart-ink: #e2e8f0;
+    --chart-grid: #334155;
+    --chart-tooltip-bg: #020617;
+    --chart-tooltip-fg: #f8fafc;
+  }
+}
+
 body {
   margin: 0;
-  background: #f6f7f9;
+  background: var(--bg);
 }
 header {
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--header-bg);
+  color: var(--header-fg);
   padding: 0.75rem 1.25rem;
 }
-header a {
-  color: #93c5fd;
+.header-tagline {
+  margin-left: 0.75rem;
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+.header-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin-top: 0.4rem;
+}
+.header-links a {
+  color: var(--header-link);
   margin-right: 1rem;
   text-decoration: none;
 }
-header a:hover {
+.header-links a:hover {
   text-decoration: underline;
+}
+.theme-toggle {
+  background: transparent;
+  color: var(--header-fg);
+  border: 1px solid var(--header-link);
+  border-radius: 6px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.theme-toggle:hover {
+  background: rgba(148, 163, 184, 0.18);
 }
 main {
   max-width: 1100px;
@@ -25,8 +167,8 @@ main {
   padding: 0 1rem 2rem;
 }
 .card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
@@ -41,23 +183,23 @@ th,
 td {
   text-align: left;
   padding: 0.45rem 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--border);
 }
 th {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #64748b;
+  color: var(--muted);
 }
 tr:hover {
-  background: #f8fafc;
+  background: var(--hover);
 }
 .mono {
   font-family: ui-monospace, monospace;
   font-size: 0.85rem;
 }
 .muted {
-  color: #64748b;
+  color: var(--muted);
 }
 /* Live cell fill from today's change. Green/red rhyme with pass/fail for scan, not shared meaning. */
 .quote-live.chg-up {
@@ -74,14 +216,14 @@ tr:hover {
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
-  color: #94a3b8;
+  color: var(--faint);
 }
 .badge {
   display: inline-block;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
   font-size: 0.75rem;
-  background: #e2e8f0;
+  background: var(--chip-bg);
 }
 .badge.pass {
   background: #bbf7d0;
@@ -106,14 +248,16 @@ form.filters label {
   display: flex;
   flex-direction: column;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--muted);
 }
 form.filters input,
 form.filters select {
   padding: 0.35rem 0.5rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   min-width: 7rem;
+  background: var(--input-bg);
+  color: var(--fg);
 }
 form.filters .range-pair {
   display: flex;
@@ -129,8 +273,8 @@ form.filters input[type="number"] {
 }
 button,
 .btn {
-  background: #2563eb;
-  color: #fff;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
   border: 0;
   border-radius: 6px;
   padding: 0.4rem 0.75rem;
@@ -141,11 +285,11 @@ button,
 }
 button.secondary,
 .btn.secondary {
-  background: #64748b;
+  background: var(--btn-secondary);
 }
 pre {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--pre-bg);
+  color: var(--pre-fg);
   padding: 0.75rem;
   border-radius: 6px;
   overflow: auto;
@@ -163,21 +307,21 @@ pre {
   }
 }
 .flash {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
+  background: var(--flash-bg);
+  border: 1px solid var(--flash-border);
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
 }
 .err {
-  background: #fef2f2;
-  border: 1px solid #f87171;
+  background: var(--err-bg);
+  border: 1px solid var(--err-border);
   padding: 0.75rem;
   border-radius: 6px;
 }
 form.filters.is-abort input[name="ticker_prefix"],
 form.filters.is-abort input[name="ticker"] {
-  border-color: #dc2626;
-  background: #fef2f2;
+  border-color: var(--abort-border);
+  background: var(--err-bg);
 }
 .compare-bar {
   display: flex;
@@ -186,7 +330,7 @@ form.filters.is-abort input[name="ticker"] {
   align-items: center;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--border);
 }
 .compare-form {
   display: flex;
@@ -198,13 +342,15 @@ form.filters.is-abort input[name="ticker"] {
   display: flex;
   flex-direction: column;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--muted);
 }
 .compare-form select {
   padding: 0.35rem 0.5rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   min-width: 16rem;
+  background: var(--input-bg);
+  color: var(--fg);
 }
 th.pick,
 td.pick {
@@ -251,8 +397,8 @@ td.pick {
   height: min(60vh, 36rem);
   min-height: 28rem;
   margin: 1rem 0;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: var(--paper);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: auto;
 }
@@ -284,7 +430,7 @@ td.pick {
   padding: 0.25rem 0.6rem;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  background: #fff;
+  background: var(--paper);
   color: #0f172a;
   cursor: pointer;
 }
@@ -303,11 +449,11 @@ th a.sort:hover {
   text-decoration: underline;
 }
 th a.sort.is-active {
-  color: #0f172a;
+  color: var(--fg);
 }
 th .sort-ind {
   font-size: 0.7rem;
-  color: #2563eb;
+  color: var(--link);
 }
 th.num a.sort {
   justify-content: flex-end;
@@ -324,20 +470,20 @@ th.num a.sort {
   margin: 0.5rem 0 0.65rem;
 }
 .chart-ranges button {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: var(--chip-bg);
+  color: var(--chart-ink);
   font-size: 0.78rem;
   padding: 0.22rem 0.6rem;
 }
 .chart-ranges button[aria-pressed="true"] {
-  background: #0f172a;
-  color: #fff;
+  background: var(--chart-ink);
+  color: var(--card);
 }
 .chart-stage {
   position: relative;
   height: 280px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--chart-stage);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 #price-chart-svg {
@@ -348,8 +494,8 @@ th.num a.sort {
 .chart-tooltip {
   position: absolute;
   z-index: 2;
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--chart-tooltip-bg);
+  color: var(--chart-tooltip-fg);
   font-family: ui-monospace, monospace;
   font-size: 0.75rem;
   line-height: 1.4;
@@ -362,7 +508,7 @@ th.num a.sort {
 .chart-readout {
   margin: 0.45rem 0 0;
   font-size: 0.8rem;
-  color: #334155;
+  color: var(--chip-fg);
 }
 .chart-legend {
   display: flex;
@@ -372,7 +518,7 @@ th.num a.sort {
   padding: 0;
   margin: 0.65rem 0 0;
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--muted);
 }
 .chart-legend .swatch {
   display: inline-block;
@@ -382,17 +528,17 @@ th.num a.sort {
   vertical-align: middle;
   border-radius: 1px;
 }
-.swatch-price { background: #0f172a; }
+.swatch-price { background: var(--chart-ink); }
 .swatch-bear { background: #b91c1c; }
 .swatch-base { background: #1d4ed8; }
 .swatch-bull { background: #15803d; }
 .swatch-asof { background: #94a3b8; }
 .chart-grid line {
-  stroke: #e2e8f0;
+  stroke: var(--chart-grid);
   stroke-width: 1;
 }
 .chart-grid text {
-  fill: #94a3b8;
+  fill: var(--faint);
   font-size: 10px;
   font-family: ui-monospace, monospace;
 }
@@ -401,13 +547,13 @@ th.num a.sort {
 }
 .chart-price {
   fill: none;
-  stroke: #0f172a;
+  stroke: var(--chart-ink);
   stroke-width: 1.75;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 .chart-price-dot {
-  fill: #0f172a;
+  fill: var(--chart-ink);
 }
 .chart-bear {
   stroke: #b91c1c;
@@ -445,32 +591,32 @@ th.num a.sort {
   stroke-dasharray: 2 4;
 }
 .chart-this-run line {
-  stroke: #0f172a;
+  stroke: var(--chart-ink);
   stroke-width: 2;
 }
 .chart-this-run circle {
-  fill: #0f172a;
-  stroke: #fff;
+  fill: var(--chart-ink);
+  stroke: var(--card);
   stroke-width: 1;
 }
 .chart-sibling line {
-  stroke: #94a3b8;
+  stroke: var(--faint);
   stroke-width: 1.5;
 }
 .chart-sibling circle {
-  fill: #64748b;
-  stroke: #fff;
+  fill: var(--muted);
+  stroke: var(--card);
   stroke-width: 1;
 }
 .chart-hover-x,
 .chart-hover-y {
-  stroke: #64748b;
+  stroke: var(--muted);
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
 .chart-hover-dot {
-  fill: #2563eb;
-  stroke: #fff;
+  fill: var(--link);
+  stroke: var(--card);
   stroke-width: 1;
 }
 @media (max-width: 800px) {
@@ -488,7 +634,7 @@ th.num a.sort {
   height: 0.7rem;
   max-width: 100%;
   border-radius: 3px;
-  background: #94a3b8;
+  background: var(--faint);
 }
 .perf-bar.pos {
   background: #86efac;
@@ -497,7 +643,7 @@ th.num a.sort {
   background: #fca5a5;
 }
 .perf-bar.zero {
-  background: #e2e8f0;
+  background: var(--chip-bg);
 }
 @media (max-width: 800px) {
   .perf-table td.perf-bar-cell {

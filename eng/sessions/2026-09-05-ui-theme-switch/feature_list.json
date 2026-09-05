@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json success criteria; write plan; strategic design review; absorb",
+      "passes": true,
+      "verify": "issue.json + handoffs/plan.md after review"
+    },
+    {
+      "id": "theme-switch",
+      "description": "CSS chrome tokens + data-theme + theme.js header toggle; tests; browser check",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py PASS"
+    }
+  ]
+}

@@ -178,6 +178,75 @@ class QuoteLiveChgCssTests(unittest.TestCase):
             self.assertNotIn("hover", _css_rule_bodies(css, sel), sel)
 
 
+class ThemeSwitchTests(unittest.TestCase):
+    def test_chrome_tokens_and_cascade(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        root_m = re.search(r":root\s*\{([^}]+)\}", css)
+        self.assertIsNotNone(root_m)
+        root = root_m.group(1)
+        for name in (
+            "--bg",
+            "--fg",
+            "--card",
+            "--paper",
+            "--chart-ink",
+            "--chip-bg",
+        ):
+            self.assertIn(name, root, name)
+        dark_m = re.search(r'html\[data-theme="dark"\]\s*\{([^}]+)\}', css)
+        self.assertIsNotNone(dark_m)
+        dark = dark_m.group(1)
+        self.assertIn("--bg", dark)
+        self.assertNotIn("--paper", dark)
+        media = re.search(
+            r"@media\s*\(prefers-color-scheme:\s*dark\)\s*"
+            r"\{\s*html:not\(\[data-theme\]\)\s*\{([^}]+)\}",
+            css,
+        )
+        self.assertIsNotNone(media)
+        inner = media.group(1)
+        self.assertIn("--bg", inner)
+        self.assertNotIn("--paper", inner)
+        self.assertNotIn('html[data-theme="light"]', css)
+        fig = _css_rule_bodies(css, ".architecture-figure")
+        self.assertIn("var(--paper)", fig)
+
+    def test_semantic_chg_stays_hex(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        for sel in (".quote-live.chg-up", ".quote-live.chg-down"):
+            body = _css_rule_bodies(css, sel)
+            self.assertIn("background", body, sel)
+            self.assertNotIn("var(", body, sel)
+
+    def test_theme_js_boot(self):
+        js = (Path(__file__).resolve().parents[1] / "static" / "theme.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("analysis_web.theme", js)
+        self.assertIn("prefers-color-scheme", js)
+        self.assertIn('"light"', js)
+        self.assertIn('"dark"', js)
+        self.assertIn("localStorage.getItem", js)
+        self.assertIn("localStorage.setItem", js)
+        self.assertIn("private mode", js)
+        self.assertIn("theme-toggle", js)
+
+    def test_base_loads_theme_js_before_css(self):
+        base = (
+            Path(__file__).resolve().parents[1] / "templates" / "base.html"
+        ).read_text(encoding="utf-8")
+        js_at = base.index('src="/static/theme.js"')
+        css_at = base.index('href="/static/app.css"')
+        self.assertLess(js_at, css_at)
+        self.assertNotIn('src="/static/theme.js" defer', base)
+        self.assertIn("no defer", base)
+        self.assertIn('id="theme-toggle"', base)
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -287,6 +356,21 @@ class AnalysisWebTests(unittest.TestCase):
         cc = r.headers.get("cache-control", "")
         self.assertIn("no-cache", cc)
         self.assertIn("must-revalidate", cc)
+
+    def test_theme_toggle_on_pages(self):
+        r_js = self.client.get("/static/theme.js")
+        self.assertEqual(r_js.status_code, 200)
+        for path in ("/", "/harness", "/health"):
+            r = self.client.get(path)
+            self.assertEqual(r.status_code, 200, path)
+            html = r.text
+            self.assertIn("/static/theme.js", html, path)
+            self.assertIn('id="theme-toggle"', html, path)
+            self.assertLess(
+                html.index("/static/theme.js"),
+                html.index("/static/app.css"),
+                path,
+            )
 
     def test_api_health(self):
         r = self.client.get("/api/health")

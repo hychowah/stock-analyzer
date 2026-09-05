@@ -1,0 +1,35 @@
+{
+  "goal": "Comfortable phone use of the analysis web UI (adaptive chrome, stacked list cards, collapsed filters; desktop unchanged)",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "No second mobile markup tree, no new routes, no UA sniffing",
+    "Do not change sort/filter/live/quote/compare semantics",
+    "No harness VERSION bump (W4)",
+    "Do not merge; user reviews the branch"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Below 800px: header is a compact bar with a Menu control; tagline hidden; tap targets at least 44px",
+    "Below 800px: Runs and Portfolio are stacked cards (same table markup, data-label); secondary columns hidden; compare picks and live quotes still bind",
+    "Below 800px: Runs ticker + Filter + Reset stay visible; remaining filters sit behind a Filters disclosure",
+    "Desktop (≥800px) looks as today (no Menu button, full tables, all filters visible)",
+    "pytest apps/analysis_web/tests and eng_verify.py pass; browser check at ~1100px and ~390px on / /runs /portfolio /analyze /harness /architecture"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ]
+}

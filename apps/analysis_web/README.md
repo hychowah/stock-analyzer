@@ -64,6 +64,8 @@ Header **Runs** and run-detail **← Runs** remember the last non-empty query (b
 
 Header **Night** / **Light** switches page chrome. The choice is browser-local (`localStorage` key `analysis_web.theme`), not archive. First visit follows the OS light/dark setting until you click.
 
+Below 800px the header hides the tagline and the nine links sit behind a **Menu** control (CSS checkbox; no extra JS). Desktop is unchanged.
+
 | Param | Meaning |
 |-------|---------|
 | `ticker` | Exact ticker (legacy bookmarks) |

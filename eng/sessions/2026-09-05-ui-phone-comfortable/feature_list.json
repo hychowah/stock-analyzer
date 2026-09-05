@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json; write plan; strategic design review; absorb",
+      "passes": true,
+      "verify": "issue.json + handoffs/plan.md after review"
+    },
+    {
+      "id": "chrome",
+      "description": "Slice 1: disclose CSS module + compact header Menu + 44px tap targets at max-width 800px",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests -q; browser 390px header"
+    },
+    {
+      "id": "stack-tables",
+      "description": "Slice 2: .stack-table on entity row-lists only; data-label + desktop-only",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests -q; fragments/runs still has compare-pick"
+    },
+    {
+      "id": "narrow-controls",
+      "description": "Slice 3: reuse disclose for extra Runs filters; 800px form tap-size; no leftover-page tour",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests -q; browser 390px filters + dense pages"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py PASS"
+    }
+  ]
+}

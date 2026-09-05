@@ -247,6 +247,42 @@ class ThemeSwitchTests(unittest.TestCase):
         self.assertIn('id="theme-toggle"', base)
 
 
+class PhoneChromeTests(unittest.TestCase):
+    def test_base_has_nav_disclose(self):
+        base = (
+            Path(__file__).resolve().parents[1] / "templates" / "base.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('id="nav-open"', base)
+        self.assertIn('for="nav-open"', base)
+        self.assertIn('class="disclose"', base)
+        self.assertIn("disclose-btn", base)
+        self.assertIn("disclose-panel", base)
+        self.assertIn('id="site-nav"', base)
+
+    def test_disclose_css_phone_contract(self):
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(".disclose-btn", css)
+        self.assertIn(".disclose-panel", css)
+        self.assertIn(".disclose:checked ~ .disclose-panel", css)
+        media = re.search(
+            r"@media\s*\(max-width:\s*800px\)\s*\{([\s\S]*?)\n\}",
+            css,
+        )
+        self.assertIsNotNone(media)
+        # First 800px block is chrome/disclose (tagline + Menu).
+        inner = media.group(1)
+        self.assertIn(".header-tagline", inner)
+        self.assertIn("display: none", inner)
+        self.assertIn(".disclose-btn", inner)
+        self.assertIn(".disclose-panel", inner)
+        self.assertIn("min-height: 44px", inner)
+        self.assertNotRegex(
+            css, r"\.header-links\s*\{[^}]*display:\s*none"
+        )
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)

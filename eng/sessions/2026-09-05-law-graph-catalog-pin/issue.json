@@ -1,0 +1,35 @@
+{
+  "goal": "C1 live law + C2 phase graph + C3 catalog RunQuery + C4 UI query + C5 pin runtime",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite pins/2.27.0–2.36.0",
+    "Do not retire gates.py, rename specialists, or merge Analyze/Compare"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "One orchestrator bind/identity sequence in live Mode A operator files",
+    "phase_graph.py is the DAG; parallel tables are derived",
+    "Catalog list_runs takes RunQuery; quote_symbol is a sqlite column",
+    "Analysis UI consumes RunQuery without audit rename",
+    "Next pin publish copies Mode A only; live vs semver is the only branch",
+    "eng_verify.py passes after each slice"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**",
+    "pins/"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

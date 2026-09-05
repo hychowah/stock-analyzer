@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "c1-live-law",
+      "description": "2.36-only live law + one orch bind/identity sequence + VERSION 2.37.0",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_law_surface_freeze.py packages/kd_research/tests/test_workflow_spec.py -q"
+    },
+    {
+      "id": "c2-phase-graph",
+      "description": "Single phase_graph DAG; derived tables; VERSION 2.38.0",
+      "passes": false,
+      "verify": "pytest packages/kd_research/tests/test_phase_graph.py packages/kd_research/tests/test_gates_preflight.py packages/kd_research/tests/test_spawn_gate.py packages/kd_research/tests/test_workflow_spec.py packages/kd_research/tests/test_phase_status.py packages/kd_research/tests/test_check_catalog.py -q"
+    },
+    {
+      "id": "c3-runquery",
+      "description": "Catalog RunQuery + quote_symbol stamped at rebuild",
+      "passes": false,
+      "verify": "pytest packages/catalog_api/tests -q"
+    },
+    {
+      "id": "c4-ui-query",
+      "description": "Analysis UI runs-query consumes RunQuery",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests -q plus browser runs/filter/compare-picker"
+    },
+    {
+      "id": "c5-pin-runtime",
+      "description": "Pin publish Mode A-only; live vs semver execution",
+      "passes": false,
+      "verify": "pytest packages/harness_pin/tests packages/research_jobs/tests -q"
+    }
+  ]
+}

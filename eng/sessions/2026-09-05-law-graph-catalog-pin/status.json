@@ -1,0 +1,9 @@
+{
+  "slug": "law-graph-catalog-pin",
+  "session_key": "2026-09-05-law-graph-catalog-pin",
+  "status": "scaffolded",
+  "created_at": "2026-09-05T09:09:19Z",
+  "updated_at": "2026-09-05T09:09:19Z",
+  "work_type": "W1",
+  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+}

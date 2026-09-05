@@ -1,0 +1,42 @@
+{
+  "goal": "2.36.0: Check catalog is the only when-table (atomic rows, CLI sandwich on the catalog, no record()). StreetY1Policy is the only Street-era statute. No junk-drawer modules.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite pins/2.34.0 or pins/2.35.0",
+    "Do not change Mode A statute, prompts, or FAIL/WARN bands",
+    "Do not merge PHASE_ENTRY/COMPLETE/PATH_EXTRAS into one phase-files table (later)",
+    "Do not split library.py ingest vs gates",
+    "Do not unify report: vs exists: check ids"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "check_session.main is argparse + run_catalog(session_core|session_full) + print + optional write_acceptance; no record()/results global",
+    "Every CheckRow.run is a named session→rows function; no catalog lambdas or year-dive FDD strip wrappers",
+    "check_catalog does not import gates; check_path lives in check_core",
+    "entry_checks/complete_checks are thin facades: abandon/graph/path tables + run_catalog",
+    "StreetY1Policy.for_session is the public version floor; epistemology destock and bind bands/hooks/legal responses apply one policy object",
+    "Hygiene (dials/stacking/SOTP/box) is not inside check_street_bind; catalog has its own row",
+    "No session_checks.py, phase_coverage.py, or agent4_isolation.py",
+    "harness/VERSION 2.36.0 + pins/2.36.0 in the same change set",
+    "eng_verify.py and pytest packages/kd_research packages/catalog_api apps/analysis_web/tests scripts/tests pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "pins/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/kd_research packages/catalog_api apps/analysis_web/tests scripts/tests -q"
+  ]
+}

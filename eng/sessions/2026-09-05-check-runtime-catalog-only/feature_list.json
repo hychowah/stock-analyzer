@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "n2-street-policy",
+      "description": "StreetY1Policy is the only Street-era statute (bind apply, hooks, destock, boolean facades, hygiene split)",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_street_y1_policy.py packages/kd_research/tests/test_street_bind.py packages/kd_research/tests/test_wave10_street_y1.py packages/kd_research/tests/test_wave11_gated_y1.py -q"
+    },
+    {
+      "id": "n1-catalog-only",
+      "description": "Atomic catalog + leftover CLI sandwich on the table; check_session has no record()",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_check_catalog.py packages/kd_research/tests/test_market_context_check.py packages/kd_research/tests/test_handoff_structure.py packages/kd_research/tests/test_session_isolation_check.py packages/kd_research/tests/test_phase_status.py packages/kd_research/tests/test_agent4_isolation_check.py -q"
+    },
+    {
+      "id": "version-pin",
+      "description": "harness/VERSION 2.36.0 and pins/2.36.0",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

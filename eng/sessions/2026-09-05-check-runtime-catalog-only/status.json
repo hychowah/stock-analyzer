@@ -1,0 +1,9 @@
+{
+  "slug": "check-runtime-catalog-only",
+  "session_key": "2026-09-05-check-runtime-catalog-only",
+  "status": "complete",
+  "created_at": "2026-09-05T03:14:30Z",
+  "updated_at": "2026-09-05T04:00:00Z",
+  "work_type": "W1",
+  "resume_hint": "Shipped 2.36.0. Later: one phase-files table."
+}

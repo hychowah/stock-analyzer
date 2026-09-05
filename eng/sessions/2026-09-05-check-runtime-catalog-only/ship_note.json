@@ -1,0 +1,7 @@
+{
+  "session_key": "2026-09-05-check-runtime-catalog-only",
+  "harness_version": "2.36.0",
+  "summary": "Check catalog is the only when-table (named session→rows functions, CLI sandwich on the catalog, no record()). StreetY1Policy is the only Street-era statute; hygiene is its own catalog row. pins/2.36.0 published. Phase-files table merge left later.",
+  "verify": "python scripts/eng_verify.py PASS (725 pytest)",
+  "follow_up": "Merge PHASE_ENTRY/OPTIONAL/COMPLETE + PATH_EXTRAS + workflow_spec price_snapshot into one (phase, rel, required, since) table next to check_path. Unify report: vs exists: ids. Split library.py ingest vs gates."
+}

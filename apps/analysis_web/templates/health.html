@@ -1,6 +1,14 @@
 {% extends "base.html" %}
+{% block body_attrs %}data-live-reload="1"{% endblock %}
 {% block title %}Health{% endblock %}
 {% block content %}
+<div class="card">
+  <h1>Process</h1>
+  <p class="muted">Git HEAD this UI booted at. A commit replaces the process; Analyze/Compare Grok keep running.</p>
+  <table>
+    <tr><th>git_sha</th><td class="mono">{{ git_sha or "—" }}</td></tr>
+  </table>
+</div>
 <div class="card">
   <h1>Catalog health</h1>
   <p class="muted">ARCHIVE_ROOT = <span class="mono">{{ health.archive_root }}</span></p>

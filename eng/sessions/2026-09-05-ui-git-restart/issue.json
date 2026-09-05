@@ -1,0 +1,35 @@
+{
+  "goal": "Restart Analysis UI when git HEAD moves; leave Grok jobs running",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not use uvicorn --reload or file watches",
+    "Do not kill or re-spawn Grok Analyze/Compare workers",
+    "Do not 503 job POSTs during drain; no restart banner; no SHA in CatalogApi.health or fingerprint token",
+    "No harness VERSION bump"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "python -m apps.analysis_web polls git HEAD and replaces only the UI child; --no-auto-restart is the one-shot server",
+    "SSE hello and /health HTML expose boot git_sha; /api/health and fingerprint token do not",
+    "live.js reloads once when hello git_sha changes; catalog hello token still does not reload",
+    "Supervisor never taskkill /T or kill_pid the UI; Grok stays detached",
+    "pytest apps/analysis_web/tests and eng_verify.py pass"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests -q"
+  ]
+}

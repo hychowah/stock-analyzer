@@ -1,0 +1,14 @@
+{
+  "session": "2026-09-05-ui-git-restart",
+  "feature": "Restart Analysis UI when git HEAD moves; leave Grok jobs running",
+  "verify": "eng_verify.py PASS (691 tests); HTTP smoke :8777 --no-auto-restart: /health Process+git_sha, /api/health and /api/fingerprint have no git_sha, SSE hello git_sha=068919ee…, live.js onHelloSha, Cache-Control no-cache",
+  "notes": [
+    "Default python -m apps.analysis_web polls git_head_sha (~2s) and replaces only the UI child (--no-auto-restart). Uncommitted saves do not restart. Git None keeps serving. Child crash/Ctrl+C exits the supervisor (no crash loop).",
+    "Stop path is CTRL_BREAK / SIGTERM then PID-only kill. Never taskkill /T. Grok stays detached. No job-typed 503 drain.",
+    "SSE hello and /health HTML expose boot git_sha. CatalogApi.health and fingerprint token do not. live.js reloads once on hello SHA change (every page); catalog poll still opt-in data-live-reload.",
+    "live pin is the workspace: prompt.md frozen, PYTHONPATH/cwd not. Supervisor does not re-spawn jobs.",
+    "Existing UI on :8765 must be restarted once (or wait until it is replaced) to pick this up."
+  ],
+  "follow_ups": [],
+  "proposed_commit": "Restart the Analysis UI when git HEAD moves"
+}

@@ -32,6 +32,8 @@ python3 -m packages.catalog_api list-runs --limit 5
 # Analysis UI (FastAPI + Jinja; install deps once)
 # pip install -r apps/analysis_web/requirements.txt
 python3 -m apps.analysis_web
+# default: replace UI when git HEAD moves; Grok jobs keep running
+# python3 -m apps.analysis_web --no-auto-restart
 # or: bash apps/analysis_web/init.sh
 # → http://127.0.0.1:8765/
 # Runs list: ticker_prefix, sector/region/harness dropdowns, session/MoS/price/FV ranges, column sort
@@ -45,6 +47,7 @@ python3 -m apps.analysis_web
 #   python -m packages.research_jobs {list,get,cancel,discard,resume,reconcile}
 #   UI /analyze — kill UI does not kill Grok; cancel=kill-only; discard=abandon; ANALYZE_MAX=3; GROK_JOBS_MAX defaults to kind-slot sum (set 1 to serialize)
 #   Real Grok Analyze refuses non-default ARCHIVE_ROOT. Do not uvicorn --reload.
+#   UI git-SHA supervisor replaces FastAPI only; never taskkill /T the UI (that would kill Grok).
 
 # Experiment summary program
 python3 programs/experiment_summary.py

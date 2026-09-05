@@ -1,8 +1,10 @@
 /**
  * Lightweight live reload for Archive Analysis.
  * - Prefer SSE /api/events (catalog_changed / portfolio_changed)
- * - Fallback: poll /api/fingerprint every 5s if EventSource fails
- * Opt-in: <body data-live-reload="1">
+ * - hello.git_sha is UI process identity: a new SHA means a new UI → reload once
+ * - Fallback: poll /api/fingerprint every 5s if EventSource fails (catalog only)
+ * Catalog opt-in: <body data-live-reload="1">
+ * SHA watch runs on every page (this script is in base.html).
  */
 (function () {
   "use strict";
@@ -52,10 +54,23 @@
   }
 
   var lastToken = null;
+  var lastSha = null;
   var sseOk = false;
   var es = null;
   var pollTimer = null;
   var running = false;
+
+  function onHelloSha(sha) {
+    if (!sha) return;
+    if (lastSha === null) {
+      lastSha = sha;
+      return;
+    }
+    if (sha !== lastSha) {
+      lastSha = sha;
+      window.location.reload();
+    }
+  }
 
   function onToken(token, kind) {
     if (!token) return;
@@ -78,6 +93,7 @@
         sseOk = true;
         try {
           var data = JSON.parse(ev.data);
+          onHelloSha(data.git_sha);
           onToken(data.token, "hello");
         } catch (e) {}
       });
@@ -162,15 +178,12 @@
   }
 
   function start() {
-    if (!wantsReload() || running) return;
+    if (running) return;
     running = true;
     startSSE();
-    startPoll();
+    if (wantsReload()) startPoll();
   }
 
-  if (!wantsReload()) {
-    return;
-  }
   start();
   window.addEventListener("pagehide", stop);
   window.addEventListener("pageshow", start);

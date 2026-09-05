@@ -167,6 +167,41 @@ class EventsEndpointTests(unittest.TestCase):
         self.assertIn("event: hello", text)
         self.assertIn("data:", text)
 
+    def test_events_hello_includes_git_sha_not_in_token(self):
+        import json
+
+        r = self.client.get("/api/events", params={"once": 1, "interval_ms": 200})
+        self.assertEqual(r.status_code, 200)
+        payload = None
+        for line in r.text.splitlines():
+            if line.startswith("data:"):
+                payload = json.loads(line[5:].strip())
+                break
+        self.assertIsNotNone(payload)
+        self.assertIn("git_sha", payload)
+        self.assertIn("token", payload)
+        sha = payload["git_sha"]
+        self.assertTrue(sha is None or (isinstance(sha, str) and len(sha) >= 7))
+
+    def test_fingerprint_endpoint_has_no_git_sha(self):
+        r = self.client.get("/api/fingerprint")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertIn("token", body)
+        self.assertNotIn("git_sha", body)
+
+    def test_api_health_has_no_git_sha(self):
+        r = self.client.get("/api/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("git_sha", r.json())
+
+    def test_health_html_shows_process_sha(self):
+        r = self.client.get("/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"Process", r.content)
+        self.assertIn(b"git_sha", r.content)
+        self.assertIn(b'data-live-reload="1"', r.content)
+
     def test_event_stream_ends_on_cancel(self):
         import asyncio
 

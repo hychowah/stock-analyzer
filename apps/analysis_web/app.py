@@ -7,6 +7,7 @@ Does not author research phases, fair values, or MoS. Schedules Mode A
 
 Usage:
     python3 -m apps.analysis_web
+    python3 -m apps.analysis_web --no-auto-restart
     ARCHIVE_ROOT=/path/to/archive python3 -m apps.analysis_web --port 8765
 """
 
@@ -28,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.types import Scope
 
 from apps.analysis_web.config import archive_root, static_dir
+from apps.analysis_web.identity import boot_git_sha
 from apps.analysis_web.routes import analyze, api, artifacts, compares, events, harness, pages
 from apps.analysis_web.services.price_history import (
     HistoryService,
@@ -66,6 +68,7 @@ def create_app() -> FastAPI:
         lifespan=_lifespan,
     )
     app.state.templates = create_templates()
+    app.state.git_sha = boot_git_sha()
     app.state.quote_service = QuoteService(YahooPrintBackend(), ttl_sec=quote_ttl_sec())
     app.state.history_service = HistoryService(
         YahooHistoryBackend(), ttl_sec=history_ttl_sec()
@@ -101,36 +104,24 @@ def create_app() -> FastAPI:
 # ASGI entry for uvicorn / tests
 app = create_app()
 
-# Open SSE must not pin the process. Grok workers are detached (agent_jobs.spawn).
-SHUTDOWN_BUDGET_S = 3
-
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument(
+        "--no-auto-restart",
+        action="store_true",
+        help="One-shot server: do not replace this process when git HEAD moves.",
+    )
     args = ap.parse_args(argv)
     root = archive_root()
     print("Archive Analysis UI")
     print(f"  ARCHIVE_ROOT={root}")
     print(f"  http://{args.host}:{args.port}/")
-    try:
-        import uvicorn
-    except ImportError:
-        print(
-            "uvicorn is required. Install: pip install -r apps/analysis_web/requirements.txt",
-            file=sys.stderr,
-        )
-        return 1
-    uvicorn.run(
-        "apps.analysis_web.app:app",
-        host=args.host,
-        port=args.port,
-        reload=False,
-        log_level="info",
-        timeout_graceful_shutdown=SHUTDOWN_BUDGET_S,
-    )
-    return 0
+    from apps.analysis_web.supervise import serve
+
+    return serve(args.host, args.port, auto_restart=not args.no_auto_restart)
 
 
 if __name__ == "__main__":

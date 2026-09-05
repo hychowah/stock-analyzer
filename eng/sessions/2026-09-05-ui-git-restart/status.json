@@ -1,0 +1,9 @@
+{
+  "slug": "ui-git-restart",
+  "session_key": "2026-09-05-ui-git-restart",
+  "status": "complete",
+  "created_at": "2026-09-05T00:00:00Z",
+  "updated_at": "2026-09-05T12:00:00Z",
+  "work_type": "W4",
+  "resume_hint": "Done. Restart the UI once (or wait for git HEAD change) to pick up the supervisor. Default python -m apps.analysis_web auto-restarts on commit."
+}

@@ -207,6 +207,23 @@ class AnalysisWebTests(unittest.TestCase):
         r = self.client.get("/health")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"run_count", r.content)
+        self.assertIn(b"git_sha", r.content)
+        self.assertIn(b"Process", r.content)
+
+    def test_api_health_is_catalog_only(self):
+        r = self.client.get("/api/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn("git_sha", r.json())
+
+    def test_live_js_reloads_on_hello_sha_not_token(self):
+        js = (Path(__file__).resolve().parents[1] / "static" / "live.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("function onHelloSha(sha)", js)
+        self.assertIn("window.location.reload()", js)
+        self.assertIn('if (kind === "hello") return;', js)
+        self.assertNotIn("catalog-changed", js.split("function onHelloSha")[1].split("function onToken")[0])
+        self.assertIn("if (wantsReload()) startPoll()", js)
 
     def test_static_files_revalidate(self):
         r = self.client.get("/static/quotes.js")

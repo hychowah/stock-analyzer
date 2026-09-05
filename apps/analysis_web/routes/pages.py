@@ -324,7 +324,13 @@ def page_health(
     request: Request,
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
-    return _render(request, "health.html", health=api.health())
+    git_sha = getattr(request.app.state, "git_sha", None)
+    return _render(
+        request,
+        "health.html",
+        health=api.health(),
+        git_sha=git_sha if isinstance(git_sha, str) else None,
+    )
 
 
 @router.get("/calibration", response_class=HTMLResponse)

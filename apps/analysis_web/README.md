@@ -13,10 +13,11 @@ pip install -r apps/analysis_web/requirements.txt
 ## Run
 
 ```bash
-# From project root
+# From project root (default: replace this UI when git HEAD moves)
 python3 -m apps.analysis_web
 # → http://127.0.0.1:8765/
 
+python3 -m apps.analysis_web --no-auto-restart   # freeze this process
 ARCHIVE_ROOT=/path/to/archive python3 -m apps.analysis_web --port 8765
 ```
 
@@ -46,7 +47,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/api/compares` | GET list / POST start (`run_id_a`, `run_id_b`) |
 | `/api/compares/{compare_id}` | JSON job status |
 | `/api/portfolio` | JSON portfolio summary + positions |
-| `/health` | Catalog health probe |
+| `/health` | Catalog health plus the git SHA this UI process booted at |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
 | `/api/quotes` | Last print for Yahoo listing symbols (not typed catalog tickers) |
@@ -78,7 +79,7 @@ Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s f
 
 Runs list also has checkboxes: select **exactly two** rows of the **same ticker** and **Compare**. That POSTs `/api/compares` and redirects to the job page. Headline numbers come from `prediction_snapshot.json` immediately; completion is `99_synthesis.md` on disk.
 
-Env: `COMPARE_SPAWN=fake` writes a stub compare packet (tests). `AGENT_SPAWN=fake` is the Analyze fake (job_dir only; never writes FV). Default spawns `grok --prompt-file … --yolo` (`GROK_BIN` to override). Caps: `ANALYZE_MAX=3`, `COMPARE_MAX=1`; unset `GROK_JOBS_MAX` is their sum. Set `GROK_JOBS_MAX=1` on laptops to serialize. Do **not** run with uvicorn `--reload`. First Ctrl+C exits within a few seconds even with live-reload tabs open. Killing the UI does **not** kill Grok; startup reconciles `job.json`. Cancel is kill-only (resumable); Discard writes `abandon.json`. Before resume, confirm no leftover `grok.exe`. If a Store-Python wrapper leftover holds the port, `taskkill /F` the `python3.12.exe` PID. Real Grok Analyze refuses a non-default `ARCHIVE_ROOT` (Mode A scripts ignore it). Isolation is prompt/runbook, not an OS sandbox. OneDrive may delay SSE mtimes — pause sync on `archive/` if jobs flap.
+Env: `COMPARE_SPAWN=fake` writes a stub compare packet (tests). `AGENT_SPAWN=fake` is the Analyze fake (job_dir only; never writes FV). Default spawns `grok --prompt-file … --yolo` (`GROK_BIN` to override). Caps: `ANALYZE_MAX=3`, `COMPARE_MAX=1`; unset `GROK_JOBS_MAX` is their sum. Set `GROK_JOBS_MAX=1` on laptops to serialize. Do **not** run with uvicorn `--reload`. Default `python -m apps.analysis_web` polls `git rev-parse HEAD` and replaces **only the UI** when the SHA changes (uncommitted saves do not). `--no-auto-restart` is the one-shot server (debug freeze, and the supervised child). Git unreadable → keep serving. First Ctrl+C exits within a few seconds even with live-reload tabs open. Killing or replacing the UI does **not** kill Grok; startup reconciles `job.json`. Cancel is kill-only (resumable); Discard writes `abandon.json`. Before resume, confirm no leftover `grok.exe`. If a Store-Python wrapper leftover holds the port, `taskkill /F` the `python3.12.exe` PID. Real Grok Analyze refuses a non-default `ARCHIVE_ROOT` (Mode A scripts ignore it). Isolation is prompt/runbook, not an OS sandbox. `harness_version=live` jobs use the workspace (`prompt.md` frozen; `PYTHONPATH`/`cwd` are not) — a harness commit can affect a running live Grok on the next import whether or not the UI restarted. OneDrive may delay SSE mtimes — pause sync on `archive/` if jobs flap. SSE `hello` carries `git_sha` (process identity, not the catalog token); `live.js` reloads once when that SHA changes.
 
 ## App-local state
 

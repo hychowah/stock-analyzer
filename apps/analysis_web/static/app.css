@@ -430,3 +430,30 @@ th.num a.sort {
     height: 220px;
   }
 }
+.perf-table td.perf-bar-cell {
+  width: 40%;
+  min-width: 8rem;
+  vertical-align: middle;
+}
+.perf-bar {
+  display: block;
+  height: 0.7rem;
+  max-width: 100%;
+  border-radius: 3px;
+  background: #94a3b8;
+}
+.perf-bar.pos {
+  background: #86efac;
+}
+.perf-bar.neg {
+  background: #fca5a5;
+}
+.perf-bar.zero {
+  background: #e2e8f0;
+}
+@media (max-width: 800px) {
+  .perf-table td.perf-bar-cell {
+    width: 30%;
+    min-width: 4rem;
+  }
+}

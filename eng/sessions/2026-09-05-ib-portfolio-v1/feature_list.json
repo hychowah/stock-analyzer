@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue + plan; baseline eng_verify",
+      "passes": true,
+      "verify": "issue.json success_criteria set"
+    },
+    {
+      "id": "ingest",
+      "description": "Copy statement; parse_activity_csv → replace_statement; every Trades,Data row",
+      "passes": true,
+      "verify": "pytest: 4 fixture trades, SubTotal skipped, no PII fields, no JSON rewrite; live import trades_imported=130"
+    },
+    {
+      "id": "page",
+      "description": "/portfolio + /api/portfolio from sqlite (JSON fallback if missing); IB identity + catalog overlay",
+      "passes": true,
+      "verify": "pytest HTTP + TestClient live book 21 positions; HY9H stays HY9H with overlay 000660.KS"
+    },
+    {
+      "id": "graph",
+      "description": "Server-rendered waterfall (all NAV rows) + MTM bars; API performance",
+      "passes": true,
+      "verify": "HTML/JSON tests; no portfolio_chart.js; Selenium 8771 desktop+mobile 34 bars"
+    },
+    {
+      "id": "verify",
+      "description": "eng_verify green; ship_note",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py PASS (706)"
+    }
+  ]
+}

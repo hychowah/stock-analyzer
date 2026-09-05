@@ -1,0 +1,28 @@
+{
+  "session": "2026-09-05-ib-portfolio-v1",
+  "feature": "IB activity statement ingest + /portfolio NAV/TWR waterfall",
+  "summary": "Parse IB activity CSV into app-local sqlite (every Trades,Data row, no PII). /portfolio reads sqlite as the book, JSON only if sqlite is missing. Server-rendered Change-in-NAV waterfall + MTM bars. No portfolio_chart.js. No catalog sqlite writes.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests",
+    "python scripts/eng_verify.py",
+    "python -m apps.analysis_web.import_ib --src <gitignored U*.csv under .local/ib/statements/>",
+    "python eng/sessions/2026-09-05-ib-portfolio-v1/handoffs/smoke_portfolio_browser.py http://127.0.0.1:8771"
+  ],
+  "verify": "pytest apps/analysis_web/tests 153 passed; eng_verify PASS 706; live import trades_imported=130 positions=21 value_base checksum exact; Selenium 8771 desktop+mobile",
+  "notes": [
+    "Interfaces: parse_activity_csv → IbStatement; replace_statement/load hide sqlite; build_portfolio_view / active_portfolio_view compose catalog overlay.",
+    "IB symbol is identity (HY9H stays HY9H). Catalog ticker is view-time overlay (SEHK pad-4 plus 5-digit candidate; HY9H→000660.KS join only).",
+    "value_base = native Value × Forex Balances close (HKD=1). Sleeve totals are checksum only.",
+    "Import copies CSV/PDF into .local/ib/statements/ and does not write portfolio.json. Name/Address never parsed onto IbStatement.",
+    "Existing :8765 process will not pick this up until restart (uncommitted files; git SHA supervisor ignores them)."
+  ],
+  "follow_ups": [
+    "Daily NAV curve from stored trades + Yahoo + FX",
+    "Trade blotter UI"
+  ],
+  "risks": [
+    "Do not commit live statement CSV/PDF or portfolio.sqlite (PII, gitignored).",
+    "HK overlay 2318.HK vs 02318.HK tries both; unmapped names stay uncovered."
+  ],
+  "proposed_commit": "Ingest IB activity statements into local sqlite and show NAV/TWR on /portfolio"
+}

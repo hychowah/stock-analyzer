@@ -5,8 +5,8 @@
 <div class="card">
   <h1>Portfolio{% if view.name %} · {{ view.name }}{% endif %}</h1>
   <p class="muted">
-    Book + latest catalog join ·
-    {% if view.path %}<span class="mono">{{ view.path }}</span>{% endif %}
+    {% if view.ib %}IB statement + catalog overlay{% else %}Book + latest catalog join{% endif %}
+    {% if view.path %} · <span class="mono">{{ view.path }}</span>{% endif %}
     · live
   </p>
   <form class="filters" method="get" action="/portfolio">
@@ -20,8 +20,34 @@
   </form>
   {% if view.error %}
   <p class="err">{{ view.error }}</p>
+  {% if not view.ib %}
   <p class="muted">Example: copy <span class="mono">apps/analysis_web/portfolio.example.json</span>
-    to <span class="mono">apps/analysis_web/.local/portfolio.json</span></p>
+    to <span class="mono">apps/analysis_web/.local/portfolio.json</span>
+    · or import an IB activity CSV:
+    <span class="mono">python -m apps.analysis_web.import_ib</span></p>
+  {% endif %}
+  {% endif %}
+  {% if view.ib %}
+  <div class="grid2" style="margin-top:0.75rem">
+    <table>
+      <tr><th>Account</th><td class="mono">{{ view.ib.account_masked }}</td></tr>
+      <tr><th>Period</th>
+          <td class="mono">{{ view.ib.period_from }} → {{ view.ib.period_to }}</td></tr>
+      <tr><th>Ending NAV</th>
+          <td class="num">{{ view.ib.ending_nav | fmt_num }} {{ view.ib.base_currency }}</td></tr>
+      <tr><th>Deposits</th>
+          <td class="num">{{ view.ib.deposits_total | fmt_num }}</td></tr>
+    </table>
+    <table>
+      <tr><th>IB TWR</th>
+          <td class="num">{% if view.ib.twr_pct is not none %}{{ '%.2f'|format(view.ib.twr_pct) }}%{% else %}—{% endif %}</td></tr>
+      <tr><th>Stock / cash</th>
+          <td class="num">{{ view.ib.stock_value | fmt_num }} / {{ view.ib.cash_value | fmt_num }}</td></tr>
+      <tr><th>Trades</th><td class="num">{{ view.ib.trade_count }}</td></tr>
+      <tr><th>Currency</th><td>{{ view.ib.base_currency }}</td></tr>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:0.5rem">TWR is IB-reported time-weighted return for the statement period.</p>
   {% endif %}
   {% if view.summary and not view.error %}
   <div class="grid2" style="margin-top:0.75rem">
@@ -46,12 +72,60 @@
   {% endif %}
 </div>
 
+{% if view.performance and view.performance.waterfall %}
+<div class="card">
+  <h2>Change in NAV</h2>
+  <p class="muted">Every IB Change-in-NAV row. Values in {{ view.currency or 'base currency' }}.</p>
+  <table class="perf-table">
+    <thead>
+      <tr><th>Component</th><th></th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      {% for row in view.performance.waterfall %}
+      <tr>
+        <td>{{ row.name }}</td>
+        <td class="perf-bar-cell">
+          <span class="perf-bar {{ row.sign }}" style="width: {{ '%.1f'|format(row.bar_pct or 0) }}%"></span>
+        </td>
+        <td class="num">{{ row.value | fmt_num }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if view.performance and view.performance.mtm %}
+<div class="card">
+  <h2>Mark-to-market P/L</h2>
+  <p class="muted">Stocks, signed. Largest 20 by |P/L| plus other.</p>
+  <table class="perf-table">
+    <thead>
+      <tr><th>Symbol</th><th></th><th>P/L</th></tr>
+    </thead>
+    <tbody>
+      {% for row in view.performance.mtm %}
+      <tr>
+        <td class="mono">{{ row.ib_symbol }}</td>
+        <td class="perf-bar-cell">
+          <span class="perf-bar {{ row.sign }}" style="width: {{ '%.1f'|format(row.bar_pct or 0) }}%"></span>
+        </td>
+        <td class="num">{{ row.pl | fmt_num }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 {% if view.positions %}
 <div class="card">
   <table>
     <thead>
       <tr>
-        <th>Ticker</th><th>Weight</th><th>Price</th><th>FV base</th><th>MoS %</th>
+        <th>Symbol</th>
+        {% if view.ib %}<th>Exch</th><th>Qty</th><th>Close</th><th>Value (base)</th>{% endif %}
+        <th>Weight</th><th>Price</th><th>FV base</th><th>MoS %</th>
         <th>Audit</th><th>Tech</th><th>Session</th><th>Sector</th>
       </tr>
     </thead>
@@ -60,11 +134,20 @@
       <tr>
         <td class="mono">
           {% if p.run_id %}
-            <a href="/runs/{{ p.run_id }}">{{ p.ticker }}</a>
+            <a href="/runs/{{ p.run_id }}">{{ p.ib_symbol or p.ticker }}</a>
           {% else %}
-            {{ p.ticker }}
+            {{ p.ib_symbol or p.ticker }}
+          {% endif %}
+          {% if p.catalog_ticker and p.catalog_ticker != (p.ib_symbol or p.ticker) %}
+            <div class="muted">{{ p.catalog_ticker }}</div>
           {% endif %}
         </td>
+        {% if view.ib %}
+        <td class="muted">{{ p.listing_exch or '' }}</td>
+        <td class="num">{{ p.quantity | fmt_num(0) }}</td>
+        <td class="num">{{ p.close_price | fmt_num }}</td>
+        <td class="num">{{ p.value_base | fmt_num }}</td>
+        {% endif %}
         <td class="num">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
         <td class="num">{{ p.asof_price | fmt_num }}</td>
         <td class="num">{{ p.fv_base | fmt_num }}</td>

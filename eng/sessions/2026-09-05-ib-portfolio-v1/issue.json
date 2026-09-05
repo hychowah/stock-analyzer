@@ -1,0 +1,34 @@
+{
+  "goal": "Ingest IB activity statement into app-local sqlite and show NAV/TWR plus a statement-true performance graph on /portfolio",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not write IB data into archive/catalog",
+    "Do not invent FV/MoS or a daily equity curve",
+    "Do not add portfolio_chart.js or regenerate portfolio.json on import",
+    "No trade blotter UI, PDF parse, or live IB API"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "parse_activity_csv → IbStatement; replace_statement/load hide sqlite; every Trades,Data row stored (stocks and Forex); no Name/Address in the object or DB",
+    "sqlite is the book when present; JSON fallback only if sqlite is missing; unreadable sqlite fails the page",
+    "IB symbol is identity; catalog ticker is overlay; value_base = native × Forex Balances close (HKD=1)",
+    "/portfolio and /api/portfolio show NAV, IB TWR, all Change-in-NAV rows as HTML, MTM bars; no portfolio_chart.js",
+    "pytest apps/analysis_web/tests and eng_verify.py pass; browser check of /portfolio"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

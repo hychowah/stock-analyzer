@@ -421,11 +421,10 @@ def page_portfolio(
     pass_only: str = "0",
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
-    from apps.analysis_web.services.portfolio import build_portfolio_view, load_book
+    from apps.analysis_web.services.portfolio import active_portfolio_view
 
     po = pass_only not in ("", "0", "false", "False")
-    book = load_book()
-    view = build_portfolio_view(api, book, pass_only=po)
+    view = active_portfolio_view(api, pass_only=po)
     return _render(
         request,
         "portfolio.html",

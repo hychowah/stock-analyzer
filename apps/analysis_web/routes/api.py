@@ -148,12 +148,11 @@ def api_portfolio(
     pass_only: str = "0",
     api: CatalogApi = Depends(get_api),
 ) -> dict[str, Any]:
-    """JSON portfolio view: local book joined to latest catalog runs."""
-    from apps.analysis_web.services.portfolio import build_portfolio_view, load_book
+    """JSON portfolio view: IB sqlite book (or JSON fallback) joined to catalog."""
+    from apps.analysis_web.services.portfolio import active_portfolio_view
 
     po = pass_only not in ("", "0", "false", "False")
-    book = load_book()
-    return build_portfolio_view(api, book, pass_only=po)
+    return active_portfolio_view(api, pass_only=po)
 
 
 class CompareStartBody(BaseModel):

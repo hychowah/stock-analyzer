@@ -35,6 +35,23 @@ def portfolio_path() -> Path:
     return local_dir() / "portfolio.json"
 
 
+def portfolio_sqlite_path() -> Path:
+    return local_dir() / "portfolio.sqlite"
+
+
+def _portfolio_part() -> str:
+    """Sqlite is the book when present; JSON only on the fallback path."""
+    sqlite = portfolio_sqlite_path()
+    st = _stat_tuple(sqlite)
+    if st is not None:
+        return f"portfolio=sqlite:{st[0]}:{st[1]}"
+    book = portfolio_path()
+    book_st = _stat_tuple(book)
+    if book_st is None:
+        return "portfolio=missing"
+    return f"portfolio=json:{book_st[0]}:{book_st[1]}"
+
+
 def fingerprint(*, root: Path | None = None) -> dict[str, Any]:
     """Return a JSON-serializable fingerprint of catalog (+ optional portfolio book)."""
     ar = root or archive_root()
@@ -46,12 +63,8 @@ def fingerprint(*, root: Path | None = None) -> dict[str, Any]:
         else:
             parts.append(f"{name}={st[0]}:{st[1]}")
 
+    parts.append(_portfolio_part())
     book = portfolio_path()
-    book_st = _stat_tuple(book)
-    if book_st is None:
-        parts.append("portfolio=missing")
-    else:
-        parts.append(f"portfolio={book_st[0]}:{book_st[1]}")
 
     comparisons = ar / "comparisons"
     if not comparisons.is_dir():
@@ -110,7 +123,7 @@ def fingerprint(*, root: Path | None = None) -> dict[str, Any]:
         "token": digest,
         "archive_root": str(ar),
         "catalog_db_exists": (ar / "catalog" / "research_compare.sqlite").is_file(),
-        "portfolio_exists": book.is_file(),
+        "portfolio_exists": portfolio_sqlite_path().is_file() or book.is_file(),
         "parts": parts,
     }
 

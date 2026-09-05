@@ -33,7 +33,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
-| `/portfolio` | Portfolio: `.local/portfolio.json` joined to latest catalog runs |
+| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Change-in-NAV waterfall + MTM bars |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`) |
 | `/analyze/new` | Start analysis (ticker + harness version `live` or `pins/<semver>/`) |
 | `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
@@ -46,7 +46,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/compare-artifact?compare_id=…&path=…` | Allowlisted packet file (markdown rendered) |
 | `/api/compares` | GET list / POST start (`run_id_a`, `run_id_b`) |
 | `/api/compares/{compare_id}` | JSON job status |
-| `/api/portfolio` | JSON portfolio summary + positions |
+| `/api/portfolio` | JSON portfolio summary + positions + `ib` + `performance` |
 | `/health` | Catalog health plus the git SHA this UI process booted at |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
@@ -83,9 +83,11 @@ Env: `COMPARE_SPAWN=fake` writes a stub compare packet (tests). `AGENT_SPAWN=fak
 
 ## App-local state
 
-- Portfolio book (optional): `apps/analysis_web/.local/portfolio.json`
+- IB book (preferred): `apps/analysis_web/.local/portfolio.sqlite` — ingest with `python -m apps.analysis_web.import_ib` (optional `--src`). Copies `U*.csv` (and sibling `.pdf`) into `.local/ib/statements/`. **PII; gitignored. Import does not write `portfolio.json`.**
+- JSON fallback (only when sqlite is missing): `apps/analysis_web/.local/portfolio.json`
 - Example: `portfolio.example.json` (committed)
 - **Never** store holdings under `archive/research/`
+- Unreadable sqlite fails `/portfolio`; it does not fall back to JSON
 - Compare packets: `archive/comparisons/<TICKER>/<asof>__<A>_vs_<B>/` (gitignored)
 - Analyze jobs: `archive/research_jobs/<TICKER>/<SESSION_KEY>/` (gitignored; not a catalog source)
 

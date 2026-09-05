@@ -1,0 +1,10 @@
+{
+  "features": [
+    {
+      "id": "architecture-page",
+      "description": "GET /architecture renders live ARCHITECTURE.md as sanitized HTML with nav link, heading ids, and tests",
+      "passes": true,
+      "verify": "pytest analysis_web tests for /architecture + eng_verify --quick"
+    }
+  ]
+}

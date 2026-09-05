@@ -215,6 +215,31 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"git_sha", r.content)
         self.assertIn(b"Process", r.content)
 
+    def test_architecture_page(self):
+        r = self.client.get("/architecture")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"Architecture", r.content)
+        self.assertIn(b"What this system is", r.content)
+        self.assertIn(b'id="keeping-this-document-current"', r.content)
+        self.assertIn(b"report-body", r.content)
+        self.assertIn(b"ARCHITECTURE.md", r.content)
+
+    def test_nav_architecture(self):
+        r = self.client.get("/")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'href="/architecture"', r.content)
+
+    def test_architecture_missing_404(self):
+        from unittest.mock import patch
+
+        from apps.analysis_web.routes import architecture as arch_mod
+
+        missing = Path(self._td.name) / "no-such-ARCHITECTURE.md"
+        with patch.object(arch_mod, "architecture_md_path", return_value=missing):
+            r = self.client.get("/architecture")
+        self.assertEqual(r.status_code, 404)
+        self.assertIn(b"missing", r.content)
+
     def test_api_health_is_catalog_only(self):
         r = self.client.get("/api/health")
         self.assertEqual(r.status_code, 200)
@@ -282,7 +307,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Hello META", r.content)
         # Rendered heading, not only escaped source in a bare dump
-        self.assertIn(b"<h1>", r.content)
+        self.assertIn(b"<h1", r.content)
         self.assertIn(b"report-body", r.content)
 
     def test_artifact_markdown_raw(self):
@@ -313,7 +338,7 @@ class AnalysisWebTests(unittest.TestCase):
             },
         )
         self.assertEqual(r.status_code, 200)
-        self.assertIn(b"<h1>", r.content)
+        self.assertIn(b"<h1", r.content)
         # No live HTML tags (escaped &lt;script&gt; / &lt;img…&gt; text is OK)
         self.assertNotIn(b"<script>", r.content.lower())
         self.assertNotIn(b"<img", r.content.lower())

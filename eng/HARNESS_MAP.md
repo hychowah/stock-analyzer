@@ -66,6 +66,7 @@ CI: `eng/fixtures/archive` (same shape).
 
 ## Related
 
+- Human architecture map (keep current on architecture-changing commits): `ARCHITECTURE.md`  
 - Dual-mode plan audit: session plan §17  
 - Research map: `harness/HARNESS_MAP.md`  
 - Compare DB: `harness/plan_research_compare_db.md`  

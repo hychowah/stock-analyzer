@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import html
 import json
+import re
 from typing import Any
 
 import bleach
@@ -66,6 +68,37 @@ def _md_engine() -> MarkdownIt:
 
 _MD = _md_engine()
 
+_HEADING_RE = re.compile(r"<h([1-6])>(.*?)</h\1>", re.IGNORECASE | re.DOTALL)
+
+
+def _visible_text(inner: str) -> str:
+    return html.unescape(re.sub(r"<[^>]+>", "", inner))
+
+
+def github_heading_id(text: str) -> str:
+    """GitHub-style slug so in-doc #anchors match ARCHITECTURE.md links."""
+    s = text.strip().lower()
+    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    s = re.sub(r"\s+", "-", s)
+    s = re.sub(r"-{2,}", "-", s).strip("-")
+    return s
+
+
+def _with_heading_ids(fragment: str) -> str:
+    """Inject heading ids after sanitizing. Never copy an id from source HTML."""
+    seen: dict[str, int] = {}
+
+    def repl(match: re.Match[str]) -> str:
+        level, inner = match.group(1), match.group(2)
+        slug = github_heading_id(_visible_text(inner)) or "heading"
+        n = seen.get(slug, 0)
+        seen[slug] = n + 1
+        if n:
+            slug = f"{slug}-{n}"
+        return f'<h{level} id="{slug}">{inner}</h{level}>'
+
+    return _HEADING_RE.sub(repl, fragment)
+
 
 def render_markdown(text: str) -> str:
     """Convert markdown to sanitized HTML (safe for untrusted research notes)."""
@@ -78,13 +111,14 @@ def render_markdown(text: str) -> str:
         strip=True,
     )
     # Defense in depth: drop any remaining javascript: / data: href/src
-    return bleach.clean(
+    cleaned = bleach.clean(
         cleaned,
         tags=_ALLOWED_TAGS,
         attributes=_ALLOWED_ATTRS,
         protocols=_ALLOWED_PROTOCOLS,
         strip=True,
     )
+    return _with_heading_ids(cleaned)
 
 
 def render_json_pretty(data: bytes | str | Any) -> str:

@@ -14,6 +14,7 @@ export ARCHIVE_ROOT=$PWD/eng/fixtures/archive
 python3 -m packages.catalog_api health
 ```
 
+Human map of the system: `ARCHITECTURE.md` (update it when architecture changes).  
 Mode A full law: `harness/RESEARCH_AGENTS.md` (root `AGENTS.md` is router only).
 
 ## Common commands

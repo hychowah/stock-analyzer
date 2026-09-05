@@ -13,7 +13,7 @@ from apps.analysis_web.services.render_markdown import (
 class RenderMarkdownTests(unittest.TestCase):
     def test_heading(self):
         html = render_markdown("# Hello META\n")
-        self.assertIn("<h1>", html)
+        self.assertIn("<h1", html)
         self.assertIn("Hello META", html)
 
     def test_strips_script(self):
@@ -33,6 +33,19 @@ class RenderMarkdownTests(unittest.TestCase):
         html = render_markdown(md)
         self.assertIn("<table>", html)
         self.assertIn("<td>", html)
+
+    def test_heading_ids_match_in_doc_anchors(self):
+        html = render_markdown(
+            "## Keeping this document current\n\n"
+            "See [duty](#keeping-this-document-current).\n"
+        )
+        self.assertIn('id="keeping-this-document-current"', html)
+        self.assertIn('href="#keeping-this-document-current"', html)
+
+    def test_duplicate_heading_ids(self):
+        html = render_markdown("## Hello\n\n## Hello\n")
+        self.assertIn('id="hello"', html)
+        self.assertIn('id="hello-1"', html)
 
     def test_json_pretty(self):
         out = render_json_pretty(b'{"z":1,"a":2}')

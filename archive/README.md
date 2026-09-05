@@ -1,6 +1,6 @@
 # Research Archive
 
-All equity research **records** live under this tree. Harness code stays at the repo root.
+All equity research **records** live under this tree. Harness code stays at the repo root. Human map of how this tree fits the rest of the system: `ARCHITECTURE.md`.
 
 ## Layout
 

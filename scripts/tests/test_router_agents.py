@@ -15,6 +15,7 @@ class RouterAgentsTests(unittest.TestCase):
         self.assertLessEqual(len(lines), 150, msg=f"router too long: {len(lines)} lines")
         self.assertIn("harness/RESEARCH_AGENTS.md", agents)
         self.assertIn("eng/AGENTS.md", agents)
+        self.assertIn("ARCHITECTURE.md", agents)
         self.assertIn("Mode A", agents)
         self.assertIn("Mode B", agents)
 

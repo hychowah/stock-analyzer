@@ -1,0 +1,34 @@
+{
+  "goal": "Add a website page that renders the live repo ARCHITECTURE.md so a person can read the human map without leaving the UI.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent a generic /docs CMS or pin-aware architecture (ARCHITECTURE.md is live-tree only)",
+    "Do not vendor mermaid.js in this increment",
+    "Do not author FV/MoS"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "GET /architecture returns 200 and the ARCHITECTURE.md title/headings as sanitized HTML",
+    "Header nav links to /architecture from every page that uses base.html",
+    "Missing file is a 404, not a 500",
+    "In-page heading links work (h2/h3 ids)",
+    "XSS in a swapped file would be stripped (reuse render_markdown)",
+    "Tests cover the page; eng_verify.py passes",
+    "ARCHITECTURE.md website table lists /architecture"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "apps/analysis_web/",
+    "ARCHITECTURE.md",
+    "apps/analysis_web/README.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 -m pytest apps/analysis_web/tests/test_analysis_web.py apps/analysis_web/tests/test_render_markdown.py scripts/tests/test_architecture_doc.py -q",
+    "python3 scripts/eng_verify.py --quick"
+  ]
+}

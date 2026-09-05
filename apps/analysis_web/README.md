@@ -1,6 +1,6 @@
 # Analysis Web (Mode B)
 
-Catalog UI over `packages.catalog_api` and the **live `archive/`** data plane. Research sessions stay immutable. **Analyze** schedules a Mode A Grok orchestrator (new `archive/research/` session + `archive/research_jobs/` control plane). **Compare** appends `archive/comparisons/` with a session-valuation-audit. This app does **not author** FV/MoS.
+Human map of the whole system: `ARCHITECTURE.md`. Catalog UI over `packages.catalog_api` and the **live `archive/`** data plane. Research sessions stay immutable. **Analyze** schedules a Mode A Grok orchestrator (new `archive/research/` session + `archive/research_jobs/` control plane). **Compare** appends `archive/comparisons/` with a session-valuation-audit. This app does **not author** FV/MoS.
 
 **Stack:** FastAPI + Jinja2 + static CSS (`runs.js` list search, `compares.js` two-select, SSE live reload, markdown reports).
 
@@ -36,6 +36,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Change-in-NAV waterfall + MTM bars |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`) |
 | `/analyze/new` | Start analysis (ticker + harness version `live` or `pins/<semver>/`) |
+| `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin) |
 | `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
 | `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
 | `/analyze/{analyze_id}` | Live phase/status; cancel = keep session; discard = abandon |

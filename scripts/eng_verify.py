@@ -40,6 +40,7 @@ def check_eng_tree(root: Path) -> list[str]:
         root / "apps" / "analysis_web" / "app.py",
         root / "harness" / "RESEARCH_AGENTS.md",
         root / "harness" / "VERSION",
+        root / "ARCHITECTURE.md",
     ]
     for p in required:
         if not p.is_file():
@@ -58,6 +59,8 @@ def check_eng_tree(root: Path) -> list[str]:
             errs.append("root AGENTS.md must point Mode A at harness/RESEARCH_AGENTS.md")
         if "eng/AGENTS.md" not in body:
             errs.append("root AGENTS.md must point Mode B at eng/AGENTS.md")
+        if "ARCHITECTURE.md" not in body:
+            errs.append("root AGENTS.md must point humans at ARCHITECTURE.md")
     # Mode B must not be named build/ at top level as the harness home
     if (root / "build" / "AGENTS.md").is_file():
         errs.append(

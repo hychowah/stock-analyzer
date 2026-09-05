@@ -16,7 +16,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 4. Run `python3 scripts/eng_verify.py` (baseline).  
 5. Implement the increment.  
 6. Re-verify; only then flip `passes: true` (verifier role).  
-7. Update `progress.md`; leave a mergeable clean tree. **Do not `git commit` until the user explicitly agrees** (see Git discipline).
+7. If the increment changed architecture, update `ARCHITECTURE.md` (Hard constraint 11). Update `progress.md`; leave a mergeable clean tree. **Do not `git commit` until the user explicitly agrees** (see Git discipline).
 
 ## Work types
 
@@ -40,12 +40,14 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 8. Gen ≠ eval: implementer does not mark `passes: true`.  
 9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `packages/kd_research/`, research scripts), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  
 10. **No commit without user agreement:** never run `git commit`, `git push`, amend, or force-push unless the user has **explicitly** asked or approved in this conversation (e.g. “commit”, “yes commit that”). Preparing a message or staging when asked is fine; silent commits are forbidden.  
-11. **Refactor when it pays — do not fear it.** Agentic coding makes refactors cheap; duplication, leaky workarounds, and unscalable structure are what compound. If a cleaner shape has clear long-term benefit (one home for a fact, a boundary that will scale, deleting a workaround), **do that refactor** rather than a local patch — even if the user only named the feature. Do **not** skip it to keep the diff small. Guardrails: write allowlist only; never rewrite `archive/research/**` or `archive/outcomes/**`; leave **one coherent, verify-green increment** (a large boundary move may be its own `feature_list` item, not a half-finished rewrite). Record what you refactored and why in `progress.md`.
+11. **Keep `ARCHITECTURE.md` current.** It is the human map of the system. Before every commit, if the change set altered layout, package/app boundaries, `archive/` planes, public routes/CLIs, identity, or the Mode A/B split, update `ARCHITECTURE.md` in the **same** change set. If nothing architectural changed, leave it. Do not ship a commit that makes that map wrong. Trigger table: `ARCHITECTURE.md` § Keeping this document current.  
+12. **Refactor when it pays — do not fear it.** Agentic coding makes refactors cheap; duplication, leaky workarounds, and unscalable structure are what compound. If a cleaner shape has clear long-term benefit (one home for a fact, a boundary that will scale, deleting a workaround), **do that refactor** rather than a local patch — even if the user only named the feature. Do **not** skip it to keep the diff small. Guardrails: write allowlist only; never rewrite `archive/research/**` or `archive/outcomes/**`; leave **one coherent, verify-green increment** (a large boundary move may be its own `feature_list` item, not a half-finished rewrite). Record what you refactored and why in `progress.md`.
 
 ## Key paths
 
 | Need | Path |
 |------|------|
+| Human architecture map | `ARCHITECTURE.md` (keep current; see Hard constraint 11) |
 | Map | `eng/HARNESS_MAP.md` |
 | Prompts | `eng/agent_prompts.md` |
 | Runbook | `eng/runbook.md` |
@@ -58,6 +60,8 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 ## Write allowlist (default)
 
 - `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `harness/` (when W1)  
+- **Allow:** `ARCHITECTURE.md` (human map — update in the same change set when architecture changes)  
+- **Allow:** root `AGENTS.md` only when the router must point at a new surface (keep ≤150 lines)  
 - **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
 - **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
 - **Allow append:** `archive/research_jobs/**` (Analyze control plane; never a catalog source)  
@@ -101,7 +105,8 @@ If ready to commit: summarize what will be committed and **ask**; only then run 
 | **Gate first** | `eng_verify` (and listed verify_commands) green **before** commit when claiming the feature done. |
 | **Message** | One descriptive subject: **what changed + why**. Optional body for risks / follow-ups. |
 | **W1** | Same commit (or same change set before ship) must include the `harness/VERSION` bump when research-runtime paths change. |
-| **Do not** | Commit broken `eng_verify`, secrets, or rewrites of completed `archive/research/**` / `archive/outcomes/**` to green tests. |
+| **ARCHITECTURE.md** | Same change set must update it when layout, package/app boundaries, archive planes, public routes/CLIs, identity, or Mode A/B split changed. Skip only when nothing architectural changed. |
+| **Do not** | Commit broken `eng_verify`, secrets, a stale `ARCHITECTURE.md`, or rewrites of completed `archive/research/**` / `archive/outcomes/**` to green tests. |
 | **Session end** | Clean tree preferred. If WIP must remain, note it in `progress.md` + `status.resume_hint` — still **no** unsolicited commit. |
 | **Recovery** | Prefer reset/revert to last good commit only with user agreement (destructive). |
 

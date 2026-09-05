@@ -16,7 +16,8 @@ Auto-loaded entrypoint. **Keep this file short.** Deep law lives in nested files
 3. Mode B does **not** run research Phases 0–5 unless the user explicitly schedules a black-box research experiment.  
 4. Mode A agents **must open `harness/RESEARCH_AGENTS.md`** for the full pipeline, justification contract, and quality gates before Phase 0. Do not invent methodology from this router alone.  
 5. English only for normative keys, schemas, registry fields, and reports.  
-6. **No git commit without user agreement** — agents must not `git commit` / push / amend until the user explicitly asks or approves in-chat. Details: `eng/AGENTS.md` Git discipline (Mode B); Mode A same bar for any harness commits.
+6. **No git commit without user agreement** — agents must not `git commit` / push / amend until the user explicitly asks or approves in-chat. Details: `eng/AGENTS.md` Git discipline (Mode B); Mode A same bar for any harness commits.  
+7. **Keep `ARCHITECTURE.md` current** — human map of the system. Before every commit, if the change set made that map stale, update it in the same change set (`ARCHITECTURE.md` § Keeping this document current).
 
 ## Quick commands
 
@@ -41,6 +42,7 @@ python3 -m packages.research_jobs start --ticker COHR   # UI-scheduled Mode A (a
 
 | Need | Path |
 |------|------|
+| **Human architecture map** | `ARCHITECTURE.md` (keep current on every architecture-changing commit) |
 | **Mode A full law** | `harness/RESEARCH_AGENTS.md` |
 | Phase map / preflight table | `harness/HARNESS_MAP.md` |
 | Subagent prompts | `harness/agent_prompts.md` |
@@ -63,7 +65,7 @@ Details: **`harness/RESEARCH_AGENTS.md`**.
 
 ## Mode B one-line loop
 
-Scaffold eng session → baseline `eng_verify` → implement one feature → verify → ship note → **ask user** → commit only if agreed (`eng/AGENTS.md` Git discipline).  
+Scaffold eng session → baseline `eng_verify` → implement one feature → verify → keep `ARCHITECTURE.md` true → ship note → **ask user** → commit only if agreed (`eng/AGENTS.md` Git discipline).  
 Default data root: `ARCHIVE_ROOT=<project>/archive`.  
 Details: **`eng/AGENTS.md`**.
 
@@ -74,4 +76,5 @@ Details: **`eng/AGENTS.md`**.
 - Invent fair values in Mode B — read catalog/snapshots only.  
 - Use multi-agent fan-out for tightly sequential valuation writes (Mode A Agent 5 stays single-writer).  
 - **Mode A new run:** open yesterday’s session “to see if it’s usable” before scaffolding — forbidden under isolation.  
-- **`git commit` without the user saying so** — forbidden in both modes.
+- **`git commit` without the user saying so** — forbidden in both modes.  
+- Ship a commit that leaves `ARCHITECTURE.md` describing the old system.

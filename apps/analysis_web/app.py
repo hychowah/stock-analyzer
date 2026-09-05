@@ -30,7 +30,7 @@ from starlette.types import Scope
 
 from apps.analysis_web.config import archive_root, static_dir
 from apps.analysis_web.identity import boot_git_sha
-from apps.analysis_web.routes import analyze, api, artifacts, compares, events, harness, pages
+from apps.analysis_web.routes import analyze, api, architecture, artifacts, compares, events, harness, pages
 from apps.analysis_web.services.price_history import (
     HistoryService,
     YahooHistoryBackend,
@@ -79,6 +79,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFilesNoCache(directory=str(static_path)), name="static")
 
     app.include_router(pages.router)
+    app.include_router(architecture.router)
     app.include_router(analyze.router)
     app.include_router(harness.router)
     app.include_router(compares.router)

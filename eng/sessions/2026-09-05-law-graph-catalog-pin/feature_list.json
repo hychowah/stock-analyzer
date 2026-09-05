@@ -15,7 +15,7 @@
     {
       "id": "c2-phase-graph",
       "description": "PhaseNode DAG is the gate (priors after overlays, not PHASE_ORDER walk); derived tables; VERSION 2.38.0; publish thin pins/2.38.0 once",
-      "passes": false,
+      "passes": true,
       "verify": "pytest packages/kd_research/tests/test_phase_graph.py packages/kd_research/tests/test_gates_preflight.py packages/kd_research/tests/test_spawn_gate.py packages/kd_research/tests/test_workflow_spec.py packages/kd_research/tests/test_phase_status.py packages/kd_research/tests/test_check_catalog.py -q"
     },
     {

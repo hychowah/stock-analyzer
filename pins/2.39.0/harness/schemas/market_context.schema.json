@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "market_context.schema.json",
+  "title": "Market / Region Context (light contract)",
+  "description": "Written once per session by the orchestrator (main agent), alongside sector_config. Region and institutional context are agent JUDGMENT: intensity gates how deep downstream agents go. Schemas enforce structure and provenance only. Decided cost-of-capital and governance numbers live in valuation assumptions, not here as mandates. Advisory methodology: region_*.md modules named by module_file.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "session_date",
+    "primary_region",
+    "intensity",
+    "confidence",
+    "module_file",
+    "signals",
+    "rationale",
+    "requires_manual_review"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string", "format": "date" },
+    "primary_region": {
+      "type": "string",
+      "enum": ["us", "hk_china", "korea", "japan", "eu_uk", "other"],
+      "description": "Coarse listing/institutional region for module selection. Extend enum only when a new region_*.md ships."
+    },
+    "intensity": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "low = typical US widely-held no-op path; medium = local CoC/accounting attention; high = control/VIE/SOE/family or hard non-US institutional risk."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Self-assessed. Below 0.70 -> requires_manual_review true and widen valuation range; do NOT fake primary_region=us."
+    },
+    "module_file": {
+      "type": "string",
+      "description": "Advisory region module, e.g. region_us.md, region_hk_china.md, region_generic.md"
+    },
+    "signals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "Objective evidence (exchange, currency, form type, ownership headlines, ADR/home listing)."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Why this primary_region and intensity."
+    },
+    "requires_manual_review": { "type": "boolean" },
+    "runner_up": {
+      "type": "object",
+      "description": "Second-best region hypothesis.",
+      "properties": {
+        "region": { "type": "string" },
+        "why_rejected": { "type": "string" }
+      }
+    },
+    "disconfirming_signals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Evidence against the chosen region/intensity that was weighed."
+    },
+    "listing": {
+      "type": "object",
+      "description": "Listing and filing identity (aligns with README required inputs).",
+      "properties": {
+        "exchange": { "type": "string" },
+        "market_region": { "type": "string" },
+        "reporting_currency": { "type": "string" },
+        "primary_filing_source": {
+          "type": "string",
+          "description": "e.g. sec_edgar | hkex | dart | other"
+        },
+        "filing_forms_expected": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "regional_benchmark": { "type": "string" }
+      }
+    },
+    "accounting_regime": {
+      "type": "object",
+      "description": "Primary reporting basis for peer and model comparability — not a valuation number.",
+      "properties": {
+        "basis": {
+          "type": "string",
+          "description": "us_gaap | ifrs | hkfrs | cas | k_ifrs | local_gaap | mixed | other"
+        },
+        "rationale": { "type": "string" },
+        "peer_comparability_notes": { "type": "string" }
+      }
+    },
+    "cost_of_capital_flags": {
+      "type": "object",
+      "description": "FLAGS only (booleans + notes). Judged Rf/ERP/CRP/FX values belong in valuation_model.assumptions with {value,rationale,basis}. No mandated formulas.",
+      "properties": {
+        "use_local_rf": { "type": "boolean" },
+        "erp_source_hint": { "type": "string" },
+        "country_risk_overlay": { "type": "boolean" },
+        "fx_in_cash_flows": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "description": "Control structure hints for 2e depth and valuation governance dials.",
+      "properties": {
+        "control_type": {
+          "type": "string",
+          "description": "widely_held | founder_dual_class | family | soe | vie | pyramid | mixed | unknown"
+        },
+        "complexity": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "signals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

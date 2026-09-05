@@ -66,7 +66,7 @@ def _mini_archive(base: Path) -> Path:
     conn.executescript(
         """
         CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT);
-        INSERT INTO schema_migrations VALUES (1, '2026-08-10T00:00:00Z');
+        INSERT INTO schema_migrations VALUES (3, '2026-08-10T00:00:00Z');
         CREATE TABLE runs (
           run_id TEXT PRIMARY KEY,
           ticker TEXT, session_date TEXT, session_key TEXT, path TEXT,
@@ -75,18 +75,20 @@ def _mini_archive(base: Path) -> Path:
           fv_bear REAL, fv_base REAL, fv_bull REAL, fv_weighted REAL,
           p_bear REAL, p_base REAL, p_bull REAL, margin_of_safety_pct REAL,
           model_name TEXT, tech_signal TEXT, tech_regime TEXT,
-          exported_at TEXT, harness_version TEXT, harness_git_sha TEXT, orchestrator_model TEXT
+          exported_at TEXT, harness_version TEXT, harness_git_sha TEXT, orchestrator_model TEXT,
+          quote_symbol TEXT, quote_listing TEXT, quote_listing_source TEXT
         );
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path, experiment_id,
           audit_verdict, primary_sector, region, asof_price,
           fv_bear, fv_base, fv_bull, margin_of_safety_pct,
-          harness_version, exported_at
+          harness_version, exported_at, quote_symbol, quote_listing, quote_listing_source
         ) VALUES (
           'research:META:2026-08-03', 'META', '2026-08-03', '2026-08-03',
           'archive/research/META/2026-08-03', 'exp-demo',
           'PASS', 'growth', 'us', 400.0,
-          350.0, 500.0, 650.0, 12.5, '2.5.0', '2026-08-10T00:00:00Z'
+          350.0, 500.0, 650.0, 12.5, '2.5.0', '2026-08-10T00:00:00Z',
+          'META', 'META', 'stamp'
         );
         """
     )
@@ -113,8 +115,8 @@ def _insert_run(
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path, experiment_id,
           audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
-          harness_version, exported_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          harness_version, exported_at, quote_symbol, quote_listing, quote_listing_source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             f"research:{ticker}:{session_key}",
@@ -130,6 +132,9 @@ def _insert_run(
             mos,
             harness_version,
             "2026-08-10T00:00:00Z",
+            None,
+            ticker,
+            "ticker",
         ),
     )
     conn.commit()

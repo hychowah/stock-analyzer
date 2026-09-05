@@ -14,6 +14,7 @@ from packages.catalog_api.client import (
     CatalogApi,
     DbMissing,
     RunNotFound,
+    SchemaStale,
     TickerNotFound,
 )
 
@@ -144,6 +145,8 @@ def _runs_context(api: CatalogApi, q: dict[str, Any]) -> tuple[dict[str, Any], i
         status = 400
     except DbMissing as e:
         error = f"Database missing: {e}"
+    except SchemaStale as e:
+        error = str(e)
     ctx = {
         **q,
         "runs": runs,
@@ -387,7 +390,7 @@ def page_experiments(
 ) -> HTMLResponse:
     try:
         runs = api.list_runs(limit=500)
-    except DbMissing as e:
+    except (DbMissing, SchemaStale) as e:
         return _render(
             request,
             "error.html",

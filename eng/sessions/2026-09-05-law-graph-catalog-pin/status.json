@@ -5,5 +5,5 @@
   "created_at": "2026-09-05T09:09:19Z",
   "updated_at": "2026-09-05T12:00:00Z",
   "work_type": "W1",
-  "resume_hint": "C1, C5, C2 done. Next is C3 RunQuery + listing columns, then C4. See plan.md."
+  "resume_hint": "C1, C5, C2, C3 done. Next is C4 UI RunQuery. See plan.md."
 }

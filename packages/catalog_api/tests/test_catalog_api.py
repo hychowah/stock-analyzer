@@ -15,7 +15,9 @@ from packages.catalog_api.client import (
     CatalogApi,
     CompareNotFound,
     DbMissing,
+    RunQuery,
     RunNotFound,
+    SchemaStale,
     parse_compare_id,
     parse_run_id,
 )
@@ -44,7 +46,7 @@ def _make_mini_archive(base: Path) -> Path:
     conn.executescript(
         """
         CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT);
-        INSERT INTO schema_migrations VALUES (1, '2026-08-10T00:00:00Z');
+        INSERT INTO schema_migrations VALUES (3, '2026-08-10T00:00:00Z');
         CREATE TABLE runs (
           run_id TEXT PRIMARY KEY,
           ticker TEXT,
@@ -67,8 +69,12 @@ def _make_mini_archive(base: Path) -> Path:
           tech_signal TEXT,
           tech_regime TEXT,
           exported_at TEXT,
+          harness_version TEXT,
           harness_git_sha TEXT,
-          orchestrator_model TEXT
+          orchestrator_model TEXT,
+          quote_symbol TEXT,
+          quote_listing TEXT,
+          quote_listing_source TEXT
         );
         """
     )
@@ -77,8 +83,8 @@ def _make_mini_archive(base: Path) -> Path:
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path,
           audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
-          exported_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          exported_at, quote_symbol, quote_listing, quote_listing_source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             "research:META:2026-08-03",
@@ -92,6 +98,9 @@ def _make_mini_archive(base: Path) -> Path:
             500.0,
             10.0,
             "2026-08-10T00:00:00Z",
+            None,
+            "META",
+            "ticker",
         ),
     )
     conn.commit()
@@ -117,8 +126,8 @@ def _insert_run(
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path,
           audit_verdict, primary_sector, region, fv_base, margin_of_safety_pct,
-          exported_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          exported_at, quote_symbol, quote_listing, quote_listing_source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             f"research:{ticker}:{session_key}",
@@ -132,6 +141,9 @@ def _insert_run(
             fv_base,
             mos,
             "2026-08-10T00:00:00Z",
+            None,
+            ticker,
+            "ticker",
         ),
     )
     conn.commit()
@@ -178,7 +190,7 @@ class CatalogApiTests(unittest.TestCase):
         h = self.api.health()
         self.assertTrue(h["db_exists"])
         self.assertEqual(h["run_count"], 1)
-        self.assertEqual(h["schema_version"], 1)
+        self.assertEqual(h["schema_version"], 3)
 
     def test_list_and_get(self):
         rows = self.api.list_runs(limit=10)
@@ -193,11 +205,25 @@ class CatalogApiTests(unittest.TestCase):
         self.assertEqual(run.get("quote_listing"), "META")
 
     def test_quote_symbol_from_stamp_no_ticker_fallback(self):
+        from packages.kd_research.ticker_lookup import listing_projection
+
         session = self.archive / "research" / "META" / "2026-08-03"
         (session / "meta" / "run_manifest.json").write_text(
             json.dumps({"ticker": "META", "quote_symbol": "META"}),
             encoding="utf-8",
         )
+        proj = listing_projection(session, "META")
+        self.assertEqual(proj["quote_symbol"], "META")
+        self.assertEqual(proj["quote_listing_source"], "stamp")
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        conn.execute(
+            "UPDATE runs SET quote_symbol=?, quote_listing=?, quote_listing_source=? "
+            "WHERE ticker='META'",
+            (proj["quote_symbol"], proj["quote_listing"], proj["quote_listing_source"]),
+        )
+        conn.commit()
+        conn.close()
         rows = self.api.list_runs(limit=10)
         self.assertEqual(rows[0]["quote_symbol"], "META")
         self.assertEqual(rows[0]["quote_listing"], "META")
@@ -209,9 +235,10 @@ class CatalogApiTests(unittest.TestCase):
             json.dumps({"ticker": "META", "quote_symbol": "ADYEN.AS"}),
             encoding="utf-8",
         )
+        live_manifest = listing_projection(session, "META")
+        self.assertEqual(live_manifest["quote_symbol"], "ADYEN.AS")
         stamped = self.api.get_run("research:META:2026-08-03")
-        self.assertEqual(stamped["quote_symbol"], "ADYEN.AS")
-        self.assertEqual(stamped["quote_listing"], "ADYEN.AS")
+        self.assertEqual(stamped["quote_symbol"], "META")
 
         (session / "meta" / "run_manifest.json").write_text(
             json.dumps({"ticker": "META", "quote_symbol": None}),
@@ -222,6 +249,22 @@ class CatalogApiTests(unittest.TestCase):
             json.dumps({"ticker": "META", "quote_symbol": "ADYEN.AS"}),
             encoding="utf-8",
         )
+        snap_proj = listing_projection(session, "META")
+        self.assertIsNone(snap_proj["quote_symbol"])
+        self.assertEqual(snap_proj["quote_listing"], "ADYEN.AS")
+        self.assertEqual(snap_proj["quote_listing_source"], "snapshot")
+        conn = sqlite3.connect(str(db))
+        conn.execute(
+            "UPDATE runs SET quote_symbol=?, quote_listing=?, quote_listing_source=? "
+            "WHERE ticker='META'",
+            (
+                snap_proj["quote_symbol"],
+                snap_proj["quote_listing"],
+                snap_proj["quote_listing_source"],
+            ),
+        )
+        conn.commit()
+        conn.close()
         from_snap = self.api.get_run("research:META:2026-08-03")
         self.assertIsNone(from_snap["quote_symbol"])
         self.assertEqual(from_snap["quote_listing"], "ADYEN.AS")
@@ -413,17 +456,32 @@ class CatalogQueryTests(unittest.TestCase):
         self.assertEqual(facets["tech_signal"], [])
         self.assertEqual(facets["harness_version"], [])
 
-    def test_harness_version_filter_without_column_empty(self):
-        self.assertEqual(self.api.list_runs(harness_version="2.17.0", limit=50), [])
-        self.assertEqual(self.api.count_runs(harness_version="2.17.0"), 0)
-        self.assertEqual(self.api.list_runs(limit=50)[0]["ticker"], "JPM")
-        with self.assertRaises(ValueError):
-            self.api.list_runs(sort="harness_version", limit=50)
+    def test_stale_schema_points_at_rebuild(self):
+        archive = Path(self._td.name) / "stale-archive" / "archive"
+        catalog = archive / "catalog"
+        catalog.mkdir(parents=True)
+        conn = sqlite3.connect(str(catalog / "research_compare.sqlite"))
+        conn.executescript(
+            """
+            CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT);
+            INSERT INTO schema_migrations VALUES (1, '2026-08-10T00:00:00Z');
+            CREATE TABLE runs (
+              run_id TEXT PRIMARY KEY, ticker TEXT, session_date TEXT, session_key TEXT,
+              path TEXT, fv_base REAL, exported_at TEXT
+            );
+            INSERT INTO runs VALUES ('research:X:2026-01-01','X','2026-01-01','2026-01-01','p',1,'t');
+            """
+        )
+        conn.commit()
+        conn.close()
+        api = CatalogApi(archive_root=archive, readonly=True)
+        with self.assertRaises(SchemaStale) as ctx:
+            api.list_runs(limit=1)
+        self.assertIn("rebuild_catalog", str(ctx.exception))
 
     def test_harness_version_exact_and_facet(self):
         db = self.archive / "catalog" / "research_compare.sqlite"
         conn = sqlite3.connect(str(db))
-        conn.execute("ALTER TABLE runs ADD COLUMN harness_version TEXT")
         conn.execute("UPDATE runs SET harness_version = '2.5.0' WHERE ticker = 'META'")
         conn.execute("UPDATE runs SET harness_version = '2.4.0' WHERE ticker = 'JPM'")
         conn.execute(
@@ -447,7 +505,6 @@ class CatalogQueryTests(unittest.TestCase):
     def test_harness_version_semver_sort(self):
         db = self.archive / "catalog" / "research_compare.sqlite"
         conn = sqlite3.connect(str(db))
-        conn.execute("ALTER TABLE runs ADD COLUMN harness_version TEXT")
         conn.execute("UPDATE runs SET harness_version = '2.7.0' WHERE ticker = 'META'")
         conn.execute("UPDATE runs SET harness_version = '2.4.0' WHERE ticker = 'JPM'")
         conn.execute(
@@ -477,12 +534,14 @@ class CatalogQueryTests(unittest.TestCase):
     def test_null_fv_quarantined_from_comparable_list(self):
         db = self.archive / "catalog" / "research_compare.sqlite"
         _insert_run(db, ticker="AAPL", session_key="2026-07-20", fv_base=None, mos=0.0)
-        comparable = self.api.list_runs(limit=50)
+        comparable = self.api.list_runs(comparable_only=True, limit=50)
         self.assertNotIn("AAPL", {r["ticker"] for r in comparable})
-        self.assertEqual(self.api.count_runs(), 4)
-        all_rows = self.api.list_runs(comparable_only=False, limit=50)
+        self.assertEqual(self.api.count_runs(comparable_only=True), 4)
+        all_rows = self.api.list_runs(limit=50)
         self.assertIn("AAPL", {r["ticker"] for r in all_rows})
-        self.assertEqual(self.api.count_runs(comparable_only=False), 5)
+        self.assertEqual(self.api.count_runs(), 5)
+        via_q = self.api.list_runs(RunQuery(comparable_only=True, limit=50))
+        self.assertNotIn("AAPL", {r["ticker"] for r in via_q})
 
     def test_calibration_pass_only_defaults_false(self):
         import inspect

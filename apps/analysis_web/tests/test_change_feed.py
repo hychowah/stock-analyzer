@@ -115,7 +115,7 @@ class EventsEndpointTests(unittest.TestCase):
         conn.executescript(
             """
             CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT);
-            INSERT INTO schema_migrations VALUES (1, '2026-08-10T00:00:00Z');
+            INSERT INTO schema_migrations VALUES (3, '2026-08-10T00:00:00Z');
             CREATE TABLE runs (
               run_id TEXT PRIMARY KEY,
               ticker TEXT, session_date TEXT, session_key TEXT, path TEXT,
@@ -124,7 +124,8 @@ class EventsEndpointTests(unittest.TestCase):
               fv_bear REAL, fv_base REAL, fv_bull REAL, fv_weighted REAL,
               p_bear REAL, p_base REAL, p_bull REAL, margin_of_safety_pct REAL,
               model_name TEXT, tech_signal TEXT, tech_regime TEXT,
-              exported_at TEXT, harness_git_sha TEXT, orchestrator_model TEXT
+              exported_at TEXT, harness_git_sha TEXT, orchestrator_model TEXT,
+              quote_symbol TEXT, quote_listing TEXT, quote_listing_source TEXT
             );
             INSERT INTO runs (
               run_id, ticker, session_date, session_key, path,

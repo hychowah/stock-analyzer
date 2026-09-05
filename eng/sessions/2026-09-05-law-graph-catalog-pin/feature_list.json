@@ -21,7 +21,7 @@
     {
       "id": "c3-runquery",
       "description": "Catalog RunQuery; stamp quote_symbol + quote_listing at rebuild; list/get read columns; no attach walk / v1 fallback",
-      "passes": false,
+      "passes": true,
       "verify": "pytest packages/catalog_api/tests -q"
     },
     {

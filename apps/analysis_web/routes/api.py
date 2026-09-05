@@ -12,6 +12,7 @@ from packages.catalog_api.client import (
     CompareNotFound,
     DbMissing,
     RunNotFound,
+    SchemaStale,
     TickerNotFound,
 )
 from packages.compare_jobs.jobs import (
@@ -82,7 +83,7 @@ def api_list_runs(
         raise HTTPException(status_code=404, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except DbMissing as e:
+    except (DbMissing, SchemaStale) as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
     return {
         "runs": rows,
@@ -101,7 +102,7 @@ def api_get_run(run_id: str, api: CatalogApi = Depends(get_api)) -> dict[str, An
         return api.get_run(run_id.strip())
     except RunNotFound as e:
         raise HTTPException(status_code=404, detail=f"Run not found: {run_id}") from e
-    except DbMissing as e:
+    except (DbMissing, SchemaStale) as e:
         raise HTTPException(status_code=503, detail=str(e)) from e
 
 

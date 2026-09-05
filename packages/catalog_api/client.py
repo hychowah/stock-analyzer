@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -63,6 +63,47 @@ class DbMissing(FileNotFoundError):
     pass
 
 
+class SchemaStale(RuntimeError):
+    """Catalog sqlite is older than this client. Rebuild."""
+
+    def __init__(self, detail: str = "") -> None:
+        msg = (
+            "Catalog schema is stale (need listing columns). "
+            "Rebuild with: python scripts/rebuild_catalog.py "
+            "and python scripts/export_compare_db.py --all --rebuild"
+        )
+        if detail:
+            msg = f"{msg} ({detail})"
+        super().__init__(msg)
+
+
+@dataclass
+class RunQuery:
+    """One catalog runs query. comparable_only defaults off; pickers pass True."""
+
+    ticker: str | None = None
+    ticker_prefix: str | None = None
+    sector: str | None = None
+    region: str | None = None
+    experiment_id: str | None = None
+    audit_verdict: str | None = None
+    tech_signal: str | None = None
+    harness_version: str | None = None
+    session_date_from: str | None = None
+    session_date_to: str | None = None
+    mos_min: Any = None
+    mos_max: Any = None
+    price_min: Any = None
+    price_max: Any = None
+    fv_base_min: Any = None
+    fv_base_max: Any = None
+    comparable_only: bool = False
+    sort: str | None = None
+    dir: str | None = None
+    limit: int = 50
+    offset: int = 0
+
+
 def default_archive_root() -> Path:
     return _archive_root()
 
@@ -89,26 +130,8 @@ RUN_SORT_COLUMNS: frozenset[str] = frozenset(
 
 _DEFAULT_ORDER_SQL = "ORDER BY ticker, session_date DESC, session_key DESC"
 _TIEBREAK = (("ticker", "ASC"), ("session_date", "DESC"), ("session_key", "DESC"))
-
-_RUN_COLUMNS_V1 = """
-            run_id, ticker, session_date, session_key, path,
-            experiment_id, audit_verdict, data_quality, status,
-            asof_price, currency, primary_sector, region, intensity,
-            fv_bear, fv_base, fv_bull, fv_weighted,
-            p_bear, p_base, p_bull, margin_of_safety_pct,
-            model_name, tech_signal, tech_regime,
-            exported_at, harness_git_sha, orchestrator_model
-"""
-
-_RUN_COLUMNS_V2 = """
-            run_id, ticker, session_date, session_key, path,
-            experiment_id, audit_verdict, data_quality, status,
-            asof_price, currency, primary_sector, region, intensity,
-            fv_bear, fv_base, fv_bull, fv_weighted,
-            p_bear, p_base, p_bull, margin_of_safety_pct,
-            model_name, tech_signal, tech_regime,
-            exported_at, harness_version, harness_git_sha, orchestrator_model
-"""
+_LISTING_COLUMNS = ("quote_symbol", "quote_listing", "quote_listing_source")
+_RUN_QUERY_FIELDS = {f.name for f in fields(RunQuery)}
 
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -150,8 +173,15 @@ def _sql_semver_components(column: str) -> tuple[str, str, str]:
     return major, minor, patch
 
 
-def _missing_optional_column(exc: BaseException, column: str) -> bool:
-    return column.lower() in str(exc).lower()
+def coerce_run_query(q: RunQuery | None, kwargs: dict[str, Any]) -> RunQuery:
+    if q is not None:
+        if kwargs:
+            raise TypeError("pass a RunQuery or keyword filters, not both")
+        return q
+    extra = set(kwargs) - _RUN_QUERY_FIELDS
+    if extra:
+        raise TypeError(f"unexpected run query kwargs: {sorted(extra)}")
+    return RunQuery(**kwargs)
 
 
 def escape_like_prefix(prefix: str) -> str:
@@ -206,7 +236,29 @@ def _append_numeric_range(
         params.append(hi_v)
 
 
-def _runs_filter_sql(
+def _runs_filter_sql(q: RunQuery) -> tuple[str, list[Any]]:
+    return _runs_filter_sql_kwargs(
+        ticker=q.ticker,
+        ticker_prefix=q.ticker_prefix,
+        sector=q.sector,
+        region=q.region,
+        experiment_id=q.experiment_id,
+        audit_verdict=q.audit_verdict,
+        tech_signal=q.tech_signal,
+        harness_version=q.harness_version,
+        session_date_from=q.session_date_from,
+        session_date_to=q.session_date_to,
+        mos_min=q.mos_min,
+        mos_max=q.mos_max,
+        price_min=q.price_min,
+        price_max=q.price_max,
+        fv_base_min=q.fv_base_min,
+        fv_base_max=q.fv_base_max,
+        comparable_only=q.comparable_only,
+    )
+
+
+def _runs_filter_sql_kwargs(
     *,
     ticker: str | None = None,
     ticker_prefix: str | None = None,
@@ -224,7 +276,7 @@ def _runs_filter_sql(
     price_max: Any = None,
     fv_base_min: Any = None,
     fv_base_max: Any = None,
-    comparable_only: bool = True,
+    comparable_only: bool = False,
 ) -> tuple[str, list[Any]]:
     clauses: list[str] = []
     params: list[Any] = []
@@ -317,76 +369,11 @@ def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     return {k: row[k] for k in row.keys()}
 
 
-def _session_dir_from_row(archive_root: Path, row: dict[str, Any]) -> Path | None:
-    """Session directory for a run row. Does not call get_run (no recursion)."""
-    research_dir = archive_root / "research"
-    ticker = str(row.get("ticker") or "")
-    session_key = str(row.get("session_key") or "")
-    if ticker and session_key:
-        cand = research_dir / ticker / session_key
-        if cand.is_dir():
-            return cand
-    rel = row.get("path")
-    if not rel:
-        return None
-    p = Path(str(rel))
-    parts = p.parts
-    if "research" in parts:
-        idx = parts.index("research")
-        tail = Path(*parts[idx + 1 :])
-        alt = (research_dir / tail).resolve()
-        if alt.is_dir():
-            return alt
-    return None
-
-
-def _snapshot_listing(session: Path) -> str | None:
-    """Yahoo listing already written on price_snapshot. Not a suffix map."""
-    path = session / "data" / "price_snapshot.json"
-    if not path.is_file():
-        return None
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None
-    if not isinstance(raw, dict):
-        return None
-    for key in ("quote_symbol", "yahoo_ticker"):
-        val = raw.get(key)
-        if val is None:
-            continue
-        s = str(val).strip().upper()
-        if s:
-            return s
-    return None
-
-
-def _attach_quote_symbol(archive_root: Path, row: dict[str, Any]) -> dict[str, Any]:
-    """Attach stamp + display listing. Stamp has no ticker fallback.
-
-    quote_symbol is the run_manifest stamp only (None if unstamped).
-    quote_listing is what the UI may send to /api/quotes: stamp, else snapshot
-    listing, else the folder ticker (display-only; completed sessions are
-    immutable and historically unstamped).
-    """
-    from packages.kd_research.ticker_lookup import quote_symbol_from_session
-
-    out = dict(row)
-    session = _session_dir_from_row(archive_root, row)
-    stamp = quote_symbol_from_session(session) if session is not None else None
-    snap = _snapshot_listing(session) if session is not None else None
-    ticker = str(out.get("ticker") or "").strip().upper() or None
-    out["quote_symbol"] = stamp
-    if stamp:
-        out["quote_listing"] = stamp
-        out["quote_listing_source"] = "stamp"
-    elif snap:
-        out["quote_listing"] = snap
-        out["quote_listing_source"] = "snapshot"
-    else:
-        out["quote_listing"] = ticker
-        out["quote_listing_source"] = "ticker" if ticker else None
-    return out
+def _require_listing_schema(conn: sqlite3.Connection) -> None:
+    cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(runs)").fetchall()}
+    missing = [c for c in _LISTING_COLUMNS if c not in cols]
+    if missing:
+        raise SchemaStale(f"missing columns: {', '.join(missing)}")
 
 
 @dataclass
@@ -484,131 +471,34 @@ class CatalogApi:
 
     def list_runs(
         self,
-        *,
-        ticker: str | None = None,
-        ticker_prefix: str | None = None,
-        sector: str | None = None,
-        region: str | None = None,
-        experiment_id: str | None = None,
-        audit_verdict: str | None = None,
-        tech_signal: str | None = None,
-        harness_version: str | None = None,
-        session_date_from: str | None = None,
-        session_date_to: str | None = None,
-        mos_min: Any = None,
-        mos_max: Any = None,
-        price_min: Any = None,
-        price_max: Any = None,
-        fv_base_min: Any = None,
-        fv_base_max: Any = None,
-        comparable_only: bool = True,
-        sort: str | None = None,
-        dir: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
+        q: RunQuery | None = None,
+        **kwargs: Any,
     ) -> list[dict[str, Any]]:
-        if limit < 1 or limit > 1000:
+        query = coerce_run_query(q, kwargs)
+        if query.limit < 1 or query.limit > 1000:
             raise ValueError("limit must be 1..1000")
-        if offset < 0:
+        if query.offset < 0:
             raise ValueError("offset must be >= 0")
-        where, params = _runs_filter_sql(
-            ticker=ticker,
-            ticker_prefix=ticker_prefix,
-            sector=sector,
-            region=region,
-            experiment_id=experiment_id,
-            audit_verdict=audit_verdict,
-            tech_signal=tech_signal,
-            harness_version=harness_version,
-            session_date_from=session_date_from,
-            session_date_to=session_date_to,
-            mos_min=mos_min,
-            mos_max=mos_max,
-            price_min=price_min,
-            price_max=price_max,
-            fv_base_min=fv_base_min,
-            fv_base_max=fv_base_max,
-            comparable_only=comparable_only,
-        )
-        order = _runs_order_sql(sort, dir)
-        sql = f"""
-            SELECT {_RUN_COLUMNS_V1}
-            FROM runs
-            {where}
-            {order}
-            LIMIT ? OFFSET ?
-        """
-        sql_v2 = f"""
-            SELECT {_RUN_COLUMNS_V2}
-            FROM runs
-            {where}
-            {order}
-            LIMIT ? OFFSET ?
-        """
-        params.extend([limit, offset])
+        where, params = _runs_filter_sql(query)
+        order = _runs_order_sql(query.sort, query.dir)
+        sql = f"SELECT * FROM runs {where} {order} LIMIT ? OFFSET ?"
+        params.extend([query.limit, query.offset])
         with self._connect() as conn:
-            try:
-                rows = conn.execute(sql_v2, params).fetchall()
-            except sqlite3.OperationalError:
-                try:
-                    rows = conn.execute(sql, params).fetchall()
-                except sqlite3.OperationalError as e:
-                    if _missing_optional_column(e, "harness_version"):
-                        if _blank(harness_version):
-                            return []
-                        if sort == "harness_version":
-                            raise ValueError("invalid sort: 'harness_version'") from e
-                    raise
-        return [_attach_quote_symbol(self.archive_root, _row_to_dict(r)) for r in rows]
+            _require_listing_schema(conn)
+            rows = conn.execute(sql, params).fetchall()
+        return [_row_to_dict(r) for r in rows]
 
     def count_runs(
         self,
-        *,
-        ticker: str | None = None,
-        ticker_prefix: str | None = None,
-        sector: str | None = None,
-        region: str | None = None,
-        experiment_id: str | None = None,
-        audit_verdict: str | None = None,
-        tech_signal: str | None = None,
-        harness_version: str | None = None,
-        session_date_from: str | None = None,
-        session_date_to: str | None = None,
-        mos_min: Any = None,
-        mos_max: Any = None,
-        price_min: Any = None,
-        price_max: Any = None,
-        fv_base_min: Any = None,
-        fv_base_max: Any = None,
-        comparable_only: bool = True,
+        q: RunQuery | None = None,
+        **kwargs: Any,
     ) -> int:
-        where, params = _runs_filter_sql(
-            ticker=ticker,
-            ticker_prefix=ticker_prefix,
-            sector=sector,
-            region=region,
-            experiment_id=experiment_id,
-            audit_verdict=audit_verdict,
-            tech_signal=tech_signal,
-            harness_version=harness_version,
-            session_date_from=session_date_from,
-            session_date_to=session_date_to,
-            mos_min=mos_min,
-            mos_max=mos_max,
-            price_min=price_min,
-            price_max=price_max,
-            fv_base_min=fv_base_min,
-            fv_base_max=fv_base_max,
-            comparable_only=comparable_only,
-        )
+        query = coerce_run_query(q, kwargs)
+        where, params = _runs_filter_sql(query)
         sql = f"SELECT COUNT(*) FROM runs {where}"
         with self._connect() as conn:
-            try:
-                row = conn.execute(sql, params).fetchone()
-            except sqlite3.OperationalError as e:
-                if harness_version and _missing_optional_column(e, "harness_version"):
-                    return 0
-                raise
+            _require_listing_schema(conn)
+            row = conn.execute(sql, params).fetchone()
         return int(row[0] if row is not None else 0)
 
     def ticker_in_catalog(
@@ -663,12 +553,13 @@ class CatalogApi:
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         with self._connect() as conn:
+            _require_listing_schema(conn)
             row = conn.execute(
                 "SELECT * FROM runs WHERE run_id = ?", (run_id,)
             ).fetchone()
         if row is None:
             raise RunNotFound(run_id)
-        return _attach_quote_symbol(self.archive_root, _row_to_dict(row))
+        return _row_to_dict(row)
 
     def get_session_root(self, run_id: str) -> Path:
         """Resolve session directory under this ARCHIVE_ROOT via run_id (not stored path)."""

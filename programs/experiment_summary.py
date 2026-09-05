@@ -19,7 +19,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from packages.catalog_api.client import CatalogApi, default_archive_root  # noqa: E402
+from packages.catalog_api.client import CatalogApi, RunQuery, default_archive_root  # noqa: E402
 
 
 def _nums(rows: list[dict[str, Any]], key: str) -> list[float]:
@@ -49,16 +49,36 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--experiment", help="Filter to one experiment_id")
     ap.add_argument("--json", action="store_true", help="JSON output")
-    ap.add_argument("--limit", type=int, default=1000)
+    ap.add_argument(
+        "--limit",
+        type=int,
+        default=1000,
+        help="Max runs to include (pages internally; default 1000)",
+    )
     args = ap.parse_args(argv)
 
     root = default_archive_root()
     api = CatalogApi(archive_root=root, readonly=True)
 
-    runs = api.list_runs(
+    cap = max(1, args.limit)
+    page = min(cap, 1000)
+    q = RunQuery(
         experiment_id=args.experiment,
-        limit=max(1, min(args.limit, 1000)),
+        comparable_only=False,
+        limit=page,
+        offset=0,
     )
+    total = min(api.count_runs(q), cap)
+    runs: list[dict[str, Any]] = []
+    while len(runs) < total:
+        q.offset = len(runs)
+        q.limit = min(page, total - len(runs))
+        batch = api.list_runs(q)
+        if not batch:
+            break
+        runs.extend(batch)
+        if len(batch) < q.limit:
+            break
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in runs:
         groups[str(r.get("experiment_id") or "(none)")].append(r)

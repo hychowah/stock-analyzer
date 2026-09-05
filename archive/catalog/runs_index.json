@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "updated_at": "2026-09-04T11:19:31Z",
+  "updated_at": "2026-09-05T12:37:47Z",
   "runs": [
     {
       "run_id": "research:000660.KS:2026-07-29",
@@ -19,14 +19,19 @@
       "p_bear": 0.3,
       "p_base": 0.5,
       "p_bull": 0.2,
-      "margin_of_safety_pct": -112.69,
+      "margin_of_safety_pct": -114.6564,
       "primary_sector": "cyclical",
       "region": null,
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "000660.KS",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:01378.HK:2026-08-24",
@@ -54,7 +59,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "01378.HK",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:02318.HK:2026-08-24",
@@ -82,7 +90,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "02318.HK",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:02618.HK:2026-08-04",
@@ -101,14 +112,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 41.12,
+      "margin_of_safety_pct": 41.1197,
       "primary_sector": "standard",
       "region": "hk_china",
       "tech_signal": "bullish",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "02618.HK",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:02618.HK:2026-08-13",
@@ -136,7 +152,10 @@
       "harness_version": "2.5.0",
       "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "2618.HK",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:0700.HK:2026-08-23",
@@ -164,7 +183,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "0700.HK",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:0710.HK:2026-08-23",
@@ -192,7 +214,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "0710.HK",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:0762.HK:2026-08-23",
@@ -220,7 +245,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "0762.HK",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:0762.HK:2026-09-01",
@@ -248,7 +276,10 @@
       "harness_version": "2.32.0",
       "harness_git_sha": "0f33dba7aa32acc22e9cde2ff1969f0ce3733cd1",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "0762.HK",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:1571.HK:2026-09-03",
@@ -276,7 +307,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "1571.HK",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:2209.HK:2026-09-01",
@@ -304,7 +338,10 @@
       "harness_version": "2.27.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "2209.HK",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:4516.T:2026-08-04",
@@ -323,14 +360,19 @@
       "p_bear": 0.34,
       "p_base": 0.41,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 37.25,
+      "margin_of_safety_pct": 38.1551,
       "primary_sector": "standard",
       "region": "japan",
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "4516.T",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:6690.HK:2026-09-03",
@@ -358,7 +400,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "6690.HK",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:7203.T:2026-08-05",
@@ -377,14 +422,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 29.2,
+      "margin_of_safety_pct": 28.9308,
       "primary_sector": "cyclical",
       "region": "japan",
       "tech_signal": "neutral",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "7203.T",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:AAPL:2026-07-25",
@@ -409,8 +459,13 @@
       "tech_signal": "bullish",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "AAPL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ACGL:2026-08-12",
@@ -438,7 +493,10 @@
       "harness_version": "2.4.0",
       "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ACGL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ACN:2026-08-10",
@@ -466,7 +524,10 @@
       "harness_version": "2.3.0",
       "harness_git_sha": "d1c0d8a3d6343e006c3700d9867074323dbd839e",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ACN",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ACN:2026-08-10__r2",
@@ -494,7 +555,10 @@
       "harness_version": "2.3.0",
       "harness_git_sha": "f0d43b33955ada64aace9cb824381476c453f061",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ACN",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ACN:2026-08-21",
@@ -522,7 +586,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ACN",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ACN:2026-08-29",
@@ -550,7 +617,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ACN",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:ADBE:2026-07-20",
@@ -575,8 +645,13 @@
       "tech_signal": "bearish",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "ADBE",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ADBE:2026-08-15",
@@ -604,7 +679,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ADBE",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ADBE:2026-09-03",
@@ -632,7 +710,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ADBE",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ADYEN:2026-08-05",
@@ -651,14 +732,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 12.23,
+      "margin_of_safety_pct": 12.2272,
       "primary_sector": "growth",
       "region": "eu_uk",
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "ADYEN",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ADYEN:2026-08-13",
@@ -686,7 +772,10 @@
       "harness_version": "2.5.0",
       "harness_git_sha": "81dec11b16a0ed5791aa5327a479c84f7171769b",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ADYEN.AS",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:ADYEN:2026-08-29",
@@ -714,7 +803,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ADYEN.AS",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:AVGO:2026-08-21",
@@ -742,7 +834,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "AVGO",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:AVGO:2026-08-22",
@@ -770,7 +865,41 @@
       "harness_version": "2.7.0",
       "harness_git_sha": "ca950d4d2d54ce40dfd3b94410e73b16b7410ea4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "AVGO",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:AVGO:2026-08-23",
+      "ticker": "AVGO",
+      "session_date": "2026-08-23",
+      "session_key": "2026-08-23",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/AVGO/2026-08-23",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": "cyclical",
+      "region": "us",
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.6",
+      "harness_version": "2.17.0",
+      "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "AVGO",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:AVGO:2026-08-23__r2",
@@ -798,7 +927,10 @@
       "harness_version": "2.17.0",
       "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "AVGO",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:AVGO:2026-08-23__r3",
@@ -826,7 +958,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "AVGO",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:AVGO:2026-09-01",
@@ -854,7 +989,41 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "ece88969b2bd5607ca440df613e3fab8edf616c9",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "AVGO",
+      "quote_listing_source": "snapshot"
+    },
+    {
+      "run_id": "research:BESI.AS:2026-08-25",
+      "ticker": "BESI.AS",
+      "session_date": "2026-08-25",
+      "session_key": "2026-08-25",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/BESI.AS/2026-08-25",
+      "audit_verdict": null,
+      "asof_price": 200.5,
+      "fv_bear": 33.75,
+      "fv_base": 52.93,
+      "fv_bull": 110.07,
+      "fv_weighted": 63.0,
+      "p_bear": 0.22,
+      "p_base": 0.53,
+      "p_bull": 0.25,
+      "margin_of_safety_pct": -278.8022,
+      "primary_sector": "cyclical",
+      "region": "eu_uk",
+      "tech_signal": "neutral",
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.6",
+      "harness_version": "2.19.0",
+      "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "BESI.AS",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:BESI.AS:2026-09-02",
@@ -882,7 +1051,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "b6e3b17ac325035fe2ebda9f54cfeef4fdb995e5",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "BESI.AS",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:BSX:2026-08-29",
@@ -910,7 +1082,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "BSX",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:CDI.PA:2026-09-04",
@@ -938,7 +1113,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CDI.PA",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:CELH:2026-08-06",
@@ -957,14 +1135,50 @@
       "p_bear": 0.28,
       "p_base": 0.47,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 12.15,
+      "margin_of_safety_pct": 12.1459,
       "primary_sector": "growth",
       "region": "us",
       "tech_signal": "neutral",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "CELH",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:CELH:2026-08-11",
+      "ticker": "CELH",
+      "session_date": "2026-08-11",
+      "session_key": "2026-08-11",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/CELH/2026-08-11",
+      "audit_verdict": null,
+      "asof_price": 27.209999,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": null,
+      "region": null,
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.5",
+      "harness_version": "2.4.0",
+      "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CELH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:CELH:2026-08-11__r2",
@@ -992,7 +1206,10 @@
       "harness_version": "2.4.0",
       "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CELH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:CELH:2026-08-11__r3",
@@ -1020,7 +1237,10 @@
       "harness_version": "2.4.0",
       "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CELH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:CELH:2026-08-23",
@@ -1048,7 +1268,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CELH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:CELH:2026-08-29",
@@ -1076,7 +1299,10 @@
       "harness_version": "2.25.0",
       "harness_git_sha": "0770228c13d4a73cd6e8c0931c7f1c0b24784a55",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CELH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:CMCSA:2026-07-25",
@@ -1095,14 +1321,50 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 28.23,
+      "margin_of_safety_pct": 23.0504,
       "primary_sector": "standard",
       "region": null,
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "CMCSA",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:CMCSA:2026-08-11",
+      "ticker": "CMCSA",
+      "session_date": "2026-08-11",
+      "session_key": "2026-08-11",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/CMCSA/2026-08-11",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": "standard",
+      "region": "us",
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "kimi-k2",
+      "harness_version": "2.4.0",
+      "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "CMCSA",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:COHR:2026-08-13",
@@ -1130,7 +1392,10 @@
       "harness_version": "2.5.0",
       "harness_git_sha": "81dec11b16a0ed5791aa5327a479c84f7171769b",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "COHR",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:COHR:2026-08-13__flatten-mid",
@@ -1158,7 +1423,41 @@
       "harness_version": "2.5.0",
       "harness_git_sha": "81dec11b16a0ed5791aa5327a479c84f7171769b",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "COHR",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:COHR:2026-08-24",
+      "ticker": "COHR",
+      "session_date": "2026-08-24",
+      "session_key": "2026-08-24",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/COHR/2026-08-24",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": "cyclical",
+      "region": "us",
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.6",
+      "harness_version": "2.19.0",
+      "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "COHR",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:COHR:2026-08-24__r2",
@@ -1186,7 +1485,41 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "COHR",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:COHR:2026-09-03",
+      "ticker": "COHR",
+      "session_date": "2026-09-03",
+      "session_key": "2026-09-03",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/COHR/2026-09-03",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": null,
+      "region": null,
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.5",
+      "harness_version": "2.33.0",
+      "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "COHR",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:EVTC:2026-08-30",
@@ -1214,7 +1547,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "EVTC",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:GOOG:2026-08-14",
@@ -1242,7 +1578,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GOOG",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:GOOGL:2026-08-23",
@@ -1270,7 +1609,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GOOGL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:GRAB:2026-08-09",
@@ -1289,14 +1631,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 36.9,
+      "margin_of_safety_pct": 36.8966,
       "primary_sector": "growth",
       "region": "us",
       "tech_signal": "neutral",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "GRAB",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:GRAB:2026-08-29",
@@ -1324,7 +1671,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GRAB",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:GT:2026-08-22",
@@ -1352,7 +1702,41 @@
       "harness_version": "2.7.0",
       "harness_git_sha": "ca950d4d2d54ce40dfd3b94410e73b16b7410ea4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GT",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:GT:2026-08-23",
+      "ticker": "GT",
+      "session_date": "2026-08-23",
+      "session_key": "2026-08-23",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/GT/2026-08-23",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": "cyclical",
+      "region": "us",
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.6",
+      "harness_version": "2.17.0",
+      "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GT",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:GT:2026-08-23__r2",
@@ -1380,7 +1764,10 @@
       "harness_version": "2.17.0",
       "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GT",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:GT:2026-08-23__r3",
@@ -1408,7 +1795,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "GT",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ISRG:2026-08-30",
@@ -1436,7 +1826,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ISRG",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:JPM:2026-07-25",
@@ -1455,14 +1848,19 @@
       "p_bear": 0.2,
       "p_base": 0.55,
       "p_bull": 0.25,
-      "margin_of_safety_pct": -29.9,
+      "margin_of_safety_pct": -33.7511,
       "primary_sector": "banking",
       "region": null,
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "JPM",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:LULU:2026-07-26",
@@ -1481,14 +1879,19 @@
       "p_bear": 0.3,
       "p_base": 0.5,
       "p_bull": 0.2,
-      "margin_of_safety_pct": 34.05,
+      "margin_of_safety_pct": 29.756,
       "primary_sector": "standard",
       "region": null,
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "LULU",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:LULU:2026-08-24",
@@ -1516,7 +1919,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "LULU",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:LULU:2026-09-03",
@@ -1544,7 +1950,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "LULU",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:MC.PA:2026-08-04",
@@ -1563,14 +1972,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": -12.23,
+      "margin_of_safety_pct": -12.233,
       "primary_sector": "cyclical",
       "region": "eu_uk",
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "MC.PA",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:MC.PA:2026-08-16",
@@ -1598,7 +2012,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "MC.PA",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:MC.PA:2026-09-03",
@@ -1626,7 +2043,10 @@
       "harness_version": "2.33.0",
       "harness_git_sha": "dc5b11f6612d5dd29111eb21211ddece35a97a13",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "MC.PA",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:MELI:2026-08-06",
@@ -1645,14 +2065,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 108.0,
+      "margin_of_safety_pct": 1.081,
       "primary_sector": "growth",
       "region": "us",
       "tech_signal": "neutral",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "MELI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:MELI:2026-08-16",
@@ -1680,7 +2105,41 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "MELI",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:MELI:2026-08-23",
+      "ticker": "MELI",
+      "session_date": "2026-08-23",
+      "session_key": "2026-08-23",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/MELI/2026-08-23",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": "standard",
+      "region": "us",
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.6",
+      "harness_version": "2.17.0",
+      "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "MELI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:MELI:2026-08-23__r2",
@@ -1708,7 +2167,10 @@
       "harness_version": "2.17.0",
       "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "MELI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:MELI:2026-08-24",
@@ -1736,7 +2198,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "MELI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:META:2026-07-30",
@@ -1755,14 +2220,19 @@
       "p_bear": 0.25,
       "p_base": 0.5,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 3.49,
+      "margin_of_safety_pct": 2.3072,
       "primary_sector": "standard",
       "region": null,
       "tech_signal": "bearish",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "META",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:META:2026-08-03",
@@ -1781,14 +2251,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": -17.65,
+      "margin_of_safety_pct": -17.6493,
       "primary_sector": "standard",
       "region": null,
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.1.0",
+      "harness_git_sha": "b2cd4e25e6083baabda9276724d954f32f9e2182",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "META",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:META:2026-08-14",
@@ -1816,7 +2291,41 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "META",
+      "quote_listing_source": "ticker"
+    },
+    {
+      "run_id": "research:META:2026-08-23",
+      "ticker": "META",
+      "session_date": "2026-08-23",
+      "session_key": "2026-08-23",
+      "is_production": true,
+      "slug": null,
+      "path": "archive/research/META/2026-08-23",
+      "audit_verdict": null,
+      "asof_price": null,
+      "fv_bear": null,
+      "fv_base": null,
+      "fv_bull": null,
+      "fv_weighted": null,
+      "p_bear": null,
+      "p_base": null,
+      "p_bull": null,
+      "margin_of_safety_pct": null,
+      "primary_sector": "standard",
+      "region": "us",
+      "tech_signal": null,
+      "experiment_id": null,
+      "orchestrator_model": "grok-4.6",
+      "harness_version": "2.17.0",
+      "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
+      "has_prediction_snapshot": true,
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "META",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:META:2026-08-23__r2",
@@ -1844,7 +2353,10 @@
       "harness_version": "2.17.0",
       "harness_git_sha": "16a974092d76386c631b2decec5c5e7e221762a7",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "META",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:META:2026-08-23__r3",
@@ -1872,7 +2384,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "META",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:NCLH:2026-08-22",
@@ -1900,7 +2415,10 @@
       "harness_version": "2.7.0",
       "harness_git_sha": "ca950d4d2d54ce40dfd3b94410e73b16b7410ea4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "NCLH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:NCLH:2026-08-23",
@@ -1928,7 +2446,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "NCLH",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:NKE:2026-08-29",
@@ -1956,7 +2477,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "NKE",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:NVO:2026-08-11",
@@ -1984,7 +2508,10 @@
       "harness_version": "2.4.0",
       "harness_git_sha": "d02166b05310673f32298efb3be5e8e48cfc999f",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "NVO",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:NVT:2026-08-08",
@@ -2003,14 +2530,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": -66.67,
+      "margin_of_safety_pct": -66.6734,
       "primary_sector": "cyclical",
       "region": "us",
       "tech_signal": "neutral",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "NVT",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ORCL:2026-08-03",
@@ -2029,14 +2561,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": 17.54,
+      "margin_of_safety_pct": 17.3269,
       "primary_sector": "standard",
       "region": null,
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "ORCL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:ORCL:2026-08-23",
@@ -2064,7 +2601,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "ORCL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:PYPL:2026-08-10",
@@ -2092,7 +2632,10 @@
       "harness_version": "2.3.0",
       "harness_git_sha": "f0d43b33955ada64aace9cb824381476c453f061",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "PYPL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:PYPL:2026-08-15",
@@ -2120,7 +2663,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "PYPL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:QCOM:2026-08-15",
@@ -2148,7 +2694,10 @@
       "harness_version": "2.6.0",
       "harness_git_sha": "06fd91a0b197730a78c3f187e60bc6d0d8866521",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "QCOM",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:SLVM:2026-08-30",
@@ -2176,7 +2725,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "SLVM",
+      "quote_listing_source": "snapshot"
     },
     {
       "run_id": "research:SOFI:2026-08-09",
@@ -2195,14 +2747,19 @@
       "p_bear": 0.3,
       "p_base": 0.5,
       "p_bull": 0.2,
-      "margin_of_safety_pct": -41.28,
+      "margin_of_safety_pct": -41.2759,
       "primary_sector": "banking",
       "region": "us",
       "tech_signal": "neutral",
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "SOFI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:SOFI:2026-08-10",
@@ -2230,7 +2787,10 @@
       "harness_version": "2.2.1",
       "harness_git_sha": "1629d77132d64614c6dc2a54c282256b53ac5835",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "SOFI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:SOFI:2026-08-10__r2",
@@ -2258,7 +2818,10 @@
       "harness_version": "2.2.1",
       "harness_git_sha": "1629d77132d64614c6dc2a54c282256b53ac5835",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "SOFI",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:SQM:2026-08-24",
@@ -2286,7 +2849,10 @@
       "harness_version": "2.19.0",
       "harness_git_sha": "eff17ce293df7487a0527afb2af091099bddf379",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "SQM",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:TGLS:2026-08-29",
@@ -2314,7 +2880,10 @@
       "harness_version": "2.25.0",
       "harness_git_sha": "0770228c13d4a73cd6e8c0931c7f1c0b24784a55",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "TGLS",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:VITL:2026-08-22",
@@ -2342,7 +2911,10 @@
       "harness_version": "2.7.0",
       "harness_git_sha": "ca950d4d2d54ce40dfd3b94410e73b16b7410ea4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "VITL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:VITL:2026-08-23",
@@ -2370,7 +2942,10 @@
       "harness_version": "2.18.1",
       "harness_git_sha": "139d7d3842b60453993abe0ef7eda6e2e20a11a4",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "VITL",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:VST:2026-08-08",
@@ -2389,14 +2964,19 @@
       "p_bear": 0.3,
       "p_base": 0.45,
       "p_bull": 0.25,
-      "margin_of_safety_pct": -92.56,
+      "margin_of_safety_pct": -92.5627,
       "primary_sector": "cyclical",
       "region": "us",
       "tech_signal": null,
       "experiment_id": null,
       "orchestrator_model": null,
+      "harness_version": "2.38.0",
+      "harness_git_sha": "6a7c74e12eb5d24fe6e1ee6e2a628ba1dccc3379",
       "has_prediction_snapshot": true,
-      "has_outcomes": true
+      "has_outcomes": true,
+      "quote_symbol": null,
+      "quote_listing": "VST",
+      "quote_listing_source": "ticker"
     },
     {
       "run_id": "research:WHR:2026-08-30",
@@ -2424,7 +3004,10 @@
       "harness_version": "2.26.0",
       "harness_git_sha": "cde6a6ea2e7faeebb0e0d6a4989f2643f47fd6a2",
       "has_prediction_snapshot": true,
-      "has_outcomes": false
+      "has_outcomes": false,
+      "quote_symbol": null,
+      "quote_listing": "WHR",
+      "quote_listing_source": "snapshot"
     }
   ]
 }

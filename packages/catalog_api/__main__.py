@@ -11,6 +11,7 @@ from packages.catalog_api.client import (
     CompareNotFound,
     DbMissing,
     RunNotFound,
+    SchemaStale,
     default_archive_root,
 )
 
@@ -46,6 +47,11 @@ def main(argv: list[str] | None = None) -> int:
     p_list.add_argument("--dir", choices=["asc", "desc"], help="Sort direction")
     p_list.add_argument("--limit", type=int, default=20)
     p_list.add_argument("--offset", type=int, default=0)
+    p_list.add_argument(
+        "--comparable-only",
+        action="store_true",
+        help="Only runs with fv_base (compare/portfolio pickers)",
+    )
 
     p_get = sub.add_parser("get-run", help="Get one run by run_id")
     p_get.add_argument("run_id")
@@ -101,6 +107,7 @@ def main(argv: list[str] | None = None) -> int:
                 dir=args.dir,
                 limit=args.limit,
                 offset=args.offset,
+                comparable_only=bool(args.comparable_only),
             )
             print(json.dumps(rows, indent=2, default=str))
             return 0
@@ -133,6 +140,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.cmd == "get-compare":
             print(json.dumps(api.get_compare(args.compare_id), indent=2, default=str))
             return 0
+    except SchemaStale as e:
+        print(f"Schema stale: {e}", file=sys.stderr)
+        return 2
     except DbMissing as e:
         print(f"DB missing: {e}", file=sys.stderr)
         return 2

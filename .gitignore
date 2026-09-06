@@ -49,7 +49,7 @@ out.log
 
 # Research session trees (large: filings, prices, charts, raw dumps).
 # Keep on disk under archive/research/; do not version in git.
-# Catalog JSON indexes + archive/README.md remain tracked; SQLite is rebuildable.
+# Catalog indexes (JSON, jsonl, schema_version, SQLite) are rebuildable.
 archive/research/
 archive/outcomes/
 archive/library/
@@ -57,6 +57,9 @@ archive/comparisons/
 archive/research_jobs/
 archive/.grok_jobs.lock
 eng/fixtures/archive/library/**
+archive/catalog/*.json
+archive/catalog/*.jsonl
+archive/catalog/schema_version
 archive/catalog/*.sqlite
 archive/catalog/*.sqlite-*
 

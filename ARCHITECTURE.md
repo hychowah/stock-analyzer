@@ -108,7 +108,7 @@ archive/research/<TICKER>/<SESSION_KEY>/
 
 `SESSION_KEY` is usually the as-of date (`2026-09-05`). A second run the same day becomes `2026-09-05__r2`. Named experiments use a slug: `2026-09-05__model-a`.
 
-**Git:** do not commit `archive/research/`, `archive/outcomes/`, `archive/library/`, `archive/comparisons/`, `archive/research_jobs/`, or catalog SQLite. Do commit harness code and thin catalog JSON. Offline tests may point `ARCHIVE_ROOT` at `eng/fixtures/archive/` (same layout; bulk trees are generated, not versioned).
+**Git:** do not commit `archive/research/`, `archive/outcomes/`, `archive/library/`, `archive/comparisons/`, `archive/research_jobs/`, or `archive/catalog/` indexes (JSON, jsonl, schema_version, SQLite). Those indexes are rebuildable on disk. Do commit harness code. Offline tests may point `ARCHIVE_ROOT` at `eng/fixtures/archive/` (same layout; bulk trees are generated, not versioned).
 
 ---
 

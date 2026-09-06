@@ -10,10 +10,10 @@ archive/
 ├── comparisons/<TICKER>/<packet>/  # session-valuation-audit packets (append-only)
 ├── research_jobs/<TICKER>/<SESSION_KEY>/  # Analyze control plane (job.json; not a catalog source)
 ├── catalog/
-│   ├── runs_index.json           # thin path index (rebuildable)
-│   ├── tickers_index.json        # per-ticker latest + history
-│   ├── research_compare.sqlite   # comparison warehouse (rebuildable; gitignored)
-│   └── migration_log.jsonl       # session moves from legacy root paths
+│   ├── runs_index.json           # thin path index (rebuildable; not in git)
+│   ├── tickers_index.json        # per-ticker latest + history (rebuildable; not in git)
+│   ├── research_compare.sqlite   # comparison warehouse (rebuildable; not in git)
+│   └── migration_log.jsonl       # session moves from legacy root paths (not in git)
 ├── research/
 │   └── <TICKER>/<SESSION_KEY>/  # YYYY-MM-DD or YYYY-MM-DD__rN / __slug
 │       ├── reports/
@@ -36,7 +36,7 @@ archive/
 5. **Comparison DB** — after Phase 5, export with `python3 scripts/export_compare_db.py` (see below). Plan: `harness/plan_research_compare_db.md`.
 6. **Outcomes** record whether past calls were right; they never rewrite valuation JSON.
 7. Design plan (layout): `harness/plan_research_archive_layout.md`.
-8. **Not in git:** `archive/research/`, `archive/outcomes/`, `archive/comparisons/`, `archive/research_jobs/`, and `*.sqlite` under catalog. Session trees are large. Commit harness code + thin catalog JSON, not full sessions, compare packets, Analyze job control, or the SQLite binary.
+8. **Not in git:** `archive/research/`, `archive/outcomes/`, `archive/comparisons/`, `archive/research_jobs/`, and `archive/catalog/` (JSON indexes, jsonl, schema_version, SQLite). Session trees are large. Indexes are caches — rebuild with `rebuild_catalog.py` / `export_compare_db.py`. Commit harness code, not sessions, compare packets, Analyze job control, or catalog caches.
 9. **Compares** are post-finalize audits of two named sessions. They never rewrite research folders. UI: `/compares`. CLI: `python -m packages.compare_jobs`.
 10. **Analyze jobs** (`archive/research_jobs/`) are Mode B control plane (PID, prompt, status). Not rebuildable from sessions; not a catalog source; backup = disk next to archive. Grok writes `archive/research/`; FastAPI does not author FV. CLI: `python -m packages.research_jobs`.
 

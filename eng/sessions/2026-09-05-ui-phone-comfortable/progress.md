@@ -15,3 +15,4 @@
 - slice 2 stack-tables: entity lists as cards; Health excluded; pytest 174, smoke_stack.py OK
 - slice 3 narrow-controls: Filters disclose reuses the checkbox module; form.filters label.disclose-btn beats label {display:flex}; smoke_controls.py OK
 - eng_verify PASS (765); session complete; do not merge
+- follow-up: isolate disclose (show/hide only; header wrap on .header-nav; field labels are .filters-row label)

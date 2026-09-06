@@ -5,20 +5,22 @@
   <h1>Calibration</h1>
   <p class="muted">MoS direction hit vs realized outcomes (sqlite join)</p>
   <form class="filters" method="get" action="/calibration">
-    <label>Horizon
-      <select name="horizon">
-        {% for h in ['1d','1w','1m','3m'] %}
-        <option value="{{ h }}" {% if h == horizon %}selected{% endif %}>{{ h }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <label>Audit PASS filter (process completeness, not a buy list)
-      <select name="pass_only">
-        <option value="0" {% if not pass_only %}selected{% endif %}>no</option>
-        <option value="1" {% if pass_only %}selected{% endif %}>yes</option>
-      </select>
-    </label>
-    <button type="submit">Update</button>
+    <div class="filters-row">
+      <label>Horizon
+        <select name="horizon">
+          {% for h in ['1d','1w','1m','3m'] %}
+          <option value="{{ h }}" {% if h == horizon %}selected{% endif %}>{{ h }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Audit PASS filter (process completeness, not a buy list)
+        <select name="pass_only">
+          <option value="0" {% if not pass_only %}selected{% endif %}>no</option>
+          <option value="1" {% if pass_only %}selected{% endif %}>yes</option>
+        </select>
+      </label>
+      <button type="submit">Update</button>
+    </div>
   </form>
   <p>Joined rows: <strong>{{ report.n_joined }}</strong>
      · overall hit rate: <strong>{{ overall_hit }}</strong>

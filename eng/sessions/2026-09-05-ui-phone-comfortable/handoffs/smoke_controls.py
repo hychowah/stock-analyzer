@@ -75,7 +75,7 @@ def main() -> int:
         time.sleep(0.2)
         expect(
             fails,
-            style(d, "#filters-extra", "display") == "flex",
+            style(d, "#filters-extra", "display") == "block",
             f"phone Filters open ({style(d, '#filters-extra', 'display')})",
         )
         expect(

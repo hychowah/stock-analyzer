@@ -43,8 +43,9 @@ Keep the existing **800px** breakpoint. Do not add a second policy. Leave harnes
 One CSS contract, introduced in slice 1, reused in slice 3:
 
 - Hidden checkbox (`.disclose`) + label (`.disclose-btn`) + sibling panel (`.disclose-panel`).
-- Desktop: label hidden; panel always shown (existing layout).
-- Phone (800px): label shown (≥44px); panel hidden until `:checked`.
+- Show/hide only. Desktop: label hidden; panel keeps its own display. Phone: label shown (≥44px); panel `display:none` until `:checked`, then `display:block`.
+- Header wrap (`flex-basis` / `order` / column flex) lives on `.header-nav`, not the generic panel.
+- Field chrome is `form.filters .filters-row label` so a disclose `<label>` is not a field. A disclose checkbox inside a form must not have `name`.
 - Comment this contract next to the rules. Do not invent a second checkbox hack for Filters.
 
 ## Slices (3)

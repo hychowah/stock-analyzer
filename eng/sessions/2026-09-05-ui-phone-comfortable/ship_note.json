@@ -12,6 +12,6 @@
   "risks": [
     "Column sort is desktop-only (thead hidden on phone).",
     "Secondary Runs/Portfolio columns are hidden on phone; values remain on desktop and run-detail.",
-    "form.filters label { display:flex } must stay weaker than form.filters label.disclose-btn or the Filters control shows on desktop."
+    "Disclose is show/hide only; header wrap lives on .header-nav. Field labels are .filters-row label."
   ]
 }

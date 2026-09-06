@@ -263,21 +263,23 @@ class PhoneChromeTests(unittest.TestCase):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
-        self.assertIn(".disclose-btn", css)
+        self.assertRegex(css, r"\.disclose-btn\s*\{[^}]*display:\s*none")
         self.assertIn(".disclose-panel", css)
-        self.assertIn(".disclose:checked ~ .disclose-panel", css)
-        media = re.search(
-            r"@media\s*\(max-width:\s*800px\)\s*\{([\s\S]*?)\n\}",
+        self.assertRegex(
+            css,
+            r"\.disclose:checked\s*~\s*\.disclose-panel\s*\{[^}]*display:\s*block",
+        )
+        self.assertIn(".header-nav .disclose-panel", css)
+        self.assertIn(".header-nav .disclose:checked ~ .disclose-panel", css)
+        self.assertIn("flex-basis: 100%", css)
+        generic_panel = re.search(
+            r"(?<!nav )\.disclose-panel\s*\{([^}]+)\}",
             css,
         )
-        self.assertIsNotNone(media)
-        # First 800px block is chrome/disclose (tagline + Menu).
-        inner = media.group(1)
-        self.assertIn(".header-tagline", inner)
-        self.assertIn("display: none", inner)
-        self.assertIn(".disclose-btn", inner)
-        self.assertIn(".disclose-panel", inner)
-        self.assertIn("min-height: 44px", inner)
+        self.assertIsNotNone(generic_panel)
+        self.assertIn("display: none", generic_panel.group(1))
+        self.assertNotIn("flex-basis", generic_panel.group(1))
+        self.assertNotIn("form.filters label.disclose-btn", css)
         self.assertNotRegex(
             css, r"\.header-links\s*\{[^}]*display:\s*none"
         )
@@ -334,6 +336,9 @@ class PhoneControlsTests(unittest.TestCase):
         self.assertIn('name="sort"', always)
         self.assertIn('name="dir"', always)
         self.assertIn('id="runs-reset"', always)
+        open_tag = re.search(r"<input[^>]*id=\"filters-open\"[^>]*>", html)
+        self.assertIsNotNone(open_tag)
+        self.assertNotIn("name=", open_tag.group(0))
 
     def test_stack_form_on_analyze_new(self):
         html = (
@@ -348,7 +353,8 @@ class PhoneControlsTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn(".header-nav .disclose-btn", css)
-        self.assertIn("form.filters label.disclose-btn", css)
+        self.assertIn("form.filters .filters-row label", css)
+        self.assertNotIn("form.filters label.disclose-btn", css)
         self.assertIn(".compare-form select", css)
         self.assertIn(".stack-form", css)
         self.assertIn('input:not([type="checkbox"]):not([type="hidden"])', css)

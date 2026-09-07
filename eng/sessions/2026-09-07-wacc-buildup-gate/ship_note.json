@@ -1,0 +1,17 @@
+{
+  "summary": "Shipped harness 2.40.0 wacc_buildup identity so new Mode A runs cannot repeat the CMCSA coupon-as-Kd / trough-weight / 6% WACC failure. Six investing-persona reviews first. Shared checker, not a pasted rate. Completed research sessions untouched (CMCSA 2.39 SKIPPED).",
+  "verify_commands_run": [
+    "python -m pytest packages/kd_research/tests/test_wacc_buildup.py -q",
+    "python -m pytest packages/kd_research/tests/test_check_catalog.py packages/kd_research/tests/test_law_surface_freeze.py packages/kd_research/tests/test_gates_preflight.py packages/kd_research/tests/test_workflow_spec.py -q",
+    "python scripts/publish_harness_release.py",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Later wave: fv_at_implied_wacc dollar tail (Risk PM), lease-weight vs roic_identity.leases, Hamada at target weights.",
+    "New Analyze runs on 2.40.0 pick this up; do not rewrite CMCSA 2026-09-07."
+  ],
+  "risks": [
+    "rf_plus_spread with a thin but legal spread plus a structural_leverage_hatch essay can still print a low WACC; Agent 13 4-wacc is the substance grade.",
+    "Utilities with YTM a few bp through the 10Y need kd_spread_hatch or current_yield with Kd >= Rf; negative_rate_market is Japan-only."
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "goal": "Ship harness 2.40.0 WACC-buildup identity so new Mode A runs cannot repeat the CMCSA coupon-as-Kd / trough-weight / 6% WACC failure. Persona review first; then law + prompt + schema + machine gate + tests. Do not rewrite completed research sessions.",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not hardcode a WACC, ERP, or Kd number as the correct rate",
+    "Do not rewrite CMCSA 2026-09-07 or any other completed session"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "Six investing-persona memos plus synthesis exist under handoffs/",
+    "New runtime requires valuation_model.wacc_buildup (or applies:false with reason)",
+    "Machine FAIL when pretax Kd is below session Rf without a named hatch",
+    "Coupon is illegal as the WACC Kd input; kd_source is current_yield or rf_plus_spread",
+    "Going-concern DCF cannot use trough current-market weights alone when distressed-equity tripwire fires",
+    "Agent 5 and Agent 13 prompts name the identity; no pasted WACC table",
+    "Legacy sessions SKIPPED; pytest + eng_verify green; harness/VERSION bumped to 2.40.0"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest packages/kd_research/tests/test_wacc_buildup.py -q",
+    "python scripts/eng_verify.py"
+  ]
+}

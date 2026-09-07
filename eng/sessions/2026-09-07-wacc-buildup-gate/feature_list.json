@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue.json; write 00_assignment.md; spawn six investing-persona reviewers",
+      "passes": true,
+      "verify": "handoffs/00_assignment.md exists and issue.json success_criteria is specific"
+    },
+    {
+      "id": "persona_review",
+      "description": "Six persona memos + 99_synthesis.md; absorb load-bearing comments into the 2.40 design",
+      "passes": true,
+      "verify": "handoffs/01 through 06 plus 99_synthesis.md exist"
+    },
+    {
+      "id": "gate",
+      "description": "§10e law + Agent 5/13 prompts + schema + wacc_buildup.py checker + tests + VERSION 2.40.0",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_wacc_buildup.py -q"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks; ship_note.json",
+      "passes": true,
+      "verify": "ship_note.json present when complete; eng_verify green"
+    }
+  ]
+}

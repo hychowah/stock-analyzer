@@ -1,0 +1,9 @@
+{
+  "slug": "wacc-buildup-gate",
+  "session_key": "2026-09-07-wacc-buildup-gate",
+  "status": "complete",
+  "created_at": "2026-09-07T13:55:43Z",
+  "updated_at": "2026-09-07T15:30:00Z",
+  "work_type": "W1",
+  "resume_hint": "2.40.0 shipped. Read handoffs/99_synthesis.md. Do not rewrite CMCSA 2026-09-07. Commit only if the user agrees."
+}

@@ -60,11 +60,11 @@ Runs list (`/`): type in Ticker to filter **starts-with** (`ticker_prefix`). Sec
 
 Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`. Default `limit=50` is omitted from the query string. Empty `/` is the catalog dump (no `latest`). `/?latest=1` is at most one row per ticker after the other filters.
 
-Header **Runs** and run-detail **← Runs** remember the last non-empty query (browser `localStorage`) so leaving to Analyze or a run and coming back keeps sort/filter. Empty `/` is still the default list (storage is not replayed). **Reset** is the only clear. A pasted query URL becomes the new memory.
+Header **Runs**, the brand, and run-detail **← Runs** remember the last non-empty query (browser `localStorage`). When storage is empty, those chrome links go to `/?latest=1` (one row per ticker). Empty `/` and **Reset** stay the All dump and are not rewritten from storage. A pasted query URL becomes the new memory.
 
 Header **Night** / **Light** switches page chrome. The choice is browser-local (`localStorage` key `analysis_web.theme`), not archive. First visit follows the OS light/dark setting until you click.
 
-The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **Lab** (Harness, Architecture, Experiments, Calibration, Health). Below 1100px (the same width as `main`) the tagline hides and each group sits behind its own **Menu** / **Lab** control (CSS checkbox; no extra JS). Wide one-entity lists (Runs, Portfolio positions, Analyze jobs, Compares, Experiments, Calibration) restyle as stacked cards; secondary Runs/Portfolio columns hide. On Runs, ticker + Filter + Reset stay visible; extra filters sit behind **Filters** (same checkbox pattern; collapsed is not omitted — live search still serializes every field). Desktop (`min-width: 1101px`) hides the disclose checkboxes so they are not tab stops.
+The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **Lab** (Harness, Architecture, Experiments, Calibration, Health). Below 1100px (the same width as `main`) the tagline hides and each group sits behind its own **Menu** / **Lab** control (CSS checkbox; no extra JS). Wide one-entity lists (Runs, Portfolio positions, Analyze jobs, Compares, Experiments, Calibration) restyle as stacked cards; secondary Runs/Portfolio columns hide. On Runs, ticker + **Apply** + **Reset** stay visible; extra filters sit behind **Filters** (same checkbox pattern; collapsed is not omitted — live search still serializes every field). Desktop (`min-width: 1101px`) hides the disclose checkboxes so they are not tab stops.
 
 | Param | Meaning |
 |-------|---------|

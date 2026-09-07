@@ -144,6 +144,37 @@ def _insert_run(
     conn.close()
 
 
+class RunningBannerTests(unittest.TestCase):
+    def test_running_analyzes_caps_and_skips_done(self):
+        from unittest.mock import patch
+
+        from apps.analysis_web.services.running import running_analyzes
+
+        jobs = [
+            {"status": "running", "ticker": "A", "analyze_id": "analyze:A:1"},
+            {"status": "queued", "ticker": "B", "analyze_id": "analyze:B:1"},
+            {"status": "complete", "ticker": "C", "analyze_id": "analyze:C:1"},
+            {"status": "running", "ticker": "D", "analyze_id": "analyze:D:1"},
+            {"status": "running", "ticker": "E", "analyze_id": "analyze:E:1"},
+        ]
+        with patch("packages.research_jobs.jobs.list_analyzes", return_value=jobs):
+            out, extra = running_analyzes(cap=3)
+        self.assertEqual([j["ticker"] for j in out], ["A", "B", "D"])
+        self.assertEqual(out[0]["href"], "/analyze/analyze:A:1")
+        self.assertEqual(extra, 1)
+
+
+class DurationLabelTests(unittest.TestCase):
+    def test_pass_is_do_not_initiate(self):
+        from apps.analysis_web.templating import cheap_claim_label, duration_label
+
+        self.assertEqual(duration_label("pass"), "Do not initiate")
+        self.assertEqual(duration_label("too_hard"), "Too hard")
+        self.assertEqual(duration_label("initiate"), "Initiate")
+        self.assertEqual(duration_label(""), "")
+        self.assertEqual(cheap_claim_label("franchise_mos"), "Franchise MoS")
+
+
 def _css_rule_bodies(css: str, selector: str) -> str:
     bodies = []
     for chunk in css.split("}"):
@@ -557,6 +588,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"Harness", r.content)
         self.assertIn(b"2.5.0", r.content)
         self.assertIn(b"stack-table", r.content)
+        self.assertNotIn(b"Analyze running", r.content)
         self.assertIn(b'data-label="Ticker"', r.content)
         self.assertIn(b'id="runs-status"', r.content)
         self.assertIn(b'id="runs-flash"', r.content)
@@ -1020,11 +1052,16 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'name="latest"', r.content)
         self.assertNotIn(b'name="latest" value="1"', r.content)
         self.assertIn(b'href="/?latest=1"', r.content)
+        self.assertIn(b'class="brand" href="/?latest=1"', r.content)
+        self.assertIn(b'id="nav-runs" href="/?latest=1"', r.content)
+        self.assertIn(b">Apply</button>", r.content)
+        self.assertNotIn(b">Filter</button>", r.content)
+        self.assertIn(b"Duration = stored action", r.content)
         self.assertIn(b"Duration", r.content)
         self.assertIn(b"Audit (process)", r.content)
         self.assertRegex(
             r.text,
-            r'data-label="Duration"[^>]*>\s*<span class="cell-label">Duration</span>\s*pass\s*<',
+            r'data-label="Duration"[^>]*>\s*<span class="cell-label">Duration</span>\s*Do not initiate\s*<',
         )
         self.assertNotRegex(
             r.text,
@@ -1102,6 +1139,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn('DEFAULT_LIMIT = "50"', js)
         self.assertIn('key === "limit" && v === DEFAULT_LIMIT', js)
         self.assertIn("if (s) {\n      writeStored(s);", js)
+        self.assertIn('return "/?latest=1"', js)
+        self.assertIn("isLatestGrain", Path(__file__).resolve().parents[1].joinpath("static", "compares.js").read_text(encoding="utf-8"))
         self.assertNotIn("window.RunsMemory", js)
         self.assertNotIn("QUERY_KEY_SET", js)
         self.assertIn('id="nav-runs"', base)

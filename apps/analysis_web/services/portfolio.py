@@ -118,7 +118,7 @@ def load_book(path: Path | None = None) -> PortfolioBook:
     if not p.is_file():
         return PortfolioBook(
             path=p,
-            error=f"No book at {p}. Copy portfolio.example.json → .local/portfolio.json",
+            error="No IB book yet. Import an activity statement or copy portfolio.example.json to .local/.",
         )
     try:
         raw = json.loads(p.read_text(encoding="utf-8"))

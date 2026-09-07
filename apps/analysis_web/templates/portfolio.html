@@ -7,7 +7,6 @@
   <h1>Portfolio{% if view.name %} · {{ view.name }}{% endif %}</h1>
   <p class="muted">
     {% if view.ib %}IB statement + catalog overlay{% else %}Book + latest catalog join{% endif %}
-    {% if view.path %} · <span class="mono">{{ view.path }}</span>{% endif %}
     · live
   </p>
   <form class="filters" method="get" action="/portfolio">
@@ -25,8 +24,6 @@
   <p class="err">{{ view.error }}</p>
   {% if not view.ib %}
   <p>Import an IB activity statement.</p>
-  <p class="muted">Expected book: <code>{{ view.path or 'apps/analysis_web/.local/portfolio.sqlite' }}</code>
-    · JSON fallback: <code>apps/analysis_web/.local/portfolio.json</code></p>
   {% endif %}
   {% endif %}
   {% if view.ib %}
@@ -175,7 +172,7 @@
             {% if p.fv_bear is not none %}data-fv-bear="{{ p.fv_bear }}"{% endif %}
             {% if p.asof_price is not none %}data-asof-price="{{ p.asof_price }}"{% endif %}
             {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ cell_label("Downside") }}{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
-        <td data-label="Duration">{{ cell_label("Duration") }}{% if p.decision_action %}{{ p.decision_action }}{% else %}—{% endif %}</td>
+        <td class="decision" data-label="Duration"{% if p.decision_action %} title="{{ p.decision_action }}"{% endif %}>{{ cell_label("Duration") }}{% if p.decision_action %}{{ p.decision_action | duration_label }}{% else %}—{% endif %}</td>
         <td data-label="Audit">{{ cell_label("Audit") }}{{ p.audit_verdict | verdict_badge }}</td>
         <td class="desktop-only" data-label="Tech">{{ cell_label("Tech") }}{{ p.tech_signal or '' }}</td>
         <td class="mono muted" data-label="Session">{{ cell_label("Session") }}{{ p.session_key or '—' }}</td>

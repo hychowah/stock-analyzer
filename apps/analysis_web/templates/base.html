@@ -12,7 +12,7 @@
 <body {% block body_attrs %}{% endblock %}>
   <a class="skip-link" href="#content">Skip to content</a>
   <header>
-    <a class="brand" href="/">Stock Research</a>
+    <a class="brand" href="/?latest=1">Stock Research</a>
     <span class="header-tagline">completed runs · start analysis · compare sessions</span>
     {# Two disclose instances (Menu / Lab), not a new widget. Each checkbox+label+panel is wrapped so :checked ~ .disclose-panel cannot open the other group. Wave 5 still hides .disclose on desktop. #}
     <div class="header-nav">
@@ -20,7 +20,7 @@
         <input type="checkbox" id="nav-open" class="disclose" aria-controls="site-nav"/>
         <label for="nav-open" class="disclose-btn">{{ nav.menu if nav is defined else 'Menu' }}</label>
         <nav id="site-nav" class="header-links disclose-panel" aria-label="Primary">
-          <a id="nav-runs" href="/"{% if nav is defined and nav.current == 'runs' %} aria-current="page"{% endif %}>Runs</a>
+          <a id="nav-runs" href="/?latest=1"{% if nav is defined and nav.current == 'runs' %} aria-current="page"{% endif %}>Runs</a>
           <a href="/analyze"{% if nav is defined and nav.current == 'analyze' %} aria-current="page"{% endif %}>Analyze</a>
           <a href="/compares"{% if nav is defined and nav.current == 'compare' %} aria-current="page"{% endif %}>Compare</a>
           <a href="/portfolio"{% if nav is defined and nav.current == 'portfolio' %} aria-current="page"{% endif %}>Portfolio</a>

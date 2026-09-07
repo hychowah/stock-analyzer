@@ -226,6 +226,9 @@ class PortfolioHttpTests(unittest.TestCase):
         r = self.client.get("/portfolio")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Import an IB activity statement.", r.content)
+        self.assertIn(b"No IB book yet", r.content)
+        self.assertNotIn(b"No book at", r.content)
+        self.assertNotIn(b"apps/analysis_web/.local", r.content)
         self.assertNotIn(b"python -m apps.analysis_web.import_ib", r.content)
 
 

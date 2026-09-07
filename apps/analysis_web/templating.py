@@ -91,6 +91,55 @@ def verdict_badge(v: Any) -> Markup:
     return Markup(f'<span class="badge {cls}">{escape(s or "—")}</span>')
 
 
+_DURATION_LABELS: dict[str, str] = {
+    "pass": "Do not initiate",
+    "too_hard": "Too hard",
+    "initiate": "Initiate",
+    "add": "Add",
+    "hold": "Hold",
+    "trim": "Trim",
+    "sell": "Sell",
+    "short": "Short",
+}
+
+_CHEAP_CLAIM_LABELS: dict[str, str] = {
+    "franchise_mos": "Franchise MoS",
+    "equity_near_book": "Equity near book",
+    "residual_option": "Residual option",
+    "not_cheap": "Not cheap",
+}
+
+
+def duration_label(v: Any) -> str:
+    """English duration.action. Stored token is unchanged."""
+    s = str(v or "").strip()
+    if not s:
+        return ""
+    if s in _DURATION_LABELS:
+        return _DURATION_LABELS[s]
+    return s.replace("_", " ").replace("-", " ").title()
+
+
+def cheap_claim_label(v: Any) -> str:
+    """English cheap_claim.class. Stored token is unchanged."""
+    s = str(v or "").strip()
+    if not s:
+        return ""
+    if s in _CHEAP_CLAIM_LABELS:
+        return _CHEAP_CLAIM_LABELS[s]
+    return s.replace("_", " ").replace("-", " ").title()
+
+
+def verdict_line_html(v: Any) -> Markup:
+    """Bleach-rendered verdict_line. Empty input → empty markup."""
+    raw = str(v or "").strip()
+    if not raw:
+        return Markup("")
+    from apps.analysis_web.services.render_markdown import render_markdown
+
+    return Markup(render_markdown(raw))
+
+
 NAV_LABELS: dict[str, str] = {
     "runs": "Runs",
     "analyze": "Analyze",
@@ -148,6 +197,9 @@ def create_templates() -> Environment:
     )
     env.filters["fmt_num"] = fmt_num
     env.filters["verdict_badge"] = verdict_badge
+    env.filters["duration_label"] = duration_label
+    env.filters["cheap_claim_label"] = cheap_claim_label
+    env.filters["verdict_line_html"] = verdict_line_html
     env.filters["tojson"] = lambda v: Markup(json.dumps(v))
     env.globals["downside_pct"] = downside_pct
     env.globals["downside_title"] = downside_title

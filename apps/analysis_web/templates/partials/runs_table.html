@@ -61,7 +61,7 @@
               {% if r.fv_bear is not none %}data-fv-bear="{{ r.fv_bear }}"{% endif %}
               {% if r.asof_price is not none %}data-asof-price="{{ r.asof_price }}"{% endif %}
               {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ cell_label("Downside") }}{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
-          <td data-label="Duration">{{ cell_label("Duration") }}{% if r.decision_action %}{{ r.decision_action }}{% else %}—{% endif %}</td>
+          <td class="decision" data-label="Duration"{% if r.decision_action %} title="{{ r.decision_action }}"{% endif %}>{{ cell_label("Duration") }}{% if r.decision_action %}{{ r.decision_action | duration_label }}{% else %}—{% endif %}</td>
           <td data-label="Audit (process)">{{ cell_label("Audit (process)") }}{{ r.audit_verdict | verdict_badge }}</td>
           <td class="mono desktop-only" data-label="Harness">{{ cell_label("Harness") }}{% if r.harness_version %}<a class="version-filter" data-version="{{ r.harness_version }}" href="{{ filter_href(harness_version=r.harness_version) }}">{{ r.harness_version }}</a>{% endif %}</td>
           <td class="desktop-only" data-label="Sector">{{ cell_label("Sector") }}{{ r.primary_sector or '' }}</td>

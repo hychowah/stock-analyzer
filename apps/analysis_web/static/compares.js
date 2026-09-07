@@ -19,6 +19,27 @@
     return Object.keys(selected);
   }
 
+  function isLatestGrain() {
+    var inp = document.querySelector('#runs-filters [name="latest"]');
+    if (inp && String(inp.value).trim() === "1") {
+      return true;
+    }
+    return new URLSearchParams(window.location.search).get("latest") === "1";
+  }
+
+  function setLatestHint(ticker) {
+    btn.disabled = true;
+    hint.className = "muted";
+    hint.textContent = "";
+    hint.appendChild(
+      document.createTextNode("Latest shows one row per name. ")
+    );
+    var a = document.createElement("a");
+    a.href = "/?ticker_prefix=" + encodeURIComponent(ticker || "");
+    a.textContent = "Switch to All to pick two sessions of " + (ticker || "this ticker");
+    hint.appendChild(a);
+  }
+
   function updateBar() {
     var ids = keys();
     results.querySelectorAll("input.compare-pick").forEach(function (cb) {
@@ -26,6 +47,10 @@
     });
     if (bar) {
       bar.classList.toggle("is-on", ids.length > 0);
+    }
+    if (isLatestGrain() && ids.length > 0) {
+      setLatestHint(selected[ids[0]].ticker);
+      return;
     }
     if (ids.length === 0) {
       btn.disabled = true;

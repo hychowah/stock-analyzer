@@ -3,7 +3,8 @@
  *
  * Last non-empty sort/filter is remembered so header Runs and run-detail
  * "← Runs" return to it. The address bar is the working set while you are
- * on a query URL. Empty `/` is the default list (storage is not replayed).
+ * on a query URL. Empty `/` stays All (storage is not replayed onto `/`).
+ * Chrome Runs/brand/back use /?latest=1 when storage is empty.
  * Reset is the only clear. Links are rewritten from the stored query.
  * `ticker` is URL-only (no form field). Default limit 50 is omitted.
  * localStorage quota / private-mode failures are ignored.
@@ -94,7 +95,7 @@
   function pathFromStored() {
     var raw = readStored();
     if (!raw) {
-      return "/";
+      return "/?latest=1";
     }
     return pathFromParams(new URLSearchParams(raw));
   }

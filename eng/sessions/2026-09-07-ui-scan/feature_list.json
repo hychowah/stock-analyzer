@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read PLAN_POST_COMPOSE.md Wave 7; Wave 6 verified",
+      "passes": true,
+      "verify": "Wave 6 session exists"
+    },
+    {
+      "id": "duration-english",
+      "description": "duration_label pass → Do not initiate; cheap_claim_label; verdict_line_html helper",
+      "passes": true,
+      "verify": "DurationLabelTests"
+    },
+    {
+      "id": "latest-home",
+      "description": "Brand and nav-runs /?latest=1; empty / still All; pathFromStored empty → latest",
+      "passes": true,
+      "verify": "test_home_ticker_prefix_field brand href"
+    },
+    {
+      "id": "compare-latest",
+      "description": "compares.js Latest hint; #compare-btn:disabled look",
+      "passes": true,
+      "verify": "isLatestGrain in compares.js"
+    },
+    {
+      "id": "banner-apply",
+      "description": "running_analyzes [{ticker,href}]; Apply vs Filters; portfolio empty copy",
+      "passes": true,
+      "verify": "pages.py does not import research_jobs"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "pytest analysis_web"
+    }
+  ]
+}

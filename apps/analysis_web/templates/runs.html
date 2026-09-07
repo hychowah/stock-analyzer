@@ -18,7 +18,16 @@
   <p class="muted">source: catalog sqlite
     · <span title="SSE /api/events with 5s poll fallback">live</span>
     · MoS vs base · as-of
-    · Downside vs bear · live if printed else as-of</p>
+    · Downside vs bear · live if printed else as-of
+    · Duration = stored action · Audit = process completeness</p>
+  {% if running_analyzes %}
+  <p class="muted">Analyze running:
+    {% for job in running_analyzes %}
+    <a href="{{ job.href }}">{{ job.ticker }}</a>{% if not loop.last %}, {% endif %}
+    {% endfor %}
+    {% if running_more %} and {{ running_more }} more{% endif %}
+  </p>
+  {% endif %}
   <form id="runs-filters" class="filters{% if error_kind == 'ticker_not_found' %} is-abort{% endif %}" method="get" action="/" data-runs-live="1">
     <div class="filters-row">
       <label>Ticker<input name="ticker_prefix" value="{{ ticker_prefix or '' }}" placeholder="M…" autocomplete="off" spellcheck="false"/></label>
@@ -30,7 +39,7 @@
         ·
         <a href="{{ filter_href(latest=1) }}" {% if latest %}aria-current="page"{% endif %}>Latest</a>
       </p>
-      <button type="submit">Filter</button>
+      <button type="submit">Apply</button>
       <a id="runs-reset" class="btn secondary" href="/">Reset</a>
     </div>
     <input type="checkbox" id="filters-open" class="disclose" aria-controls="filters-extra"/>

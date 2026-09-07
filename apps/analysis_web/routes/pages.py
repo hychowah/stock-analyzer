@@ -25,6 +25,7 @@ from apps.analysis_web.services.runs_query import (
     query_public_map,
     runs_list_q,
 )
+from apps.analysis_web.services.running import running_analyzes
 from apps.analysis_web.templating import fmt_num, render_fragment, render_page
 
 router = APIRouter(tags=["pages"])
@@ -170,6 +171,9 @@ def page_runs(
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     ctx, status = _runs_context(api, q)
+    live, extra = running_analyzes()
+    ctx["running_analyzes"] = live
+    ctx["running_more"] = extra
     return render_page(request, "runs.html", status_code=status, **ctx)
 
 

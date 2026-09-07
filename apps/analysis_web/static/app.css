@@ -549,6 +549,11 @@ button,
   font-size: 0.9rem;
   display: inline-block;
 }
+#compare-btn:disabled {
+  opacity: 0.55;
+  background: var(--btn-secondary);
+  cursor: not-allowed;
+}
 button.secondary,
 .btn.secondary {
   background: var(--btn-secondary);

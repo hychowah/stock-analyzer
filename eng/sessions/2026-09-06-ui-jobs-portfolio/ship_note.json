@@ -1,0 +1,24 @@
+{
+  "session": "2026-09-06-ui-jobs-portfolio",
+  "feature": "Wave 4c ui-jobs-portfolio — one wait loop; errors stay on the task; portfolio reuses Runs cells",
+  "summary": "Wait on Analyze/Compare in place (JS patch + meta refresh; no SSE full-reload). Busy/Grok-missing stay on the start form. Failed Compare can Retry. Portfolio Live/Downside/Duration use the same cells as Runs.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "TestClient live ARCHIVE_ROOT (no bind): /analyze/new details+Advanced, no data-live-reload; /analyze and /compares no live-reload; /portfolio data-downside-pct + As-of + Duration; unknown analyze 404"
+  ],
+  "verify": "pytest analysis_web 212 passed; eng_verify PASS 803. progress.md names predecessor ui-trust-p0. analyze_new ticker/as-of/harness before <details> Advanced; AnalyzeBusy 409 is the form not error.html. analyze.html and analyze_detail.html have no data-live-reload; JS patches then reloads only TERMINAL; meta refresh 15 on running. Cancel confirm Kill Grok, keep the session; compare_detail Retry form; cancel 303 ?flash=. portfolio.html has data-downside-pct / data-quote-symbol; quotes.js app.css base.html import_ib harness/VERSION untouched vs 5864cf2. ARCHITECTURE.md website table updated. Live TestClient: /analyze/new details True live False; /portfolio downside True; unknown analyze 404.",
+  "notes": [
+    "SDR reshape held: one wait loop; no /fragments/analyze; no artifact ul in JS; no portfolio Live dialect.",
+    "No harness/VERSION bump (W4).",
+    "Product already committed as 6449cfd; this verifier pass is session metadata (feature_list + ship_note).",
+    "Issue success_criteria listed Age; PLAN Session 6 shows Session date, not a derived Age column. Session is present. Not a reject."
+  ],
+  "follow_ups": [
+    "Wave 5 ui-a11y-phone after Wave 2 AND Wave 3 (every app.css 800px query → 1100px; must not restyle .decision / .below-bear)."
+  ],
+  "risks": [
+    "Stale :8765 is old chrome; do not treat it as this tree."
+  ],
+  "proposed_commit": "Record verifier pass for UI jobs-portfolio wave"
+}

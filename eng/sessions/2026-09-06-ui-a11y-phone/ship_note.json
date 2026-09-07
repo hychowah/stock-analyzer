@@ -1,0 +1,26 @@
+{
+  "session": "2026-09-06-ui-a11y-phone",
+  "feature": "Wave 5 ui-a11y-phone — one 1100px contract; disclose out of desktop tab order; list replacement live node + runs-table-updated",
+  "summary": "Keyboardable chrome and stacked cards at main width (1100px). Desktop disclose is display:none at 1101px. Night --btn-bg is #2563eb. thead stays display:none. Runs live region is outside the swap. Architecture zoom controls on. harness.css untouched.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "python eng/sessions/2026-09-06-ui-a11y-phone/handoffs/smoke_a11y.py http://127.0.0.1:8778",
+    "TestClient live ARCHIVE_ROOT (no bind): / runs-status before runs-results; /fragments/runs has data-runs-status and no aria-live; /architecture On-figure controls"
+  ],
+  "verify": "pytest analysis_web 220 passed; eng_verify PASS 811. progress.md names predecessors ui-nav-ia and ui-decision-blotter. app.css has no max-width: 800px; min-width 1101px display none on .disclose; both dark tables --btn-bg #2563eb; .quote-kind and .chart-grid text use --muted; .stack-table thead display:none not clip. runs.js dispatches runs-table-updated; compares.js listens and has no catalog-changed. mermaid_boot controlIconsEnabled true; harness.css still 900px. git diff 140061b..6560a74 does not touch base.html, quotes.js, price_chart.js, harness.css, harness/VERSION, .decision, .below-bear. Live :8778 SHA 6560a74: Edge first Tab is skip-link; 844px innerWidth 820 stacked cards; sort links not visible. TestClient: runs-status outside swap; fragment no aria-live; architecture On-figure controls.",
+  "notes": [
+    "SDR reshape held: one 1100px contract; do not clip thead; list replacement is live node + runs-table-updated; harness 900px dropped from this session.",
+    "No harness/VERSION bump (W4).",
+    "Product already committed as 6560a74; this verifier pass is session metadata (feature_list + ship_note).",
+    "Compare bar at 1100px uses position:fixed while a pick is on (sticky cannot escape the filter card)."
+  ],
+  "follow_ups": [
+    "Harness pipeline column / fake tablist (later lab pass; not the 1100px app.css contract).",
+    "Real .cell-label in stacked cells (after blotter owns runs_table.html alone)."
+  ],
+  "risks": [
+    "Stale :8765 is old chrome; do not treat it as this tree."
+  ],
+  "proposed_commit": "Record verifier pass for UI a11y-phone wave"
+}

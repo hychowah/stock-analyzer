@@ -220,11 +220,38 @@ def _bar_rows(items: list[dict[str, Any]], value_key: str) -> list[dict[str, Any
     return out
 
 
+_WATERFALL_TOTALS = frozenset(
+    {"Starting Value", "Ending Value", "Starting NAV", "Ending NAV"}
+)
+
+
+def _waterfall_rows(stmt: IbStatement) -> list[dict[str, Any]]:
+    """Starting/Ending as total rows; signed flows from a zero gutter."""
+    items = [{"name": c.name, "value": c.value} for c in stmt.nav_components]
+    flows = [r for r in items if r["name"] not in _WATERFALL_TOTALS]
+    peak = max((abs(float(r["value"] or 0)) for r in flows), default=0.0)
+    out: list[dict[str, Any]] = []
+    for r in items:
+        try:
+            n = float(r["value"]) if r["value"] is not None else 0.0
+        except (TypeError, ValueError):
+            n = 0.0
+        is_total = r["name"] in _WATERFALL_TOTALS
+        sign = "pos" if n > 0 else ("neg" if n < 0 else "zero")
+        out.append(
+            {
+                "name": r["name"],
+                "value": r["value"],
+                "kind": "total" if is_total else "flow",
+                "sign": sign,
+                "bar_pct": (50.0 * abs(n) / peak) if (not is_total and peak > 0) else 0.0,
+            }
+        )
+    return out
+
+
 def _performance(stmt: IbStatement) -> dict[str, Any]:
-    waterfall = _bar_rows(
-        [{"name": c.name, "value": c.value} for c in stmt.nav_components],
-        "value",
-    )
+    waterfall = _waterfall_rows(stmt)
     stocks = [m for m in stmt.mtm if (m.asset_category or "").lower() == "stocks"]
     ranked = sorted(stocks, key=lambda m: abs(m.pl_total or 0.0), reverse=True)
     top, rest = ranked[:20], ranked[20:]
@@ -248,10 +275,15 @@ def _catalog_fields(run: dict[str, Any] | None) -> dict[str, Any]:
         "covered": run is not None,
         "run_id": (run or {}).get("run_id"),
         "session_key": (run or {}).get("session_key"),
+        "session_date": (run or {}).get("session_date"),
         "asof_price": (run or {}).get("asof_price"),
+        "fv_bear": (run or {}).get("fv_bear"),
         "fv_base": (run or {}).get("fv_base"),
         "margin_of_safety_pct": mos_f,
         "audit_verdict": (run or {}).get("audit_verdict"),
+        "decision_action": (run or {}).get("decision_action"),
+        "quote_listing": (run or {}).get("quote_listing"),
+        "quote_listing_source": (run or {}).get("quote_listing_source"),
         "tech_signal": (run or {}).get("tech_signal"),
         "primary_sector": (run or {}).get("primary_sector"),
         "region": (run or {}).get("region"),

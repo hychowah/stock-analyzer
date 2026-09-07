@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ job.ticker }} {{ job.session_a }} vs {{ job.session_b }}{% endblock %}
-{% block body_attrs %}data-live-reload="1" data-live-compare="1" data-compare-id="{{ job.compare_id }}" data-compare-status="{{ job.status }}"{% endblock %}
+{% block extra_css %}
+{% if job.status in ['running', 'queued'] %}
+<meta http-equiv="refresh" content="15"/>
+{% endif %}
+{% endblock %}
+{% block body_attrs %}data-compare-id="{{ job.compare_id }}" data-compare-status="{{ job.status }}"{% endblock %}
 {% block content %}
 <div class="card">
   <p>
@@ -15,22 +20,34 @@
   <h1 class="mono">{{ job.ticker }} · {{ job.session_a }} vs {{ job.session_b }}</h1>
   <p class="mono muted">{{ job.compare_id }}</p>
   <p>
-    Status <span class="badge status-{{ job.status }}">{{ job.status }}</span>
+    Status <span id="job-status" class="badge status-{{ job.status }}">{{ job.status }}</span>
     {% if job.degraded %}<span class="badge">degraded headline</span>{% endif %}
   </p>
+  <p id="job-resume-hint" class="muted" aria-live="polite">{% if job.resume_hint %}{{ job.resume_hint }}{% endif %}</p>
   <table>
     <tr><th>A</th><td class="mono"><a href="/runs/{{ job.run_id_a }}">{{ job.run_id_a }}</a></td></tr>
     <tr><th>B</th><td class="mono"><a href="/runs/{{ job.run_id_b }}">{{ job.run_id_b }}</a></td></tr>
     <tr><th>Packet</th><td class="mono">{{ job.out_dir }}</td></tr>
     {% if job.error %}
-    <tr><th>Error</th><td class="err">{{ job.error }}</td></tr>
+    <tr><th>Error</th><td id="job-error" class="err">{{ job.error }}</td></tr>
+    {% else %}
+    <tr id="job-error-row" hidden><th>Error</th><td id="job-error" class="err"></td></tr>
     {% endif %}
   </table>
   {% if job.status == 'running' or job.status == 'queued' %}
-  <p class="muted">Grok audit running. Headline numbers below are the snapshot helper, not the audit. This page refreshes when the packet changes.</p>
-  <form method="post" action="/compare-cancel">
+  <p class="muted">Grok audit running. Headline numbers below are the snapshot helper, not the audit.</p>
+  <form method="post" action="/compare-cancel"
+        onsubmit="return confirm('Kill Grok, keep the session.');">
     <input type="hidden" name="compare_id" value="{{ job.compare_id }}"/>
     <button type="submit" class="secondary">Cancel</button>
+  </form>
+  {% endif %}
+  {% if job.status == 'failed' %}
+  <form method="post" action="/compares/new"
+        onsubmit="if (!confirm('Retry this pair as a new compare packet?')) return false; var b = this.querySelector('button[type=submit]'); if (b) b.disabled = true; return true;">
+    <input type="hidden" name="run_id_a" value="{{ job.run_id_a }}"/>
+    <input type="hidden" name="run_id_b" value="{{ job.run_id_b }}"/>
+    <button type="submit">Retry</button>
   </form>
   {% endif %}
 </div>

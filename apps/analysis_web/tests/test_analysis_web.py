@@ -1419,6 +1419,85 @@ class AnalysisWebCompareTests(unittest.TestCase):
             r'<h1>99_synthesis.md</h1>\s*<p class="mono muted">99_synthesis.md</p>',
         )
 
+    def test_compare_pages_drop_live_reload_and_failed_has_retry(self):
+        listed = self.client.get("/compares")
+        self.assertEqual(listed.status_code, 200)
+        self.assertNotIn(b"data-live-reload", listed.content)
+        r = self.client.post(
+            "/api/compares",
+            json={
+                "run_id_a": "research:META:2026-08-03",
+                "run_id_b": "research:META:2026-08-10",
+            },
+        )
+        cid = r.json()["compare_id"]
+        page = self.client.get(f"/compares/{cid}")
+        self.assertEqual(page.status_code, 200)
+        self.assertNotIn(b"data-live-reload", page.content)
+        html = (
+            Path(__file__).resolve().parents[1] / "templates" / "compare_detail.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('http-equiv="refresh"', html)
+        self.assertIn("Retry", html)
+        self.assertIn("Kill Grok, keep the session.", html)
+        js = (
+            Path(__file__).resolve().parents[1] / "static" / "compare_detail.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("TERMINAL", js)
+        self.assertNotIn("innerHTML", js)
+
+    def test_compare_busy_stays_on_form(self):
+        from unittest.mock import patch
+
+        from packages.compare_jobs.jobs import CompareBusy
+
+        with patch(
+            "apps.analysis_web.routes.compares.start_compare",
+            side_effect=CompareBusy("Compare slots full"),
+        ):
+            r = self.client.post(
+                "/compares/new",
+                data={
+                    "run_id_a": "research:META:2026-08-03",
+                    "run_id_b": "research:META:2026-08-10",
+                },
+            )
+        self.assertEqual(r.status_code, 409)
+        self.assertIn(b"Compare two sessions", r.content)
+        self.assertIn(b"Compare slots full", r.content)
+        self.assertIn(b"research:META:2026-08-03", r.content)
+        self.assertIn(b"research:META:2026-08-10", r.content)
+
+    def test_failed_compare_retry_form_in_response(self):
+        packet = "2026-08-10__2026-08-03_vs_2026-08-10"
+        cid = f"compare:META:{packet}"
+        out = self.archive / "comparisons" / "META" / packet
+        out.mkdir(parents=True)
+        (out / "job.json").write_text(
+            json.dumps(
+                {
+                    "compare_id": cid,
+                    "ticker": "META",
+                    "packet_key": packet,
+                    "session_a": "2026-08-03",
+                    "session_b": "2026-08-10",
+                    "run_id_a": "research:META:2026-08-03",
+                    "run_id_b": "research:META:2026-08-10",
+                    "out_dir": str(out),
+                    "status": "failed",
+                    "error": "Grok process exited before 99_synthesis.md",
+                }
+            ),
+            encoding="utf-8",
+        )
+        page = self.client.get(f"/compares/{cid}")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b">Retry<", page.content)
+        self.assertIn(b'name="run_id_a"', page.content)
+        self.assertIn(b'value="research:META:2026-08-03"', page.content)
+        self.assertIn(b'value="research:META:2026-08-10"', page.content)
+        self.assertNotIn(b'http-equiv="refresh"', page.content)
+
     def test_run_detail_has_compare_form(self):
         r = self.client.get("/runs/research:META:2026-08-03")
         self.assertEqual(r.status_code, 200)
@@ -1626,4 +1705,124 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         r = self.client.get("/analyze/analyze:META:2026-09-01")
         self.assertEqual(r.status_code, 200)
         self.assertRegex(r.text, r'class="err">\s*Grok process exited before finalize')
+
+    def test_analyze_new_advanced_in_details(self):
+        r = self.client.get("/analyze/new")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"<details>", r.content)
+        self.assertIn(b"Advanced", r.content)
+        self.assertIn(b'name="slug"', r.content)
+        self.assertLess(r.text.index("name=\"ticker\""), r.text.index("<details>"))
+        self.assertLess(r.text.index("name=\"harness_version\""), r.text.index("<details>"))
+
+    def test_analyze_busy_stays_on_form(self):
+        from unittest.mock import patch
+
+        from packages.research_jobs.jobs import AnalyzeBusy
+
+        with patch(
+            "apps.analysis_web.routes.analyze.start_analyze",
+            side_effect=AnalyzeBusy("Analyze slots full"),
+        ):
+            r = self.client.post(
+                "/analyze/new",
+                data={
+                    "ticker": "COHR",
+                    "notes": "keep-me",
+                    "harness_version": "live",
+                    "orchestrator_model": "grok-4.5",
+                },
+            )
+        self.assertEqual(r.status_code, 409)
+        self.assertIn(b"Start Mode A analysis", r.content)
+        self.assertIn(b"Analyze slots full", r.content)
+        self.assertIn(b"keep-me", r.content)
+        self.assertIn(b'value="COHR"', r.content)
+        self.assertNotIn(b"Not Found", r.content)
+
+    def test_analyze_pages_drop_live_reload(self):
+        r = self.client.get("/analyze")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn(b"data-live-reload", r.content)
+        r2 = self.client.get("/analyze/new")
+        self.assertNotIn(b"data-live-reload", r2.content)
+        session = self.archive / "research" / "META" / "2026-09-02"
+        (session / "meta").mkdir(parents=True)
+        job_dir = self.archive / "research_jobs" / "META" / "2026-09-02"
+        job_dir.mkdir(parents=True)
+        (job_dir / "job.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "kind": "analyze",
+                    "analyze_id": "analyze:META:2026-09-02",
+                    "ticker": "META",
+                    "session_key": "2026-09-02",
+                    "run_id": "research:META:2026-09-02",
+                    "session_root": str(session),
+                    "job_dir": str(job_dir),
+                    "status": "running",
+                    "error": None,
+                    "abandoned": False,
+                    "snapshot_ready": False,
+                    "phase_current": "orch",
+                    "resume_hint": "Waiting on valuation",
+                    "mode": "new",
+                }
+            ),
+            encoding="utf-8",
+        )
+        page = self.client.get("/analyze/analyze:META:2026-09-02")
+        self.assertEqual(page.status_code, 200)
+        self.assertNotIn(b"data-live-reload", page.content)
+        self.assertIn(b'http-equiv="refresh"', page.content)
+        self.assertIn(b"Waiting on valuation", page.content)
+        self.assertIn(b'id="job-status"', page.content)
+        self.assertIn(b"Kill Grok, keep the session.", page.content)
+        js = (
+            Path(__file__).resolve().parents[1] / "static" / "analyze_detail.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("TERMINAL", js)
+        self.assertNotIn("innerHTML", js)
+
+    def test_analyze_cancel_redirects_with_flash(self):
+        session = self.archive / "research" / "META" / "2026-09-03"
+        (session / "meta").mkdir(parents=True)
+        job_dir = self.archive / "research_jobs" / "META" / "2026-09-03"
+        job_dir.mkdir(parents=True)
+        cid = "analyze:META:2026-09-03"
+        (job_dir / "job.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "kind": "analyze",
+                    "analyze_id": cid,
+                    "ticker": "META",
+                    "session_key": "2026-09-03",
+                    "run_id": "research:META:2026-09-03",
+                    "session_root": str(session),
+                    "job_dir": str(job_dir),
+                    "status": "running",
+                    "error": None,
+                    "abandoned": False,
+                    "snapshot_ready": False,
+                    "phase_current": "orch",
+                    "mode": "new",
+                }
+            ),
+            encoding="utf-8",
+        )
+        r = self.client.post(
+            "/analyze-cancel",
+            data={"analyze_id": cid},
+            follow_redirects=False,
+        )
+        self.assertEqual(r.status_code, 303)
+        loc = r.headers.get("location") or ""
+        self.assertIn("/analyze/", loc)
+        self.assertIn("flash=", loc)
+        page = self.client.get(loc)
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b'class="flash"', page.content)
+        self.assertIn(b"Cancelled. Session kept.", page.content)
 

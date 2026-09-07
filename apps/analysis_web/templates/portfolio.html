@@ -23,10 +23,9 @@
   {% if view.error %}
   <p class="err">{{ view.error }}</p>
   {% if not view.ib %}
-  <p class="muted">Example: copy <span class="mono">apps/analysis_web/portfolio.example.json</span>
-    to <span class="mono">apps/analysis_web/.local/portfolio.json</span>
-    · or import an IB activity CSV:
-    <span class="mono">python -m apps.analysis_web.import_ib</span></p>
+  <p>Import an IB activity statement.</p>
+  <p class="muted">Expected book: <code>{{ view.path or 'apps/analysis_web/.local/portfolio.sqlite' }}</code>
+    · JSON fallback: <code>apps/analysis_web/.local/portfolio.json</code></p>
   {% endif %}
   {% endif %}
   {% if view.ib %}
@@ -85,9 +84,18 @@
     <tbody>
       {% for row in view.performance.waterfall %}
       <tr>
-        <td>{{ row.name }}</td>
+        <td>{% if row.kind == 'total' %}<strong>{{ row.name }}</strong>{% else %}{{ row.name }}{% endif %}</td>
         <td class="perf-bar-cell">
-          <span class="perf-bar {{ row.sign }}" style="width: {{ '%.1f'|format(row.bar_pct or 0) }}%"></span>
+          {% if row.kind != 'total' %}
+          <span style="display:block;position:relative;height:0.7rem;">
+            <span style="position:absolute;top:0;bottom:0;left:50%;width:0;border-left:1px solid currentColor;opacity:0.35;"></span>
+            {% if row.sign == 'pos' %}
+            <span style="position:absolute;left:50%;width:{{ '%.1f'|format(row.bar_pct or 0) }}%;height:100%;background:#86efac;border-radius:3px;"></span>
+            {% elif row.sign == 'neg' %}
+            <span style="position:absolute;right:50%;width:{{ '%.1f'|format(row.bar_pct or 0) }}%;height:100%;background:#fca5a5;border-radius:3px;"></span>
+            {% endif %}
+          </span>
+          {% endif %}
         </td>
         <td class="num">{{ row.value | fmt_num }}</td>
       </tr>
@@ -126,9 +134,11 @@
     <thead>
       <tr>
         <th>Symbol</th>
-        {% if view.ib %}<th>Exch</th><th>Qty</th><th>Close</th><th>Value (base)</th>{% endif %}
-        <th>Weight</th><th>Price</th><th>FV base</th><th>MoS %</th>
+        {% if view.ib %}<th>Exch</th><th>Qty</th><th>IB Close</th><th>Value (base)</th>{% endif %}
+        <th>Weight</th><th>As-of</th><th>Live</th><th>FV base</th><th>MoS %</th>
+        <th>Downside</th><th>Duration</th>
         <th>Audit</th><th>Tech</th><th>Session</th><th>Sector</th>
+        <th>Analyze</th>
       </tr>
     </thead>
     <tbody>
@@ -147,17 +157,32 @@
         {% if view.ib %}
         <td class="muted desktop-only" data-label="Exch">{{ p.listing_exch or '' }}</td>
         <td class="num desktop-only" data-label="Qty">{{ p.quantity | fmt_num(0) }}</td>
-        <td class="num desktop-only" data-label="Close">{{ p.close_price | fmt_num }}</td>
+        <td class="num desktop-only" data-label="IB Close">{{ p.close_price | fmt_num }}</td>
         <td class="num desktop-only" data-label="Value (base)">{{ p.value_base | fmt_num }}</td>
         {% endif %}
+        {% set ds = downside_pct(p.asof_price, p.fv_bear) %}
+        {% set ds_title = downside_title(p.asof_price, p.fv_bear, 'as-of') %}
         <td class="num" data-label="Weight">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
-        <td class="num" data-label="Price">{{ p.asof_price | fmt_num }}</td>
+        <td class="num" data-label="As-of">{{ p.asof_price | fmt_num }}</td>
+        <td class="num quote-live" data-label="Live" data-quote-cell{% if p.quote_listing %} data-quote-symbol="{{ p.quote_listing }}" data-quote-source="{{ p.quote_listing_source or '' }}"{% endif %}>—</td>
         <td class="num" data-label="FV base">{{ p.fv_base | fmt_num }}</td>
         <td class="num" data-label="MoS %">{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
+        <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}" data-label="Downside"
+            data-downside-pct
+            data-vintage="as-of"
+            {% if p.fv_bear is not none %}data-fv-bear="{{ p.fv_bear }}"{% endif %}
+            {% if p.asof_price is not none %}data-asof-price="{{ p.asof_price }}"{% endif %}
+            {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
+        <td data-label="Duration">{% if p.decision_action %}{{ p.decision_action }}{% else %}—{% endif %}</td>
         <td data-label="Audit">{{ p.audit_verdict | verdict_badge }}</td>
         <td class="desktop-only" data-label="Tech">{{ p.tech_signal or '' }}</td>
         <td class="mono muted" data-label="Session">{{ p.session_key or '—' }}</td>
         <td class="desktop-only" data-label="Sector">{{ p.primary_sector or '' }}</td>
+        {% if not p.run_id or (p.audit_verdict or '')|upper != 'PASS' %}
+        <td data-label="Analyze"><a href="/analyze/new?ticker={{ (p.catalog_ticker or p.ib_symbol or p.ticker) | urlencode }}">Analyze</a></td>
+        {% else %}
+        <td class="muted" data-label="Analyze">—</td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>

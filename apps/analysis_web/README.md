@@ -33,17 +33,17 @@ Or: `bash apps/analysis_web/init.sh`
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown title + TOC + sibling `.md` links on `/artifact`; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
-| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Change-in-NAV waterfall + MTM bars |
-| `/analyze` | Mode A jobs (`archive/research_jobs/`) |
-| `/analyze/new` | Start analysis (ticker + harness version `live` or `pins/<semver>/`) |
+| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Live/Downside/Duration match Runs; Change-in-NAV waterfall + MTM bars |
+| `/analyze` | Mode A jobs (`archive/research_jobs/`). List does not SSE-reload. |
+| `/analyze/new` | Start analysis (ticker + as-of + harness first; advanced in details). Busy stays on the form. |
 | `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
 | `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
 | `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
-| `/analyze/{analyze_id}` | Live phase/status; cancel = keep session; discard = abandon |
+| `/analyze/{analyze_id}` | Status patches in place; meta refresh 15s while running; cancel = keep session; discard = abandon |
 | `/analyze-artifact?analyze_id=…&path=…` | In-progress: handoffs/phase only; FV and report bodies 403 until snapshot |
-| `/compares` | Compare packets (`archive/comparisons/`) |
-| `/compares/new` | No-JS form to start a two-session Grok audit |
-| `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete |
+| `/compares` | Compare packets (`archive/comparisons/`). List does not SSE-reload. |
+| `/compares/new` | No-JS form to start a two-session Grok audit. Busy/Grok-missing stay on the form. |
+| `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete; Retry on failed |
 | `/compare-artifact?compare_id=…&path=…` | Allowlisted packet file (markdown rendered) |
 | `/api/compares` | GET list / POST start (`run_id_a`, `run_id_b`) |
 | `/api/compares/{compare_id}` | JSON job status |
@@ -81,7 +81,7 @@ The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **La
 
 No-JS: the GET form still submits. Invalid ranges (min > max, bad date) return HTTP 400. Unknown ticker / prefix returns HTTP 404 and an abort card.
 
-Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s fingerprint poll if SSE is unhealthy. On the runs page (`data-live-partial="1"`) a catalog change refetches `/fragments/runs` instead of a full reload, so an in-progress ticker search is not wiped.
+Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s fingerprint poll if SSE is unhealthy. On the runs page (`data-live-partial="1"`) a catalog change refetches `/fragments/runs` instead of a full reload, so an in-progress ticker search is not wiped. Analyze and Compare list/detail pages do not opt in; a running job patches status in JS and uses `<meta refresh=15>`.
 
 Runs list also has checkboxes: select **exactly two** rows of the **same ticker** and **Compare**. That POSTs `/api/compares` and redirects to the job page. Headline numbers come from `prediction_snapshot.json` immediately; completion is `99_synthesis.md` on disk.
 

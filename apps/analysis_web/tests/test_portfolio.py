@@ -49,8 +49,9 @@ def _mini_archive(base: Path) -> Path:
             """
             INSERT INTO runs (
               run_id, ticker, session_date, session_key, path,
-              audit_verdict, fv_base, margin_of_safety_pct, asof_price, exported_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              audit_verdict, fv_base, fv_bear, margin_of_safety_pct, asof_price,
+              quote_listing, quote_listing_source, exported_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 f"research:{ticker}:{session}",
@@ -60,8 +61,11 @@ def _mini_archive(base: Path) -> Path:
                 f"archive/research/{ticker}/{session}",
                 audit,
                 fv,
+                fv * 0.7,
                 mos,
                 fv * 0.9,
+                ticker,
+                "stamp",
                 "2026-08-10T00:00:00Z",
             ),
         )
@@ -71,6 +75,21 @@ def _mini_archive(base: Path) -> Path:
 
 
 class PortfolioServiceTests(unittest.TestCase):
+    def test_waterfall_rows_mark_totals(self):
+        from apps.analysis_web.services.ib_statement import parse_activity_csv
+        from apps.analysis_web.services.portfolio import _waterfall_rows
+
+        stmt = parse_activity_csv(
+            Path(__file__).resolve().parent / "fixtures" / "ib_activity_mini.csv"
+        )
+        rows = {r["name"]: r for r in _waterfall_rows(stmt)}
+        self.assertEqual(rows["Starting Value"]["kind"], "total")
+        self.assertEqual(rows["Ending Value"]["kind"], "total")
+        self.assertEqual(rows["Starting Value"]["bar_pct"], 0.0)
+        flow = rows["Change in Dividend Accruals"]
+        self.assertEqual(flow["kind"], "flow")
+        self.assertGreater(flow["bar_pct"], 0)
+
     def test_weighted_mos_and_coverage(self):
         from packages.catalog_api.client import CatalogApi
         from apps.analysis_web.services.portfolio import (
@@ -143,8 +162,9 @@ class PortfolioHttpTests(unittest.TestCase):
             "name": "test-book",
             "currency": "USD",
             "positions": [
-                {"ticker": "META", "weight": 0.5},
-                {"ticker": "AAPL", "weight": 0.5},
+                {"ticker": "META", "weight": 0.4},
+                {"ticker": "AAPL", "weight": 0.4},
+                {"ticker": "ZZZZ", "weight": 0.2},
             ],
         }
         (self._local / "portfolio.json").write_text(
@@ -183,10 +203,10 @@ class PortfolioHttpTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         data = r.json()
         self.assertEqual(data["name"], "test-book")
-        self.assertEqual(data["summary"]["n_positions"], 2)
+        self.assertEqual(data["summary"]["n_positions"], 3)
         self.assertEqual(data["summary"]["n_covered"], 2)
         tickers = {p["ticker"] for p in data["positions"]}
-        self.assertEqual(tickers, {"META", "AAPL"})
+        self.assertEqual(tickers, {"META", "AAPL", "ZZZZ"})
 
     def test_portfolio_page(self):
         r = self.client.get("/portfolio")
@@ -194,6 +214,19 @@ class PortfolioHttpTests(unittest.TestCase):
         self.assertIn(b"test-book", r.content)
         self.assertIn(b"META", r.content)
         self.assertIn(b"Weighted mean MoS", r.content)
+        self.assertIn(b"data-downside-pct", r.content)
+        self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertIn(b'data-fv-bear="350.0"', r.content)
+        self.assertIn(b">As-of<", r.content)
+        self.assertIn(b">Duration<", r.content)
+        self.assertIn(b"/analyze/new?ticker=", r.content)
+
+    def test_portfolio_empty_copy_is_import_statement(self):
+        (self._local / "portfolio.json").unlink()
+        r = self.client.get("/portfolio")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"Import an IB activity statement.", r.content)
+        self.assertNotIn(b"python -m apps.analysis_web.import_ib", r.content)
 
 
 if __name__ == "__main__":

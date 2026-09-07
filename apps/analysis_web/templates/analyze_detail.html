@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ job.ticker }} {{ job.session_key }}{% endblock %}
-{% block body_attrs %}data-live-reload="1" data-live-analyze="1" data-analyze-id="{{ job.analyze_id }}" data-analyze-status="{{ job.status }}"{% endblock %}
+{% block extra_css %}
+{% if job.status in ['running', 'queued'] %}
+<meta http-equiv="refresh" content="15"/>
+{% endif %}
+{% endblock %}
+{% block body_attrs %}data-analyze-id="{{ job.analyze_id }}" data-analyze-status="{{ job.status }}"{% endblock %}
 {% block content %}
 <div class="card">
   <p>
@@ -15,15 +20,20 @@
   {% else %}
   <p class="muted">Yahoo listing not stamped yet (orchestrator confirms with tools)</p>
   {% endif %}
-  <p><span class="badge status-{{ job.status }}">{{ job.status }}</span>
+  <p>
+    <span id="job-status" class="badge status-{{ job.status }}">{{ job.status }}</span>
      {% if job.abandoned %}<span class="badge">abandoned</span>{% endif %}
-     phase {{ job.phase_current or '—' }}</p>
+     phase <span id="job-phase">{{ job.phase_current or '—' }}</span>
+  </p>
+  <p id="job-resume-hint" class="muted" aria-live="polite">{% if job.resume_hint %}{{ job.resume_hint }}{% endif %}</p>
   {% if job.error %}
     {% if job.status in ['failed', 'cancelled', 'abandoned'] or job.abandoned %}
-    <p class="err">{{ job.error }}</p>
+    <p id="job-error" class="err">{{ job.error }}</p>
     {% else %}
-    <p class="muted">{{ job.error }}</p>
+    <p id="job-error" class="muted">{{ job.error }}</p>
     {% endif %}
+  {% else %}
+    <p id="job-error" class="muted" hidden></p>
   {% endif %}
   {% if complete %}
   <p>Job complete (finalize snapshot on disk). Audit: {{ job.audit_verdict or '—' }}. This is not a buy list.
@@ -35,7 +45,8 @@
   <p class="muted">mode={{ job.mode }} · harness={% if job.pin %}{{ job.pin.label or job.pin.version }}{% else %}live{% endif %} · pid={{ job.pid or '—' }} · spawned {{ job.spawned_at or '—' }}</p>
   <div>
     {% if job.status in ['running', 'queued'] %}
-    <form method="post" action="/analyze-cancel" style="display:inline">
+    <form method="post" action="/analyze-cancel" style="display:inline"
+          onsubmit="return confirm('Kill Grok, keep the session.');">
       <input type="hidden" name="analyze_id" value="{{ job.analyze_id }}"/>
       <button type="submit">Cancel (keep session)</button>
     </form>

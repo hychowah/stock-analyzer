@@ -7,15 +7,12 @@
   <p class="muted">Existence-checks the typed ticker (Yahoo quote or search listings), scaffolds that folder, then spawns one Grok orchestrator to confirm the listing and run Mode A. Typical wall time is hours. Up to {{ limits.analyze_slots }} can run in parallel (global Grok cap {{ limits.grok }}, including Compare). Killing this web UI does not stop Grok.</p>
   {% if error %}<p class="flash err">{{ error }}</p>{% endif %}
   <form class="stack-form" method="post" action="/analyze/new"
-        onsubmit="return confirm('Start a Mode A Grok research run? This can take 2–8 hours. Cancel is kill-only (resumable); Discard abandons the session.');">
+        onsubmit="if (!confirm('Start a Mode A Grok research run? This can take 2–8 hours. Cancel is kill-only (resumable); Discard abandons the session.')) return false; var b = this.querySelector('button[type=submit]'); if (b) b.disabled = true; return true;">
     <label>Ticker
       <input name="ticker" value="{{ ticker or '' }}" required placeholder="COHR"/>
     </label>
     <label>As-of date
-      <input name="session_date" type="date"/>
-    </label>
-    <label>Optional slug
-      <input name="slug" placeholder="leave blank for YYYY-MM-DD or __r2"/>
+      <input name="session_date" type="date" value="{{ session_date or '' }}"/>
     </label>
     <label>Harness
       <select name="harness_version">
@@ -24,17 +21,23 @@
         {% endfor %}
       </select>
     </label>
-    <label>Orchestrator model
-      <input name="orchestrator_model" value="grok-4.5"/>
-    </label>
-    <label>Subagent model
-      <input name="subagent_model" placeholder="defaults to orchestrator"/>
-    </label>
-    <label>Notes
-      <input name="notes" placeholder="optional"/>
-    </label>
-    <p><label><input type="checkbox" name="ingest_library" value="1"/> Ingest library inbox first (default off)</label></p>
     <p><button type="submit">Start analysis</button></p>
+    <details>
+      <summary>Advanced</summary>
+      <label>Optional slug
+        <input name="slug" value="{{ slug or '' }}" placeholder="leave blank for YYYY-MM-DD or __r2"/>
+      </label>
+      <label>Orchestrator model
+        <input name="orchestrator_model" value="{{ orchestrator_model or 'grok-4.5' }}"/>
+      </label>
+      <label>Subagent model
+        <input name="subagent_model" value="{{ subagent_model or '' }}" placeholder="defaults to orchestrator"/>
+      </label>
+      <label>Notes
+        <input name="notes" value="{{ notes or '' }}" placeholder="optional"/>
+      </label>
+      <p><label><input type="checkbox" name="ingest_library" value="1"{% if ingest_library %} checked{% endif %}/> Ingest library inbox first (default off)</label></p>
+    </details>
   </form>
 </div>
 {% endblock %}

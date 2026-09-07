@@ -54,6 +54,45 @@ def _error(request: Request, message: str, status: int, title: str = "Analyze") 
     )
 
 
+def _analyze_new_page(
+    request: Request,
+    *,
+    error: str = "",
+    status_code: int = 200,
+    ticker: str = "",
+    session_date: str = "",
+    slug: str = "",
+    harness_version: str = "live",
+    orchestrator_model: str = "grok-4.5",
+    subagent_model: str = "",
+    notes: str = "",
+    ingest_library: bool = False,
+) -> HTMLResponse:
+    return render_page(
+        request,
+        "analyze_new.html",
+        status_code=status_code,
+        ticker=(ticker or "").strip().upper(),
+        session_date=(session_date or "").strip(),
+        slug=(slug or "").strip(),
+        harness_version=(harness_version or "live").strip() or "live",
+        orchestrator_model=(orchestrator_model or "grok-4.5").strip() or "grok-4.5",
+        subagent_model=(subagent_model or "").strip(),
+        notes=(notes or "").strip(),
+        ingest_library=bool(ingest_library),
+        error=error,
+        limits=limits(),
+        harness_versions=list_versions(),
+    )
+
+
+def _redirect_analyze(cid: str, flash: str | None = None) -> RedirectResponse:
+    url = f"/analyze/{quote(cid, safe=':')}"
+    if flash:
+        url += f"?flash={quote(flash)}"
+    return RedirectResponse(url, status_code=303)
+
+
 @router.get("/analyze", response_class=HTMLResponse)
 def page_analyzes(
     request: Request,
@@ -76,15 +115,25 @@ def page_analyze_new(
     request: Request,
     ticker: str = "",
     error: str = "",
+    session_date: str = "",
+    slug: str = "",
+    harness_version: str = "live",
+    orchestrator_model: str = "grok-4.5",
+    subagent_model: str = "",
+    notes: str = "",
+    ingest_library: str = "0",
 ) -> HTMLResponse:
-    return render_page(
+    return _analyze_new_page(
         request,
-        "analyze_new.html",
-        ticker=(ticker or "").strip().upper(),
         error=error,
-        limits=limits(),
-        harness_versions=list_versions(),
-        harness_version="live",
+        ticker=ticker,
+        session_date=session_date,
+        slug=slug,
+        harness_version=harness_version,
+        orchestrator_model=orchestrator_model,
+        subagent_model=subagent_model,
+        notes=notes,
+        ingest_library=ingest_library not in ("", "0", "false", "False"),
     )
 
 
@@ -100,6 +149,23 @@ def post_analyze_new(
     ingest_library: str = Form("0"),
     harness_version: str = Form("live"),
 ) -> Response:
+    ingest = ingest_library not in ("", "0", "false", "False")
+
+    def _form(error: str, status_code: int) -> HTMLResponse:
+        return _analyze_new_page(
+            request,
+            error=error,
+            status_code=status_code,
+            ticker=ticker,
+            session_date=session_date,
+            slug=slug,
+            harness_version=harness_version,
+            orchestrator_model=orchestrator_model,
+            subagent_model=subagent_model,
+            notes=notes,
+            ingest_library=ingest,
+        )
+
     try:
         job = start_analyze(
             archive_root(),
@@ -109,19 +175,19 @@ def post_analyze_new(
             orchestrator_model=orchestrator_model.strip() or "grok-4.5",
             subagent_model=subagent_model.strip() or None,
             notes=notes.strip() or None,
-            ingest_library=ingest_library not in ("", "0", "false", "False"),
+            ingest_library=ingest,
             harness_version=harness_version.strip() or "live",
         )
     except AnalyzeTickerError as e:
-        return page_analyze_new(request, ticker=ticker, error=str(e))
+        return _form(str(e), 200)
     except AnalyzeValidationError as e:
-        return page_analyze_new(request, ticker=ticker, error=str(e))
+        return _form(str(e), 200)
     except AnalyzeBusy as e:
-        return _error(request, str(e), 409)
+        return _form(str(e), 409)
     except (AnalyzeGrokMissing, AnalyzeRunbookMissing) as e:
-        return _error(request, str(e), 503)
+        return _form(str(e), 503)
     except AnalyzeError as e:
-        return _error(request, str(e), 500)
+        return _form(str(e), 500)
     cid = quote(str(job["analyze_id"]), safe=":")
     return RedirectResponse(f"/analyze/{cid}", status_code=303)
 
@@ -130,6 +196,7 @@ def post_analyze_new(
 def page_analyze_detail(
     request: Request,
     analyze_id: str,
+    flash: str = "",
     api=Depends(get_api),  # noqa: ARG001
 ) -> HTMLResponse:
     cid = analyze_id.strip()
@@ -171,6 +238,7 @@ def page_analyze_detail(
         artifact_index=artifact_index,
         complete=job.get("status") == "complete",
         snapshot_ready=snapshot_ready,
+        flash=(flash or "").strip() or None,
     )
 
 
@@ -183,7 +251,7 @@ def post_analyze_cancel(analyze_id: str = Form("")) -> RedirectResponse:
         cancel_analyze(archive_root(), cid)
     except (AnalyzeNotFound, ValueError):
         return RedirectResponse("/analyze", status_code=303)
-    return RedirectResponse(f"/analyze/{quote(cid, safe=':')}", status_code=303)
+    return _redirect_analyze(cid, "Cancelled. Session kept.")
 
 
 @router.post("/analyze-discard")
@@ -194,10 +262,10 @@ def post_analyze_discard(request: Request, analyze_id: str = Form("")) -> Respon
     try:
         discard_analyze(archive_root(), cid)
     except AnalyzeDiscardRefused as e:
-        return _error(request, str(e), 409)
+        return _redirect_analyze(cid, str(e))
     except (AnalyzeNotFound, ValueError):
         return RedirectResponse("/analyze", status_code=303)
-    return RedirectResponse(f"/analyze/{quote(cid, safe=':')}", status_code=303)
+    return _redirect_analyze(cid, "Discarded.")
 
 
 @router.post("/analyze/{analyze_id:path}/resume")
@@ -206,16 +274,16 @@ def post_analyze_resume(request: Request, analyze_id: str) -> Response:
     try:
         resume_analyze(archive_root(), cid)
     except AnalyzeResumeConflict as e:
-        return _error(request, str(e), 409)
+        return _redirect_analyze(cid, str(e))
     except AnalyzeBusy as e:
-        return _error(request, str(e), 409)
+        return _redirect_analyze(cid, str(e))
     except (AnalyzeGrokMissing, AnalyzeRunbookMissing) as e:
-        return _error(request, str(e), 503)
+        return _redirect_analyze(cid, str(e))
     except AnalyzeValidationError as e:
-        return _error(request, str(e), 400)
+        return _redirect_analyze(cid, str(e))
     except (AnalyzeNotFound, ValueError):
         return _error(request, f"Analyze not found: {cid}", 404)
-    return RedirectResponse(f"/analyze/{quote(cid, safe=':')}", status_code=303)
+    return _redirect_analyze(cid, "Resumed.")
 
 
 @router.get("/analyze-artifact")

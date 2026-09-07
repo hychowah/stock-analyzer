@@ -243,14 +243,14 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/` | List completed runs; filter and sort; optional Latest (one row per ticker). First glance is ticker, as-of/live, FV, MoS, Downside, stored duration, process audit. Pick two of the same ticker to Compare |
 | `/runs/{run_id}` | One run: decision strip, full-width valuation, price vs analysis, Agent 6 football-field PNG when present, then the CIO cover |
 | `/artifact` | Allowlisted session file. Markdown reports use the document title and a section list; in-archive `.md` links stay on this page. Architecture and harness still use the plain sanitizer. |
-| `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin) |
-| `/analyze/{id}` | Live phase/status; cancel keeps the session (can resume); discard writes `abandon.json` unless a snapshot exists |
+| `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin). Start form is ticker + as-of + harness; Busy/Grok-missing stay on the form. |
+| `/analyze/{id}` | Status patches in place while running; cancel keeps the session (can resume); discard writes `abandon.json` unless a snapshot exists |
 | `/analyze-artifact` | In-progress session file (handoffs/phase; FV and report bodies blocked until snapshot) |
-| `/compares` | Two-run audits |
-| `/compares/new` | Start a two-session Grok audit |
-| `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete |
+| `/compares` | Two-run audits. List does not SSE-reload. |
+| `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |
+| `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete. Failed jobs can Retry as a new packet. |
 | `/compare-artifact` | Allowlisted compare-packet file |
-| `/portfolio` | IB statement (or local JSON) joined to latest catalog runs |
+| `/portfolio` | IB statement (or local JSON) joined to latest catalog runs. Live/Downside/Duration use the same cells as Runs. |
 | `/harness` | Pin map and briefing inspector |
 | `/experiments`, `/calibration` | Group by experiment; MoS vs later outcomes |
 | `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, Reset fits). |

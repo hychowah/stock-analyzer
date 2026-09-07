@@ -52,6 +52,13 @@ def _error(request: Request, message: str, status: int, title: str = "Compare") 
     )
 
 
+def _redirect_compare(cid: str, flash: str | None = None) -> RedirectResponse:
+    url = f"/compares/{quote(cid, safe=':')}"
+    if flash:
+        url += f"?flash={quote(flash)}"
+    return RedirectResponse(url, status_code=303)
+
+
 def _start(
     run_id_a: str,
     run_id_b: str,
@@ -99,13 +106,14 @@ def page_compares(
     )
 
 
-@router.get("/compares/new", response_class=HTMLResponse)
-def page_compare_new(
+def _compare_new_page(
     request: Request,
+    api: CatalogApi,
+    *,
     run_id_a: str = "",
     run_id_b: str = "",
     error: str = "",
-    api: CatalogApi = Depends(get_api),
+    status_code: int = 200,
 ) -> HTMLResponse:
     runs: list[dict[str, Any]] = []
     try:
@@ -115,9 +123,27 @@ def page_compare_new(
     return render_page(
         request,
         "compare_new.html",
+        status_code=status_code,
         runs=runs,
         run_id_a=run_id_a.strip(),
         run_id_b=run_id_b.strip(),
+        error=error,
+    )
+
+
+@router.get("/compares/new", response_class=HTMLResponse)
+def page_compare_new(
+    request: Request,
+    run_id_a: str = "",
+    run_id_b: str = "",
+    error: str = "",
+    api: CatalogApi = Depends(get_api),
+) -> HTMLResponse:
+    return _compare_new_page(
+        request,
+        api,
+        run_id_a=run_id_a,
+        run_id_b=run_id_b,
         error=error,
     )
 
@@ -134,19 +160,41 @@ def post_compare_new(
     try:
         job = _start(run_id_a, run_id_b, force=want_force)
     except CompareValidationError as e:
-        return page_compare_new(
+        return _compare_new_page(
             request,
+            api,
             run_id_a=run_id_a,
             run_id_b=run_id_b,
             error=str(e),
-            api=api,
+            status_code=200,
         )
     except CompareBusy as e:
-        return _error(request, str(e), 409)
+        return _compare_new_page(
+            request,
+            api,
+            run_id_a=run_id_a,
+            run_id_b=run_id_b,
+            error=str(e),
+            status_code=409,
+        )
     except GrokMissing as e:
-        return _error(request, str(e), 503)
+        return _compare_new_page(
+            request,
+            api,
+            run_id_a=run_id_a,
+            run_id_b=run_id_b,
+            error=str(e),
+            status_code=503,
+        )
     except CompareError as e:
-        return _error(request, str(e), 500)
+        return _compare_new_page(
+            request,
+            api,
+            run_id_a=run_id_a,
+            run_id_b=run_id_b,
+            error=str(e),
+            status_code=500,
+        )
     cid = quote(str(job["compare_id"]), safe=":")
     return RedirectResponse(f"/compares/{cid}", status_code=303)
 
@@ -155,6 +203,7 @@ def post_compare_new(
 def page_compare_detail(
     request: Request,
     compare_id: str,
+    flash: str = "",
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     cid = compare_id.strip()
@@ -210,6 +259,7 @@ def page_compare_detail(
         synthesis_html=synthesis_html,
         artifact_index=artifact_index,
         complete=job.get("status") == "complete",
+        flash=(flash or "").strip() or None,
     )
 
 
@@ -222,7 +272,7 @@ def post_compare_cancel(compare_id: str = Form("")) -> RedirectResponse:
         cancel_compare(archive_root(), cid)
     except (CompareNotFound, JobNotFound, ValueError):
         return RedirectResponse("/compares", status_code=303)
-    return RedirectResponse(f"/compares/{quote(cid, safe=':')}", status_code=303)
+    return _redirect_compare(cid, "Cancelled. Session kept.")
 
 
 @router.get("/compare-artifact")

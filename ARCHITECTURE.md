@@ -241,8 +241,8 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | Page | What a person uses it for |
 |------|---------------------------|
 | `/` | List completed runs; filter and sort; optional Latest (one row per ticker). First glance is ticker, as-of/live, FV, MoS, Downside, stored duration, process audit. Pick two of the same ticker to Compare |
-| `/runs/{run_id}` | One run: decision strip, full-width valuation, then price vs analysis, reports |
-| `/artifact` | Render an allowlisted session file (markdown → HTML) |
+| `/runs/{run_id}` | One run: decision strip, full-width valuation, price vs analysis, Agent 6 football-field PNG when present, then the CIO cover |
+| `/artifact` | Allowlisted session file. Markdown reports use the document title and a section list; in-archive `.md` links stay on this page. Architecture and harness still use the plain sanitizer. |
 | `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin) |
 | `/analyze/{id}` | Live phase/status; cancel keeps the session (can resume); discard writes `abandon.json` unless a snapshot exists |
 | `/analyze-artifact` | In-progress session file (handoffs/phase; FV and report bodies blocked until snapshot) |

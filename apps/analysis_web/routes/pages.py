@@ -221,30 +221,21 @@ def page_run(
             message=f"DB missing: {e}",
         )
 
-    # Highlighted classic trio (when present) + full allowlisted reports/ index
-    report_links: list[dict[str, Any]] = []
-    for label, key in (
-        ("README", "readme"),
-        ("Fundamental", "fundamental"),
-        ("Technical", "technical"),
-    ):
-        p = paths.get(key)
-        if p:
-            rel = None
-            try:
-                from pathlib import Path
+    def _artifact_href(rel: str) -> str:
+        return f"/artifact?run_id={quote(run_id, safe='')}&path={quote(rel, safe='')}"
 
-                root = Path(str(paths["session_root"]))
-                rel = Path(str(p)).resolve().relative_to(root.resolve()).as_posix()
-            except Exception:
-                rel = None
-            if rel:
-                href = f"/artifact?run_id={quote(run_id, safe='')}&path={quote(rel, safe='')}"
-                report_links.append({"label": label, "href": href, "rel": rel})
-            else:
-                report_links.append({"label": label, "href": None, "rel": None})
-        else:
-            report_links.append({"label": label, "href": None, "missing": True})
+    cio_href = None
+    readme = paths.get("readme")
+    if readme:
+        try:
+            from pathlib import Path
+
+            root = Path(str(paths["session_root"]))
+            rel = Path(str(readme)).resolve().relative_to(root.resolve()).as_posix()
+        except Exception:
+            rel = None
+        if rel:
+            cio_href = _artifact_href(rel)
 
     artifact_index: list[dict[str, Any]] = []
     try:
@@ -258,9 +249,19 @@ def page_run(
                 "name": item["name"],
                 "relpath": rel,
                 "size_bytes": item.get("size_bytes"),
-                "href": f"/artifact?run_id={quote(run_id, safe='')}&path={quote(rel, safe='')}",
+                "href": _artifact_href(rel),
             }
         )
+
+    football_href = None
+    try:
+        charts = api.list_artifacts(run_id, prefix="charts/")
+    except (RunNotFound, ArtifactDenied, DbMissing):
+        charts = []
+    for item in charts:
+        if item.get("name") == "valuation_football_field.png":
+            football_href = _artifact_href(item["relpath"])
+            break
 
     siblings: list[dict[str, Any]] = []
     ticker = str(run.get("ticker") or "").strip()
@@ -276,8 +277,9 @@ def page_run(
         request,
         "run_detail.html",
         run=run,
-        report_links=report_links,
         artifact_index=artifact_index,
+        football_href=football_href,
+        cio_href=cio_href,
         siblings=siblings,
         chart_overlay=_chart_overlay(run, siblings),
     )

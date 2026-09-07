@@ -1,9 +1,9 @@
 {
   "slug": "ui-run-reading",
   "session_key": "2026-09-06-ui-run-reading",
-  "status": "scaffolded",
+  "status": "verified",
   "created_at": "2026-09-06T10:37:38Z",
-  "updated_at": "2026-09-06T10:37:38Z",
+  "updated_at": "2026-09-07T12:30:00Z",
   "work_type": "W4",
-  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+  "resume_hint": "Wave 4a verified; feature_list passes true; ship_note.json written. Commit only after user agreement (smart-commit invoked)."
 }

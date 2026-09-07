@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import html
 import json
+import posixpath
 import re
 from typing import Any
+from urllib.parse import quote, urlparse
 
 import bleach
 from markdown_it import MarkdownIt
+
+from packages.catalog_api.client import DEFAULT_ALLOW_PREFIXES, DEFAULT_DENY_PREFIXES
 
 # Keep tight: research reports need structure, not scripts.
 _ALLOWED_TAGS = frozenset(
@@ -138,6 +142,161 @@ def render_markdown(text: str) -> str:
         strip=True,
     )
     return _unwrap_mermaid_fences(_with_heading_ids(cleaned))
+
+
+_H1_RE = re.compile(r"<h1\b([^>]*)>(.*?)</h1>", re.IGNORECASE | re.DOTALL)
+_TOC_RE = re.compile(
+    r'<h([23])\b[^>]*\sid="([^"]+)"[^>]*>(.*?)</h\1>',
+    re.IGNORECASE | re.DOTALL,
+)
+_A_HREF_RE = re.compile(
+    r'(<a\b[^>]*?\s)href="([^"]*)"([^>]*>)',
+    re.IGNORECASE,
+)
+_MD_EXT = (".md", ".markdown")
+
+
+def _allowlisted_rel(norm: str) -> bool:
+    if not any(norm == a.rstrip("/") or norm.startswith(a) for a in DEFAULT_ALLOW_PREFIXES):
+        return False
+    return not any(norm.startswith(d) for d in DEFAULT_DENY_PREFIXES)
+
+
+def _rewrite_session_href(
+    href: str,
+    *,
+    run_id: str,
+    relpath: str,
+    href_base: str,
+    id_query: str,
+) -> str | None:
+    """Rewrite a relative .md href onto href_base, or None to drop the URL.
+
+    Leave #fragments and http(s)/mailto alone. Reject `..` and targets the
+    catalog would not serve. Resolve against relpath's directory (not a
+    hardcoded reports/ prefix).
+    """
+    raw = html.unescape((href or "").strip())
+    if not raw:
+        return raw
+    if raw.startswith("#"):
+        return raw
+    parsed = urlparse(raw)
+    scheme = (parsed.scheme or "").lower()
+    if scheme in ("http", "https", "mailto"):
+        return raw
+    if scheme:
+        return None
+    path = parsed.path or ""
+    if path.startswith("/"):
+        return raw
+    if not path.lower().endswith(_MD_EXT):
+        return raw
+    posix = path.replace("\\", "/")
+    if ".." in posix.split("/"):
+        return None
+    # Paths that already name an allowlisted prefix are session-root relative
+    # (`reports/01.md` from `reports/README.md` must not become reports/reports/).
+    # Bare siblings (`01.md`, `./01.md`) resolve against relpath's directory.
+    candidate = posixpath.normpath(posix)
+    if _allowlisted_rel(candidate):
+        norm = candidate
+    else:
+        base_dir = posixpath.dirname((relpath or "").replace("\\", "/"))
+        joined = posixpath.join(base_dir, posix) if base_dir else posix
+        norm = posixpath.normpath(joined)
+    if norm.startswith("..") or norm == "..":
+        return None
+    if not _allowlisted_rel(norm):
+        return None
+    out = (
+        f"{href_base}?{id_query}={quote(run_id, safe='')}&path={quote(norm, safe='')}"
+    )
+    if parsed.fragment:
+        out += f"#{parsed.fragment}"
+    return out
+
+
+def _rewrite_relative_md_hrefs(
+    fragment: str,
+    *,
+    run_id: str,
+    relpath: str,
+    href_base: str,
+    id_query: str,
+) -> str:
+    def repl(match: re.Match[str]) -> str:
+        rewritten = _rewrite_session_href(
+            match.group(2),
+            run_id=run_id,
+            relpath=relpath,
+            href_base=href_base,
+            id_query=id_query,
+        )
+        if rewritten is None:
+            prefix = match.group(1).rstrip()
+            return f"{prefix}{match.group(3)}"
+        escaped = html.escape(rewritten, quote=True)
+        return f'{match.group(1)}href="{escaped}"{match.group(3)}'
+
+    return _A_HREF_RE.sub(repl, fragment)
+
+
+def _extract_title(html_body: str, relpath: str) -> tuple[str, str]:
+    """Page title from the first H1; strip that heading from the body."""
+    match = _H1_RE.search(html_body)
+    if not match:
+        return (relpath or "Report"), html_body
+    title = _visible_text(match.group(2)).strip() or (relpath or "Report")
+    body = html_body[: match.start()] + html_body[match.end() :]
+    return title, body.lstrip()
+
+
+def _toc_from_html(html_body: str) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for match in _TOC_RE.finditer(html_body):
+        text = _visible_text(match.group(3)).strip()
+        if not text:
+            continue
+        out.append(
+            {
+                "level": int(match.group(1)),
+                "id": match.group(2),
+                "text": text,
+            }
+        )
+    return out
+
+
+def render_session_report(
+    text: str,
+    *,
+    run_id: str,
+    relpath: str,
+    href_base: str = "/artifact",
+    id_query: str = "run_id",
+) -> dict[str, Any]:
+    """Artifact markdown as a document: title, h2/h3 toc, rewritten sibling links.
+
+    `render_markdown()` stays a plain sanitizer (architecture, harness). This
+    helper is the session-report document type. Default href_base is catalog
+    `/artifact` with query key `run_id`. Compare/analyze may pass another
+    base and id_query (`compare_id` / `analyze_id`).
+    """
+    html_body = render_markdown(text)
+    title, html_body = _extract_title(html_body, relpath)
+    html_body = _rewrite_relative_md_hrefs(
+        html_body,
+        run_id=run_id,
+        relpath=relpath,
+        href_base=href_base,
+        id_query=id_query,
+    )
+    return {
+        "title": title,
+        "toc": _toc_from_html(html_body),
+        "html": html_body,
+    }
 
 
 def render_json_pretty(data: bytes | str | Any) -> str:

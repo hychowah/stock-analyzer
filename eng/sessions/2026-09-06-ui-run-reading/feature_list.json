@@ -3,31 +3,31 @@
     {
       "id": "orient",
       "description": "Read AGENT_BRIEF.md + PLAN.md Session 4 + sdr-wave4a-run-reading.md",
-      "passes": false,
+      "passes": true,
       "verify": "progress.md names predecessor"
     },
     {
       "id": "session-report",
       "description": "render_session_report {title,toc,html}; render_markdown stays str; sibling hrefs vs relpath dir",
-      "passes": false,
+      "passes": true,
       "verify": "pytest render_session_report; architecture still calls render_markdown()"
     },
     {
       "id": "football",
       "description": "page_run football_href; CIO cover CTA; allowlist table in details",
-      "passes": false,
+      "passes": true,
       "verify": "run_detail img only when football_href set"
     },
     {
       "id": "chart-copy",
       "description": "One tooltip/readout formatter; clip on status; touchmove; stage height outside 800px query",
-      "passes": false,
+      "passes": true,
       "verify": "price_chart.js shared formatter; app.css 800px block untouched"
     },
     {
       "id": "verify",
       "description": "Verifier marks features after real checks",
-      "passes": false,
+      "passes": true,
       "verify": "python scripts/eng_verify.py"
     }
   ]

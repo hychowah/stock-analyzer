@@ -18,6 +18,7 @@
   var statusEl = document.getElementById("price-chart-status");
   var overlay = readOverlay();
   var symbol = String(root.getAttribute("data-symbol") || "").trim().toUpperCase();
+  var statusKind = "empty";
   var state = {
     range: "",
     bars: [],
@@ -39,11 +40,12 @@
     }
   }
 
-  function setStatus(msg) {
+  function setStatus(msg, kind) {
     if (!statusEl) {
       return;
     }
     statusEl.textContent = msg || "";
+    statusKind = kind || (msg ? "info" : "empty");
   }
 
   function fmtNum(n, digits) {
@@ -133,10 +135,19 @@
     var height = Math.max(200, Math.floor(rect.height) || 280);
     state.width = width;
     state.height = height;
-    var pad = { l: 56, r: 14, t: 14, b: 28 };
+    var bars = state.bars;
+    var ydom = domainY(bars);
+    var ticks = yTicks(ydom.min, ydom.max, 4);
+    var longest = 0;
+    ticks.forEach(function (v) {
+      var s = fmtNum(v, v >= 100 ? 0 : 2);
+      if (s.length > longest) {
+        longest = s.length;
+      }
+    });
+    var pad = { l: Math.max(56, Math.ceil(longest * 7.2) + 14), r: 14, t: 14, b: 28 };
     var innerW = Math.max(10, width - pad.l - pad.r);
     var innerH = Math.max(10, height - pad.t - pad.b);
-    var bars = state.bars;
     var t0;
     var t1;
     if (bars.length) {
@@ -151,7 +162,6 @@
     if (!(t1 > t0)) {
       t1 = t0 + 86400000;
     }
-    var ydom = domainY(bars);
     function x(ts) {
       var t = typeof ts === "number" ? ts : parseDay(ts);
       if (isNaN(t)) {
@@ -189,10 +199,7 @@
     return i;
   }
 
-  function fillReadout(bar) {
-    if (!readout) {
-      return;
-    }
+  function formatPoint(bar) {
     var close = bar && isNum(bar.close) ? bar.close : null;
     var date = bar && bar.t ? bar.t : "";
     var bits = [];
@@ -212,7 +219,42 @@
     if (overlay.currency) {
       bits.push(overlay.currency);
     }
-    readout.textContent = bits.join("  ·  ");
+    return bits;
+  }
+
+  function fillReadout(bar) {
+    if (!readout) {
+      return;
+    }
+    readout.textContent = formatPoint(bar).join("  ·  ");
+  }
+
+  function clipNote(ydom) {
+    var parts = [];
+    var rows = [
+      ["Bear", overlay.fv_bear],
+      ["Base", overlay.fv_base],
+      ["Bull", overlay.fv_bull],
+      ["Weighted", overlay.fv_weighted],
+    ];
+    for (var i = 0; i < rows.length; i++) {
+      var v = rows[i][1];
+      if (!isNum(v)) {
+        continue;
+      }
+      if (v < ydom.min || v > ydom.max) {
+        parts.push(rows[i][0] + " " + fmtNum(v) + " off-chart");
+      }
+    }
+    return parts.join("; ");
+  }
+
+  function applyClip(ydom) {
+    if (statusKind === "load" || statusKind === "error" || statusKind === "info") {
+      return;
+    }
+    var msg = clipNote(ydom);
+    setStatus(msg, msg ? "clip" : "empty");
   }
 
   function showTooltip(lay, i, evt) {
@@ -223,11 +265,7 @@
       return;
     }
     var bar = state.bars[i];
-    var lines = [bar.t, "Close  " + fmtNum(bar.close)];
-    if (isNum(overlay.fv_base)) {
-      lines.push("Base   " + fmtNum(overlay.fv_base));
-    }
-    tooltip.textContent = lines.join("\n");
+    tooltip.textContent = formatPoint(bar).join("\n");
     tooltip.hidden = false;
     var stage = svg.parentNode;
     var sr = stage.getBoundingClientRect();
@@ -489,6 +527,7 @@
 
     var last = bars.length ? bars[bars.length - 1] : null;
     fillReadout(last);
+    applyClip(lay.ydom);
   }
 
   function onMove(evt) {
@@ -529,11 +568,11 @@
     setPressed(range);
     if (!symbol) {
       state.bars = [];
-      setStatus("No listing symbol — showing analysis levels only.");
+      setStatus("No listing symbol — showing analysis levels only.", "info");
       draw();
       return;
     }
-    setStatus("Loading price history…");
+    setStatus("Loading price history…", "load");
     var url =
       "/api/price-history?symbol=" +
       encodeURIComponent(symbol) +
@@ -551,16 +590,19 @@
         }
         if (!payload.ok) {
           state.bars = [];
-          setStatus((payload.body && payload.body.detail) || "Price history failed");
+          setStatus((payload.body && payload.body.detail) || "Price history failed", "error");
           draw();
           return;
         }
         var body = payload.body || {};
         state.bars = Array.isArray(body.bars) ? body.bars : [];
         if (body.error && !state.bars.length) {
-          setStatus("Price history unavailable (" + body.error + "). Analysis levels still shown.");
+          setStatus(
+            "Price history unavailable (" + body.error + "). Analysis levels still shown.",
+            "error"
+          );
         } else {
-          setStatus("");
+          setStatus("", "empty");
         }
         draw();
       })
@@ -569,7 +611,7 @@
           return;
         }
         state.bars = [];
-        setStatus("Price history failed. Analysis levels still shown.");
+        setStatus("Price history failed. Analysis levels still shown.", "error");
         draw();
       });
   }
@@ -612,6 +654,16 @@
     },
     { passive: true }
   );
+  svg.addEventListener(
+    "touchmove",
+    function (evt) {
+      if (evt.touches && evt.touches[0]) {
+        onMove(evt.touches[0]);
+      }
+    },
+    { passive: true }
+  );
+  svg.addEventListener("touchend", onLeave, { passive: true });
 
   if (typeof ResizeObserver === "function") {
     var ro = new ResizeObserver(function () {

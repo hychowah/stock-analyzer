@@ -90,6 +90,8 @@
       <li><span class="swatch swatch-base"></span> Base</li>
       <li><span class="swatch swatch-bull"></span> Bull</li>
       <li><span class="swatch swatch-asof"></span> As-of</li>
+      <li><span class="swatch swatch-weighted"></span> Weighted</li>
+      <li><span class="swatch swatch-sibling"></span> Other sessions</li>
     </ul>
     <script type="application/json" id="price-chart-overlay">{{ chart_overlay | tojson }}</script>
   </section>
@@ -126,37 +128,35 @@
 </div>
 {% endif %}
 <div class="card">
-  <h2>Primary reports</h2>
-  <ul>
-    {% for item in report_links %}
-      {% if item.href %}
-        <li><a href="{{ item.href }}">{{ item.label }}</a> <span class="mono muted">{{ item.rel }}</span></li>
-      {% elif item.missing %}
-        <li class="muted">{{ item.label }}: missing</li>
-      {% else %}
-        <li>{{ item.label }} <span class="muted">(path unavailable)</span></li>
-      {% endif %}
-    {% endfor %}
-  </ul>
-</div>
-<div class="card">
-  <h2>All reports/ (allowlisted)</h2>
-  {% if artifact_index %}
-  <table>
-    <thead><tr><th>File</th><th>Path</th><th>Size</th></tr></thead>
-    <tbody>
-      {% for item in artifact_index %}
-      <tr>
-        <td><a href="{{ item.href }}">{{ item.name }}</a></td>
-        <td class="mono muted">{{ item.relpath }}</td>
-        <td class="num muted">{% if item.size_bytes is not none %}{{ item.size_bytes }}{% else %}—{% endif %}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <h2>Valuation envelope</h2>
+  {% if football_href %}
+  <p><img class="football-field" src="{{ football_href }}" alt="Valuation football field"/></p>
   {% else %}
-  <p class="muted">No files under reports/ (or session missing).</p>
+  <p class="muted">No football-field chart for this session.</p>
   {% endif %}
+  {% if cio_href %}
+  <p><a href="{{ cio_href }}">Read CIO cover</a></p>
+  {% else %}
+  <p class="muted">CIO cover missing.</p>
+  {% endif %}
+  <details>
+    <summary>All reports (allowlisted)</summary>
+    {% if artifact_index %}
+    <table>
+      <thead><tr><th>File</th><th>Size</th></tr></thead>
+      <tbody>
+        {% for item in artifact_index %}
+        <tr>
+          <td><a href="{{ item.href }}">{{ item.name }}</a></td>
+          <td class="num muted">{% if item.size_bytes is not none %}{{ item.size_bytes }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No files under reports/ (or session missing).</p>
+    {% endif %}
+  </details>
   <p class="muted">Markdown is rendered as HTML; use “Raw source” on the report page for plain text. raw_sec denied by design.</p>
 </div>
 {% endblock %}

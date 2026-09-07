@@ -19,7 +19,7 @@ from apps.analysis_web.services.render_markdown import (
     is_markdown_path,
     is_text_path,
     render_json_pretty,
-    render_markdown,
+    render_session_report,
 )
 
 router = APIRouter(tags=["artifacts"])
@@ -67,14 +67,16 @@ def page_artifact(
             return render_page(
                 request, "artifact.html", run_id=rid, relpath=rel, text=text
             )
-        body_html = render_markdown(text)
+        doc = render_session_report(text, run_id=rid, relpath=rel)
         return render_page(
             request,
             "report.html",
             run_id=rid,
             relpath=rel,
             mode="markdown",
-            body_html=body_html,
+            title=doc["title"],
+            toc=doc["toc"],
+            body_html=doc["html"],
             body_text="",
         )
 

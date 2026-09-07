@@ -1,0 +1,24 @@
+{
+  "session": "2026-09-06-ui-run-reading",
+  "feature": "Wave 4a ui-run-reading — render_session_report document; page_run football_href; one chart formatter and stage height",
+  "summary": "Open a run: Agent 6 football-field PNG when present, honest price tape, CIO cover by markdown title. render_markdown() stays a plain sanitizer. page_run owns football_href; template does not guess the PNG.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "TestClient live ARCHIVE_ROOT (no bind): research:000660.KS:2026-07-29 football PNG + CIO cover; README one H1 + sibling /artifact; research:4516.T:2026-09-06 CIO title; /architecture still render_markdown"
+  ],
+  "verify": "pytest analysis_web 203 passed; eng_verify PASS 794. progress.md names predecessor ui-decision-blotter. architecture.py and harness_view.py still call render_markdown(); artifacts.py calls render_session_report. run_detail.html has no valuation_football_field.png string; img only when football_href. price_chart.js formatPoint used by readout and tooltip; 800px .chart-stage block still height 220px. git diff vs HEAD does not touch base.html, quotes.js, runs_table.html, harness/VERSION. ARCHITECTURE.md website table updated. Live archive TestClient: 000660.KS football 70989-byte PNG, README H1 SK hynix, raw sibling href absent; 4516.T cover title, one H1. Smart-commit: muted relpath only when title differs; sibling rewrite id_query defaults to run_id.",
+  "notes": [
+    "SDR reshape held: session URL knowledge is not in render_markdown(); football existence is a page_run fact; stage height is a global .chart-stage rule.",
+    "No harness/VERSION bump (W4).",
+    "Killed :8775 was not restarted; verifier used TestClient against live ARCHIVE_ROOT."
+  ],
+  "follow_ups": [
+    "Wave 4c ui-jobs-portfolio (job wait loop + portfolio blotter cells).",
+    "Wave 5 ui-a11y-phone after Wave 2 AND Wave 3 (every app.css 800px query → 1100px; must not restyle .decision / .below-bear; may move the 220px chart-stage query)."
+  ],
+  "risks": [
+    "Phone still gets height 220px from the untouched 800px query until Wave 5. Stale :8765 is old chrome; do not treat it as this tree."
+  ],
+  "proposed_commit": "Show the football-field cone and CIO cover when opening a run"
+}

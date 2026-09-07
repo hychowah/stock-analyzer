@@ -589,6 +589,21 @@ td.pick {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.football-field {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.report-toc {
+  margin: 0 0 1rem;
+}
+.report-toc ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.2rem;
+}
+.report-toc .toc-h3 {
+  margin-left: 0.85rem;
+}
 .report-body {
   line-height: 1.55;
   max-width: 52rem;
@@ -696,7 +711,8 @@ th.num a.sort {
 }
 .chart-stage {
   position: relative;
-  height: 280px;
+  min-height: 260px;
+  height: min(42vh, 320px);
   background: var(--chart-stage);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -748,6 +764,8 @@ th.num a.sort {
 .swatch-base { background: #1d4ed8; }
 .swatch-bull { background: #15803d; }
 .swatch-asof { background: #94a3b8; }
+.swatch-weighted { background: #7c3aed; }
+.swatch-sibling { background: var(--muted); }
 .chart-grid line {
   stroke: var(--chart-grid);
   stroke-width: 1;

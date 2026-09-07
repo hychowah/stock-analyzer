@@ -28,9 +28,9 @@ Or: `bash apps/analysis_web/init.sh`
 | Path | Purpose |
 |------|---------|
 | `/` | Run list: live prefix search, filters, column sort, optional Latest-per-ticker; Downside % is (price − bear FV) / price (as-of, then live print). Duration is the stored snapshot action; Audit is process completeness |
-| `/runs/{run_id}` | Run detail (decision strip, full-width valuation, then price vs analysis chart, reports) |
+| `/runs/{run_id}` | Run detail (decision strip, full-width valuation, price vs analysis, football-field PNG when present, CIO cover) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
-| `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
+| `/artifact?run_id=…&path=reports/…` | Report view (markdown title + TOC + sibling `.md` links on `/artifact`; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
 | `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Change-in-NAV waterfall + MTM bars |

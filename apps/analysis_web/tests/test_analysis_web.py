@@ -599,10 +599,59 @@ class AnalysisWebTests(unittest.TestCase):
         )
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Hello META", r.content)
-        # Rendered heading, not only escaped source in a bare dump
-        self.assertIn(b"<h1", r.content)
+        # Page H1 is the markdown title, not the filename; body does not repeat it.
+        self.assertIn("<h1>Hello META</h1>", r.text)
+        self.assertEqual(r.text.count("<h1"), 1)
+        self.assertIn("00_META_README.md", r.text)
+        self.assertRegex(
+            r.text,
+            r'<h1>Hello META</h1>\s*<p class="mono muted">reports/00_META_README.md</p>',
+        )
         self.assertIn(b"report-body", r.content)
         self.assertNotIn(b"mermaid_boot.js", r.content)
+
+    def test_artifact_json_path_is_not_duplicated_as_subtitle(self):
+        r = self.client.get(
+            "/artifact",
+            params={
+                "run_id": "research:META:2026-08-03",
+                "path": "data/valuation_model.json",
+            },
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("<h1>data/valuation_model.json</h1>", r.text)
+        self.assertEqual(r.text.count("<h1"), 1)
+        self.assertNotRegex(
+            r.text,
+            r'<h1>data/valuation_model.json</h1>\s*<p class="mono muted">data/valuation_model.json</p>',
+        )
+
+    def test_artifact_sibling_md_stays_on_artifact(self):
+        research = self.archive / "research" / "META" / "2026-08-03" / "reports"
+        (research / "00_META_README.md").write_text(
+            "# Hello META\n\n## Full reports\n\n"
+            "[Fundamental](01_META_fundamental.md#thesis)\n",
+            encoding="utf-8",
+        )
+        (research / "01_META_fundamental.md").write_text(
+            "# Fundamental\n\n## Thesis\n\nBody.\n",
+            encoding="utf-8",
+        )
+        r = self.client.get(
+            "/artifact",
+            params={
+                "run_id": "research:META:2026-08-03",
+                "path": "reports/00_META_README.md",
+            },
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("<h1>Hello META</h1>", r.text)
+        self.assertIn('href="#full-reports"', r.text)
+        self.assertIn("/artifact?run_id=research%3AMETA%3A2026-08-03", r.text)
+        self.assertIn("path=reports%2F01_META_fundamental.md", r.text)
+        self.assertIn("#thesis", r.text)
+        self.assertNotIn('href="01_META_fundamental.md"', r.text)
+        self.assertNotIn("/analyze-artifact", r.text)
 
     def test_artifact_markdown_raw(self):
         r = self.client.get(
@@ -654,7 +703,12 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertNotIn(b'class="grid2"', r.content)
         self.assertIn(b"pass - wait", r.content)
         self.assertIn(b"cheap vs high ROIC", r.content)
-        self.assertIn(b"All reports/", r.content)
+        self.assertIn(b"All reports (allowlisted)", r.content)
+        self.assertIn(b"Read CIO cover", r.content)
+        self.assertIn(b"No football-field chart for this session.", r.content)
+        self.assertNotIn(b"Primary reports", r.content)
+        self.assertNotIn(b'class="football-field"', r.content)
+        self.assertNotIn(b"valuation_football_field.png", r.content)
         js = Path(__file__).resolve().parents[1] / "static" / "price_chart.js"
         text = js.read_text(encoding="utf-8")
         self.assertIn("/api/price-history", text)
@@ -663,6 +717,74 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertNotIn("vsBase", text)
         self.assertNotIn("price vs base", text)
         self.assertNotIn("var RANGES", text)
+        self.assertIn("function formatPoint", text)
+        self.assertIn("formatPoint(bar).join(\"  ·  \")", text)
+        self.assertIn("formatPoint(bar).join(\"\\n\")", text)
+        self.assertIn("off-chart", text)
+        self.assertIn("statusKind === \"load\"", text)
+        self.assertIn("touchmove", text)
+        self.assertIn("touchend", text)
+        self.assertIn("longest * 7.2", text)
+        self.assertIn("Price is the scale", text)
+        template = (
+            Path(__file__).resolve().parents[1] / "templates" / "run_detail.html"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("valuation_football_field.png", template)
+        self.assertIn("football_href", template)
+        self.assertIn("swatch-weighted", template)
+        self.assertIn("Other sessions", template)
+        css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(
+            css,
+            r"\.chart-stage\s*\{[^}]*min-height:\s*260px",
+        )
+        self.assertRegex(
+            css,
+            r"\.chart-stage\s*\{[^}]*height:\s*min\(42vh,\s*320px\)",
+        )
+        self.assertIn(
+            "@media (max-width: 800px) {\n  .chart-stage {\n    height: 220px;\n  }\n}",
+            css.replace("\r\n", "\n"),
+        )
+        arch = (
+            Path(__file__).resolve().parents[1] / "routes" / "architecture.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("render_markdown(", arch)
+        self.assertNotIn("render_session_report", arch)
+
+    def test_run_detail_football_when_present(self):
+        charts = self.archive / "research" / "META" / "2026-08-03" / "charts"
+        charts.mkdir(parents=True, exist_ok=True)
+        png = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+            b"\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+            b"\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01"
+            b"\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        (charts / "valuation_football_field.png").write_bytes(png)
+        (charts / "tornado.png").write_bytes(png)
+        r = self.client.get("/runs/research:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'class="football-field"', r.content)
+        self.assertIn(
+            b"/artifact?run_id=research%3AMETA%3A2026-08-03"
+            b"&amp;path=charts%2Fvaluation_football_field.png",
+            r.content,
+        )
+        self.assertNotIn(b"No football-field chart for this session.", r.content)
+        self.assertNotIn(b"tornado.png", r.content)
+        self.assertIn(b"Read CIO cover", r.content)
+        img = self.client.get(
+            "/artifact",
+            params={
+                "run_id": "research:META:2026-08-03",
+                "path": "charts/valuation_football_field.png",
+            },
+        )
+        self.assertEqual(img.status_code, 200)
+        self.assertEqual(img.headers.get("content-type"), "image/png")
 
     def test_experiments(self):
         r = self.client.get("/experiments")
@@ -1292,6 +1414,10 @@ class AnalysisWebCompareTests(unittest.TestCase):
         )
         self.assertEqual(ok.status_code, 200)
         self.assertIn(b"Synthesis", ok.content)
+        self.assertNotRegex(
+            ok.text,
+            r'<h1>99_synthesis.md</h1>\s*<p class="mono muted">99_synthesis.md</p>',
+        )
 
     def test_run_detail_has_compare_form(self):
         r = self.client.get("/runs/research:META:2026-08-03")

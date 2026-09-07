@@ -13,6 +13,7 @@
   }
 
   var selected = {};
+  var bar = document.getElementById("compare-bar");
 
   function keys() {
     return Object.keys(selected);
@@ -23,6 +24,9 @@
     results.querySelectorAll("input.compare-pick").forEach(function (cb) {
       cb.checked = !!selected[cb.value];
     });
+    if (bar) {
+      bar.classList.toggle("is-on", ids.length > 0);
+    }
     if (ids.length === 0) {
       btn.disabled = true;
       hint.textContent = "Select two sessions of the same ticker.";
@@ -31,7 +35,7 @@
     }
     if (ids.length === 1) {
       btn.disabled = true;
-      hint.textContent = "Select one more session of ticker " + selected[ids[0]] + ".";
+      hint.textContent = "Select one more session of ticker " + selected[ids[0]].ticker + ".";
       hint.className = "muted";
       return;
     }
@@ -43,14 +47,14 @@
     }
     var t0 = selected[ids[0]];
     var t1 = selected[ids[1]];
-    if (t0 !== t1) {
+    if (t0.ticker !== t1.ticker) {
       btn.disabled = true;
-      hint.textContent = "Select two sessions of the same ticker (got " + t0 + " and " + t1 + ").";
+      hint.textContent = "Select two sessions of the same ticker (got " + t0.ticker + " and " + t1.ticker + ").";
       hint.className = "muted";
       return;
     }
     btn.disabled = false;
-    hint.textContent = "Compare " + t0 + ": " + ids[0] + " vs " + ids[1];
+    hint.textContent = "Compare " + t0.ticker + ": " + t0.session + " vs " + t1.session;
     hint.className = "muted";
   }
 
@@ -60,14 +64,17 @@
       return;
     }
     if (cb.checked) {
-      selected[cb.value] = cb.getAttribute("data-ticker") || "";
+      selected[cb.value] = {
+        ticker: cb.getAttribute("data-ticker") || "",
+        session: cb.getAttribute("data-session-key") || "",
+      };
     } else {
       delete selected[cb.value];
     }
     updateBar();
   });
 
-  document.addEventListener("catalog-changed", function () {
+  document.addEventListener("runs-table-updated", function () {
     window.setTimeout(updateBar, 0);
   });
 
@@ -76,7 +83,7 @@
     if (ids.length !== 2) {
       return;
     }
-    if (selected[ids[0]] !== selected[ids[1]]) {
+    if (selected[ids[0]].ticker !== selected[ids[1]].ticker) {
       return;
     }
     var ok = window.confirm(

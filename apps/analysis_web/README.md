@@ -64,7 +64,7 @@ Header **Runs** and run-detail **← Runs** remember the last non-empty query (b
 
 Header **Night** / **Light** switches page chrome. The choice is browser-local (`localStorage` key `analysis_web.theme`), not archive. First visit follows the OS light/dark setting until you click.
 
-The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **Lab** (Harness, Architecture, Experiments, Calibration, Health). Below 800px the tagline hides and each group sits behind its own **Menu** / **Lab** control (CSS checkbox; no extra JS). Wide one-entity lists (Runs, Portfolio positions, Analyze jobs, Compares, Experiments, Calibration) restyle as stacked cards; secondary Runs/Portfolio columns hide. On Runs, ticker + Filter + Reset stay visible; extra filters sit behind **Filters** (same checkbox pattern; collapsed is not omitted — live search still serializes every field). Desktop is unchanged.
+The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **Lab** (Harness, Architecture, Experiments, Calibration, Health). Below 1100px (the same width as `main`) the tagline hides and each group sits behind its own **Menu** / **Lab** control (CSS checkbox; no extra JS). Wide one-entity lists (Runs, Portfolio positions, Analyze jobs, Compares, Experiments, Calibration) restyle as stacked cards; secondary Runs/Portfolio columns hide. On Runs, ticker + Filter + Reset stay visible; extra filters sit behind **Filters** (same checkbox pattern; collapsed is not omitted — live search still serializes every field). Desktop (`min-width: 1101px`) hides the disclose checkboxes so they are not tab stops.
 
 | Param | Meaning |
 |-------|---------|

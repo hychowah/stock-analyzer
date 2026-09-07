@@ -6,7 +6,7 @@
 </th>
 {% endmacro %}
 {% if error %}
-<div class="card err" role="alert">
+<div class="card err" role="alert" data-runs-status="{% if error_kind == 'ticker_not_found' %}Aborted. {{ error }}{% else %}{{ error }}{% endif %}">
   {% if error_kind == 'ticker_not_found' %}
   <p><strong>Aborted.</strong> {{ error }}</p>
   <p>Typed ticker <code>{{ ticker_query }}</code> is not in the catalog. Fix the symbol — do not continue as if the list were empty.</p>
@@ -17,12 +17,11 @@
   {% endif %}
 </div>
 {% else %}
-<div class="card">
-  <p class="muted" aria-live="polite">{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }} · live is Yahoo last print</p>
+<div class="card" data-runs-status="{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }} · live is Yahoo last print">
   <table class="runs-table stack-table">
     <thead>
       <tr>
-        <th class="pick"></th>
+        <th class="pick" aria-label="Select for compare"></th>
         {{ sort_th('ticker', 'Ticker') }}
         {{ sort_th('session_date', 'Session') }}
         {{ sort_th('asof_price', 'As-of', 'num') }}
@@ -46,7 +45,8 @@
         <tr>
           <td class="pick">
             <input type="checkbox" class="compare-pick" value="{{ r.run_id }}"
-                   data-ticker="{{ r.ticker }}" aria-label="Select {{ r.ticker }} {{ r.session_key }}"/>
+                   data-ticker="{{ r.ticker }}" data-session-key="{{ r.session_key }}"
+                   aria-label="Select {{ r.ticker }} {{ r.session_key }}"/>
           </td>
           <td data-label="Ticker"><a class="mono decision" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
           <td class="mono" data-label="Session"><a href="/runs/{{ r.run_id }}">{{ r.session_key }}</a></td>

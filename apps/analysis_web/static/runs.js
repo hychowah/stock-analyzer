@@ -137,6 +137,92 @@
     var abort = null;
     var DEBOUNCE_MS = 100;
 
+    function statusNode() {
+      return document.getElementById("runs-status");
+    }
+
+    function flashNode() {
+      return document.getElementById("runs-flash");
+    }
+
+    function hideFlash() {
+      var flash = flashNode();
+      if (flash) {
+        flash.hidden = true;
+        flash.textContent = "";
+      }
+    }
+
+    function showFetchError() {
+      var msg = "Could not refresh the list. Showing the last loaded table.";
+      var live = statusNode();
+      if (live) {
+        live.textContent = msg;
+      }
+      var flash = flashNode();
+      if (flash) {
+        flash.hidden = false;
+        flash.textContent = msg;
+      }
+    }
+
+    function labelStackedCells(root) {
+      if (!root) {
+        return;
+      }
+      root.querySelectorAll("td[data-label]").forEach(function (td) {
+        if (td.classList.contains("pick")) {
+          return;
+        }
+        var label = td.getAttribute("data-label");
+        if (label) {
+          td.setAttribute("aria-label", label);
+        }
+      });
+    }
+
+    function syncStatus() {
+      var live = statusNode();
+      if (!live) {
+        return;
+      }
+      var marked = results.querySelector("[data-runs-status]");
+      if (marked) {
+        live.textContent = marked.getAttribute("data-runs-status") || "";
+        return;
+      }
+      var abortCard = results.querySelector(".card.err");
+      if (abortCard) {
+        live.textContent = abortCard.textContent.replace(/\s+/g, " ").trim();
+        return;
+      }
+      var count = results.querySelector("p.muted");
+      live.textContent = count ? count.textContent.trim() : "";
+    }
+
+    function restoreFocus(fromResults) {
+      if (!fromResults) {
+        return;
+      }
+      var active = results.querySelector("a.sort.is-active");
+      if (active) {
+        active.focus();
+        return;
+      }
+      var ticker = form.querySelector('[name="ticker_prefix"]');
+      if (ticker) {
+        ticker.focus();
+      }
+    }
+
+    function afterSwap(fromResults) {
+      hideFlash();
+      labelStackedCells(results);
+      syncStatus();
+      restoreFocus(fromResults);
+      document.dispatchEvent(new CustomEvent("runs-table-updated"));
+    }
+
     function paramsFromForm() {
       var fd = new FormData(form);
       var sp = new URLSearchParams();
@@ -166,6 +252,7 @@
       abort = new AbortController();
       var qs = sp.toString();
       var url = "/fragments/runs" + (qs ? "?" + qs : "");
+      var fromResults = results.contains(document.activeElement);
       fetch(url, {
         credentials: "same-origin",
         signal: abort.signal,
@@ -183,12 +270,14 @@
           }
           history.replaceState(null, "", pathFromParams(sp));
           remember(sp);
+          afterSwap(fromResults);
           document.dispatchEvent(new CustomEvent("quotes-refresh"));
         })
         .catch(function (err) {
           if (err && err.name === "AbortError") {
             return;
           }
+          showFetchError();
         });
     }
 
@@ -213,6 +302,9 @@
     if (urlQuery.toString()) {
       remember(urlQuery);
     }
+
+    labelStackedCells(results);
+    syncStatus();
 
     results.addEventListener("click", function (ev) {
       var verLink = ev.target && ev.target.closest ? ev.target.closest("a.version-filter") : null;

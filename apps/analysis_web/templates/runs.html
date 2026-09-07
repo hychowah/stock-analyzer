@@ -85,10 +85,12 @@
   </form>
   <div id="compare-bar" class="compare-bar">
     <button type="button" id="compare-btn" disabled>Compare selected</button>
-    <span id="compare-hint" class="muted">Select two sessions of the same ticker.</span>
+    <span id="compare-hint" class="muted" aria-live="polite">Select two sessions of the same ticker.</span>
     <a class="btn secondary" href="/compares/new">Compare form</a>
   </div>
 </div>
+<p id="runs-status" class="muted" aria-live="polite">{% if error %}{% if error_kind == 'ticker_not_found' %}Aborted. {{ error }}{% else %}{{ error }}{% endif %}{% else %}{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }} · live is Yahoo last print{% endif %}</p>
+<p id="runs-flash" class="flash" hidden></p>
 <div id="runs-results">
   {% include "partials/runs_table.html" %}
 </div>

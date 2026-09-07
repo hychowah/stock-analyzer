@@ -253,7 +253,7 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/portfolio` | IB statement (or local JSON) joined to latest catalog runs. Live/Downside/Duration use the same cells as Runs. |
 | `/harness` | Pin map and briefing inspector |
 | `/experiments`, `/calibration` | Group by experiment; MoS vs later outcomes |
-| `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, Reset fits). |
+| `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, on-figure zoom controls, Reset fits). |
 | `/health` | Catalog health + the git SHA this UI process booted at |
 
 Remaining JSON APIs, query params, and live-reload notes: `apps/analysis_web/README.md`.

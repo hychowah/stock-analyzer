@@ -1,9 +1,9 @@
 /* Architecture figures: draw mermaid, then pan/zoom inside a frame.
  *
  * Host first (wrap before mermaid.run). Readable native size (useMaxWidth
- * off). Reset fits the whole chart. Wheel zoom only while the pointer is
- * over the figure. Mermaid CDN fail → flowchart text. Pan/zoom CDN fail →
- * drawn SVG + overflow on the host.
+ * off). Reset fits the whole chart. Control icons zoom without dragging.
+ * Wheel zoom only while the pointer is over the figure. Mermaid CDN fail
+ * → flowchart text. Pan/zoom CDN fail → drawn SVG + overflow on the host.
  */
 (function () {
   var MERMAID_SRC =
@@ -53,7 +53,7 @@
       pz = window.svgPanZoom(svg, {
         zoomEnabled: true,
         panEnabled: true,
-        controlIconsEnabled: false,
+        controlIconsEnabled: true,
         fit: false,
         center: true,
         minZoom: 0.15,

@@ -399,6 +399,114 @@ class PhoneControlsTests(unittest.TestCase):
         self.assertIn(".chart-ranges button", css)
 
 
+class A11yPhoneContractTests(unittest.TestCase):
+    def _css(self) -> str:
+        return (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
+            encoding="utf-8"
+        )
+
+    def test_no_800px_query_in_app_css(self):
+        css = self._css()
+        self.assertNotIn("max-width: 800px", css)
+        self.assertIn("max-width: 1100px", css)
+        self.assertIn("Narrow layout contract", css)
+
+    def test_desktop_disclose_hide_at_1101(self):
+        css = self._css()
+        self.assertIn("@media (min-width: 1101px)", css)
+        hide = re.search(
+            r"@media \(min-width: 1101px\)\s*\{([^}]+)\}",
+            css,
+        )
+        self.assertIsNotNone(hide)
+        body = hide.group(1)
+        self.assertIn(".disclose", body)
+        self.assertIn(".disclose-btn", body)
+        self.assertIn("display: none", body)
+
+    def test_night_btn_bg_aa_in_both_dark_tables(self):
+        css = self._css()
+        dark_m = re.search(r'html\[data-theme="dark"\]\s*\{([^}]+)\}', css)
+        self.assertIsNotNone(dark_m)
+        self.assertIn("--btn-bg: #2563eb", dark_m.group(1))
+        media = re.search(
+            r"@media\s*\(prefers-color-scheme:\s*dark\)\s*"
+            r"\{\s*html:not\(\[data-theme\]\)\s*\{([^}]+)\}",
+            css,
+        )
+        self.assertIsNotNone(media)
+        self.assertIn("--btn-bg: #2563eb", media.group(1))
+        self.assertNotIn("--btn-bg: #3b82f6", css)
+
+    def test_words_use_muted_not_faint(self):
+        css = self._css()
+        self.assertIn("color: var(--muted)", _css_rule_bodies(css, ".quote-kind"))
+        self.assertIn("fill: var(--muted)", _css_rule_bodies(css, ".chart-grid text"))
+
+    def test_stack_table_thead_not_clipped(self):
+        css = self._css().replace("\r\n", "\n")
+        self.assertIn(".stack-table thead {\n    display: none;\n  }", css)
+        thead_at = css.index(".stack-table thead {")
+        thead_block = css[thead_at : css.index("}", thead_at)]
+        self.assertNotIn("clip:", thead_block)
+        self.assertNotIn("overflow: hidden", thead_block)
+
+    def test_runs_js_list_replacement_contract(self):
+        js = (Path(__file__).resolve().parents[1] / "static" / "runs.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('dispatchEvent(new CustomEvent("runs-table-updated"))', js)
+        self.assertIn("runs-status", js)
+        self.assertIn("aria-label", js)
+        self.assertIn("data-label", js)
+        self.assertIn("showFetchError", js)
+        compares = (
+            Path(__file__).resolve().parents[1] / "static" / "compares.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("runs-table-updated", compares)
+        self.assertNotIn("catalog-changed", compares)
+        self.assertIn("data-session-key", compares)
+        self.assertIn("is-on", compares)
+
+    def test_runs_status_outside_swap(self):
+        html = (
+            Path(__file__).resolve().parents[1] / "templates" / "runs.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn('id="runs-status"', html)
+        self.assertIn('aria-live="polite"', html)
+        self.assertLess(html.index('id="runs-status"'), html.index('id="runs-results"'))
+        self.assertGreater(html.index('id="runs-status"'), html.index('id="compare-bar"'))
+        self.assertIn('id="runs-flash"', html)
+        self.assertIn('id="compare-hint"', html)
+        hint = re.search(r"<span[^>]*id=\"compare-hint\"[^>]*>", html)
+        self.assertIsNotNone(hint)
+        self.assertIn("aria-live", hint.group(0))
+        partial = (
+            Path(__file__).resolve().parents[1]
+            / "templates"
+            / "partials"
+            / "runs_table.html"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("aria-live", partial)
+        self.assertIn("data-runs-status", partial)
+        self.assertIn('aria-label="Select for compare"', partial)
+        self.assertIn("data-session-key", partial)
+
+    def test_mermaid_control_icons_and_architecture_frame(self):
+        js = (
+            Path(__file__).resolve().parents[1] / "static" / "mermaid_boot.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("controlIconsEnabled: true", js)
+        self.assertNotIn("controlIconsEnabled: false", js)
+        css = self._css()
+        self.assertIn("min-height: 16rem", css)
+        self.assertIn("height: min(50vh, 22rem)", css)
+        harness = (
+            Path(__file__).resolve().parents[1] / "static" / "harness.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("@media (max-width: 900px)", harness)
+
+
 class AnalysisWebTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -430,6 +538,11 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"2.5.0", r.content)
         self.assertIn(b"stack-table", r.content)
         self.assertIn(b'data-label="Ticker"', r.content)
+        self.assertIn(b'id="runs-status"', r.content)
+        self.assertIn(b'id="runs-flash"', r.content)
+        self.assertLess(r.content.find(b'id="runs-status"'), r.content.find(b'id="runs-results"'))
+        self.assertIn(b'data-session-key=', r.content)
+        self.assertIn(b'aria-label="Select for compare"', r.content)
 
     def test_health(self):
         r = self.client.get("/health")
@@ -458,6 +571,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"/static/mermaid_boot.js", r.content)
         self.assertIn(b"flowchart", r.content)
         self.assertIn(b"Drag a diagram", r.content)
+        self.assertIn(b"On-figure controls", r.content)
         self.assertIn(b"Reset", r.content)
 
     def test_mermaid_boot_script(self):
@@ -468,6 +582,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn("pre.mermaid", js)
         self.assertIn("useMaxWidth", js)
         self.assertIn("svg-pan-zoom", js)
+        self.assertIn("controlIconsEnabled: true", js)
         self.assertIn("Reset", js)
         self.assertIn("pointerenter", js)
         self.assertIn("architecture-figure", js)
@@ -745,7 +860,7 @@ class AnalysisWebTests(unittest.TestCase):
             r"\.chart-stage\s*\{[^}]*height:\s*min\(42vh,\s*320px\)",
         )
         self.assertIn(
-            "@media (max-width: 800px) {\n  .chart-stage {\n    height: 220px;\n  }\n}",
+            "@media (max-width: 1100px) {\n  .chart-stage {\n    height: 220px;\n  }\n}",
             css.replace("\r\n", "\n"),
         )
         arch = (
@@ -1123,6 +1238,9 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertIn(b"stack-table", r.content)
         self.assertIn(b"compare-pick", r.content)
         self.assertIn(b'data-label="Ticker"', r.content)
+        self.assertIn(b"data-runs-status", r.content)
+        self.assertNotIn(b'id="runs-status"', r.content)
+        self.assertNotIn(b"aria-live", r.content)
 
     def test_api_ticker_prefix(self):
         r = self.client.get("/api/runs", params={"ticker_prefix": "M"})

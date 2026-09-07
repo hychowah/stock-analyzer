@@ -63,7 +63,7 @@ html[data-theme="dark"] {
   --header-link: #93c5fd;
   --input-bg: #0f172a;
   --input-border: #475569;
-  --btn-bg: #3b82f6;
+  --btn-bg: #2563eb;
   --btn-fg: #fff;
   --btn-secondary: #64748b;
   --pre-bg: #020617;
@@ -98,7 +98,7 @@ html[data-theme="dark"] {
     --header-link: #93c5fd;
     --input-bg: #0f172a;
     --input-border: #475569;
-    --btn-bg: #3b82f6;
+    --btn-bg: #2563eb;
     --btn-fg: #fff;
     --btn-secondary: #64748b;
     --pre-bg: #020617;
@@ -202,10 +202,20 @@ header .brand:hover {
   background: rgba(148, 163, 184, 0.18);
 }
 /*
+ * Narrow layout contract (max-width: 1100px).
+ * 1100px is main's max-width. One policy: Menu / Lab / Filters disclose,
+ * stack-table cards, grid2, forms, 44px targets, 16px inputs, ticker
+ * flex 1 1 100%, overflow-x on report/matrix tables, architecture-figure
+ * frame, and the .chart-stage query. Desktop disclose hide is
+ * min-width: 1101px. Do not reintroduce 800px. .chart-stage HEIGHT
+ * values are ui-run-reading (Wave 4a).
+ *
  * Disclose: checkbox + label + sibling panel. Show/hide only.
- * Desktop: .disclose-btn hidden; panel keeps its own display.
- * Phone (max-width 800px): button shown; panel display:none until :checked,
- * then display:block. Callers own layout; header groups wrap on .nav-disclose
+ * Desktop (min-width 1101px): .disclose and .disclose-btn are
+ * display:none (out of the tab order); panel keeps its own display.
+ * Phone (max-width 1100px): button shown; panel display:none until
+ * :checked, then display:block. Focus ring is on .disclose-btn.
+ * Callers own layout; header groups wrap on .nav-disclose
  * (not display:contents). .header-nav is the outer row.
  * A disclose checkbox inside a form must not have name (would submit).
  */
@@ -223,7 +233,13 @@ header .brand:hover {
 .disclose-btn {
   display: none;
 }
-@media (max-width: 800px) {
+@media (min-width: 1101px) {
+  .disclose,
+  .disclose-btn {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
   .header-tagline {
     display: none;
   }
@@ -243,6 +259,15 @@ header .brand:hover {
   }
   .disclose-btn:hover {
     background: var(--hover);
+  }
+  .disclose:focus-visible + .disclose-btn,
+  .disclose-btn:focus-visible {
+    outline: 2px solid var(--link);
+    outline-offset: 2px;
+  }
+  .header-nav .disclose:focus-visible + .disclose-btn,
+  .header-nav .disclose-btn:focus-visible {
+    outline-color: var(--header-link);
   }
   .disclose-panel {
     display: none;
@@ -286,11 +311,12 @@ header .brand:hover {
  * .stack-table: opt-in one-entity-per-row lists (Runs, Portfolio positions,
  * Analyze jobs, Compares, Experiments, Calibration). Not for property-row
  * tables (Health, NAV summaries, run-detail valuation).
- * Phone (800px): thead hidden; each tr is a card; td labeled from data-label.
- * td.desktop-only is hidden. td[colspan] stays one muted message, no label.
- * The wrapping page .card is not restyled.
+ * Phone (1100px): thead hidden (display:none, not clipped — sort links
+ * must not be invisible tab stops); each tr is a card; td labeled from
+ * data-label. td.desktop-only is hidden. td[colspan] stays one muted
+ * message, no label. The wrapping page .card is not restyled.
  */
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .stack-table thead {
     display: none;
   }
@@ -328,6 +354,13 @@ header .brand:hover {
   }
   .stack-table td.pick {
     justify-content: flex-start;
+    align-items: center;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .stack-table td.pick input {
+    width: 22px;
+    height: 22px;
   }
   .stack-table td.pick::before {
     content: none;
@@ -431,7 +464,7 @@ tr:hover {
   font-weight: 400;
   text-transform: none;
   letter-spacing: 0;
-  color: var(--faint);
+  color: var(--muted);
 }
 .badge {
   display: inline-block;
@@ -516,7 +549,7 @@ pre {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
 }
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .grid2 {
     grid-template-columns: 1fr;
   }
@@ -667,6 +700,12 @@ td.pick {
 .architecture-figure-reset:hover {
   background: #f1f5f9;
 }
+@media (max-width: 1100px) {
+  .architecture-figure {
+    min-height: 16rem;
+    height: min(50vh, 22rem);
+  }
+}
 th a.sort {
   color: inherit;
   text-decoration: none;
@@ -771,7 +810,7 @@ th.num a.sort {
   stroke-width: 1;
 }
 .chart-grid text {
-  fill: var(--faint);
+  fill: var(--muted);
   font-size: 10px;
   font-family: ui-monospace, monospace;
 }
@@ -852,7 +891,7 @@ th.num a.sort {
   stroke: var(--card);
   stroke-width: 1;
 }
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .chart-stage {
     height: 220px;
   }
@@ -878,13 +917,23 @@ th.num a.sort {
 .perf-bar.zero {
   background: var(--chip-bg);
 }
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .perf-table td.perf-bar-cell {
     width: 30%;
     min-width: 4rem;
   }
 }
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
+  form.filters .filters-row label {
+    flex: 1 1 100%;
+  }
+  form.filters input:not([type="checkbox"]):not([type="hidden"]),
+  form.filters select,
+  .compare-form select,
+  .stack-form input:not([type="checkbox"]):not([type="hidden"]),
+  .stack-form select {
+    font-size: 16px;
+  }
   form.filters input:not([type="checkbox"]):not([type="hidden"]),
   form.filters select {
     min-width: 0;
@@ -932,5 +981,28 @@ th.num a.sort {
   .btn,
   .chart-ranges button {
     min-height: 44px;
+  }
+  .report-body,
+  .card > table:not(.stack-table) {
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  /* Fixed: the bar lives in the short filter card, so sticky bottom cannot follow the list. */
+  #compare-bar.is-on {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: var(--card);
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.12);
+  }
+  main:has(#compare-bar.is-on) {
+    padding-bottom: 5rem;
   }
 }

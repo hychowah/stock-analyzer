@@ -1,9 +1,9 @@
 {
   "slug": "ui-a11y-phone",
   "session_key": "2026-09-06-ui-a11y-phone",
-  "status": "scaffolded",
+  "status": "in_progress",
   "created_at": "2026-09-06T10:37:38Z",
-  "updated_at": "2026-09-06T10:37:38Z",
+  "updated_at": "2026-09-07T12:00:00Z",
   "work_type": "W4",
-  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+  "resume_hint": "Wave 5 implemented; leave feature_list passes to a verifier. pytest apps/analysis_web/tests + eng_verify."
 }

@@ -3,31 +3,31 @@
     {
       "id": "orient",
       "description": "Read AGENT_BRIEF.md + PLAN.md Session 2 + sdr-wave2-nav-ia.md; confirm trust-p0 landed",
-      "passes": false,
+      "passes": true,
       "verify": "progress.md names predecessor"
     },
     {
       "id": "render-page",
       "description": "templating.render_page injects nav.current; cloned _render helpers collapse",
-      "passes": false,
+      "passes": true,
       "verify": "analyze HTML has aria-current from nav.current; fragments have no header"
     },
     {
       "id": "nav-group",
       "description": "Two wrapped navs + disclose; skip link; brand home; Compare singular",
-      "passes": false,
+      "passes": true,
       "verify": "base.html two aria-label navs; disclose pairs wrapped; skip-link"
     },
     {
       "id": "crumbs-lab",
       "description": "Ticker crumb on details; Lab empty states only (not runs_table, not portfolio)",
-      "passes": false,
+      "passes": true,
       "verify": "run_detail ticker_prefix crumb; calibration empty has exit; runs_table untouched"
     },
     {
       "id": "verify",
       "description": "Verifier marks features after real checks",
-      "passes": false,
+      "passes": true,
       "verify": "python scripts/eng_verify.py"
     }
   ]

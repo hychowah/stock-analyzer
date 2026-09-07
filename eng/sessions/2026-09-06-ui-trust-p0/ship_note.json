@@ -1,0 +1,23 @@
+{
+  "session": "2026-09-06-ui-trust-p0",
+  "feature": "Wave 1 ui-trust-p0 — compare headline view, HTML/JSON 404, Analyze .err vs muted, Compare abort XOR empty",
+  "summary": "Operators can trust compare numbers and error chrome. Headline is a Python {label, cells} view; unmatched HTML 404s render error.html; JSON Accept on /api stays JSON; complete Analyze reconcile notes are muted; unknown-ticker Compare abort does not also say no packets.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "curl this-tree http://127.0.0.1:8773 HTML 404 / JSON /api 404 / compares?ticker=ZZZZNOTATICKER / complete compare headline"
+  ],
+  "verify": "pytest apps/analysis_web/tests 191 passed; eng_verify PASS 779. compare_detail.html has no row.values. Live :8773 (HEAD e3f9755): Accept text/html unknown path is chrome + ← Runs; /api/runs/nope JSON Accept is {\"detail\": \"Run not found: nope\"}; /compares?ticker=ZZZZNOTATICKER 404 without “No compare packets yet”; compare:AVGO:… page has numeric headline cells. test_complete_analyze_reconcile_note_is_muted covers .err vs muted.",
+  "notes": [
+    "Product landed in d21af66. This ship note is verifier metadata after e3f9755 (Wave 2 on top).",
+    "On-disk headline.json key \"values\" unchanged. Router _error() copies not unified (later).",
+    "No harness/VERSION bump (W4). No ARCHITECTURE.md edit on Wave 1 (no new page, no new display math)."
+  ],
+  "follow_ups": [
+    "Wave 3 ui-decision-blotter is next product work."
+  ],
+  "risks": [
+    "Stale :8765 is old chrome; verifier used :8773 from this tree."
+  ],
+  "proposed_commit": "Session metadata only: mark ui-trust-p0 feature_list passes and add ship_note.json"
+}

@@ -1,0 +1,23 @@
+{
+  "session": "2026-09-06-ui-nav-ia",
+  "feature": "Wave 2 ui-nav-ia — render_page injects nav; primary vs Lab; skip; ticker crumbs; Lab empty copy",
+  "summary": "Four primary jobs, quiet Lab, visible current page. One render_page injects nav.current from a prefix table; base.html matches that value, not request.url.path. Phone Menu and Lab are wrapped disclose pairs. Skip link, ticker crumbs on details, Lab empty exits.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py",
+    "curl this-tree http://127.0.0.1:8773 /analyze aria-current, fragments, health SHA, calibration exit, run/compare ticker_prefix crumbs"
+  ],
+  "verify": "pytest apps/analysis_web/tests 191 passed; eng_verify PASS 779. No cloned _render helpers remain. Live :8773 (SHA e3f9755…): /analyze has aria-current on Analyze, two aria-label navs, skip-link before #nav-open; /fragments/runs has no header; /health Git SHA is e3f9755cdb42a6478feb35f999fc49beb7f72804 not —; /calibration has ← Runs; run research:000660.KS:2026-07-29 and a compare detail have ticker_prefix crumbs. git diff d21af66..e3f9755 does not touch runs_table.html, portfolio.html, or harness/VERSION. ARCHITECTURE.md § The website updated.",
+  "notes": [
+    "Product landed in e3f9755.",
+    "SDR reshape held: Request is not in the template; disclose pairs are wrapped so Menu cannot open Lab.",
+    "No harness/VERSION bump (W4)."
+  ],
+  "follow_ups": [
+    "Wave 3 ui-decision-blotter (catalog_api + RunQuery is the blotter)."
+  ],
+  "risks": [
+    "Stale :8765 is old chrome; verifier used :8773 from this tree."
+  ],
+  "proposed_commit": "Session metadata only: mark ui-nav-ia feature_list passes and add ship_note.json"
+}

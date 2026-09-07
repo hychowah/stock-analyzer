@@ -14,4 +14,5 @@
 - **compare-abort:** `compares.html` skips “No compare packets yet.” when `error` is set; HTTP 404 + `is-abort` kept.
 - Verify: `pytest apps/analysis_web/tests` 185 passed; `eng_verify.py` PASS (773). Curl against this-tree UI on :8766 (`--no-auto-restart`): unknown path + HTML Accept is chrome + `← Runs`; `/api/runs/nope` JSON Accept is `{"detail":"Run not found: nope"}`; `/compares?ticker=ZZZZNOTATICKER` aborts without empty-packet copy; complete MELI compare shows `1,922.73` / `631.27` / `1,031.96` in headline cells.
 - No `ARCHITECTURE.md` edit (no new page, no new display math, no archive-plane change). No `harness/VERSION` bump (W4).
-- No git commit (needs user agreement).
+- No git commit (needs user agreement). Product later landed in `d21af66`.
+- 2026-09-07 verifier (skeptical): pytest apps/analysis_web/tests 191 passed; eng_verify PASS 779. Grep: `compare_detail.html` has no `row.values`. Live `:8773` (this tree, SHA `e3f9755…`): HTML 404 is chrome + `← Runs`; `/api/runs/nope` JSON Accept is `{"detail":"Run not found: nope"}`; `/compares?ticker=ZZZZNOTATICKER` 404 without empty-packet copy; live compare page has numeric headline cells. `test_complete_analyze_reconcile_note_is_muted` covers `.err` vs muted. Flipped `feature_list` passes; wrote `ship_note.json`. Did not git commit session metadata.

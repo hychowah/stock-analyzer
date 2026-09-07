@@ -24,8 +24,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
 
 from apps.analysis_web.config import archive_root, static_dir
@@ -38,6 +40,33 @@ from apps.analysis_web.services.price_history import (
 )
 from apps.analysis_web.services.quotes import QuoteService, YahooPrintBackend, quote_ttl_sec
 from apps.analysis_web.templating import create_templates
+
+
+def _prefers_html(request: Request) -> bool:
+    """True when Accept ranks text/html at least as high as application/json."""
+    raw = request.headers.get("accept") or ""
+    html_q = -1.0
+    json_q = -1.0
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        bits = [b.strip() for b in token.split(";")]
+        media = bits[0].lower()
+        q = 1.0
+        for param in bits[1:]:
+            if param.startswith("q="):
+                try:
+                    q = float(param[2:].strip())
+                except ValueError:
+                    q = 0.0
+        if q <= 0:
+            continue
+        if media in ("text/html", "application/xhtml+xml"):
+            html_q = max(html_q, q)
+        elif media == "application/json":
+            json_q = max(json_q, q)
+    return html_q >= 0 and html_q >= json_q
 
 
 class StaticFilesNoCache(StaticFiles):
@@ -87,12 +116,25 @@ def create_app() -> FastAPI:
     app.include_router(events.router)
     app.include_router(artifacts.router)
 
+    @app.exception_handler(StarletteHTTPException)
+    async def negotiate_http_exception(request: Request, exc: StarletteHTTPException):
+        if exc.status_code == 404 and _prefers_html(request):
+            message = exc.detail if isinstance(exc.detail, str) else "Not Found"
+            html = app.state.templates.get_template("error.html").render(
+                request=request,
+                title="Not Found",
+                message=message,
+            )
+            return HTMLResponse(html, status_code=404)
+        return await http_exception_handler(request, exc)
+
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> HTMLResponse:  # noqa: ARG001
         import traceback
 
         tb = traceback.format_exc()
         html = app.state.templates.get_template("error.html").render(
+            request=request,
             title="Error",
             message="Internal server error",
             detail=tb,

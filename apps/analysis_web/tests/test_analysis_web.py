@@ -452,6 +452,25 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.status_code, 404)
         self.assertIn(b"missing", r.content)
 
+    def test_unknown_path_html_accept_is_chrome(self):
+        r = self.client.get("/this-path-does-not-exist", headers={"Accept": "text/html"})
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("text/html", r.headers.get("content-type", ""))
+        self.assertIn(b"Archive Analysis", r.content)
+        self.assertIn("← Runs".encode("utf-8"), r.content)
+        self.assertIn(b'href="/"', r.content)
+        with self.assertRaises(ValueError):
+            r.json()
+
+    def test_api_miss_json_accept_stays_json(self):
+        r = self.client.get("/api/runs/nope", headers={"Accept": "application/json"})
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("application/json", r.headers.get("content-type", ""))
+        body = r.json()
+        self.assertIn("detail", body)
+        self.assertNotIn(b"Archive Analysis", r.content)
+        self.assertNotIn("← Runs".encode("utf-8"), r.content)
+
     def test_api_health_is_catalog_only(self):
         r = self.client.get("/api/health")
         self.assertEqual(r.status_code, 200)
@@ -1042,15 +1061,37 @@ class AnalysisWebCompareTests(unittest.TestCase):
         self.assertEqual(page.status_code, 200)
         self.assertIn(b"Compare complete", page.content)
         self.assertIn(b"Synthesis", page.content)
+        self.assertIn(b"As-of", page.content)
+        self.assertIn(b"FV base", page.content)
+        self.assertIn(b"500.00", page.content)
+        self.assertIn(b"600.00", page.content)
+        self.assertIn(b"400.00", page.content)
         listed = self.client.get("/compares")
         self.assertEqual(listed.status_code, 200)
         self.assertIn(b"META", listed.content)
+
+    def test_compare_detail_template_iterates_cells(self):
+        html = (
+            Path(__file__).resolve().parents[1] / "templates" / "compare_detail.html"
+        ).read_text(encoding="utf-8")
+        self.assertIn("row.label", html)
+        self.assertIn("row.cells", html)
+        self.assertNotIn("row.values", html)
+        self.assertNotIn("row['values']", html)
 
     def test_compares_unknown_ticker_aborts(self):
         r = self.client.get("/compares", params={"ticker": "NOPE"})
         self.assertEqual(r.status_code, 404)
         self.assertIn(b"Aborted", r.content)
         self.assertIn(b"NOPE", r.content)
+        self.assertIn(b"is-abort", r.content)
+        self.assertNotIn(b"No compare packets yet", r.content)
+
+    def test_compares_unknown_ticker_zzzz_aborts_without_empty_copy(self):
+        r = self.client.get("/compares", params={"ticker": "ZZZZNOTATICKER"})
+        self.assertEqual(r.status_code, 404)
+        self.assertIn(b"Aborted", r.content)
+        self.assertNotIn(b"No compare packets yet", r.content)
 
     def test_different_tickers_400(self):
         r = self.client.post(
@@ -1241,4 +1282,64 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         r = self.client.get("/analyze/new")
         self.assertEqual(r.status_code, 200)
         self.assertNotIn(b"Start with a market listing instead", r.content)
+
+    def test_complete_analyze_reconcile_note_is_muted(self):
+        session = self.archive / "research" / "META" / "2026-08-03"
+        job_dir = self.archive / "research_jobs" / "META" / "2026-08-03"
+        job_dir.mkdir(parents=True)
+        note = "abandon.json present on finalized session; not treating as abandoned"
+        (job_dir / "job.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "kind": "analyze",
+                    "analyze_id": "analyze:META:2026-08-03",
+                    "ticker": "META",
+                    "session_key": "2026-08-03",
+                    "run_id": "research:META:2026-08-03",
+                    "session_root": str(session),
+                    "job_dir": str(job_dir),
+                    "status": "complete",
+                    "error": note,
+                    "abandoned": False,
+                    "snapshot_ready": True,
+                    "phase_current": "orch",
+                    "mode": "new",
+                }
+            ),
+            encoding="utf-8",
+        )
+        r = self.client.get("/analyze/analyze:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(note.encode("utf-8"), r.content)
+        self.assertIn(b'class="muted"', r.content)
+        self.assertNotRegex(r.text, r'class="err">\s*abandon\.json present')
+
+    def test_failed_analyze_error_is_err(self):
+        job_dir = self.archive / "research_jobs" / "META" / "2026-09-01"
+        job_dir.mkdir(parents=True)
+        (job_dir / "job.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "kind": "analyze",
+                    "analyze_id": "analyze:META:2026-09-01",
+                    "ticker": "META",
+                    "session_key": "2026-09-01",
+                    "run_id": "research:META:2026-09-01",
+                    "session_root": str(self.archive / "research" / "META" / "missing"),
+                    "job_dir": str(job_dir),
+                    "status": "failed",
+                    "error": "Grok process exited before finalize",
+                    "abandoned": False,
+                    "snapshot_ready": False,
+                    "phase_current": "orch",
+                    "mode": "new",
+                }
+            ),
+            encoding="utf-8",
+        )
+        r = self.client.get("/analyze/analyze:META:2026-09-01")
+        self.assertEqual(r.status_code, 200)
+        self.assertRegex(r.text, r'class="err">\s*Grok process exited before finalize')
 

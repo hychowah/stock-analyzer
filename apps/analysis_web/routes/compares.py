@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from urllib.parse import quote
 
@@ -30,6 +31,7 @@ from packages.compare_jobs.jobs import (
 
 from apps.analysis_web.config import archive_root
 from apps.analysis_web.deps import get_api
+from apps.analysis_web.templating import headline_view
 from apps.analysis_web.services.render_markdown import (
     is_json_path,
     is_markdown_path,
@@ -173,9 +175,7 @@ def page_compare_detail(
     headline: dict[str, Any] | None = None
     try:
         raw = api.open_compare_artifact(cid, "headline.json")
-        import json
-
-        headline = json.loads(raw.decode("utf-8"))
+        headline = headline_view(json.loads(raw.decode("utf-8")))
     except (FileNotFoundError, ArtifactDenied, ValueError, OSError):
         headline = None
 

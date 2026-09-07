@@ -40,7 +40,7 @@
       {% endfor %}
     </tbody>
   </table>
-  {% else %}
+  {% elif not error %}
   <p class="muted">No compare packets yet. Select two same-ticker runs and hit Compare.</p>
   {% endif %}
 </div>

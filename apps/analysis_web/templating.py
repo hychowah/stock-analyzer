@@ -20,6 +20,39 @@ def fmt_num(v: Any, digits: int = 2) -> str:
         return str(v)
 
 
+HEADLINE_LABELS: dict[str, str] = {
+    "asof_price": "As-of",
+    "fv_base": "FV base",
+    "fv_bear": "FV bear",
+    "fv_bull": "FV bull",
+    "margin_of_safety_pct": "MoS %",
+    "audit_verdict": "Audit",
+    "primary_sector": "Sector",
+    "region": "Region",
+    "verdict_line": "Verdict",
+}
+
+
+def headline_view(packet: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Project headline.json into {sessions, rows: [{label, cells}]}.
+
+    The template iterates label/cells only. On-disk field key remains "values".
+    """
+    if not packet:
+        return None
+    sessions = [str(s) for s in (packet.get("sessions") or [])]
+    rows: list[dict[str, Any]] = []
+    for field in packet.get("fields") or []:
+        if not isinstance(field, dict):
+            continue
+        name = str(field.get("field") or "")
+        raw = field.get("values")
+        cells_src = raw if isinstance(raw, dict) else {}
+        label = HEADLINE_LABELS.get(name) or name.replace("_", " ").strip() or name
+        rows.append({"label": label, "cells": [fmt_num(cells_src.get(key)) for key in sessions]})
+    return {"sessions": sessions, "rows": rows}
+
+
 def _as_float(v: Any) -> float | None:
     if v is None or isinstance(v, bool):
         return None

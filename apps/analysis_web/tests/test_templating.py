@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import unittest
 
-from apps.analysis_web.templating import downside_pct, downside_title, fmt_num
+from apps.analysis_web.templating import (
+    downside_pct,
+    downside_title,
+    fmt_num,
+    headline_view,
+)
 
 
 class DownsidePctTests(unittest.TestCase):
@@ -34,3 +39,34 @@ class DownsidePctTests(unittest.TestCase):
         )
         self.assertEqual(downside_title(None, 350.0), "")
         self.assertEqual(downside_title(0, 350.0), "")
+
+
+class HeadlineViewTests(unittest.TestCase):
+    def test_projects_labels_and_formatted_cells(self):
+        packet = {
+            "sessions": ["2026-08-03", "2026-08-10"],
+            "fields": [
+                {
+                    "field": "asof_price",
+                    "values": {"2026-08-03": 400.0, "2026-08-10": 480.0},
+                },
+                {
+                    "field": "fv_base",
+                    "values": {"2026-08-03": 500.0, "2026-08-10": 600.0},
+                },
+                {
+                    "field": "audit_verdict",
+                    "values": {"2026-08-03": "PASS", "2026-08-10": None},
+                },
+            ],
+        }
+        view = headline_view(packet)
+        self.assertEqual(view["sessions"], ["2026-08-03", "2026-08-10"])
+        by_label = {row["label"]: row["cells"] for row in view["rows"]}
+        self.assertEqual(by_label["As-of"], ["400.00", "480.00"])
+        self.assertEqual(by_label["FV base"], ["500.00", "600.00"])
+        self.assertEqual(by_label["Audit"], ["PASS", "—"])
+
+    def test_none_packet(self):
+        self.assertIsNone(headline_view(None))
+        self.assertIsNone(headline_view({}))

@@ -1,9 +1,9 @@
 {
   "slug": "ui-trust-p0",
   "session_key": "2026-09-06-ui-trust-p0",
-  "status": "scaffolded",
+  "status": "in_progress",
   "created_at": "2026-09-06T10:37:37Z",
-  "updated_at": "2026-09-06T10:37:37Z",
+  "updated_at": "2026-09-07T00:00:00Z",
   "work_type": "W4",
-  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+  "resume_hint": "Implementer finished four slices. Verifier: run pytest apps/analysis_web/tests + eng_verify, curl HTML 404 / JSON /api 404 / compare headline / abort, then mark feature_list passes."
 }

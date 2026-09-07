@@ -13,7 +13,13 @@
   <p><span class="badge status-{{ job.status }}">{{ job.status }}</span>
      {% if job.abandoned %}<span class="badge">abandoned</span>{% endif %}
      phase {{ job.phase_current or '—' }}</p>
-  {% if job.error %}<p class="err">{{ job.error }}</p>{% endif %}
+  {% if job.error %}
+    {% if job.status in ['failed', 'cancelled', 'abandoned'] or job.abandoned %}
+    <p class="err">{{ job.error }}</p>
+    {% else %}
+    <p class="muted">{{ job.error }}</p>
+    {% endif %}
+  {% endif %}
   {% if complete %}
   <p>Job complete (finalize snapshot on disk). Audit: {{ job.audit_verdict or '—' }}. This is not a buy list.
      {% if job.catalog_run_ready %}<a href="/runs/{{ job.run_id }}">Open catalog run</a>{% endif %}

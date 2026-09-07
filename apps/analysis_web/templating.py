@@ -85,6 +85,7 @@ def downside_title(price: Any, fv_bear: Any, vintage: str = "as-of") -> str:
 
 
 def verdict_badge(v: Any) -> Markup:
+    """Process audit completeness only. Do not pass duration.action through this."""
     s = str(v or "")
     cls = "pass" if s.upper() == "PASS" else ("fail" if s.upper() == "FAIL" else "")
     return Markup(f'<span class="badge {cls}">{escape(s or "—")}</span>')

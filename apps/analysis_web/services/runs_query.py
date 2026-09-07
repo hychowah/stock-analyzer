@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import Query
+from fastapi import HTTPException, Query
 
 from packages.catalog_api.client import RunQuery
 
@@ -26,6 +26,7 @@ RUN_QUERY_KEYS: tuple[str, ...] = (
     "sort",
     "dir",
     "audit_verdict",
+    "latest",
     "limit",
 )
 
@@ -35,6 +36,18 @@ def blank(value: str | None) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def parse_latest(value: str | None) -> bool:
+    text = blank(value)
+    if text is None:
+        return False
+    lowered = text.lower()
+    if lowered in ("1", "true", "yes", "on"):
+        return True
+    if lowered in ("0", "false", "no", "off"):
+        return False
+    raise ValueError(f"invalid latest: {value!r}")
 
 
 def runs_list_q(
@@ -56,8 +69,13 @@ def runs_list_q(
     fv_base_max: str | None = None,
     sort: str | None = None,
     dir: str | None = None,
+    latest: str | None = None,
     limit: int = Query(50, ge=1, le=200),
 ) -> RunQuery:
+    try:
+        latest_flag = parse_latest(latest)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return RunQuery(
         ticker=blank(ticker),
         ticker_prefix=blank(ticker_prefix),
@@ -77,6 +95,7 @@ def runs_list_q(
         fv_base_max=blank(fv_base_max),
         sort=blank(sort),
         dir=blank(dir),
+        latest=latest_flag,
         limit=limit,
         comparable_only=False,
     )

@@ -382,14 +382,48 @@ tr:hover {
 .muted {
   color: var(--muted);
 }
-/* Live cell fill from today's change. Green/red rhyme with pass/fail for scan, not shared meaning. */
-.quote-live.chg-up {
+/* Wave 3 blotter — ui-a11y-phone must not restyle .decision / .below-bear.
+   Price stays default ink. Day-change is a chip, not a cell fill, not .badge.pass. */
+.decision {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.below-bear {
+  color: #7f1d1d;
+  font-weight: 600;
+  background: none;
+}
+.quote-chip {
+  display: inline-block;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.quote-chip.chg-up {
   color: #14532d;
   background: #bbf7d0;
 }
-.quote-live.chg-down {
+.quote-chip.chg-down {
   color: #7f1d1d;
   background: #fecaca;
+}
+.downside-vintage {
+  font-weight: 400;
+  font-size: 0.75rem;
+}
+.decision-strip {
+  margin: 0.75rem 0 1.25rem;
+}
+.grain {
+  margin: 0;
+  font-size: 0.92rem;
+}
+.grain a[aria-current="page"] {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--fg);
 }
 .quote-kind {
   display: block;

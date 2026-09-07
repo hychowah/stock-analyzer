@@ -9,7 +9,63 @@
     {% endif %}
   </p>
   <h1 class="mono">{{ run.ticker }} · {{ run.session_key }}</h1>
+  {% if run.verdict_line %}
+  <p class="decision">{{ run.verdict_line }}</p>
+  {% endif %}
   <p class="mono muted">{{ run.run_id }}</p>
+  {% set ds = downside_pct(run.asof_price, run.fv_bear) %}
+  {% set ds_title = downside_title(run.asof_price, run.fv_bear, 'as-of') %}
+  <section class="decision-strip" aria-label="Decision">
+    <table>
+      <tr>
+        <th>As-of</th>
+        <td class="num decision">{{ run.asof_price | fmt_num }}{% if run.currency %} {{ run.currency }}{% endif %}</td>
+        <th>Live</th>
+        <td class="num quote-live" data-quote-cell{% if run.quote_listing %} data-quote-symbol="{{ run.quote_listing }}" data-quote-source="{{ run.quote_listing_source or '' }}"{% endif %}>—</td>
+        <th>FV</th>
+        <td class="num decision">{{ run.fv_base | fmt_num }}</td>
+        <th>MoS</th>
+        <td class="num decision">{{ run.margin_of_safety_pct | fmt_num(1) }}</td>
+      </tr>
+      <tr>
+        <th title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside</th>
+        <td class="num decision{% if ds is not none and ds < 0 %} below-bear{% endif %}"
+            data-downside-pct
+            data-vintage="as-of"
+            {% if run.fv_bear is not none %}data-fv-bear="{{ run.fv_bear }}"{% endif %}
+            {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
+            {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
+        <th>Duration</th>
+        <td>{% if run.decision_action %}{{ run.decision_action }}{% else %}—{% endif %}</td>
+        <th>Audit (process)</th>
+        <td>{{ run.audit_verdict | verdict_badge }}</td>
+        <th>Cheap claim</th>
+        <td>{% if run.cheap_claim %}{{ run.cheap_claim }}{% else %}—{% endif %}</td>
+      </tr>
+    </table>
+  </section>
+  <section>
+    <h2>Valuation</h2>
+    <table>
+      <tr><th>As-of price</th><td class="num">{{ run.asof_price | fmt_num }} {{ run.currency or '' }}</td></tr>
+      <tr><th>Live</th>
+          <td class="num quote-live" data-quote-cell{% if run.quote_listing %} data-quote-symbol="{{ run.quote_listing }}" data-quote-source="{{ run.quote_listing_source or '' }}"{% endif %}>—</td></tr>
+      <tr><th>FV bear / base / bull</th>
+          <td class="num">{{ run.fv_bear | fmt_num }} / {{ run.fv_base | fmt_num }} / {{ run.fv_bull | fmt_num }}</td></tr>
+      <tr><th>FV weighted</th><td class="num">{{ run.fv_weighted | fmt_num }}</td></tr>
+      <tr><th>p bear / base / bull</th>
+          <td class="num">{{ run.p_bear | fmt_num }} / {{ run.p_base | fmt_num }} / {{ run.p_bull | fmt_num }}</td></tr>
+      <tr><th>MoS %</th><td class="num">{{ run.margin_of_safety_pct | fmt_num(1) }}</td></tr>
+      <tr><th title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside %</th>
+          <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}"
+              data-downside-pct
+              data-vintage="as-of"
+              {% if run.fv_bear is not none %}data-fv-bear="{{ run.fv_bear }}"{% endif %}
+              {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
+              {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td></tr>
+      <tr><th>Model</th><td>{{ run.model_name or '' }}</td></tr>
+    </table>
+  </section>
   <section id="price-chart" class="price-chart"{% if run.quote_listing %} data-symbol="{{ run.quote_listing }}"{% endif %}>
     <h2>Price vs analysis</h2>
     <p class="muted">Yahoo daily close with this session's bear / base / bull from the catalog. Other {{ run.ticker }} sessions are markers.</p>
@@ -37,42 +93,18 @@
     </ul>
     <script type="application/json" id="price-chart-overlay">{{ chart_overlay | tojson }}</script>
   </section>
-  <div class="grid2">
-    <div>
-      <h3>Valuation</h3>
-      <table>
-        <tr><th>As-of price</th><td class="num">{{ run.asof_price | fmt_num }} {{ run.currency or '' }}</td></tr>
-        <tr><th>Live</th>
-            <td class="num quote-live" data-quote-cell{% if run.quote_listing %} data-quote-symbol="{{ run.quote_listing }}" data-quote-source="{{ run.quote_listing_source or '' }}"{% endif %}>—</td></tr>
-        <tr><th>FV bear / base / bull</th>
-            <td class="num">{{ run.fv_bear | fmt_num }} / {{ run.fv_base | fmt_num }} / {{ run.fv_bull | fmt_num }}</td></tr>
-        <tr><th>FV weighted</th><td class="num">{{ run.fv_weighted | fmt_num }}</td></tr>
-        <tr><th>p bear / base / bull</th>
-            <td class="num">{{ run.p_bear | fmt_num }} / {{ run.p_base | fmt_num }} / {{ run.p_bull | fmt_num }}</td></tr>
-        <tr><th>MoS %</th><td class="num">{{ run.margin_of_safety_pct | fmt_num(1) }}</td></tr>
-        {% set ds_title = downside_title(run.asof_price, run.fv_bear, 'as-of') %}
-        <tr><th title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside %</th>
-            <td class="num"
-                data-downside-pct
-                {% if run.fv_bear is not none %}data-fv-bear="{{ run.fv_bear }}"{% endif %}
-                {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
-                {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ downside_pct(run.asof_price, run.fv_bear) | fmt_num(1) }}</td></tr>
-        <tr><th>Model</th><td>{{ run.model_name or '' }}</td></tr>
-      </table>
-    </div>
-    <div>
-      <h3>Context</h3>
-      <table>
-        <tr><th>Sector / region</th><td>{{ run.primary_sector or '' }} / {{ run.region or '' }}</td></tr>
-        <tr><th>Intensity</th><td>{{ run.intensity or '' }}</td></tr>
-        <tr><th>Audit</th><td>{{ run.audit_verdict | verdict_badge }}</td></tr>
-        <tr><th>Tech</th><td>{{ run.tech_signal or '' }} · {{ run.tech_regime or '' }}</td></tr>
-        <tr><th>Experiment</th><td class="mono">{{ run.experiment_id or '' }}</td></tr>
-        <tr><th>Harness</th><td class="mono">{{ run.harness_version or '' }}</td></tr>
-        <tr><th>Exported</th><td class="mono">{{ run.exported_at or '' }}</td></tr>
-      </table>
-    </div>
-  </div>
+  <section>
+    <h3>Context</h3>
+    <table>
+      <tr><th>Sector / region</th><td>{{ run.primary_sector or '' }} / {{ run.region or '' }}</td></tr>
+      <tr><th>Intensity</th><td>{{ run.intensity or '' }}</td></tr>
+      <tr><th>Audit (process)</th><td>{{ run.audit_verdict | verdict_badge }}</td></tr>
+      <tr><th>Tech</th><td>{{ run.tech_signal or '' }} · {{ run.tech_regime or '' }}</td></tr>
+      <tr><th>Experiment</th><td class="mono">{{ run.experiment_id or '' }}</td></tr>
+      <tr><th>Harness</th><td class="mono">{{ run.harness_version or '' }}</td></tr>
+      <tr><th>Exported</th><td class="mono">{{ run.exported_at or '' }}</td></tr>
+    </table>
+  </section>
 </div>
 {% if siblings %}
 <div class="card">

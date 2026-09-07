@@ -183,6 +183,8 @@ flowchart LR
 
 **Catalog API** (`packages/catalog_api`) is a read-only in-process library plus CLI. Primary identity is `run_id = research:{TICKER}:{session_key}`. Queries **always** use SQLite. JSON indexes are for rebuild and watch, not a fallback. Opening a report uses an allowlist (reports, meta, charts, registry, a few data files) so the UI cannot dump raw filings by accident. If the SQLite schema is older than the client, rebuild; do not paper over it.
 
+`list_runs` / `get_run` hydrate the blotter the website paints: `verdict_line` (column), `decision_action` and `cheap_claim` (from stored extras). Missing fields are null. The extras blob is not a UI API. `RunQuery.latest` returns at most one row per ticker (newest session) **after** other filters, then sort/limit — not a unique of the current page of 50. Sort `asof_downside_pct` is SQL on stored as-of price versus bear FV; it is not a field on the run and not the live-mutated Downside cell.
+
 Rebuild:
 
 ```bash
@@ -238,8 +240,8 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 
 | Page | What a person uses it for |
 |------|---------------------------|
-| `/` | List completed runs; filter and sort; pick two of the same ticker to Compare |
-| `/runs/{run_id}` | One run: price vs analysis, FV, MoS, Downside %, reports |
+| `/` | List completed runs; filter and sort; optional Latest (one row per ticker). First glance is ticker, as-of/live, FV, MoS, Downside, stored duration, process audit. Pick two of the same ticker to Compare |
+| `/runs/{run_id}` | One run: decision strip, full-width valuation, then price vs analysis, reports |
 | `/artifact` | Render an allowlisted session file (markdown → HTML) |
 | `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin) |
 | `/analyze/{id}` | Live phase/status; cancel keeps the session (can resume); discard writes `abandon.json` unless a snapshot exists |

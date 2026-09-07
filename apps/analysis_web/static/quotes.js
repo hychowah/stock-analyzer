@@ -67,6 +67,7 @@
 
   function fillCell(el, q) {
     el.classList.remove("chg-up", "chg-down");
+    el.removeAttribute("aria-busy");
     clearCell(el);
     if (!q || q.error) {
       el.textContent = "—";
@@ -77,14 +78,15 @@
     price.textContent = fmtNum(q.price);
     el.appendChild(price);
     if (q.change_pct != null) {
-      if (q.change_pct > 0) {
-        el.classList.add("chg-up");
-      } else if (q.change_pct < 0) {
-        el.classList.add("chg-down");
-      }
       el.appendChild(document.createTextNode(" "));
       var chg = document.createElement("span");
       var sign = q.change_pct > 0 ? "+" : "";
+      chg.className = "quote-chip";
+      if (q.change_pct > 0) {
+        chg.className += " chg-up";
+      } else if (q.change_pct < 0) {
+        chg.className += " chg-down";
+      }
       chg.textContent = sign + q.change_pct.toFixed(1) + "%";
       el.appendChild(chg);
     }
@@ -166,7 +168,13 @@
       var price = liveOk ? q.price : asof;
       var vintage = liveOk ? "live" : "as-of";
       var value = downsidePct(price, fvBear);
+      el.setAttribute("data-vintage", vintage);
+      el.classList.toggle("below-bear", value != null && value < 0);
       el.textContent = fmtDownside(value);
+      var vintageEl = document.createElement("span");
+      vintageEl.className = "downside-vintage muted";
+      vintageEl.textContent = " " + vintage;
+      el.appendChild(vintageEl);
       if (value == null || price == null || fvBear == null) {
         el.removeAttribute("title");
         continue;
@@ -175,7 +183,7 @@
     }
   }
 
-  function applyQuotes(quotes) {
+  function applyQuotes(quotes, requested) {
     var by = Object.create(null);
     (quotes || []).forEach(function (q) {
       if (q && q.symbol) {
@@ -190,8 +198,16 @@
         .toUpperCase();
       if (!s) {
         el.classList.remove("chg-up", "chg-down");
+        el.removeAttribute("aria-busy");
         el.textContent = "—";
         el.title = "unstamped";
+        continue;
+      }
+      if (requested && !requested[s]) {
+        el.classList.remove("chg-up", "chg-down");
+        el.removeAttribute("aria-busy");
+        el.textContent = "—";
+        el.title = "over quote cap";
         continue;
       }
       fillCell(el, by[s] || { error: "unavailable", symbol: s });
@@ -199,26 +215,53 @@
     fillDownside(by);
   }
 
+  function markLoading(syms) {
+    var want = Object.create(null);
+    var i;
+    for (i = 0; i < syms.length; i++) {
+      want[syms[i]] = 1;
+    }
+    var cells = document.querySelectorAll("[data-quote-cell][data-quote-symbol]");
+    for (i = 0; i < cells.length; i++) {
+      var el = cells[i];
+      var s = String(el.getAttribute("data-quote-symbol") || "")
+        .trim()
+        .toUpperCase();
+      if (!s || !want[s]) {
+        continue;
+      }
+      el.setAttribute("aria-busy", "true");
+      el.textContent = "…";
+    }
+  }
+
   function poll() {
     if (document.visibilityState !== "visible") {
       return;
     }
-    var syms = uniqueSymbols();
-    if (!syms.length) {
+    var all = uniqueSymbols();
+    if (!all.length) {
       setStatus("");
       return;
     }
-    if (syms.length > MAX_SYMBOLS) {
-      setStatus(
-        "Live quotes: " +
-          syms.length +
-          " unique listings on this page; cap is " +
-          MAX_SYMBOLS +
-          ". Narrow the list."
-      );
-      return;
+    var syms = all.slice(0, MAX_SYMBOLS);
+    var requested = Object.create(null);
+    var i;
+    for (i = 0; i < syms.length; i++) {
+      requested[syms[i]] = 1;
     }
-    setStatus("");
+    if (all.length > MAX_SYMBOLS) {
+      setStatus(
+        "Live quotes: first " +
+          MAX_SYMBOLS +
+          " of " +
+          all.length +
+          " listings on this page."
+      );
+    } else {
+      setStatus("");
+    }
+    markLoading(syms);
     var url = "/api/quotes?symbols=" + encodeURIComponent(syms.join(","));
     fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } })
       .then(function (r) {
@@ -229,6 +272,7 @@
       .then(function (payload) {
         if (!payload.ok) {
           setStatus((payload.body && payload.body.detail) || "Live quotes failed");
+          applyQuotes([], requested);
           return;
         }
         if (payload.body && payload.body.ttl_sec) {
@@ -238,10 +282,11 @@
             armTimer();
           }
         }
-        applyQuotes(payload.body.quotes);
+        applyQuotes(payload.body.quotes, requested);
       })
       .catch(function () {
         setStatus("Live quotes failed");
+        applyQuotes([], requested);
       });
   }
 

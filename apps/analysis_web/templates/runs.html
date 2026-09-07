@@ -16,12 +16,20 @@
 <div class="card">
   <h1>Research runs</h1>
   <p class="muted">source: catalog sqlite
-    · <span title="SSE /api/events with 5s poll fallback">live</span></p>
+    · <span title="SSE /api/events with 5s poll fallback">live</span>
+    · MoS vs base · as-of
+    · Downside vs bear · live if printed else as-of</p>
   <form id="runs-filters" class="filters{% if error_kind == 'ticker_not_found' %} is-abort{% endif %}" method="get" action="/" data-runs-live="1">
     <div class="filters-row">
       <label>Ticker<input name="ticker_prefix" value="{{ ticker_prefix or '' }}" placeholder="M…" autocomplete="off" spellcheck="false"/></label>
       <input type="hidden" name="sort" value="{{ sort or '' }}"/>
       <input type="hidden" name="dir" value="{{ dir or '' }}"/>
+      <input type="hidden" name="latest" value="{{ '1' if latest else '' }}"/>
+      <p class="grain" role="group" aria-label="List grain">
+        <a href="{{ filter_href(latest='') }}" {% if not latest %}aria-current="page"{% endif %}>All</a>
+        ·
+        <a href="{{ filter_href(latest=1) }}" {% if latest %}aria-current="page"{% endif %}>Latest</a>
+      </p>
       <button type="submit">Filter</button>
       <a id="runs-reset" class="btn secondary" href="/">Reset</a>
     </div>

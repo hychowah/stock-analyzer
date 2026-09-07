@@ -52,6 +52,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Only runs with fv_base (compare/portfolio pickers)",
     )
+    p_list.add_argument(
+        "--latest",
+        action="store_true",
+        help="At most one row per ticker (newest session) after other filters",
+    )
 
     p_get = sub.add_parser("get-run", help="Get one run by run_id")
     p_get.add_argument("run_id")
@@ -108,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                 limit=args.limit,
                 offset=args.offset,
                 comparable_only=bool(args.comparable_only),
+                latest=bool(args.latest),
             )
             print(json.dumps(rows, indent=2, default=str))
             return 0

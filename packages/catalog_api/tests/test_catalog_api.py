@@ -203,6 +203,13 @@ class CatalogApiTests(unittest.TestCase):
         self.assertEqual(run["fv_base"], 500.0)
         self.assertIsNone(run.get("quote_symbol"))
         self.assertEqual(run.get("quote_listing"), "META")
+        self.assertIsNone(run["decision_action"])
+        self.assertIsNone(run["cheap_claim"])
+        self.assertIsNone(run["verdict_line"])
+        self.assertNotIn("extras_json", run)
+        self.assertNotIn("extras_json", rows[0])
+        self.assertNotIn("downside_pct", run)
+        self.assertNotIn("asof_downside_pct", run)
 
     def test_quote_symbol_from_stamp_no_ticker_fallback(self):
         from packages.kd_research.ticker_lookup import listing_projection
@@ -542,6 +549,100 @@ class CatalogQueryTests(unittest.TestCase):
         self.assertEqual(self.api.count_runs(), 5)
         via_q = self.api.list_runs(RunQuery(comparable_only=True, limit=50))
         self.assertNotIn("AAPL", {r["ticker"] for r in via_q})
+
+    def test_hydrate_decision_from_extras_not_blob(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        cols = {str(r[1]) for r in conn.execute("PRAGMA table_info(runs)")}
+        if "extras_json" not in cols:
+            conn.execute("ALTER TABLE runs ADD COLUMN extras_json TEXT")
+        if "verdict_line" not in cols:
+            conn.execute("ALTER TABLE runs ADD COLUMN verdict_line TEXT")
+        conn.execute(
+            "UPDATE runs SET extras_json = ?, verdict_line = ? WHERE ticker = 'META'",
+            (
+                json.dumps(
+                    {
+                        "decision_action": "pass",
+                        "roic_cheap_claim": "cheap vs high ROIC",
+                    }
+                ),
+                "pass — wait",
+            ),
+        )
+        conn.execute(
+            "UPDATE runs SET extras_json = ? WHERE ticker = 'JPM'",
+            ("not-json",),
+        )
+        conn.commit()
+        conn.close()
+        run = self.api.get_run("research:META:2026-08-03")
+        self.assertEqual(run["decision_action"], "pass")
+        self.assertEqual(run["cheap_claim"], "cheap vs high ROIC")
+        self.assertEqual(run["verdict_line"], "pass — wait")
+        self.assertNotIn("extras_json", run)
+        listed = {r["ticker"]: r for r in self.api.list_runs(limit=50)}
+        self.assertEqual(listed["META"]["decision_action"], "pass")
+        self.assertIsNone(listed["JPM"]["decision_action"])
+        self.assertNotIn("extras_json", listed["META"])
+        self.assertNotIn("extras_json", listed["JPM"])
+
+    def test_latest_is_catalog_grain_not_page_unique(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        for i in range(60):
+            day = 1 + (i % 28)
+            _insert_run(
+                db,
+                ticker="AVGO",
+                session_key=f"2025-01-{day:02d}__r{i}",
+                fv_base=100.0 + i,
+            )
+        _insert_run(db, ticker="AVGO", session_key="2026-08-20", fv_base=999.0)
+        page = self.api.list_runs(limit=50)
+        self.assertEqual(len(page), 50)
+        self.assertEqual({r["ticker"] for r in page}, {"AVGO"})
+        latest = self.api.list_runs(latest=True, limit=50)
+        tickers = [r["ticker"] for r in latest]
+        self.assertEqual(len(tickers), len(set(tickers)))
+        self.assertEqual(self.api.count_runs(latest=True), len(latest))
+        self.assertIn("META", tickers)
+        self.assertIn("AVGO", tickers)
+        avgo = next(r for r in latest if r["ticker"] == "AVGO")
+        self.assertEqual(avgo["session_key"], "2026-08-20")
+        self.assertEqual(avgo["fv_base"], 999.0)
+        limited = self.api.list_runs(latest=True, limit=2)
+        self.assertEqual(len(limited), 2)
+        self.assertEqual(self.api.count_runs(latest=True), len(latest))
+        via_q = self.api.list_runs(RunQuery(latest=True, limit=50))
+        self.assertEqual({r["ticker"] for r in via_q}, set(tickers))
+
+    def test_sort_asof_downside_pct_is_sql_not_a_field(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        conn.execute(
+            "UPDATE runs SET asof_price = ?, fv_bear = ? WHERE ticker = 'META'",
+            (400.0, 350.0),
+        )
+        conn.execute(
+            "UPDATE runs SET asof_price = ?, fv_bear = ? WHERE ticker = 'MSFT'",
+            (100.0, 40.0),
+        )
+        conn.execute(
+            "UPDATE runs SET asof_price = ?, fv_bear = ? WHERE ticker = 'JPM'",
+            (100.0, 90.0),
+        )
+        conn.commit()
+        conn.close()
+        rows = self.api.list_runs(sort="asof_downside_pct", dir="desc", limit=50)
+        tickers = [r["ticker"] for r in rows if r["asof_price"] and r["fv_bear"]]
+        self.assertEqual(tickers[0], "MSFT")
+        self.assertIn("JPM", tickers)
+        self.assertLess(tickers.index("MSFT"), tickers.index("JPM"))
+        for row in rows:
+            self.assertNotIn("downside_pct", row)
+            self.assertNotIn("asof_downside_pct", row)
+        with self.assertRaises(ValueError):
+            self.api.list_runs(sort="downside_pct")
 
     def test_calibration_pass_only_defaults_false(self):
         import inspect

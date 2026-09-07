@@ -32,6 +32,7 @@
     "sort",
     "dir",
     "audit_verdict",
+    "latest",
     "limit"
   ];
 
@@ -41,6 +42,7 @@
     fv_base: true,
     margin_of_safety_pct: true,
     harness_version: true,
+    asof_downside_pct: true,
   };
 
   function trim(value) {

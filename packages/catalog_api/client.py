@@ -98,6 +98,7 @@ class RunQuery:
     fv_base_min: Any = None
     fv_base_max: Any = None
     comparable_only: bool = False
+    latest: bool = False
     sort: str | None = None
     dir: str | None = None
     limit: int = 50
@@ -125,7 +126,14 @@ RUN_SORT_COLUMNS: frozenset[str] = frozenset(
         "audit_verdict",
         "tech_signal",
         "harness_version",
+        "asof_downside_pct",
     }
+)
+
+# Stored as-of vs bear. Not a run field; not the live-mutated Downside cell.
+_ASOF_DOWNSIDE_SQL = (
+    "CASE WHEN asof_price IS NOT NULL AND asof_price != 0 AND fv_bear IS NOT NULL "
+    "THEN (asof_price - fv_bear) * 100.0 / asof_price END"
 )
 
 _DEFAULT_ORDER_SQL = "ORDER BY ticker, session_date DESC, session_key DESC"
@@ -357,6 +365,8 @@ def _runs_order_sql(sort: str | None, direction: str | None) -> str:
             f"{minor} {dir_sql}",
             f"{patch} {dir_sql}",
         ]
+    elif sort == "asof_downside_pct":
+        parts = [f"{_ASOF_DOWNSIDE_SQL} {dir_sql}"]
     else:
         parts = [f"{sort} {dir_sql}"]
     for col, tie_dir in _TIEBREAK:
@@ -367,6 +377,59 @@ def _runs_order_sql(sort: str | None, direction: str | None) -> str:
 
 def _row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     return {k: row[k] for k in row.keys()}
+
+
+def _parse_extras(raw: Any) -> dict[str, Any]:
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, (bytes, bytearray)):
+        raw = raw.decode("utf-8", errors="replace")
+    if not isinstance(raw, str) or not raw.strip():
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _stored_text(value: Any) -> str | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        return text or None
+    return None
+
+
+def _hydrate_run(row: sqlite3.Row) -> dict[str, Any]:
+    """Named blotter fields. extras blob is not a UI API."""
+    data = _row_to_dict(row)
+    extras = _parse_extras(data.pop("extras_json", None))
+    data.pop("_blotter_rn", None)
+    data["verdict_line"] = _stored_text(data.get("verdict_line"))
+    data["decision_action"] = _stored_text(extras.get("decision_action"))
+    data["cheap_claim"] = _stored_text(extras.get("roic_cheap_claim"))
+    return data
+
+
+def _runs_from_sql(q: RunQuery) -> tuple[str, list[Any]]:
+    where, params = _runs_filter_sql(q)
+    order = _runs_order_sql(q.sort, q.dir)
+    if q.latest:
+        inner = (
+            "SELECT runs.*, ROW_NUMBER() OVER ("
+            "PARTITION BY ticker ORDER BY session_date DESC, session_key DESC"
+            f") AS _blotter_rn FROM runs {where}"
+        )
+        sql = f"SELECT * FROM ({inner}) AS blotter WHERE _blotter_rn = 1 {order} LIMIT ? OFFSET ?"
+    else:
+        sql = f"SELECT * FROM runs {where} {order} LIMIT ? OFFSET ?"
+    params = list(params)
+    params.extend([q.limit, q.offset])
+    return sql, params
 
 
 def _require_listing_schema(conn: sqlite3.Connection) -> None:
@@ -479,14 +542,11 @@ class CatalogApi:
             raise ValueError("limit must be 1..1000")
         if query.offset < 0:
             raise ValueError("offset must be >= 0")
-        where, params = _runs_filter_sql(query)
-        order = _runs_order_sql(query.sort, query.dir)
-        sql = f"SELECT * FROM runs {where} {order} LIMIT ? OFFSET ?"
-        params.extend([query.limit, query.offset])
+        sql, params = _runs_from_sql(query)
         with self._connect() as conn:
             _require_listing_schema(conn)
             rows = conn.execute(sql, params).fetchall()
-        return [_row_to_dict(r) for r in rows]
+        return [_hydrate_run(r) for r in rows]
 
     def count_runs(
         self,
@@ -495,7 +555,10 @@ class CatalogApi:
     ) -> int:
         query = coerce_run_query(q, kwargs)
         where, params = _runs_filter_sql(query)
-        sql = f"SELECT COUNT(*) FROM runs {where}"
+        if query.latest:
+            sql = f"SELECT COUNT(*) FROM (SELECT 1 FROM runs {where} GROUP BY ticker)"
+        else:
+            sql = f"SELECT COUNT(*) FROM runs {where}"
         with self._connect() as conn:
             _require_listing_schema(conn)
             row = conn.execute(sql, params).fetchone()
@@ -559,7 +622,7 @@ class CatalogApi:
             ).fetchone()
         if row is None:
             raise RunNotFound(run_id)
-        return _row_to_dict(row)
+        return _hydrate_run(row)
 
     def get_session_root(self, run_id: str) -> Path:
         """Resolve session directory under this ARCHIVE_ROOT via run_id (not stored path)."""

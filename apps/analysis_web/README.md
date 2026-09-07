@@ -27,8 +27,8 @@ Or: `bash apps/analysis_web/init.sh`
 
 | Path | Purpose |
 |------|---------|
-| `/` | Run list: live prefix search, filters, column sort; Downside % is (price − bear FV) / price (as-of, then live print) |
-| `/runs/{run_id}` | Run detail (price vs analysis chart, FV, MoS, Downside %, audit, report links) |
+| `/` | Run list: live prefix search, filters, column sort, optional Latest-per-ticker; Downside % is (price − bear FV) / price (as-of, then live print). Duration is the stored snapshot action; Audit is process completeness |
+| `/runs/{run_id}` | Run detail (decision strip, full-width valuation, then price vs analysis chart, reports) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown → sanitized HTML; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
@@ -58,7 +58,7 @@ Or: `bash apps/analysis_web/init.sh`
 
 Runs list (`/`): type in Ticker to filter **starts-with** (`ticker_prefix`). Sector / region / tech / harness are dropdowns of catalog values. Session date, MoS %, price, and FV base take **inclusive ranges**. All of that updates live; click headers to sort. A ticker/prefix that matches **no catalog ticker** aborts with HTTP 404 (do not treat an empty table as “keep going”). A real ticker with other filters that yield zero rows still shows **No runs** (200).
 
-Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`. Default `limit=50` is omitted from the query string.
+Shareable query example: `/?ticker_prefix=M&sector=growth&harness_version=2.17.0&session_date_from=2026-08-01&mos_min=0&sort=margin_of_safety_pct&dir=desc`. Default `limit=50` is omitted from the query string. Empty `/` is the catalog dump (no `latest`). `/?latest=1` is at most one row per ticker after the other filters.
 
 Header **Runs** and run-detail **← Runs** remember the last non-empty query (browser `localStorage`) so leaving to Analyze or a run and coming back keeps sort/filter. Empty `/` is still the default list (storage is not replayed). **Reset** is the only clear. A pasted query URL becomes the new memory.
 
@@ -75,7 +75,8 @@ The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **La
 | `mos_min`, `mos_max` | Inclusive MoS % |
 | `price_min`, `price_max` | Inclusive as-of price |
 | `fv_base_min`, `fv_base_max` | Inclusive FV base |
-| `sort`, `dir` | Allowlisted column + `asc`/`desc` |
+| `sort`, `dir` | Allowlisted column + `asc`/`desc`. `asof_downside_pct` is stored as-of vs bear (not a run field, not the live cell) |
+| `latest` | `1` = at most one row per ticker (newest session) after other filters; omitted on empty `/` |
 | `limit` | Page size, 1–200; default 50 is omitted from the query string |
 
 No-JS: the GET form still submits. Invalid ranges (min > max, bad date) return HTTP 400. Unknown ticker / prefix returns HTTP 404 and an abort card.

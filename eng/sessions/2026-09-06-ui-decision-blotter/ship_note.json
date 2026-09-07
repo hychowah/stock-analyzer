@@ -1,0 +1,25 @@
+{
+  "session": "2026-09-06-ui-decision-blotter",
+  "feature": "Wave 3 ui-decision-blotter — catalog_api hydrates decision fields; RunQuery.latest + asof_downside_pct; duration is not Audit; blotter paint",
+  "summary": "First glance is ticker, as-of/live, FV, MoS, Downside, stored duration, process audit. catalog_api + RunQuery is the blotter; HTML only ranks and labels it. Duration pass is not an Audit green pill. Latest is a catalog grain after filters, then sort/limit.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests packages/catalog_api/tests -q",
+    "python scripts/eng_verify.py",
+    "TestClient live ARCHIVE_ROOT (no bind): / empty omits latest; /?latest=1 unique tickers; PASS+duration pass is text not badge; run_detail strip+Valuation above #price-chart, no grid2"
+  ],
+  "verify": "pytest catalog_api+analysis_web 245 passed; eng_verify PASS 783. Templates never mention extras_json. Duration cells do not use verdict_badge. Latest is SQL ROW_NUMBER after filters, not a Python unique of LIMIT 50. git diff vs HEAD does not touch base.html, price_chart.js, export_compare_db.py, compare_db.py, harness/VERSION. ARCHITECTURE.md catalog + website table updated. TestClient live archive: 49 unique tickers on latest=1; 39 PASS+duration pass names; sample research:01378.HK:2026-08-24.",
+  "notes": [
+    "SDR reshape held: extras blob is not a UI API; asof_downside_pct is a sort expression not a run field; duration is not piped through verdict_badge.",
+    "No harness/VERSION bump (W4).",
+    "Killed :8774 was not restarted; verifier used TestClient against live ARCHIVE_ROOT."
+  ],
+  "follow_ups": [
+    "Wave 4 ui-run-reading (after Wave 3; owns run_detail football/chart/CIO).",
+    "Wave 4c ui-jobs-portfolio (portfolio Duration reuses blotter fields).",
+    "Wave 5 ui-a11y-phone after Wave 2 AND Wave 3 (app.css 1100px; must not restyle .decision / .below-bear)."
+  ],
+  "risks": [
+    "Stale :8765 is old chrome; do not treat it as this tree."
+  ],
+  "proposed_commit": "Show duration vs audit on the runs blotter so PASS is not a buy list"
+}

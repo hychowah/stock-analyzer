@@ -30,7 +30,14 @@ from apps.analysis_web.templating import fmt_num, render_fragment, render_page
 router = APIRouter(tags=["pages"])
 
 _NUMERIC_SORT = frozenset(
-    {"session_date", "asof_price", "fv_base", "margin_of_safety_pct", "harness_version"}
+    {
+        "session_date",
+        "asof_price",
+        "fv_base",
+        "margin_of_safety_pct",
+        "harness_version",
+        "asof_downside_pct",
+    }
 )
 _SORT_HEADERS = (
     "ticker",
@@ -41,6 +48,7 @@ _SORT_HEADERS = (
     "asof_price",
     "fv_base",
     "margin_of_safety_pct",
+    "asof_downside_pct",
     "audit_verdict",
     "tech_signal",
 )
@@ -88,6 +96,11 @@ def _filter_href(q: RunQuery, **overrides: Any) -> str:
         if val in (None, ""):
             continue
         if key == "limit" and val in (None, 50):
+            continue
+        if key == "latest":
+            if not val or str(val).strip().lower() in ("0", "false", "off", "no"):
+                continue
+            params[key] = "1"
             continue
         params[key] = str(val)
     if not params:

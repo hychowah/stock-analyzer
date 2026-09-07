@@ -76,19 +76,22 @@ def _mini_archive(base: Path) -> Path:
           p_bear REAL, p_base REAL, p_bull REAL, margin_of_safety_pct REAL,
           model_name TEXT, tech_signal TEXT, tech_regime TEXT,
           exported_at TEXT, harness_version TEXT, harness_git_sha TEXT, orchestrator_model TEXT,
-          quote_symbol TEXT, quote_listing TEXT, quote_listing_source TEXT
+          quote_symbol TEXT, quote_listing TEXT, quote_listing_source TEXT,
+          verdict_line TEXT, extras_json TEXT
         );
         INSERT INTO runs (
           run_id, ticker, session_date, session_key, path, experiment_id,
-          audit_verdict, primary_sector, region, asof_price,
+          audit_verdict, primary_sector, region, asof_price, currency,
           fv_bear, fv_base, fv_bull, margin_of_safety_pct,
-          harness_version, exported_at, quote_symbol, quote_listing, quote_listing_source
+          harness_version, exported_at, quote_symbol, quote_listing, quote_listing_source,
+          verdict_line, extras_json
         ) VALUES (
           'research:META:2026-08-03', 'META', '2026-08-03', '2026-08-03',
           'archive/research/META/2026-08-03', 'exp-demo',
-          'PASS', 'growth', 'us', 400.0,
+          'PASS', 'growth', 'us', 400.0, 'USD',
           350.0, 500.0, 650.0, 12.5, '2.5.0', '2026-08-10T00:00:00Z',
-          'META', 'META', 'stamp'
+          'META', 'META', 'stamp',
+          'pass - wait', '{"decision_action":"pass","roic_cheap_claim":"cheap vs high ROIC"}'
         );
         """
     )
@@ -157,16 +160,22 @@ class QuoteLiveChgCssTests(unittest.TestCase):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
-        for sel in (".quote-live.chg-up", ".quote-live.chg-down"):
+        for sel in (".quote-chip.chg-up", ".quote-chip.chg-down"):
             self.assertIn("background", _css_rule_bodies(css, sel), sel)
+        self.assertNotIn(".quote-live.chg-up", css)
+        self.assertNotIn(".quote-live.chg-down", css)
 
-    def test_quotes_js_puts_sign_on_cell(self):
+    def test_quotes_js_puts_sign_on_chip(self):
         qjs = (Path(__file__).resolve().parents[1] / "static" / "quotes.js").read_text(
             encoding="utf-8"
         )
         self.assertIn('classList.remove("chg-up", "chg-down")', qjs)
-        self.assertIn('classList.add("chg-up")', qjs)
-        self.assertIn('classList.add("chg-down")', qjs)
+        self.assertIn('chg.className = "quote-chip"', qjs)
+        self.assertIn("quote-chip", qjs)
+        self.assertIn('aria-busy', qjs)
+        self.assertIn('slice(0, MAX_SYMBOLS)', qjs)
+        self.assertNotIn('classList.add("chg-up")', qjs)
+        self.assertNotIn('classList.add("chg-down")', qjs)
 
     def test_row_hover_does_not_paint_td(self):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
@@ -174,7 +183,7 @@ class QuoteLiveChgCssTests(unittest.TestCase):
         )
         self.assertNotIn("tr:hover td", css)
         self.assertIn("tr:hover {", css.replace("\r\n", "\n"))
-        for sel in (".quote-live.chg-up", ".quote-live.chg-down"):
+        for sel in (".quote-chip.chg-up", ".quote-chip.chg-down"):
             self.assertNotIn("hover", _css_rule_bodies(css, sel), sel)
 
 
@@ -217,10 +226,13 @@ class ThemeSwitchTests(unittest.TestCase):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
-        for sel in (".quote-live.chg-up", ".quote-live.chg-down"):
+        for sel in (".quote-chip.chg-up", ".quote-chip.chg-down", ".below-bear"):
             body = _css_rule_bodies(css, sel)
-            self.assertIn("background", body, sel)
+            self.assertTrue(body.strip(), sel)
             self.assertNotIn("var(", body, sel)
+        bear = _css_rule_bodies(css, ".below-bear")
+        self.assertIn("color", bear)
+        self.assertNotIn("background:", bear.replace("background: none", ""))
 
     def test_theme_js_boot(self):
         js = (Path(__file__).resolve().parents[1] / "static" / "theme.js").read_text(
@@ -329,7 +341,9 @@ class PhoneStackTableTests(unittest.TestCase):
         self.assertIn("stack-table", html)
         self.assertIn('data-label="Ticker"', html)
         self.assertIn('data-label="Live"', html)
-        self.assertIn('data-label="MoS %"', html)
+        self.assertIn('data-label="MoS"', html)
+        self.assertIn('data-label="Duration"', html)
+        self.assertIn('data-label="Audit (process)"', html)
         self.assertIn("desktop-only", html)
         self.assertIn('data-label="Harness"', html)
         self.assertIn("compare-pick", html)
@@ -633,6 +647,13 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"data-downside-pct", r.content)
         self.assertRegex(r.text, r'data-downside-pct[\s\S]*?>\s*12\.5')
         self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertIn(b'class="decision-strip"', r.content)
+        self.assertIn(b"id=\"price-chart\"", r.content)
+        self.assertLess(r.text.index("decision-strip"), r.text.index('id="price-chart"'))
+        self.assertLess(r.text.index(">Valuation<"), r.text.index('id="price-chart"'))
+        self.assertNotIn(b'class="grid2"', r.content)
+        self.assertIn(b"pass - wait", r.content)
+        self.assertIn(b"cheap vs high ROIC", r.content)
         self.assertIn(b"All reports/", r.content)
         js = Path(__file__).resolve().parents[1] / "static" / "price_chart.js"
         text = js.read_text(encoding="utf-8")
@@ -693,6 +714,11 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(data["runs"][0]["ticker"], "META")
         self.assertEqual(data["runs"][0]["quote_symbol"], "META")
         self.assertNotIn("downside_pct", data["runs"][0])
+        self.assertNotIn("asof_downside_pct", data["runs"][0])
+        self.assertNotIn("extras_json", data["runs"][0])
+        self.assertEqual(data["runs"][0]["decision_action"], "pass")
+        self.assertEqual(data["runs"][0]["cheap_claim"], "cheap vs high ROIC")
+        self.assertEqual(data["runs"][0]["verdict_line"], "pass - wait")
         self.assertIn("quote_listing", data["runs"][0])
         self.assertNotIn("audit", data)
 
@@ -725,8 +751,29 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"As-of", r.content)
         self.assertIn(b'aria-label="As-of min"', r.content)
         self.assertIn(b"Live", r.content)
-        self.assertIn(b"Downside %", r.content)
+        self.assertIn(b"Downside", r.content)
         self.assertIn(b'data-quote-symbol="META"', r.content)
+        self.assertIn(b">Latest</a>", r.content)
+        self.assertIn(b">All</a>", r.content)
+        self.assertIn(b'name="latest"', r.content)
+        self.assertNotIn(b'name="latest" value="1"', r.content)
+        self.assertIn(b'href="/?latest=1"', r.content)
+        self.assertIn(b"Duration", r.content)
+        self.assertIn(b"Audit (process)", r.content)
+        self.assertRegex(
+            r.text,
+            r'data-label="Duration"[^>]*>\s*pass\s*<',
+        )
+        self.assertNotRegex(
+            r.text,
+            r'data-label="Duration"[^>]*>\s*<span class="badge pass">',
+        )
+        self.assertRegex(
+            r.text,
+            r'data-label="Audit \(process\)"[^>]*>\s*<span class="badge pass">',
+        )
+        self.assertIn(b'data-sort="asof_downside_pct"', r.content)
+        self.assertIn(b'href="/runs/research:META:2026-08-03"', r.content)
         self.assertIn(b"data-downside-pct", r.content)
         self.assertIn(b'data-fv-bear="350.0"', r.content)
         self.assertIn(b'data-asof-price="400.0"', r.content)
@@ -840,6 +887,11 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(overlay.status_code, 400)
         empty = self.client.get("/api/runs", params={"sort": "", "dir": ""})
         self.assertEqual(empty.status_code, 200)
+        ok = self.client.get("/api/runs", params={"sort": "asof_downside_pct", "dir": "desc"})
+        self.assertEqual(ok.status_code, 200)
+        self.assertNotIn("asof_downside_pct", ok.json()["runs"][0])
+        bad_latest = self.client.get("/api/runs", params={"latest": "maybe"})
+        self.assertEqual(bad_latest.status_code, 400)
 
 
 class AnalysisWebQueryTests(unittest.TestCase):
@@ -887,6 +939,44 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.client.close()
         os.environ.pop("ARCHIVE_ROOT", None)
         self._td.cleanup()
+
+    def test_latest_is_catalog_grain_not_page_unique(self):
+        for i in range(60):
+            day = 1 + (i % 28)
+            _insert_run(
+                self.archive,
+                ticker="AVGO",
+                session_key=f"2025-01-{day:02d}__r{i}",
+                fv_base=10.0,
+                mos=0.0,
+            )
+        _insert_run(
+            self.archive,
+            ticker="AVGO",
+            session_key="2026-08-20",
+            fv_base=99.0,
+            mos=0.0,
+        )
+        page = self.client.get("/api/runs", params={"limit": 50})
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual({r["ticker"] for r in page.json()["runs"]}, {"AVGO"})
+        latest = self.client.get("/api/runs", params={"latest": "1", "limit": 50})
+        self.assertEqual(latest.status_code, 200)
+        data = latest.json()
+        tickers = [r["ticker"] for r in data["runs"]]
+        self.assertEqual(len(tickers), len(set(tickers)))
+        self.assertIn("META", tickers)
+        self.assertIn("AVGO", tickers)
+        self.assertEqual(data["total"], len(tickers))
+        avgo = next(r for r in data["runs"] if r["ticker"] == "AVGO")
+        self.assertEqual(avgo["session_key"], "2026-08-20")
+        html = self.client.get("/", params={"latest": "1"})
+        self.assertEqual(html.status_code, 200)
+        self.assertIn(b'name="latest" value="1"', html.content)
+        home = self.client.get("/")
+        self.assertNotIn(b'name="latest" value="1"', home.content)
+        self.assertIn(b'href="/?latest=1"', home.content)
+        self.assertIn(b'name="latest" value=""', home.content)
 
     def test_html_ticker_prefix_m(self):
         r = self.client.get("/", params={"ticker_prefix": "M"})

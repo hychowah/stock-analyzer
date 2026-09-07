@@ -873,17 +873,39 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'data-quote-symbol="META"', r.content)
         self.assertIn(b'class="decision-strip"', r.content)
         self.assertIn(b"id=\"price-chart\"", r.content)
-        self.assertLess(r.text.index("decision-strip"), r.text.index('id="price-chart"'))
-        self.assertLess(r.text.index(">Valuation<"), r.text.index('id="price-chart"'))
+        self.assertLess(r.text.index("decision-strip"), r.text.index("run-cover"))
+        self.assertLess(r.text.index("run-cover"), r.text.index('id="price-chart"'))
+        self.assertLess(r.text.index("Read CIO cover"), r.text.index('id="price-chart"'))
+        self.assertLess(
+            r.text.index("No football-field chart for this session."),
+            r.text.index('id="price-chart"'),
+        )
+        self.assertLess(r.text.index('id="price-chart"'), r.text.index(">Context<"))
+        self.assertLess(
+            r.text.index(">Context<"),
+            r.text.index("Bear / base / bull / model"),
+        )
+        self.assertLess(
+            r.text.index("Read CIO cover"),
+            r.text.index("Other catalog sessions"),
+        )
         self.assertNotIn(b'class="grid2"', r.content)
         self.assertIn(b"pass - wait", r.content)
-        self.assertIn(b"cheap vs high ROIC", r.content)
+        self.assertIn(b"Do not initiate", r.content)
+        self.assertIn(b"Cheap Vs High Roic", r.content)
+        self.assertNotIn(b"cheap vs high ROIC", r.content)
         self.assertIn(b"All reports (allowlisted)", r.content)
-        self.assertIn(b"Read CIO cover", r.content)
+        self.assertIn(b'Read CIO cover</a>', r.content)
+        self.assertIn(b'class="btn"', r.content)
         self.assertIn(b"No football-field chart for this session.", r.content)
+        self.assertIn(b"No other catalog sessions", r.content)
+        self.assertNotIn(b"Compare with another META session", r.content)
         self.assertNotIn(b"Primary reports", r.content)
         self.assertNotIn(b'class="football-field"', r.content)
         self.assertNotIn(b"valuation_football_field.png", r.content)
+        self.assertNotRegex(r.text, r"<h1[^>]*class=\"[^\"]*mono")
+        self.assertIn(b'class="table-scroll"', r.content)
+        self.assertEqual(r.text.count('class="table-scroll"'), 3)
         js = Path(__file__).resolve().parents[1] / "static" / "price_chart.js"
         text = js.read_text(encoding="utf-8")
         self.assertIn("/api/price-history", text)
@@ -908,6 +930,16 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn("football_href", template)
         self.assertIn("swatch-weighted", template)
         self.assertIn("Other sessions", template)
+        self.assertIn("verdict_line_html", template)
+        self.assertNotIn("| safe", template)
+        self.assertIn("sibling_links", template)
+        self.assertIn("comparable_siblings", template)
+        self.assertNotIn("{% if siblings %}", template)
+        self.assertNotIn("{% for s in siblings %}", template)
+        self.assertIn("table-scroll", template)
+        self.assertNotIn("stack-table", template)
+        self.assertIn("duration_label", template)
+        self.assertIn("cheap_claim_label", template)
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
@@ -920,6 +952,10 @@ class AnalysisWebTests(unittest.TestCase):
             r"\.chart-stage\s*\{[^}]*height:\s*min\(42vh,\s*320px\)",
         )
         self.assertNotIn("height: 220px", css)
+        self.assertRegex(
+            css,
+            r"\.table-scroll\s*\{[^}]*overflow-x:\s*auto",
+        )
         arch = (
             Path(__file__).resolve().parents[1] / "routes" / "architecture.py"
         ).read_text(encoding="utf-8")
@@ -948,6 +984,8 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertNotIn(b"No football-field chart for this session.", r.content)
         self.assertNotIn(b"tornado.png", r.content)
         self.assertIn(b"Read CIO cover", r.content)
+        self.assertLess(r.text.index('class="football-field"'), r.text.index('id="price-chart"'))
+        self.assertLess(r.text.index("Read CIO cover"), r.text.index('id="price-chart"'))
         img = self.client.get(
             "/artifact",
             params={
@@ -1684,9 +1722,52 @@ class AnalysisWebCompareTests(unittest.TestCase):
         r = self.client.get("/runs/research:META:2026-08-03")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Compare with another META session", r.content)
+        self.assertIn(b'href="/runs/research:META:2026-08-10"', r.content)
+        self.assertIn(b'option value="research:META:2026-08-10"', r.content)
         self.assertIn(b"research:META:2026-08-10", r.content)
         self.assertIn(b'"session_key": "2026-08-10"', r.content)
         self.assertIn(b'"fv_base": 600.0', r.content)
+        self.assertNotIn(b"No other catalog sessions", r.content)
+        self.assertLess(r.text.index("run-cover"), r.text.index("compare-form"))
+
+    def test_run_detail_sibling_links_include_non_comparable(self):
+        _insert_run(
+            self.archive,
+            ticker="META",
+            session_key="2026-08-20",
+            fv_base=None,
+            mos=0.0,
+        )
+        r = self.client.get("/runs/research:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b'href="/runs/research:META:2026-08-20"', r.content)
+        self.assertIn(b'href="/runs/research:META:2026-08-10"', r.content)
+        self.assertIn(b'option value="research:META:2026-08-10"', r.content)
+        self.assertNotIn(b'option value="research:META:2026-08-20"', r.content)
+        m = re.search(
+            r'id="price-chart-overlay">(.*?)</script>', r.text, re.S
+        )
+        self.assertIsNotNone(m)
+        overlay = json.loads(m.group(1))
+        keys = {s.get("session_key") for s in overlay.get("siblings") or []}
+        self.assertIn("2026-08-10", keys)
+        self.assertNotIn("2026-08-20", keys)
+
+    def test_run_detail_bleaches_verdict_line(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        conn.execute(
+            "UPDATE runs SET verdict_line = ? WHERE run_id = ?",
+            ("**pass** — `duration.action = pass`", "research:META:2026-08-03"),
+        )
+        conn.commit()
+        conn.close()
+        r = self.client.get("/runs/research:META:2026-08-03")
+        self.assertEqual(r.status_code, 200)
+        self.assertNotIn(b"**", r.content)
+        self.assertNotIn(b"`duration.action", r.content)
+        self.assertIn(b"<strong>pass</strong>", r.content)
+        self.assertIn(b"<code>duration.action = pass</code>", r.content)
 
 
 class AnalysisWebAnalyzeTests(unittest.TestCase):

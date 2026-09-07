@@ -650,6 +650,10 @@ td.pick {
   height: auto;
   display: block;
 }
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
 .report-toc {
   margin: 0 0 1rem;
 }

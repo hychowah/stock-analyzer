@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read PLAN_POST_COMPOSE.md Wave 8; Wave 7 verified",
+      "passes": true,
+      "verify": "Wave 7 session exists; this AGENT_BRIEF names Wave 8"
+    },
+    {
+      "id": "cover-first",
+      "description": "Strip then football + Read CIO cover .btn then chart then Context; Valuation in details; no .mono on h1",
+      "passes": true,
+      "verify": "test_run_detail_lists_reports order + CIO .btn; Playwright 4516.T football/CIO above chart"
+    },
+    {
+      "id": "strip-filters",
+      "description": "duration_label, cheap_claim_label, verdict_line_html on strip; no unsanitized | safe",
+      "passes": true,
+      "verify": "run HTML has Do not initiate; template uses verdict_line_html not | safe; Playwright no raw **"
+    },
+    {
+      "id": "two-sibling-lists",
+      "description": "page_run sibling_links (all other catalog sessions) and comparable_siblings (Grok select); chart overlay comparable only",
+      "passes": true,
+      "verify": "test_run_detail_has_compare_form + empty sibling copy + non-comparable not in select"
+    },
+    {
+      "id": "table-scroll",
+      "description": "Wrap strip / Context / Valuation tables in .table-scroll; no .stack-table on property-row tables",
+      "passes": true,
+      "verify": "run_detail.html has table-scroll; Playwright 390px scrollWidth == clientWidth"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "pytest analysis_web 225 + Playwright MCP 4516.T PASS + eng_verify 816"
+    }
+  ]
+}

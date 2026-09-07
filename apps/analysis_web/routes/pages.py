@@ -267,15 +267,27 @@ def page_run(
             football_href = _artifact_href(item["relpath"])
             break
 
-    siblings: list[dict[str, Any]] = []
+    sibling_links: list[dict[str, Any]] = []
+    comparable_siblings: list[dict[str, Any]] = []
     ticker = str(run.get("ticker") or "").strip()
     if ticker:
         try:
+            for row in api.list_runs(ticker=ticker, limit=50, comparable_only=False):
+                if row.get("run_id") != run_id:
+                    rid = str(row.get("run_id") or "")
+                    sibling_links.append(
+                        {
+                            "run_id": rid,
+                            "session_key": row.get("session_key"),
+                            "href": f"/runs/{rid}",
+                        }
+                    )
             for row in api.list_runs(ticker=ticker, limit=50, comparable_only=True):
                 if row.get("run_id") != run_id:
-                    siblings.append(row)
+                    comparable_siblings.append(row)
         except (DbMissing, ValueError):
-            siblings = []
+            sibling_links = []
+            comparable_siblings = []
 
     return render_page(
         request,
@@ -284,8 +296,9 @@ def page_run(
         artifact_index=artifact_index,
         football_href=football_href,
         cio_href=cio_href,
-        siblings=siblings,
-        chart_overlay=_chart_overlay(run, siblings),
+        sibling_links=sibling_links,
+        comparable_siblings=comparable_siblings,
+        chart_overlay=_chart_overlay(run, comparable_siblings),
     )
 
 

@@ -8,14 +8,15 @@
     · <a href="/?ticker_prefix={{ run.ticker | urlencode }}">{{ run.ticker }}</a>
     {% endif %}
   </p>
-  <h1 class="mono">{{ run.ticker }} · {{ run.session_key }}</h1>
+  <h1>{{ run.ticker }} · {{ run.session_key }}</h1>
   {% if run.verdict_line %}
-  <p class="decision">{{ run.verdict_line }}</p>
+  <div class="decision">{{ run.verdict_line | verdict_line_html }}</div>
   {% endif %}
   <p class="mono muted">{{ run.run_id }}</p>
   {% set ds = downside_pct(run.asof_price, run.fv_bear) %}
   {% set ds_title = downside_title(run.asof_price, run.fv_bear, 'as-of') %}
   <section class="decision-strip" aria-label="Decision">
+    <div class="table-scroll">
     <table>
       <tr>
         <th>As-of</th>
@@ -36,35 +37,45 @@
             {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
             {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
         <th>Duration</th>
-        <td>{% if run.decision_action %}{{ run.decision_action }}{% else %}—{% endif %}</td>
+        <td class="decision"{% if run.decision_action %} title="{{ run.decision_action }}"{% endif %}>{% if run.decision_action %}{{ run.decision_action | duration_label }}{% else %}—{% endif %}</td>
         <th>Audit (process)</th>
         <td>{{ run.audit_verdict | verdict_badge }}</td>
         <th>Cheap claim</th>
-        <td>{% if run.cheap_claim %}{{ run.cheap_claim }}{% else %}—{% endif %}</td>
+        <td>{% if run.cheap_claim %}{{ run.cheap_claim | cheap_claim_label }}{% else %}—{% endif %}</td>
       </tr>
     </table>
+    </div>
   </section>
-  <section>
-    <h2>Valuation</h2>
-    <table>
-      <tr><th>As-of price</th><td class="num">{{ run.asof_price | fmt_num }} {{ run.currency or '' }}</td></tr>
-      <tr><th>Live</th>
-          <td class="num quote-live" data-quote-cell{% if run.quote_listing %} data-quote-symbol="{{ run.quote_listing }}" data-quote-source="{{ run.quote_listing_source or '' }}"{% endif %}>—</td></tr>
-      <tr><th>FV bear / base / bull</th>
-          <td class="num">{{ run.fv_bear | fmt_num }} / {{ run.fv_base | fmt_num }} / {{ run.fv_bull | fmt_num }}</td></tr>
-      <tr><th>FV weighted</th><td class="num">{{ run.fv_weighted | fmt_num }}</td></tr>
-      <tr><th>p bear / base / bull</th>
-          <td class="num">{{ run.p_bear | fmt_num }} / {{ run.p_base | fmt_num }} / {{ run.p_bull | fmt_num }}</td></tr>
-      <tr><th>MoS %</th><td class="num">{{ run.margin_of_safety_pct | fmt_num(1) }}</td></tr>
-      <tr><th title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside %</th>
-          <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}"
-              data-downside-pct
-              data-vintage="as-of"
-              {% if run.fv_bear is not none %}data-fv-bear="{{ run.fv_bear }}"{% endif %}
-              {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
-              {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td></tr>
-      <tr><th>Model</th><td>{{ run.model_name or '' }}</td></tr>
-    </table>
+  <section class="run-cover" aria-label="Valuation envelope">
+    {% if football_href %}
+    <p><img class="football-field" src="{{ football_href }}" alt="Valuation football field"/></p>
+    {% else %}
+    <p class="muted">No football-field chart for this session.</p>
+    {% endif %}
+    {% if cio_href %}
+    <p><a class="btn" href="{{ cio_href }}">Read CIO cover</a></p>
+    {% else %}
+    <p class="muted">CIO cover missing.</p>
+    {% endif %}
+    <details>
+      <summary>All reports (allowlisted)</summary>
+      {% if artifact_index %}
+      <table>
+        <thead><tr><th>File</th><th>Size</th></tr></thead>
+        <tbody>
+          {% for item in artifact_index %}
+          <tr>
+            <td><a href="{{ item.href }}">{{ item.name }}</a></td>
+            <td class="num muted">{% if item.size_bytes is not none %}{{ item.size_bytes }}{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No files under reports/ (or session missing).</p>
+      {% endif %}
+    </details>
+    <p class="muted">Markdown is rendered as HTML; use “Raw source” on the report page for plain text. raw_sec denied by design.</p>
   </section>
   <section id="price-chart" class="price-chart"{% if run.quote_listing %} data-symbol="{{ run.quote_listing }}"{% endif %}>
     <h2>Price vs analysis</h2>
@@ -97,6 +108,7 @@
   </section>
   <section>
     <h3>Context</h3>
+    <div class="table-scroll">
     <table>
       <tr><th>Sector / region</th><td>{{ run.primary_sector or '' }} / {{ run.region or '' }}</td></tr>
       <tr><th>Intensity</th><td>{{ run.intensity or '' }}</td></tr>
@@ -106,10 +118,45 @@
       <tr><th>Harness</th><td class="mono">{{ run.harness_version or '' }}</td></tr>
       <tr><th>Exported</th><td class="mono">{{ run.exported_at or '' }}</td></tr>
     </table>
+    </div>
   </section>
+  <details>
+    <summary>Bear / base / bull / model</summary>
+    <div class="table-scroll">
+    <table>
+      <tr><th>As-of price</th><td class="num">{{ run.asof_price | fmt_num }} {{ run.currency or '' }}</td></tr>
+      <tr><th>Live</th>
+          <td class="num quote-live" data-quote-cell{% if run.quote_listing %} data-quote-symbol="{{ run.quote_listing }}" data-quote-source="{{ run.quote_listing_source or '' }}"{% endif %}>—</td></tr>
+      <tr><th>FV bear / base / bull</th>
+          <td class="num">{{ run.fv_bear | fmt_num }} / {{ run.fv_base | fmt_num }} / {{ run.fv_bull | fmt_num }}</td></tr>
+      <tr><th>FV weighted</th><td class="num">{{ run.fv_weighted | fmt_num }}</td></tr>
+      <tr><th>p bear / base / bull</th>
+          <td class="num">{{ run.p_bear | fmt_num }} / {{ run.p_base | fmt_num }} / {{ run.p_bull | fmt_num }}</td></tr>
+      <tr><th>MoS %</th><td class="num">{{ run.margin_of_safety_pct | fmt_num(1) }}</td></tr>
+      <tr><th title="Percent drop from current price to bear FV. (price - bear FV) / price. Live print when available, else as-of.">Downside %</th>
+          <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}"
+              data-downside-pct
+              data-vintage="as-of"
+              {% if run.fv_bear is not none %}data-fv-bear="{{ run.fv_bear }}"{% endif %}
+              {% if run.asof_price is not none %}data-asof-price="{{ run.asof_price }}"{% endif %}
+              {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td></tr>
+      <tr><th>Model</th><td>{{ run.model_name or '' }}</td></tr>
+    </table>
+    </div>
+  </details>
 </div>
-{% if siblings %}
 <div class="card">
+  <h2>Other catalog sessions</h2>
+  {% if sibling_links %}
+  <ul>
+    {% for s in sibling_links %}
+    <li><a href="{{ s.href }}">{{ s.session_key }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No other catalog sessions</p>
+  {% endif %}
+  {% if comparable_siblings %}
   <h2>Compare with another {{ run.ticker }} session</h2>
   <p class="muted">Starts a Grok valuation audit (six personas). Writes under archive/comparisons/. Does not edit either session.</p>
   <form method="post" action="/compares/new" class="compare-form"
@@ -118,46 +165,14 @@
     <label>Other session
       <select name="run_id_b" required>
         <option value="">(choose)</option>
-        {% for s in siblings %}
+        {% for s in comparable_siblings %}
         <option value="{{ s.run_id }}">{{ s.session_key }} · FV {{ s.fv_base | fmt_num }} · MoS {{ s.margin_of_safety_pct | fmt_num(1) }}%</option>
         {% endfor %}
       </select>
     </label>
     <button type="submit">Compare</button>
   </form>
-</div>
-{% endif %}
-<div class="card">
-  <h2>Valuation envelope</h2>
-  {% if football_href %}
-  <p><img class="football-field" src="{{ football_href }}" alt="Valuation football field"/></p>
-  {% else %}
-  <p class="muted">No football-field chart for this session.</p>
   {% endif %}
-  {% if cio_href %}
-  <p><a href="{{ cio_href }}">Read CIO cover</a></p>
-  {% else %}
-  <p class="muted">CIO cover missing.</p>
-  {% endif %}
-  <details>
-    <summary>All reports (allowlisted)</summary>
-    {% if artifact_index %}
-    <table>
-      <thead><tr><th>File</th><th>Size</th></tr></thead>
-      <tbody>
-        {% for item in artifact_index %}
-        <tr>
-          <td><a href="{{ item.href }}">{{ item.name }}</a></td>
-          <td class="num muted">{% if item.size_bytes is not none %}{{ item.size_bytes }}{% else %}—{% endif %}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="muted">No files under reports/ (or session missing).</p>
-    {% endif %}
-  </details>
-  <p class="muted">Markdown is rendered as HTML; use “Raw source” on the report page for plain text. raw_sec denied by design.</p>
 </div>
 {% endblock %}
 {% block scripts %}

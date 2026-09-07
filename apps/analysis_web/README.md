@@ -28,7 +28,7 @@ Or: `bash apps/analysis_web/init.sh`
 | Path | Purpose |
 |------|---------|
 | `/` | Run list: live prefix search, filters, column sort, optional Latest-per-ticker; Downside % is (price − bear FV) / price (as-of, then live print). Duration is the stored snapshot action; Audit is process completeness |
-| `/runs/{run_id}` | Run detail (decision strip, full-width valuation, price vs analysis, football-field PNG when present, CIO cover) |
+| `/runs/{run_id}` | Run detail (decision strip, football-field PNG + Read CIO cover when present, price vs analysis, Context; bear/base/bull/model in details) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown title + TOC + sibling `.md` links on `/artifact`; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |

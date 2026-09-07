@@ -1,0 +1,22 @@
+{
+  "session": "2026-09-07-ui-sheet",
+  "feature": "Wave 8 ui-sheet — cover-first run page, two sibling lists, table-scroll",
+  "summary": "Open a run: strip → football PNG + Read CIO cover .btn → tape chart → Context. Valuation table in details. Two named sibling lists. Phone nested tables scroll inside .table-scroll.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "verify": "pytest analysis_web 225 passed; eng_verify PASS 816. Playwright MCP agent on 4516.T PASS (handoffs/playwright-wave8.md): football+CIO above chart/compare; duration Do not initiate; cheap Franchise MoS; verdict bleached; 390px no document overflow; CIO one H1 cover title.",
+  "notes": [
+    "No harness/VERSION bump (W4).",
+    "ARCHITECTURE.md / analysis_web README run-page cells updated to cover-first order.",
+    "Wave 9 ui-job must not edit app.css, run_detail.html, runs.html, or routes/pages.py."
+  ],
+  "follow_ups": [
+    "Wave 9 ui-job: analyze wait page is resume_hint; complete offers Open catalog run / Read CIO cover as .btn."
+  ],
+  "risks": [
+    "verdict_line bleach depends on Wave 7 templating filter; Wave 8 only applies it."
+  ],
+  "proposed_commit": "Wave 8 ui-sheet: cover-first run page, two sibling lists, table-scroll"
+}

@@ -1,0 +1,30 @@
+{
+  "goal": "Wave 8 ui-sheet \u2014 cover-first run page, two sibling lists, table-scroll",
+  "non_goals": [
+    "Do not run research Phases 0\u20135",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not edit templating.py, runs.js, runs.html, or blotter columns",
+    "Do not start Wave 9 ui-job"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests -q"
+  ]
+}

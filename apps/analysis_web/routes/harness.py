@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, Query, Request
@@ -10,17 +9,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from packages.harness_pin.pin import PinError, UnknownVersion, list_versions, resolve
 from apps.analysis_web.services.harness_view import harness_page_model, structure_prompt_payload
+from apps.analysis_web.templating import render_page
 
 router = APIRouter(tags=["harness"])
-
-
-def _templates(request: Request):
-    return request.app.state.templates
-
-
-def _render(request: Request, name: str, **ctx: Any) -> HTMLResponse:
-    html = _templates(request).get_template(name).render(**ctx)
-    return HTMLResponse(html)
 
 
 def _pin_or_none(version: str):
@@ -40,17 +31,19 @@ def page_harness(
     versions = list_versions()
     pin = _pin_or_none(version)
     if pin is None:
-        html = _templates(request).get_template("error.html").render(
+        return render_page(
+            request,
+            "error.html",
+            status_code=404,
             title="Harness",
             message=f"not a folder under pins/ (going-forward pins only): {version}",
         )
-        return HTMLResponse(html, status_code=404)
     try:
         spec = pin.workflow_spec()
     except PinError as e:
-        return _render(request, "error.html", title="Harness", message=str(e))
+        return render_page(request, "error.html", title="Harness", message=str(e))
     model = harness_page_model(spec)
-    return _render(
+    return render_page(
         request,
         "harness.html",
         version=pin.version,

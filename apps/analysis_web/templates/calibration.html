@@ -3,7 +3,7 @@
 {% block content %}
 <div class="card">
   <h1>Calibration</h1>
-  <p class="muted">MoS direction hit vs realized outcomes (sqlite join)</p>
+  <p class="muted">How often MoS direction matched later outcomes. Not a buy list.</p>
   <form class="filters" method="get" action="/calibration">
     <div class="filters-row">
       <label>Horizon
@@ -25,6 +25,10 @@
   <p>Joined rows: <strong>{{ report.n_joined }}</strong>
      · overall hit rate: <strong>{{ overall_hit }}</strong>
      · mean return: <strong>{{ overall_mean }}%</strong></p>
+  {% if not report.n_joined %}
+  <p class="muted">No outcomes joined for this horizon.</p>
+  <p><a href="/">← Runs</a></p>
+  {% endif %}
   {% if report.error %}<p class="err">Error: {{ report.error }}</p>{% endif %}
 </div>
 <div class="card">

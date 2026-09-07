@@ -3,7 +3,12 @@
 {% block body_attrs %}data-live-reload="1" data-live-compare="1" data-compare-id="{{ job.compare_id }}" data-compare-status="{{ job.status }}"{% endblock %}
 {% block content %}
 <div class="card">
-  <p><a href="/compares">← Compares</a></p>
+  <p>
+    <a href="/compares">← Compares</a>
+    {% if job.ticker %}
+    · <a href="/?ticker_prefix={{ job.ticker | urlencode }}">{{ job.ticker }}</a>
+    {% endif %}
+  </p>
   {% if complete %}
   <p class="flash">Compare complete. Read the synthesis first.</p>
   {% endif %}

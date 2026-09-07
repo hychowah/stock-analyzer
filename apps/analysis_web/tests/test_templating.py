@@ -9,6 +9,7 @@ from apps.analysis_web.templating import (
     downside_title,
     fmt_num,
     headline_view,
+    nav_for_path,
 )
 
 
@@ -70,3 +71,32 @@ class HeadlineViewTests(unittest.TestCase):
     def test_none_packet(self):
         self.assertIsNone(headline_view(None))
         self.assertIsNone(headline_view({}))
+
+
+class NavForPathTests(unittest.TestCase):
+    def test_closed_set(self):
+        self.assertEqual(nav_for_path("/")["current"], "runs")
+        self.assertEqual(nav_for_path("/runs")["current"], "runs")
+        self.assertEqual(nav_for_path("/runs/research:META:2026-08-03")["current"], "runs")
+        self.assertEqual(nav_for_path("/artifact")["current"], "runs")
+        self.assertEqual(nav_for_path("/analyze")["current"], "analyze")
+        self.assertEqual(nav_for_path("/analyze/new")["current"], "analyze")
+        self.assertEqual(nav_for_path("/analyze-artifact")["current"], "analyze")
+        self.assertEqual(nav_for_path("/compares")["current"], "compare")
+        self.assertEqual(nav_for_path("/compare-artifact")["current"], "compare")
+        self.assertEqual(nav_for_path("/portfolio")["current"], "portfolio")
+        self.assertEqual(nav_for_path("/harness")["current"], "harness")
+        self.assertEqual(nav_for_path("/architecture")["current"], "architecture")
+        self.assertEqual(nav_for_path("/experiments")["current"], "experiments")
+        self.assertEqual(nav_for_path("/calibration")["current"], "calibration")
+        self.assertEqual(nav_for_path("/health")["current"], "health")
+
+    def test_unknown_and_api_are_empty(self):
+        self.assertEqual(nav_for_path("/this-path-does-not-exist")["current"], "")
+        self.assertEqual(nav_for_path("/api/runs")["current"], "")
+
+    def test_menu_label(self):
+        self.assertEqual(nav_for_path("/")["menu"], "Menu")
+        self.assertEqual(nav_for_path("/analyze")["menu"], "Menu · Analyze")
+        self.assertEqual(nav_for_path("/compares/x")["menu"], "Menu · Compare")
+        self.assertEqual(nav_for_path("/nope")["menu"], "Menu")

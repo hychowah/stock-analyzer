@@ -39,25 +39,19 @@ from apps.analysis_web.services.render_markdown import (
     render_json_pretty,
     render_markdown,
 )
+from apps.analysis_web.templating import render_page
 
 router = APIRouter(tags=["analyze"])
 
 
-def _templates(request: Request):
-    return request.app.state.templates
-
-
-def _render(request: Request, name: str, **ctx: Any) -> HTMLResponse:
-    html = _templates(request).get_template(name).render(**ctx)
-    return HTMLResponse(html)
-
-
 def _error(request: Request, message: str, status: int, title: str = "Analyze") -> HTMLResponse:
-    html = _templates(request).get_template("error.html").render(
+    return render_page(
+        request,
+        "error.html",
+        status_code=status,
         title=title,
         message=message,
     )
-    return HTMLResponse(html, status_code=status)
 
 
 @router.get("/analyze", response_class=HTMLResponse)
@@ -67,7 +61,7 @@ def page_analyzes(
 ) -> HTMLResponse:
     ticker = (ticker or "").strip().upper()
     jobs = list_analyzes(archive_root(), ticker=ticker or None)
-    return _render(
+    return render_page(
         request,
         "analyze.html",
         jobs=jobs,
@@ -83,7 +77,7 @@ def page_analyze_new(
     ticker: str = "",
     error: str = "",
 ) -> HTMLResponse:
-    return _render(
+    return render_page(
         request,
         "analyze_new.html",
         ticker=(ticker or "").strip().upper(),
@@ -170,7 +164,7 @@ def page_analyze_detail(
             }
         )
 
-    return _render(
+    return render_page(
         request,
         "analyze_detail.html",
         job=job,
@@ -252,7 +246,9 @@ def page_analyze_artifact(
     if is_markdown_path(rel):
         text = data.decode("utf-8", errors="replace")
         body_html = render_markdown(text)
-        html = _templates(request).get_template("report.html").render(
+        return render_page(
+            request,
+            "report.html",
             run_id=cid,
             relpath=rel,
             mode="markdown",
@@ -261,10 +257,11 @@ def page_analyze_artifact(
             back_href=back,
             back_label="Analyze",
         )
-        return HTMLResponse(html)
     if is_json_path(rel):
         pretty = render_json_pretty(data)
-        html = _templates(request).get_template("report.html").render(
+        return render_page(
+            request,
+            "report.html",
             run_id=cid,
             relpath=rel,
             mode="json",
@@ -273,5 +270,4 @@ def page_analyze_artifact(
             back_href=back,
             back_label="Analyze",
         )
-        return HTMLResponse(html)
     return Response(data, media_type="application/octet-stream")

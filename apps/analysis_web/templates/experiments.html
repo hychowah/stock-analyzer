@@ -2,7 +2,11 @@
 {% block title %}Experiments{% endblock %}
 {% block content %}
 <h1>Experiments</h1>
-<p class="muted">Grouped from catalog runs (limit 500 scan)</p>
+<p class="muted">Filter index of tagged research experiments. Open a tag to list those runs.</p>
+{% if not sections %}
+<p class="muted">No tagged experiments in the catalog.</p>
+<p><a href="/">← Runs</a></p>
+{% else %}
 {% for section in sections %}
   {% if section.kind == 'none' %}
   <div class="card">
@@ -11,7 +15,7 @@
   </div>
   {% else %}
   <div class="card">
-    <h2 class="mono">{{ section.eid }}</h2>
+    <h2 class="mono"><a href="/?experiment_id={{ section.eid | urlencode }}">{{ section.eid }}</a></h2>
     <p class="muted">{{ section.count }} run(s)</p>
     <table class="stack-table">
       <thead>
@@ -33,4 +37,5 @@
   </div>
   {% endif %}
 {% endfor %}
+{% endif %}
 {% endblock %}

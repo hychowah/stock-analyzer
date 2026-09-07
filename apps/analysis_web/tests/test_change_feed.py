@@ -200,7 +200,7 @@ class EventsEndpointTests(unittest.TestCase):
         r = self.client.get("/health")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Process", r.content)
-        self.assertIn(b"git_sha", r.content)
+        self.assertIn(b"Git SHA", r.content)
         self.assertIn(b'data-live-reload="1"', r.content)
 
     def test_event_stream_ends_on_cancel(self):

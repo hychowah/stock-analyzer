@@ -3,35 +3,45 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>{% block title %}Archive{% endblock %} · Stock Research Archive</title>
+  <title>{% block title %}Archive{% endblock %} · Stock Research</title>
   {# no defer: set data-theme before app.css paints #}
   <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/app.css"/>
   {% block extra_css %}{% endblock %}
 </head>
 <body {% block body_attrs %}{% endblock %}>
+  <a class="skip-link" href="#content">Skip to content</a>
   <header>
-    <strong>Archive Analysis</strong>
-    <span class="header-tagline">catalog + job scheduler · Analyze starts Mode A · Compare appends archive/comparisons/</span>
+    <a class="brand" href="/">Stock Research</a>
+    <span class="header-tagline">completed runs · start analysis · compare sessions</span>
+    {# Two disclose instances (Menu / Lab), not a new widget. Each checkbox+label+panel is wrapped so :checked ~ .disclose-panel cannot open the other group. Wave 5 still hides .disclose on desktop. #}
     <div class="header-nav">
-      <input type="checkbox" id="nav-open" class="disclose" aria-controls="site-nav"/>
-      <label for="nav-open" class="disclose-btn">Menu</label>
-      <nav id="site-nav" class="header-links disclose-panel">
-        <a id="nav-runs" href="/">Runs</a>
-        <a href="/analyze">Analyze</a>
-        <a href="/architecture">Architecture</a>
-        <a href="/harness">Harness</a>
-        <a href="/compares">Compares</a>
-        <a href="/health">Health</a>
-        <a href="/experiments">Experiments</a>
-        <a href="/calibration">Calibration</a>
-        <a href="/portfolio">Portfolio</a>
-      </nav>
+      <div class="nav-disclose">
+        <input type="checkbox" id="nav-open" class="disclose" aria-controls="site-nav"/>
+        <label for="nav-open" class="disclose-btn">{{ nav.menu if nav is defined else 'Menu' }}</label>
+        <nav id="site-nav" class="header-links disclose-panel" aria-label="Primary">
+          <a id="nav-runs" href="/"{% if nav is defined and nav.current == 'runs' %} aria-current="page"{% endif %}>Runs</a>
+          <a href="/analyze"{% if nav is defined and nav.current == 'analyze' %} aria-current="page"{% endif %}>Analyze</a>
+          <a href="/compares"{% if nav is defined and nav.current == 'compare' %} aria-current="page"{% endif %}>Compare</a>
+          <a href="/portfolio"{% if nav is defined and nav.current == 'portfolio' %} aria-current="page"{% endif %}>Portfolio</a>
+        </nav>
+      </div>
+      <div class="nav-disclose">
+        <input type="checkbox" id="lab-open" class="disclose" aria-controls="lab-nav"/>
+        <label for="lab-open" class="disclose-btn">Lab</label>
+        <nav id="lab-nav" class="header-links header-lab disclose-panel" aria-label="Lab">
+          <a href="/harness"{% if nav is defined and nav.current == 'harness' %} aria-current="page"{% endif %}>Harness</a>
+          <a href="/architecture"{% if nav is defined and nav.current == 'architecture' %} aria-current="page"{% endif %}>Architecture</a>
+          <a href="/experiments"{% if nav is defined and nav.current == 'experiments' %} aria-current="page"{% endif %}>Experiments</a>
+          <a href="/calibration"{% if nav is defined and nav.current == 'calibration' %} aria-current="page"{% endif %}>Calibration</a>
+          <a href="/health"{% if nav is defined and nav.current == 'health' %} aria-current="page"{% endif %}>Health</a>
+        </nav>
+      </div>
       <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false" aria-label="Switch to night theme">Night</button>
     </div>
     <script src="/static/runs.js"></script>
   </header>
-  <main>
+  <main id="content">
     {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}
     {% block content %}{% endblock %}
   </main>

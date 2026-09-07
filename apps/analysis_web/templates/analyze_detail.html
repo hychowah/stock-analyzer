@@ -3,7 +3,12 @@
 {% block body_attrs %}data-live-reload="1" data-live-analyze="1" data-analyze-id="{{ job.analyze_id }}" data-analyze-status="{{ job.status }}"{% endblock %}
 {% block content %}
 <div class="card">
-  <p><a href="/analyze">← Analyze</a></p>
+  <p>
+    <a href="/analyze">← Analyze</a>
+    {% if job.ticker %}
+    · <a href="/?ticker_prefix={{ job.ticker | urlencode }}">{{ job.ticker }}</a>
+    {% endif %}
+  </p>
   <h1>{{ job.ticker }} <span class="mono">{{ job.session_key }}</span></h1>
   {% if job.quote_symbol %}
   <p class="muted">Yahoo listing <span class="mono">{{ job.quote_symbol }}</span></p>

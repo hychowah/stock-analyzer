@@ -8,7 +8,6 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from jinja2 import Environment
 
 from packages.catalog_api.client import (
     ArtifactDenied,
@@ -31,7 +30,7 @@ from packages.compare_jobs.jobs import (
 
 from apps.analysis_web.config import archive_root
 from apps.analysis_web.deps import get_api
-from apps.analysis_web.templating import headline_view
+from apps.analysis_web.templating import headline_view, render_page
 from apps.analysis_web.services.render_markdown import (
     is_json_path,
     is_markdown_path,
@@ -43,21 +42,14 @@ from apps.analysis_web.services.render_markdown import (
 router = APIRouter(tags=["compares"])
 
 
-def _templates(request: Request) -> Environment:
-    return request.app.state.templates
-
-
-def _render(request: Request, name: str, **ctx: Any) -> HTMLResponse:
-    html = _templates(request).get_template(name).render(**ctx)
-    return HTMLResponse(html)
-
-
 def _error(request: Request, message: str, status: int, title: str = "Compare") -> HTMLResponse:
-    html = _templates(request).get_template("error.html").render(
+    return render_page(
+        request,
+        "error.html",
+        status_code=status,
         title=title,
         message=message,
     )
-    return HTMLResponse(html, status_code=status)
 
 
 def _start(
@@ -87,15 +79,17 @@ def page_compares(
         try:
             api.require_ticker(ticker=ticker)
         except TickerNotFound as e:
-            html = _templates(request).get_template("compares.html").render(
+            return render_page(
+                request,
+                "compares.html",
+                status_code=404,
                 jobs=[],
                 ticker=ticker,
                 health=api.health(),
                 error=str(e),
             )
-            return HTMLResponse(html, status_code=404)
     jobs = list_compares(archive_root(), ticker=ticker or None)
-    return _render(
+    return render_page(
         request,
         "compares.html",
         jobs=jobs,
@@ -118,7 +112,7 @@ def page_compare_new(
         runs = api.list_runs(limit=200, comparable_only=True)
     except DbMissing:
         runs = []
-    return _render(
+    return render_page(
         request,
         "compare_new.html",
         runs=runs,
@@ -207,7 +201,7 @@ def page_compare_detail(
             }
         )
 
-    return _render(
+    return render_page(
         request,
         "compare_detail.html",
         job=job,
@@ -255,12 +249,19 @@ def page_compare_artifact(
     if is_markdown_path(rel):
         text = data.decode("utf-8", errors="replace")
         if want_raw:
-            html = _templates(request).get_template("artifact.html").render(
-                run_id=cid, relpath=rel, text=text, back_href=back, back_label="Compare"
+            return render_page(
+                request,
+                "artifact.html",
+                run_id=cid,
+                relpath=rel,
+                text=text,
+                back_href=back,
+                back_label="Compare",
             )
-            return HTMLResponse(html)
         body_html = render_markdown(text)
-        html = _templates(request).get_template("report.html").render(
+        return render_page(
+            request,
+            "report.html",
             run_id=cid,
             relpath=rel,
             mode="markdown",
@@ -269,10 +270,11 @@ def page_compare_artifact(
             back_href=back,
             back_label="Compare",
         )
-        return HTMLResponse(html)
     if is_json_path(rel):
         pretty = render_json_pretty(data)
-        html = _templates(request).get_template("report.html").render(
+        return render_page(
+            request,
+            "report.html",
             run_id=cid,
             relpath=rel,
             mode="text",
@@ -281,10 +283,11 @@ def page_compare_artifact(
             back_href=back,
             back_label="Compare",
         )
-        return HTMLResponse(html)
     if is_text_path(rel):
         text = data.decode("utf-8", errors="replace")
-        html = _templates(request).get_template("report.html").render(
+        return render_page(
+            request,
+            "report.html",
             run_id=cid,
             relpath=rel,
             mode="text",
@@ -293,5 +296,4 @@ def page_compare_artifact(
             back_href=back,
             back_label="Compare",
         )
-        return HTMLResponse(html)
     return Response(content=data, media_type="application/octet-stream")

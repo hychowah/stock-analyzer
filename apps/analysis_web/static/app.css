@@ -123,10 +123,30 @@ body {
   margin: 0;
   background: var(--bg);
 }
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -3.5rem;
+  z-index: 20;
+  padding: 0.4rem 0.75rem;
+  background: var(--header-bg);
+  color: var(--header-fg);
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
 header {
   background: var(--header-bg);
   color: var(--header-fg);
   padding: 0.75rem 1.25rem;
+}
+header .brand {
+  color: var(--header-fg);
+  text-decoration: none;
+  font-weight: 700;
+}
+header .brand:hover {
+  text-decoration: underline;
 }
 .header-tagline {
   margin-left: 0.75rem;
@@ -137,9 +157,17 @@ header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem 1rem;
+  gap: 0.4rem 1.25rem;
   margin-top: 0.4rem;
+}
+.nav-disclose {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1rem;
+}
+.header-nav .theme-toggle {
+  margin-left: auto;
 }
 .header-links a {
   color: var(--header-link);
@@ -148,6 +176,18 @@ header {
 }
 .header-links a:hover {
   text-decoration: underline;
+}
+.header-links a[aria-current="page"] {
+  color: var(--header-fg);
+  text-decoration: underline;
+  font-weight: 600;
+}
+.header-lab a {
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+.header-lab a[aria-current="page"] {
+  color: var(--header-fg);
 }
 .theme-toggle {
   background: transparent;
@@ -165,7 +205,8 @@ header {
  * Disclose: checkbox + label + sibling panel. Show/hide only.
  * Desktop: .disclose-btn hidden; panel keeps its own display.
  * Phone (max-width 800px): button shown; panel display:none until :checked,
- * then display:block. Callers own layout (header wrap is on .header-nav).
+ * then display:block. Callers own layout; header groups wrap on .nav-disclose
+ * (not display:contents). .header-nav is the outer row.
  * A disclose checkbox inside a form must not have name (would submit).
  */
 .disclose {
@@ -226,6 +267,10 @@ header {
     flex-direction: column;
     align-items: stretch;
     gap: 0;
+  }
+  .header-nav .nav-disclose:has(.disclose:checked) {
+    flex-basis: 100%;
+    order: 3;
   }
   .header-links a {
     display: flex;

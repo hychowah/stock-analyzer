@@ -39,7 +39,7 @@ from apps.analysis_web.services.price_history import (
     history_ttl_sec,
 )
 from apps.analysis_web.services.quotes import QuoteService, YahooPrintBackend, quote_ttl_sec
-from apps.analysis_web.templating import create_templates
+from apps.analysis_web.templating import create_templates, render_page
 
 
 def _prefers_html(request: Request) -> bool:
@@ -120,12 +120,13 @@ def create_app() -> FastAPI:
     async def negotiate_http_exception(request: Request, exc: StarletteHTTPException):
         if exc.status_code == 404 and _prefers_html(request):
             message = exc.detail if isinstance(exc.detail, str) else "Not Found"
-            html = app.state.templates.get_template("error.html").render(
-                request=request,
+            return render_page(
+                request,
+                "error.html",
+                status_code=404,
                 title="Not Found",
                 message=message,
             )
-            return HTMLResponse(html, status_code=404)
         return await http_exception_handler(request, exc)
 
     @app.exception_handler(Exception)
@@ -133,13 +134,14 @@ def create_app() -> FastAPI:
         import traceback
 
         tb = traceback.format_exc()
-        html = app.state.templates.get_template("error.html").render(
-            request=request,
+        return render_page(
+            request,
+            "error.html",
+            status_code=500,
             title="Error",
             message="Internal server error",
             detail=tb,
         )
-        return HTMLResponse(html, status_code=500)
 
     return app
 

@@ -258,6 +258,27 @@ class PhoneChromeTests(unittest.TestCase):
         self.assertIn("disclose-btn", base)
         self.assertIn("disclose-panel", base)
         self.assertIn('id="site-nav"', base)
+        self.assertEqual(base.count('class="nav-disclose"'), 2)
+        self.assertIn('id="lab-open"', base)
+        self.assertIn('aria-label="Primary"', base)
+        self.assertIn('aria-label="Lab"', base)
+        self.assertIn('class="skip-link"', base)
+        self.assertIn('href="#content"', base)
+        self.assertIn('id="content"', base)
+        self.assertLess(base.index("skip-link"), base.index('id="nav-open"'))
+        self.assertIn(">Compare</a>", base)
+        self.assertNotIn(">Compares</a>", base)
+        self.assertIn("Stock Research", base)
+        self.assertNotIn("Archive Analysis", base)
+        # Each wrap owns one checkbox then its panel (Menu cannot open Lab).
+        primary = base.split('class="nav-disclose"', 2)[1]
+        lab = base.split('class="nav-disclose"', 2)[2]
+        self.assertIn('id="nav-open"', primary)
+        self.assertIn('id="site-nav"', primary)
+        self.assertNotIn('id="lab-open"', primary)
+        self.assertIn('id="lab-open"', lab)
+        self.assertIn('id="lab-nav"', lab)
+        self.assertNotIn('id="nav-open"', lab)
 
     def test_disclose_css_phone_contract(self):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
@@ -272,6 +293,9 @@ class PhoneChromeTests(unittest.TestCase):
         self.assertIn(".header-nav .disclose-panel", css)
         self.assertIn(".header-nav .disclose:checked ~ .disclose-panel", css)
         self.assertIn("flex-basis: 100%", css)
+        self.assertIn(".nav-disclose", css)
+        self.assertNotIn(".nav-disclose {\n  display: contents", css.replace("\r\n", "\n"))
+        self.assertIn(".skip-link", css)
         generic_panel = re.search(
             r"(?<!nav )\.disclose-panel\s*\{([^}]+)\}",
             css,
@@ -396,9 +420,16 @@ class AnalysisWebTests(unittest.TestCase):
     def test_health(self):
         r = self.client.get("/health")
         self.assertEqual(r.status_code, 200)
-        self.assertIn(b"run_count", r.content)
-        self.assertIn(b"git_sha", r.content)
+        self.assertIn(b"Completed runs", r.content)
+        self.assertIn(b"Git SHA", r.content)
         self.assertIn(b"Process", r.content)
+        self.assertNotIn(b"<th>git_sha</th>", r.content)
+        self.assertNotIn(b"<th>run_count</th>", r.content)
+        self.assertNotRegex(
+            r.text,
+            r"<th>Git SHA</th>\s*<td class=\"mono\">—</td>",
+        )
+        self.assertIn(b"Catalog has", r.content)
         self.assertNotIn(b"stack-table", r.content)
 
     def test_architecture_page(self):
@@ -456,7 +487,7 @@ class AnalysisWebTests(unittest.TestCase):
         r = self.client.get("/this-path-does-not-exist", headers={"Accept": "text/html"})
         self.assertEqual(r.status_code, 404)
         self.assertIn("text/html", r.headers.get("content-type", ""))
-        self.assertIn(b"Archive Analysis", r.content)
+        self.assertIn(b"Stock Research", r.content)
         self.assertIn("← Runs".encode("utf-8"), r.content)
         self.assertIn(b'href="/"', r.content)
         with self.assertRaises(ValueError):
@@ -469,6 +500,7 @@ class AnalysisWebTests(unittest.TestCase):
         body = r.json()
         self.assertIn("detail", body)
         self.assertNotIn(b"Archive Analysis", r.content)
+        self.assertNotIn(b"Stock Research", r.content)
         self.assertNotIn("← Runs".encode("utf-8"), r.content)
 
     def test_api_health_is_catalog_only(self):
@@ -526,6 +558,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b'id="price-chart-overlay"', r.content)
         self.assertIn(b"/static/price_chart.js", r.content)
         self.assertIn(b'class="js-runs-back"', r.content)
+        self.assertIn(b'href="/?ticker_prefix=META"', r.content)
         self.assertIn(b"/static/runs.js", r.content)
         self.assertIn(b'data-range="1y"', r.content)
         self.assertIn(b'"fv_bear": 350.0', r.content)
@@ -614,11 +647,42 @@ class AnalysisWebTests(unittest.TestCase):
         r = self.client.get("/experiments")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"exp-demo", r.content)
+        self.assertIn(b'href="/?experiment_id=exp-demo"', r.content)
+
+    def test_experiments_empty_has_exit(self):
+        db = self.archive / "catalog" / "research_compare.sqlite"
+        conn = sqlite3.connect(str(db))
+        conn.execute("UPDATE runs SET experiment_id = NULL")
+        conn.commit()
+        conn.close()
+        r = self.client.get("/experiments")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn(b"No tagged experiments", r.content)
+        self.assertIn("← Runs".encode("utf-8"), r.content)
+        self.assertNotIn(b"exp-demo", r.content)
 
     def test_calibration_page(self):
         r = self.client.get("/calibration")
         self.assertEqual(r.status_code, 200)
         self.assertIn(b"Calibration", r.content)
+        self.assertIn("← Runs".encode("utf-8"), r.content)
+
+    def test_analyze_aria_current_from_nav(self):
+        r = self.client.get("/analyze")
+        self.assertEqual(r.status_code, 200)
+        self.assertRegex(r.text, r'<a href="/analyze"\s+aria-current="page"')
+        self.assertNotRegex(r.text, r'id="nav-runs"[^>]*aria-current')
+        self.assertIn(b"Skip to content", r.content)
+        self.assertIn(b'id="content"', r.content)
+        self.assertIn(b'aria-label="Primary"', r.content)
+        self.assertIn(b'aria-label="Lab"', r.content)
+        self.assertIn("Menu · Analyze".encode("utf-8"), r.content)
+        self.assertNotIn(b"request.url.path", r.content)
+
+    def test_home_aria_current_is_runs(self):
+        r = self.client.get("/")
+        self.assertRegex(r.text, r'id="nav-runs"[^>]*aria-current="page"')
+        self.assertNotRegex(r.text, r'<a href="/analyze"[^>]*aria-current')
 
     def test_api_list_runs(self):
         r = self.client.get("/api/runs", params={"ticker": "META"})
@@ -841,6 +905,8 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertNotIn(b"JPM", r.content)
         self.assertNotIn(b"<header>", r.content)
         self.assertNotIn(b"Archive Analysis", r.content)
+        self.assertNotIn(b"Stock Research", r.content)
+        self.assertNotIn(b"skip-link", r.content)
         self.assertIn(b"runs-table", r.content)
         self.assertIn(b"stack-table", r.content)
         self.assertIn(b"compare-pick", r.content)
@@ -1059,6 +1125,7 @@ class AnalysisWebCompareTests(unittest.TestCase):
         cid = job["compare_id"]
         page = self.client.get(f"/compares/{cid}")
         self.assertEqual(page.status_code, 200)
+        self.assertIn(b'href="/?ticker_prefix=META"', page.content)
         self.assertIn(b"Compare complete", page.content)
         self.assertIn(b"Synthesis", page.content)
         self.assertIn(b"As-of", page.content)
@@ -1311,6 +1378,7 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         )
         r = self.client.get("/analyze/analyze:META:2026-08-03")
         self.assertEqual(r.status_code, 200)
+        self.assertIn(b'href="/?ticker_prefix=META"', r.content)
         self.assertIn(note.encode("utf-8"), r.content)
         self.assertIn(b'class="muted"', r.content)
         self.assertNotRegex(r.text, r'class="err">\s*abandon\.json present')

@@ -234,6 +234,8 @@ Tests sit next to the code they cover (`packages/*/tests`, `apps/analysis_web/te
 
 Stack: FastAPI, Jinja templates, a little static JS (search, live reload, charts). It reads `ARCHIVE_ROOT` (catalog/UI/tests) and **does not author** research phases or fair values. The website never invents a fair value. It may show live Yahoo prices and Downside % from stored bear fair value versus price — display math, not a second valuation.
 
+The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a quieter Lab (Harness, Architecture, Experiments, Calibration, Health). Full HTML pages go through one `render_page` helper that injects the current section; the template matches that value, not the raw URL.
+
 | Page | What a person uses it for |
 |------|---------------------------|
 | `/` | List completed runs; filter and sort; pick two of the same ticker to Compare |

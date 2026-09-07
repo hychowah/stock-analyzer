@@ -8,7 +8,6 @@ from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from jinja2 import Environment
 
 from packages.catalog_api.client import (
     ArtifactDenied,
@@ -26,7 +25,7 @@ from apps.analysis_web.services.runs_query import (
     query_public_map,
     runs_list_q,
 )
-from apps.analysis_web.templating import fmt_num
+from apps.analysis_web.templating import fmt_num, render_fragment, render_page
 
 router = APIRouter(tags=["pages"])
 
@@ -47,13 +46,27 @@ _SORT_HEADERS = (
 )
 
 
-def _templates(request: Request) -> Environment:
-    return request.app.state.templates
+_HEALTH_LABELS: tuple[tuple[str, str], ...] = (
+    ("archive_root", "Archive root"),
+    ("db_path", "Database path"),
+    ("db_exists", "Database exists"),
+    ("research_exists", "Research folder"),
+    ("library_exists", "Library folder"),
+    ("comparisons_exists", "Comparisons folder"),
+    ("schema_version", "Schema version"),
+    ("run_count", "Completed runs"),
+    ("max_exported_at", "Last catalog export"),
+    ("error", "Error"),
+)
 
 
-def _render(request: Request, name: str, **ctx: Any) -> HTMLResponse:
-    html = _templates(request).get_template(name).render(**ctx)
-    return HTMLResponse(html)
+def _health_rows(health: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for key, label in _HEALTH_LABELS:
+        val = health.get(key)
+        href = "/" if key == "run_count" and val is not None else None
+        rows.append({"key": key, "label": label, "value": val, "href": href})
+    return rows
 
 
 def _first_dir(col: str) -> str:
@@ -144,8 +157,7 @@ def page_runs(
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     ctx, status = _runs_context(api, q)
-    html = _templates(request).get_template("runs.html").render(**ctx)
-    return HTMLResponse(html, status_code=status)
+    return render_page(request, "runs.html", status_code=status, **ctx)
 
 
 @router.get("/runs", response_class=HTMLResponse)
@@ -164,8 +176,9 @@ def fragment_runs(
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     ctx, status = _runs_context(api, q)
-    html = _templates(request).get_template("partials/runs_table.html").render(**ctx)
-    return HTMLResponse(html, status_code=status)
+    return render_fragment(
+        request, "partials/runs_table.html", status_code=status, **ctx
+    )
 
 
 @router.get("/runs/{run_id:path}", response_class=HTMLResponse)
@@ -179,17 +192,21 @@ def page_run(
         run = api.get_run(run_id)
         paths = api.get_report_paths(run_id)
     except RunNotFound:
-        html = _templates(request).get_template("error.html").render(
+        return render_page(
+            request,
+            "error.html",
+            status_code=404,
             title="Run",
             message=f"Run not found: {run_id}",
         )
-        return HTMLResponse(html, status_code=404)
     except DbMissing as e:
-        html = _templates(request).get_template("error.html").render(
+        return render_page(
+            request,
+            "error.html",
+            status_code=503,
             title="Run",
             message=f"DB missing: {e}",
         )
-        return HTMLResponse(html, status_code=503)
 
     # Highlighted classic trio (when present) + full allowlisted reports/ index
     report_links: list[dict[str, Any]] = []
@@ -242,7 +259,7 @@ def page_run(
         except (DbMissing, ValueError):
             siblings = []
 
-    return _render(
+    return render_page(
         request,
         "run_detail.html",
         run=run,
@@ -304,11 +321,15 @@ def page_health(
     api: CatalogApi = Depends(get_api),
 ) -> HTMLResponse:
     git_sha = getattr(request.app.state, "git_sha", None)
-    return _render(
+    if not isinstance(git_sha, str) or not git_sha.strip():
+        git_sha = None
+    health = api.health()
+    return render_page(
         request,
         "health.html",
-        health=api.health(),
-        git_sha=git_sha if isinstance(git_sha, str) else None,
+        health=health,
+        git_sha=git_sha,
+        health_rows=_health_rows(health),
     )
 
 
@@ -324,7 +345,7 @@ def page_calibration(
     try:
         report = api.calibration(horizon=horizon, pass_only=po)
     except DbMissing as e:
-        return _render(
+        return render_page(
             request,
             "error.html",
             title="Calibration",
@@ -347,7 +368,7 @@ def page_calibration(
                 "mean_s": fmt_num(st.get("mean_return_pct"), 2),
             }
         )
-    return _render(
+    return render_page(
         request,
         "calibration.html",
         report=report,
@@ -367,12 +388,14 @@ def page_experiments(
     try:
         runs = api.list_runs(limit=500)
     except (DbMissing, SchemaStale) as e:
-        return _render(
+        return render_page(
             request,
             "error.html",
             title="Experiments",
             message=str(e),
         )
+    if not any(r.get("experiment_id") for r in runs):
+        return render_page(request, "experiments.html", sections=[])
     by_exp: dict[str, list[dict[str, Any]]] = {}
     for r in runs:
         eid = r.get("experiment_id") or "(none)"
@@ -380,7 +403,7 @@ def page_experiments(
 
     sections: list[dict[str, Any]] = []
     for eid, group in sorted(by_exp.items(), key=lambda x: (-len(x[1]), x[0])):
-        if eid == "(none)" and len(by_exp) > 1:
+        if eid == "(none)":
             sections.append({"kind": "none", "count": len(group)})
             continue
         sections.append(
@@ -391,7 +414,7 @@ def page_experiments(
                 "runs": group,
             }
         )
-    return _render(request, "experiments.html", sections=sections)
+    return render_page(request, "experiments.html", sections=sections)
 
 
 @router.get("/portfolio", response_class=HTMLResponse)
@@ -404,7 +427,7 @@ def page_portfolio(
 
     po = pass_only not in ("", "0", "false", "False")
     view = active_portfolio_view(api, pass_only=po)
-    return _render(
+    return render_page(
         request,
         "portfolio.html",
         view=view,

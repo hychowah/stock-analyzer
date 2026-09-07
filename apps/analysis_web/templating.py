@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from fastapi import Request
+from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup, escape
 
@@ -88,6 +90,56 @@ def verdict_badge(v: Any) -> Markup:
     return Markup(f'<span class="badge {cls}">{escape(s or "—")}</span>')
 
 
+NAV_LABELS: dict[str, str] = {
+    "runs": "Runs",
+    "analyze": "Analyze",
+    "compare": "Compare",
+    "portfolio": "Portfolio",
+    "harness": "Harness",
+    "architecture": "Architecture",
+    "experiments": "Experiments",
+    "calibration": "Calibration",
+    "health": "Health",
+}
+
+# Boundary match: path == prefix or path.startswith(prefix + "/").
+# /analyze-artifact is listed so /analyze cannot swallow it via a raw startswith.
+_NAV_PREFIXES: tuple[tuple[str, str], ...] = (
+    ("/analyze-artifact", "analyze"),
+    ("/analyze", "analyze"),
+    ("/compare-artifact", "compare"),
+    ("/compares", "compare"),
+    ("/portfolio", "portfolio"),
+    ("/harness", "harness"),
+    ("/architecture", "architecture"),
+    ("/experiments", "experiments"),
+    ("/calibration", "calibration"),
+    ("/health", "health"),
+    ("/artifact", "runs"),
+    ("/runs", "runs"),
+)
+
+
+def nav_for_path(path: str) -> dict[str, str]:
+    """Small chrome value for base.html. current is '' on unknown paths."""
+    raw = (path or "/").split("?", 1)[0]
+    if not raw.startswith("/"):
+        raw = "/" + raw
+    if len(raw) > 1:
+        raw = raw.rstrip("/")
+    current = ""
+    if raw == "/":
+        current = "runs"
+    else:
+        for prefix, name in _NAV_PREFIXES:
+            if raw == prefix or raw.startswith(prefix + "/"):
+                current = name
+                break
+    label = NAV_LABELS.get(current, "")
+    menu = f"Menu · {label}" if current and current != "runs" else "Menu"
+    return {"current": current, "label": label, "menu": menu}
+
+
 def create_templates() -> Environment:
     env = Environment(
         loader=FileSystemLoader(str(templates_dir())),
@@ -99,3 +151,31 @@ def create_templates() -> Environment:
     env.globals["downside_pct"] = downside_pct
     env.globals["downside_title"] = downside_title
     return env
+
+
+def render_page(
+    request: Request,
+    name: str,
+    *,
+    status_code: int = 200,
+    **ctx: Any,
+) -> HTMLResponse:
+    """Full HTML page. Always injects nav from the path prefix table.
+
+    Do not put FastAPI Request in the template. Fragments use render_fragment.
+    """
+    ctx["nav"] = nav_for_path(request.url.path)
+    html = request.app.state.templates.get_template(name).render(**ctx)
+    return HTMLResponse(html, status_code=status_code)
+
+
+def render_fragment(
+    request: Request,
+    name: str,
+    *,
+    status_code: int = 200,
+    **ctx: Any,
+) -> HTMLResponse:
+    """Chrome-less partial. No nav."""
+    html = request.app.state.templates.get_template(name).render(**ctx)
+    return HTMLResponse(html, status_code=status_code)

@@ -1,0 +1,36 @@
+{
+  "goal": "Make Runs and run detail scan as ticker, prices, FV, MoS, Downside, duration, audit — display stored snapshot fields only.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent live MoS, a JS DCF, or duration when extras lack it",
+    "Do not link football-field PNGs (ui-run-reading)",
+    "Do not change 800px policy (ui-a11y-phone)",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Runs columns: Ticker Session As-of Live FV MoS Downside Duration Audit; context columns desktop-only",
+    "Duration/verdict_line from catalog extras/snapshot; omitted if missing",
+    "MoS and Downside labeled (vs base as-of vs vs bear live-or-as-of); negative Downside is below-bear",
+    "Live day-change is a chip, not a whole-cell PASS-green fill",
+    "Latest-per-ticker is a visible toggle; empty / without it stays catalog default",
+    "Run detail decision strip + valuation above the chart",
+    "pytest + eng_verify green"
+  ],
+  "write_allowlist": [
+    "apps/analysis_web/",
+    "packages/catalog_api/",
+    "eng/sessions/2026-09-06-ui-decision-blotter/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests packages/catalog_api/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "predecessor": "eng/sessions/2026-09-06-ui-nav-ia/",
+  "parent_plan": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+}

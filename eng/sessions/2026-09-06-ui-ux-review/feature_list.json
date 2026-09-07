@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "reviews",
+      "description": "Seven persona UI/UX reviews written under handoffs/review-*.md",
+      "passes": true,
+      "verify": "seven review-*.md files exist"
+    },
+    {
+      "id": "plan",
+      "description": "PLAN.md sequences workstreams with severity, files, and child-session mapping",
+      "passes": true,
+      "verify": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+    },
+    {
+      "id": "child-sessions",
+      "description": "Six child eng sessions scaffolded with issue.json, feature_list.json, AGENT_BRIEF.md",
+      "passes": true,
+      "verify": "SESSION_MAP.md lists six dirs each with AGENT_BRIEF.md"
+    },
+    {
+      "id": "verify",
+      "description": "Parent ships docs only; product CSS/HTML is children. Verifier: files on disk.",
+      "passes": false,
+      "verify": "No product code in this parent session; children own passes"
+    }
+  ]
+}

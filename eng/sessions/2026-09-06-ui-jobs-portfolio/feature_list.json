@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read AGENT_BRIEF.md + PLAN.md Session 6 + sdr-wave4c-jobs-portfolio.md; boot UI from this tree",
+      "passes": false,
+      "verify": "progress.md notes process boot"
+    },
+    {
+      "id": "start-form",
+      "description": "Ticker+as-of+harness first; round-trip; Busy stays on the form",
+      "passes": false,
+      "verify": "analyze_new details for advanced; Busy is not error.html"
+    },
+    {
+      "id": "wait-loop",
+      "description": "Patch status in JS; meta refresh; drop data-live-reload on analyze/compare pages; no artifact JS list",
+      "passes": false,
+      "verify": "analyze.html and analyze_detail.html have no data-live-reload"
+    },
+    {
+      "id": "verbs",
+      "description": "Cancel confirm; resume_hint on job page; flash; Retry failed compare",
+      "passes": false,
+      "verify": "analyze_detail confirm on cancel; compare_detail Retry form"
+    },
+    {
+      "id": "portfolio-blotter",
+      "description": "Reuse Runs quote/Downside cells; As-of vs IB Close; empty-state copy; waterfall inline",
+      "passes": false,
+      "verify": "portfolio.html has data-downside-pct; quotes.js and app.css untouched"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

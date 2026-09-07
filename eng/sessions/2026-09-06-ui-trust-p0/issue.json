@@ -1,0 +1,32 @@
+{
+  "goal": "Fix confirmed P0 UI trust bugs: compare headline Jinja, HTML 404, Analyze reconcile painted as error, Compare abort vs empty.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not regroup nav or reorder runs columns",
+    "Do not invent fair values",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Complete compare detail renders headline numbers from a Python view (template never uses row.values)",
+    "Unknown HTML paths render error.html with a back link; JSON Accept on /api 404 stays JSON",
+    "Complete Analyze does not paint reconcile notes as .err",
+    "Compare ticker abort does not also say no packets yet",
+    "pytest apps/analysis_web/tests and eng_verify.py pass"
+  ],
+  "write_allowlist": [
+    "apps/analysis_web/",
+    "eng/sessions/2026-09-06-ui-trust-p0/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "predecessor": null,
+  "parent_plan": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+}

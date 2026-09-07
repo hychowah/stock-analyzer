@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read AGENT_BRIEF.md + PLAN.md Session 3 + sdr-wave3-decision-blotter.md",
+      "passes": false,
+      "verify": "progress.md names predecessor"
+    },
+    {
+      "id": "project-decision",
+      "description": "catalog_api hydrates decision_action / verdict_line / cheap claim; UI never parses extras_json",
+      "passes": false,
+      "verify": "catalog_api test: extras.decision_action surfaces as run.decision_action"
+    },
+    {
+      "id": "query-grains",
+      "description": "RunQuery.latest + asof_downside_pct sort; GET key in QUERY_KEYS; not unique-on-50",
+      "passes": false,
+      "verify": "Latest returns at most one row per ticker after filters; empty / omits the key"
+    },
+    {
+      "id": "duration-not-audit",
+      "description": "Duration is stored action, not verdict_badge; Audit labeled process; below-bear ink",
+      "passes": false,
+      "verify": "duration pass is not class badge pass"
+    },
+    {
+      "id": "paint",
+      "description": "Column order; .decision; quote chip; full-width valuation above chart; session links",
+      "passes": false,
+      "verify": "run_detail strip before #price-chart; valuation not half of grid2"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

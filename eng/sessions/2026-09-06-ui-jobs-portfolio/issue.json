@@ -1,0 +1,34 @@
+{
+  "goal": "Human Analyze/Compare wait and verbs; portfolio blotter columns from stored catalog math.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not show FV before snapshot or blend compare FVs",
+    "Do not rebuild IB ingest",
+    "Do not rewrite base.html nav",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Analyze new: ticker+harness first; advanced in details; fields round-trip on error",
+    "Running job pages patch phase in place and meta-refresh without JS",
+    "Cancel has confirm; Resume shows resume_hint; failed Compare has Retry",
+    "Analyze/Compares pages have no data-live-reload (one wait loop; no list fragments)",
+    "Portfolio blotter: Live, Downside %, Age, Duration; missing names link to Analyze new",
+    "pytest + eng_verify green"
+  ],
+  "write_allowlist": [
+    "apps/analysis_web/",
+    "eng/sessions/2026-09-06-ui-jobs-portfolio/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "predecessor": "eng/sessions/2026-09-06-ui-trust-p0/",
+  "parent_plan": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+}

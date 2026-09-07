@@ -1,0 +1,38 @@
+{
+  "goal": "Keyboardable disclose chrome, AA contrast leftovers, raise stack-table breakpoint to 1100px, phone leftovers.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not re-propose Menu/stack-table as new products — raise the query and fix leftovers",
+    "Do not add a second card markup or sticky site header",
+    "Do not reorder runs columns (ui-decision-blotter)",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Desktop Tab does not land on a clipped #nav-open checkbox",
+    "Night primary button contrast ≥ 4.5:1",
+    "stack-table thead stays display:none on narrow; cell names come from data-label aria-label after swap (do not clip thead)",
+    "Runs fragment swap restores focus and has a live region outside the swap",
+    "Phone layout (Menu, stack-table, 44px, filter disclose) applies at max-width 1100px",
+    "Report tables overflow-x locally; compare pick is a 44px hit on phone",
+    "pytest + eng_verify green"
+  ],
+  "write_allowlist": [
+    "apps/analysis_web/",
+    "eng/sessions/2026-09-06-ui-a11y-phone/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "predecessor": [
+    "eng/sessions/2026-09-06-ui-nav-ia/",
+    "eng/sessions/2026-09-06-ui-decision-blotter/"
+  ],
+  "parent_plan": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+}

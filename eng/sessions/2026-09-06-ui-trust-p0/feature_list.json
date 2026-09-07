@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read AGENT_BRIEF.md + PLAN.md Session 1 + sdr-wave1-trust-p0.md",
+      "passes": false,
+      "verify": "progress.md notes headline view + Accept negotiation"
+    },
+    {
+      "id": "headline",
+      "description": "Python headline view {label, cells}; template does not touch row.values",
+      "passes": false,
+      "verify": "pytest: fixture/packet headline cells non-empty; grep compare_detail.html has no row.values"
+    },
+    {
+      "id": "html-404",
+      "description": "404 content negotiation: HTML chrome vs JSON for API Accept",
+      "passes": false,
+      "verify": "unknown path Accept text/html is HTML; /api miss JSON Accept stays JSON"
+    },
+    {
+      "id": "analyze-err",
+      "description": "Analyze .err only for failed/cancelled/abandoned; reconcile notes muted",
+      "passes": false,
+      "verify": "complete + error string is not class err"
+    },
+    {
+      "id": "compare-abort",
+      "description": "compares.html abort does not also render empty-packet copy",
+      "passes": false,
+      "verify": "curl /compares?ticker=ZZZZNOTATICKER"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

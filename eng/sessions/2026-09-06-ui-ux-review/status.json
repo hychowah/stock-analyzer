@@ -1,0 +1,9 @@
+{
+  "slug": "ui-ux-review",
+  "session_key": "2026-09-06-ui-ux-review",
+  "status": "plan-ready",
+  "created_at": "2026-09-06T10:24:27Z",
+  "updated_at": "2026-09-06T12:00:00Z",
+  "work_type": "W4",
+  "resume_hint": "Planning committed on branch ui-ux-compose. Next: new session implements Wave 1 from eng/sessions/2026-09-06-ui-trust-p0/AGENT_BRIEF.md. See START_NEXT_SESSION.md."
+}

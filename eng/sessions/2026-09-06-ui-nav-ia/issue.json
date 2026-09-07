@@ -1,0 +1,34 @@
+{
+  "goal": "Group analysis_web nav into primary jobs vs lab, current page, skip link, ticker crumbs, human chrome copy.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "No SPA, mega-menu, or /ticker/META hub",
+    "Do not raise the phone breakpoint (ui-a11y-phone)",
+    "Do not reorder runs columns (ui-decision-blotter)",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "One render_page injects nav.current; header primary vs Lab as two wrapped navs",
+    "aria-current=page from nav.current (not request.url.path)",
+    "Skip link to #content is first focusable",
+    "Run/analyze/compare detail has a ticker_prefix crumb",
+    "Empty Lab pages have an exit to /",
+    "pytest + eng_verify green"
+  ],
+  "write_allowlist": [
+    "apps/analysis_web/",
+    "eng/sessions/2026-09-06-ui-nav-ia/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "predecessor": "eng/sessions/2026-09-06-ui-trust-p0/",
+  "parent_plan": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+}

@@ -1,0 +1,34 @@
+{
+  "goal": "Produce a multi-persona UI/UX review of analysis_web, a sequenced improvement plan, and child eng sessions that later agents can execute independently.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent fair values or MoS in the UI",
+    "Do not rewrite the app as an SPA unless a reviewer proves the Jinja tree cannot scale",
+    "Do not implement visual slices in this parent session — planning and briefs only"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Seven persona reviews written under handoffs/review-*.md",
+    "PLAN.md sequences workstreams with severity, files, and child-session mapping",
+    "Child eng sessions scaffolded with issue.json, feature_list.json, and AGENT_BRIEF.md",
+    "No archive/research or archive/outcomes writes",
+    "This parent session does not ship product CSS/HTML except docs under eng/sessions/"
+  ],
+  "write_allowlist": [
+    "eng/sessions/2026-09-06-ui-ux-review/",
+    "eng/sessions/2026-09-06-ui-trust-p0/",
+    "eng/sessions/2026-09-06-ui-nav-ia/",
+    "eng/sessions/2026-09-06-ui-decision-blotter/",
+    "eng/sessions/2026-09-06-ui-run-reading/",
+    "eng/sessions/2026-09-06-ui-a11y-phone/",
+    "eng/sessions/2026-09-06-ui-jobs-portfolio/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py"
+  ]
+}

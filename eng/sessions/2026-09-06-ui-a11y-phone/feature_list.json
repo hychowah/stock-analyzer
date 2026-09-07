@@ -1,0 +1,52 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read AGENT_BRIEF.md + PLAN.md Session 5 + sdr-wave4b-a11y-phone.md; confirm nav-ia AND blotter landed",
+      "passes": false,
+      "verify": "progress.md names both predecessors"
+    },
+    {
+      "id": "breakpoint-1100",
+      "description": "One 1100px contract; every app.css 800px query replaced; comments/README updated",
+      "passes": false,
+      "verify": "no max-width: 800px in app.css"
+    },
+    {
+      "id": "disclose-focus",
+      "description": "Desktop hide .disclose at 1101px; phone focus-visible on label",
+      "passes": false,
+      "verify": "min-width 1101px display none on .disclose"
+    },
+    {
+      "id": "contrast",
+      "description": "Night --btn-bg AA in both dark tables; words use --muted",
+      "passes": false,
+      "verify": "both dark token tables use #2563eb for --btn-bg"
+    },
+    {
+      "id": "thead",
+      "description": "Keep thead display:none; aria-label from data-label after swap; do not clip",
+      "passes": false,
+      "verify": "no clip recipe on stack-table thead"
+    },
+    {
+      "id": "live-focus",
+      "description": "runs-status outside swap; runs-table-updated event; compare hint live; 44px pick",
+      "passes": false,
+      "verify": "runs.js dispatches runs-table-updated; compares.js listens"
+    },
+    {
+      "id": "figures",
+      "description": "Architecture frame in 1100px query; mermaid control icons; no harness.css",
+      "passes": false,
+      "verify": "mermaid_boot controlIconsEnabled true; harness.css untouched"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "goal": "Run page: football-field chart, honest price overlay, CIO cover as first read, sibling markdown links.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not replot a Mode B football field or invent FV",
+    "Do not reorder / columns (ui-decision-blotter)",
+    "No harness VERSION bump (W4)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Run detail links charts/valuation_football_field.png when present",
+    "Price chart tooltip includes bear/base/bull; clipped levels are named in status",
+    "Report page title is the markdown H1; sibling .md hrefs stay on /artifact",
+    "One Read CIO cover CTA; duplicate allowlist behind details",
+    "pytest + eng_verify green"
+  ],
+  "write_allowlist": [
+    "apps/analysis_web/",
+    "eng/sessions/2026-09-06-ui-run-reading/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "predecessor": "eng/sessions/2026-09-06-ui-decision-blotter/",
+  "parent_plan": "eng/sessions/2026-09-06-ui-ux-review/PLAN.md"
+}

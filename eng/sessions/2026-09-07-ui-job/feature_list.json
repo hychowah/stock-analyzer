@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read PLAN_POST_COMPOSE.md Wave 9; Wave 8 verified",
+      "passes": true,
+      "verify": "Wave 8 session exists; this AGENT_BRIEF names Wave 9"
+    },
+    {
+      "id": "hide-phase",
+      "description": "Hide #job-phase (and the word phase) when resume_hint is non-empty; JS patch matches; keep meta refresh while running",
+      "passes": true,
+      "verify": "running job HTML has job-phase-wrap hidden; refresh meta remains; Playwright 000660.KS/SOFI"
+    },
+    {
+      "id": "complete-btns",
+      "description": "Complete: Open catalog run .btn; Read CIO cover .btn if README allowlisted; artifact ul stays",
+      "passes": true,
+      "verify": "complete job HTML has class=btn Open catalog run and Read CIO cover; Playwright 4516.T"
+    },
+    {
+      "id": "muted-reconcile",
+      "description": "Reconcile/abandon copy stays muted unless failed/cancelled/abandoned; do not map orch",
+      "passes": true,
+      "verify": "test_complete_analyze_reconcile_note_is_muted; Playwright COHR/WHR muted"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "pytest analysis_web 225 + Playwright MCP PASS + eng_verify 816"
+    }
+  ]
+}

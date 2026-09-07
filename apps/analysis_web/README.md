@@ -39,7 +39,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
 | `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
 | `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
-| `/analyze/{analyze_id}` | Status patches in place; meta refresh 15s while running; cancel = keep session; discard = abandon |
+| `/analyze/{analyze_id}` | Wait page is resume_hint (phase hidden when hint exists); meta refresh 15s while running; complete offers Open catalog run / Read CIO cover; cancel = keep session; discard = abandon |
 | `/analyze-artifact?analyze_id=…&path=…` | In-progress: handoffs/phase only; FV and report bodies 403 until snapshot |
 | `/compares` | Compare packets (`archive/comparisons/`). List does not SSE-reload. |
 | `/compares/new` | No-JS form to start a two-session Grok audit. Busy/Grok-missing stay on the form. |

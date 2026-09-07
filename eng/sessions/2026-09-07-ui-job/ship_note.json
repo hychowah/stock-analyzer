@@ -1,0 +1,22 @@
+{
+  "session": "2026-09-07-ui-job",
+  "feature": "Wave 9 ui-job — analyze wait page is resume_hint; complete Open catalog run / Read CIO cover as .btn",
+  "summary": "Hide phase token when resume_hint exists. Complete jobs offer .btn Open catalog run and Read CIO cover. Reconcile notes stay muted unless failed/cancelled/abandoned.",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests -q",
+    "python scripts/eng_verify.py"
+  ],
+  "verify": "pytest analysis_web 225 passed; eng_verify PASS 816. Playwright MCP agent PASS (handoffs/playwright-wave9.md): 4516.T complete .btn Open catalog run / Read CIO cover, phase wrap hidden; COHR/WHR notes muted; running jobs refresh=15; Wave 8 run sheet unchanged.",
+  "notes": [
+    "No harness/VERSION bump (W4).",
+    "ARCHITECTURE.md and analysis_web README /analyze/{id} cells updated.",
+    "Did not edit app.css, run_detail.html, runs.html, pages.py, analyze.html."
+  ],
+  "follow_ups": [
+    "PLAN_POST_COMPOSE Out of scope: Compare A/B labels, synthesis card order, error.html back label."
+  ],
+  "risks": [
+    "Read CIO cover is detected from allowlisted *_README.md in artifact_index without pages.py."
+  ],
+  "proposed_commit": "Make the Analyze wait page the resume hint"
+}

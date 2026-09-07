@@ -1929,6 +1929,7 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
                     "abandoned": False,
                     "snapshot_ready": True,
                     "phase_current": "orch",
+                    "resume_hint": "Audit: PASS. This is not a buy list.",
                     "mode": "new",
                 }
             ),
@@ -1940,6 +1941,15 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         self.assertIn(note.encode("utf-8"), r.content)
         self.assertIn(b'class="muted"', r.content)
         self.assertNotRegex(r.text, r'class="err">\s*abandon\.json present')
+        self.assertRegex(r.text, r'id="job-phase-wrap"[^>]*\bhidden\b')
+        self.assertNotRegex(r.text, r'(?s)id="job-phase-wrap"(?:(?!hidden).)*>\s*phase\s+orch')
+        self.assertIn(b'class="btn"', r.content)
+        self.assertIn(b">Open catalog run</a>", r.content)
+        self.assertIn(b">Read CIO cover</a>", r.content)
+        self.assertIn(b'href="/runs/research:META:2026-08-03"', r.content)
+        self.assertIn(b"00_META_README.md", r.content)
+        self.assertIn(b"<ul>", r.content)
+        self.assertNotIn(b'http-equiv="refresh"', r.content)
 
     def test_failed_analyze_error_is_err(self):
         job_dir = self.archive / "research_jobs" / "META" / "2026-09-01"
@@ -2042,11 +2052,16 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         self.assertIn(b"Waiting on valuation", page.content)
         self.assertIn(b'id="job-status"', page.content)
         self.assertIn(b"Kill Grok, keep the session.", page.content)
+        self.assertIn(b'id="job-phase-wrap"', page.content)
+        self.assertRegex(page.text, r'id="job-phase-wrap"[^>]*\bhidden\b')
+        self.assertNotRegex(page.text, r'(?s)id="job-phase-wrap"(?:(?!hidden).)*>\s*phase\s+orch')
         js = (
             Path(__file__).resolve().parents[1] / "static" / "analyze_detail.js"
         ).read_text(encoding="utf-8")
         self.assertIn("TERMINAL", js)
         self.assertNotIn("innerHTML", js)
+        self.assertIn("job-phase-wrap", js)
+        self.assertIn("hidePhaseWhenHint", js)
 
     def test_analyze_cancel_redirects_with_flash(self):
         session = self.archive / "research" / "META" / "2026-09-03"

@@ -27,6 +27,13 @@
     }
   }
 
+  function hidePhaseWhenHint(hint) {
+    var wrap = document.getElementById("job-phase-wrap");
+    if (wrap) {
+      wrap.hidden = !!(hint || "").trim();
+    }
+  }
+
   function patch(job) {
     var badge = document.getElementById("job-status");
     if (badge && job.status) {
@@ -35,11 +42,18 @@
     }
     setText("job-phase", job.phase_current || "—");
     setText("job-resume-hint", job.resume_hint || "");
+    hidePhaseWhenHint(job.resume_hint);
     var err = document.getElementById("job-error");
     if (err) {
       if (job.error) {
         err.hidden = false;
         err.textContent = job.error;
+        var loud =
+          job.status === "failed" ||
+          job.status === "cancelled" ||
+          job.status === "abandoned" ||
+          job.abandoned;
+        err.className = loud ? "err" : "muted";
       }
     }
   }

@@ -244,7 +244,7 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/runs/{run_id}` | One run: decision strip, football-field PNG + Read CIO cover when present, price vs analysis, Context; bear/base/bull/model in details |
 | `/artifact` | Allowlisted session file. Markdown reports use the document title and a section list; in-archive `.md` links stay on this page. Architecture and harness still use the plain sanitizer. |
 | `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin). Start form is ticker + as-of + harness; Busy/Grok-missing stay on the form. |
-| `/analyze/{id}` | Status patches in place while running; cancel keeps the session (can resume); discard writes `abandon.json` unless a snapshot exists |
+| `/analyze/{id}` | Wait page is the resume hint (phase token hidden when the hint exists). Complete offers Open catalog run / Read CIO cover. Cancel keeps the session; discard writes `abandon.json` unless a snapshot exists |
 | `/analyze-artifact` | In-progress session file (handoffs/phase; FV and report bodies blocked until snapshot) |
 | `/compares` | Two-run audits. List does not SSE-reload. |
 | `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |

@@ -23,7 +23,7 @@
   <p>
     <span id="job-status" class="badge status-{{ job.status }}">{{ job.status }}</span>
      {% if job.abandoned %}<span class="badge">abandoned</span>{% endif %}
-     phase <span id="job-phase">{{ job.phase_current or '—' }}</span>
+     <span id="job-phase-wrap"{% if job.resume_hint %} hidden{% endif %}> phase <span id="job-phase">{{ job.phase_current or '—' }}</span></span>
   </p>
   <p id="job-resume-hint" class="muted" aria-live="polite">{% if job.resume_hint %}{{ job.resume_hint }}{% endif %}</p>
   {% if job.error %}
@@ -36,8 +36,24 @@
     <p id="job-error" class="muted" hidden></p>
   {% endif %}
   {% if complete %}
-  <p>Job complete (finalize snapshot on disk). Audit: {{ job.audit_verdict or '—' }}. This is not a buy list.
-     {% if job.catalog_run_ready %}<a href="/runs/{{ job.run_id }}">Open catalog run</a>{% endif %}
+  <p>Job complete (finalize snapshot on disk). Audit: {{ job.audit_verdict or '—' }}. This is not a buy list.</p>
+  <p>
+    {% if job.catalog_run_ready %}
+    <a class="btn" href="/runs/{{ job.run_id }}">Open catalog run</a>
+    {% endif %}
+    {% set cio = namespace(href='') %}
+    {% for a in artifact_index %}
+      {% if not cio.href and a.body_ok and a.name.endswith('_README.md') %}
+        {% if job.catalog_run_ready and job.run_id %}
+          {% set cio.href = '/artifact?run_id=' ~ (job.run_id | urlencode) ~ '&path=' ~ (a.relpath | urlencode) %}
+        {% elif a.href %}
+          {% set cio.href = a.href %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+    {% if cio.href %}
+    <a class="btn" href="{{ cio.href }}">Read CIO cover</a>
+    {% endif %}
   </p>
   {% else %}
   <p class="muted">No FV numbers until the finalize snapshot exists. Report/chart names below are sizes only until then.</p>

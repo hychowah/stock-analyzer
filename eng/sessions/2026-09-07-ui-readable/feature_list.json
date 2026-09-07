@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read PLAN_POST_COMPOSE.md Wave 6; predecessors Waves 1–5 shipped",
+      "passes": true,
+      "verify": "progress.md names PLAN_POST_COMPOSE Wave 6"
+    },
+    {
+      "id": "below-bear-token",
+      "description": "--below-bear in light + both dark tables; .below-bear uses the token, no fill",
+      "passes": true,
+      "verify": "css has --below-bear in :root and html[data-theme=dark]; .below-bear uses var(--below-bear)"
+    },
+    {
+      "id": "header-muted",
+      "description": "header-tagline and header-lab words use --muted; focus-visible on a/button",
+      "passes": true,
+      "verify": ".header-tagline and .header-lab a use var(--muted)"
+    },
+    {
+      "id": "cell-label",
+      "description": "Delete labelStackedCells; clipped .cell-label in runs_table and portfolio",
+      "passes": true,
+      "verify": "runs.js has no labelStackedCells; home HTML has cell-label not aria-label=MoS on td"
+    },
+    {
+      "id": "list-overflow",
+      "description": "thead th uppercase; stack-form skin on base sheet; desktop stack-table overflow-x; no tr:hover on headless tables; drop 220px chart-stage",
+      "passes": true,
+      "verify": "no .chart-stage height 220px; thead th text-transform"
+    },
+    {
+      "id": "favicon",
+      "description": "GET /favicon.ico is 204",
+      "passes": true,
+      "verify": "TestClient /favicon.ico status 204"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

@@ -4,6 +4,8 @@ Parent session: `eng/sessions/2026-09-06-ui-ux-review/`
 Work type: **W4**. No `harness/VERSION` bump. No SPA. No second fair value.
 Date: 2026-09-06.
 
+Waves 1–5 in this file **shipped**. Remainder (Waves 6–9, post-SDR recut): **`PLAN_POST_COMPOSE.md`**. Next session: `START_NEXT_SESSION.md`.
+
 This parent session is **reviews + plan + child briefs only**. Product CSS/HTML ships in the child sessions below.
 
 ## North star
@@ -176,7 +178,7 @@ Slices:
 1. **One 1100px comment, every `app.css` 800px query.** 1100px = `main` max-width; Menu, stack-table, grid2, forms, 44px, 16px inputs, ticker flex, overflow-x, architecture-figure, **and** `.chart-stage` **query** all use it. Desktop disclose hide is `min-width: 1101px`. Handoff to run-reading: do not reintroduce 800; only edit height values. Update README / CSS comments that say “Below 800px”.
 2. **Disclose.** Class-level `display: none` on `.disclose` / `.disclose-btn` when wide (covers Menu, Wave 2 Lab, Filters). Phone: keep the CSS hack; `:focus-visible` on `.disclose-btn`. Do not special-case `#nav-open`.
 3. **Contrast.** Night `--btn-bg` ≥ 4.5:1 (`#2563eb`) in **both** dark tables (`data-theme` and `prefers-color-scheme`). Word uses (`.quote-kind`, chart ticks) → `--muted`. Leave `--faint` for non-text.
-4. **Do not clip `.stack-table thead`.** Keep `display:none` so sort links are not invisible tab stops. After `innerHTML`, set `aria-label` from `data-label` on non-pick `td`s. Empty pick `th`: `aria-label="Select for compare"`. Real `.cell-label` markup is **later**.
+4. **Do not clip `.stack-table thead`.** Keep `display:none` so sort links are not invisible tab stops. Empty pick `th`: `aria-label="Select for compare"`. Wave 6: `.cell-label` spans, not JS `aria-label` on the value `td`.
 5. **List replacement.** `#runs-status` (`aria-live="polite"`) **outside** `#runs-results`. Strip `aria-live` from the count inside the partial. After swap: copy count/abort into the live node, restore focus, `dispatchEvent("runs-table-updated")`. `compares.js` listens to **that** (not `catalog-changed`). Fetch failure: same status node + flash; stale table stays. `#compare-hint` is a separate live region. Hint: ticker + session_key, not raw `research:` ids. Compare pick 44px hit; sticky `#compare-bar` only while a pick is on.
 6. **Architecture only (not harness).** Shorter figure frame inside the 1100px query; `controlIconsEnabled: true`. **Drop** harness.css 900px / pipeline column / `scrollIntoView` from this session.
 
@@ -260,6 +262,6 @@ First implementation session: **Wave 1** `eng/sessions/2026-09-06-ui-trust-p0/AG
 - Desktop 44px everywhere (AA + keyboard is the bar).
 - Unify router `_error()` helpers.
 - Ticker strip `META · 5 runs · Start · Compare`.
-- Real `.cell-label` in stacked cells (after blotter owns `runs_table.html` alone).
+- Real `.cell-label` in stacked cells — **shipped Wave 6** (`runs_table.html` + `portfolio.html`; other stack-tables still `data-label` only).
 - UI map of `phase_current` ids to English (`resume_hint` is the human sentence).
 ```

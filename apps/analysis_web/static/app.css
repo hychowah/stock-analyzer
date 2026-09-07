@@ -7,10 +7,11 @@
  *
  * Membership: chrome inverts (page, fg, muted, card, border, hover,
  * header, links, inputs, buttons, pre, flash/err, chart stage/grid/ink/
- * tooltip/range chips/this-run/hover halo, default chip). Paper does not
- * (--paper on the light table only; architecture-figure + Reset). Semantic
- * stays hex (Live chg, pass/fail/status badges, bear/base/bull/weighted/asof
- * series + those swatches, perf-bar pos/neg).
+ * tooltip/range chips/this-run/hover halo, default chip, --below-bear).
+ * Paper does not (--paper on the light table only; architecture-figure +
+ * Reset). Semantic stays hex (Live chg, pass/fail/status badges,
+ * bear/base/bull/weighted/asof series + those swatches, perf-bar pos/neg).
+ * Through-bear cell ink is --below-bear (not a fill, not .badge.fail).
  */
 :root {
   font-family: system-ui, sans-serif;
@@ -47,6 +48,7 @@
   --chart-tooltip-bg: #0f172a;
   --chart-tooltip-fg: #f8fafc;
   --paper: #fff;
+  --below-bear: #7f1d1d;
 }
 
 html[data-theme="dark"] {
@@ -81,6 +83,7 @@ html[data-theme="dark"] {
   --chart-grid: #334155;
   --chart-tooltip-bg: #020617;
   --chart-tooltip-fg: #f8fafc;
+  --below-bear: #fca5a5;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -116,6 +119,7 @@ html[data-theme="dark"] {
     --chart-grid: #334155;
     --chart-tooltip-bg: #020617;
     --chart-tooltip-fg: #f8fafc;
+    --below-bear: #fca5a5;
   }
 }
 
@@ -150,7 +154,7 @@ header .brand:hover {
 }
 .header-tagline {
   margin-left: 0.75rem;
-  color: var(--faint);
+  color: var(--header-link);
   font-size: 0.85rem;
 }
 .header-nav {
@@ -183,11 +187,16 @@ header .brand:hover {
   font-weight: 600;
 }
 .header-lab a {
-  color: var(--faint);
+  color: var(--header-link);
   font-size: 0.9rem;
 }
 .header-lab a[aria-current="page"] {
   color: var(--header-fg);
+}
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
 }
 .theme-toggle {
   background: transparent;
@@ -219,7 +228,8 @@ header .brand:hover {
  * (not display:contents). .header-nav is the outer row.
  * A disclose checkbox inside a form must not have name (would submit).
  */
-.disclose {
+.disclose,
+.cell-label {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -388,6 +398,12 @@ main {
   margin-bottom: 1rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
+@media (min-width: 1101px) {
+  .card:has(.runs-table),
+  .card:has(.stack-table) {
+    overflow-x: auto;
+  }
+}
 table {
   width: 100%;
   border-collapse: collapse;
@@ -401,11 +417,13 @@ td {
 }
 th {
   font-size: 0.8rem;
-  text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--muted);
 }
-tr:hover {
+thead th {
+  text-transform: uppercase;
+}
+table:has(thead) tr:hover {
   background: var(--hover);
 }
 .mono {
@@ -423,7 +441,7 @@ tr:hover {
   font-weight: 600;
 }
 .below-bear {
-  color: #7f1d1d;
+  color: var(--below-bear);
   font-weight: 600;
   background: none;
 }
@@ -891,10 +909,23 @@ th.num a.sort {
   stroke: var(--card);
   stroke-width: 1;
 }
-@media (max-width: 1100px) {
-  .chart-stage {
-    height: 220px;
-  }
+.stack-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  margin-bottom: 0.65rem;
+}
+.stack-form input:not([type="checkbox"]):not([type="hidden"]),
+.stack-form select {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--fg);
 }
 .perf-table td.perf-bar-cell {
   width: 40%;
@@ -958,24 +989,10 @@ th.num a.sort {
     min-height: 44px;
     box-sizing: border-box;
   }
-  .stack-form label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    width: 100%;
-    margin-bottom: 0.65rem;
-  }
   .stack-form input:not([type="checkbox"]):not([type="hidden"]),
   .stack-form select {
-    min-width: 0;
-    width: 100%;
+    font-size: 16px;
     min-height: 44px;
-    box-sizing: border-box;
-    padding: 0.35rem 0.5rem;
-    border: 1px solid var(--input-border);
-    border-radius: 6px;
-    background: var(--input-bg);
-    color: var(--fg);
   }
   button,
   .btn,

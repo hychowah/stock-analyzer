@@ -13,3 +13,6 @@
 - Next: Wave 1 `2026-09-06-ui-trust-p0`. Boot UI from this tree (review-time :8765 was a stale process).
 - Strategic design review of all six waves (mixed/reshape each). Absorb: handoffs/SDR_ABSORB.md. PLAN.md + AGENT_BRIEFs + feature_lists updated. a11y-phone is Wave 5 (after blotter), not parallel with Wave 3.
 - Implementation lives on branch `ui-ux-compose`. This parent session ships planning only. Next Grok session: START_NEXT_SESSION.md (Wave 1).
+- 2026-09-07 Playwright post-compose review: `handoffs/review-post-compose.md`. First remainder plan (file-owner waves) got SDR **mixed / reshape**.
+- Absorb: `handoffs/SDR_ABSORB_POST_COMPOSE.md`. Recut: `PLAN_POST_COMPOSE.md` (operator surfaces: readable / scan / sheet / job). Next: Wave 6 `ui-readable` — START_NEXT_SESSION.md.
+- 2026-09-07 Wave 6 `eng/sessions/2026-09-07-ui-readable/` implemented (Night `--below-bear`, cell-label, chrome `--muted`, list overflow, favicon 204). Next: Wave 7 `ui-scan`.

@@ -1,20 +1,23 @@
 # Start the next Grok session here
 
-Branch: **`ui-ux-compose`** (planning commit is on this branch; implement on it).
+Branch: **`ui-ux-compose`**. Waves 1–6 shipped (Wave 6: `eng/sessions/2026-09-07-ui-readable/`). Remainder: `PLAN_POST_COMPOSE.md`.
 
 Paste:
 
 ```
 Mode B W4. Checkout branch ui-ux-compose.
 
-Read eng/AGENTS.md, then eng/sessions/2026-09-06-ui-trust-p0/AGENT_BRIEF.md
-and eng/sessions/2026-09-06-ui-ux-review/PLAN.md § Session 1.
+Read eng/AGENTS.md, then eng/sessions/2026-09-06-ui-ux-review/PLAN_POST_COMPOSE.md
+Wave 7 (ui-scan) only.
 
-Implement Wave 1 only (headline view, 404 Accept negotiation, Analyze .err vs muted, Compare abort copy). Do not start Wave 2.
+Latest as chrome home (/?latest=1), duration_label (pass → Do not initiate),
+cheap_claim_label + verdict_line helper, Apply vs Filters, in-flight banner
+as [{ticker, href}], Compare-on-Latest hint, portfolio empty copy.
+Do not edit run_detail.html. Do not start Wave 8.
 
-Boot the UI from this tree (--no-auto-restart). Verify with pytest apps/analysis_web/tests and eng_verify. Do not git commit until I agree.
+Boot python -m apps.analysis_web --no-auto-restart --port 8765.
+Verify pytest apps/analysis_web/tests and Latest vs All grain.
+Do not git commit until I agree.
 ```
 
-After Wave 1 lands: Wave 2 `ui-nav-ia`, then Wave 3 `ui-decision-blotter`. Wave 4a (`ui-run-reading`) waits on Wave 3. Wave 4c (`ui-jobs-portfolio`) may start after Wave 1. Wave 5 (`ui-a11y-phone`) waits on Wave 2 **and** Wave 3.
-
-Do not run two writers on `app.css` or `run_detail.html` at once.
+After Wave 7: Wave 8 `ui-sheet` waits on Wave 7. Wave 9 `ui-job` may start after Wave 6 and run beside Wave 8 (must not edit `app.css`, `runs.html`, `pages.py`, or `run_detail.html`).

@@ -166,21 +166,6 @@
       }
     }
 
-    function labelStackedCells(root) {
-      if (!root) {
-        return;
-      }
-      root.querySelectorAll("td[data-label]").forEach(function (td) {
-        if (td.classList.contains("pick")) {
-          return;
-        }
-        var label = td.getAttribute("data-label");
-        if (label) {
-          td.setAttribute("aria-label", label);
-        }
-      });
-    }
-
     function syncStatus() {
       var live = statusNode();
       if (!live) {
@@ -217,7 +202,6 @@
 
     function afterSwap(fromResults) {
       hideFlash();
-      labelStackedCells(results);
       syncStatus();
       restoreFocus(fromResults);
       document.dispatchEvent(new CustomEvent("runs-table-updated"));
@@ -303,7 +287,6 @@
       remember(urlQuery);
     }
 
-    labelStackedCells(results);
     syncStatus();
 
     results.addEventListener("click", function (ev) {

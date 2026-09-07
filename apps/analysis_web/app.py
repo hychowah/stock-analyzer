@@ -25,7 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import http_exception_handler
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Scope
@@ -106,6 +106,10 @@ def create_app() -> FastAPI:
     static_path = static_dir()
     static_path.mkdir(parents=True, exist_ok=True)
     app.mount("/static", StaticFilesNoCache(directory=str(static_path)), name="static")
+
+    @app.get("/favicon.ico")
+    def favicon() -> Response:
+        return Response(status_code=204)
 
     app.include_router(pages.router)
     app.include_router(architecture.router)

@@ -170,6 +170,8 @@ class QuoteLiveChgCssTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('classList.remove("chg-up", "chg-down")', qjs)
+        self.assertIn("takeCellLabel", qjs)
+        self.assertIn("restoreCellLabel", qjs)
         self.assertIn('chg.className = "quote-chip"', qjs)
         self.assertIn("quote-chip", qjs)
         self.assertIn('aria-busy', qjs)
@@ -182,7 +184,7 @@ class QuoteLiveChgCssTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertNotIn("tr:hover td", css)
-        self.assertIn("tr:hover {", css.replace("\r\n", "\n"))
+        self.assertIn("table:has(thead) tr:hover {", css.replace("\r\n", "\n"))
         for sel in (".quote-chip.chg-up", ".quote-chip.chg-down"):
             self.assertNotIn("hover", _css_rule_bodies(css, sel), sel)
 
@@ -202,6 +204,7 @@ class ThemeSwitchTests(unittest.TestCase):
             "--paper",
             "--chart-ink",
             "--chip-bg",
+            "--below-bear",
         ):
             self.assertIn(name, root, name)
         dark_m = re.search(r'html\[data-theme="dark"\]\s*\{([^}]+)\}', css)
@@ -226,13 +229,26 @@ class ThemeSwitchTests(unittest.TestCase):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
-        for sel in (".quote-chip.chg-up", ".quote-chip.chg-down", ".below-bear"):
+        for sel in (".quote-chip.chg-up", ".quote-chip.chg-down"):
             body = _css_rule_bodies(css, sel)
             self.assertTrue(body.strip(), sel)
             self.assertNotIn("var(", body, sel)
         bear = _css_rule_bodies(css, ".below-bear")
-        self.assertIn("color", bear)
+        self.assertIn("var(--below-bear)", bear)
         self.assertNotIn("background:", bear.replace("background: none", ""))
+        root = re.search(r":root\s*\{([^}]+)\}", css)
+        self.assertIsNotNone(root)
+        self.assertIn("--below-bear: #7f1d1d", root.group(1))
+        dark = re.search(r'html\[data-theme="dark"\]\s*\{([^}]+)\}', css)
+        self.assertIsNotNone(dark)
+        self.assertIn("--below-bear: #fca5a5", dark.group(1))
+        media = re.search(
+            r"@media\s*\(prefers-color-scheme:\s*dark\)\s*"
+            r"\{\s*html:not\(\[data-theme\]\)\s*\{([^}]+)\}",
+            css,
+        )
+        self.assertIsNotNone(media)
+        self.assertIn("--below-bear: #fca5a5", media.group(1))
 
     def test_theme_js_boot(self):
         js = (Path(__file__).resolve().parents[1] / "static" / "theme.js").read_text(
@@ -442,6 +458,8 @@ class A11yPhoneContractTests(unittest.TestCase):
         css = self._css()
         self.assertIn("color: var(--muted)", _css_rule_bodies(css, ".quote-kind"))
         self.assertIn("fill: var(--muted)", _css_rule_bodies(css, ".chart-grid text"))
+        self.assertIn("color: var(--header-link)", _css_rule_bodies(css, ".header-tagline"))
+        self.assertIn("color: var(--header-link)", _css_rule_bodies(css, ".header-lab a"))
 
     def test_stack_table_thead_not_clipped(self):
         css = self._css().replace("\r\n", "\n")
@@ -457,8 +475,8 @@ class A11yPhoneContractTests(unittest.TestCase):
         )
         self.assertIn('dispatchEvent(new CustomEvent("runs-table-updated"))', js)
         self.assertIn("runs-status", js)
-        self.assertIn("aria-label", js)
-        self.assertIn("data-label", js)
+        self.assertNotIn("labelStackedCells", js)
+        self.assertNotIn('setAttribute("aria-label"', js)
         self.assertIn("showFetchError", js)
         compares = (
             Path(__file__).resolve().parents[1] / "static" / "compares.js"
@@ -491,6 +509,8 @@ class A11yPhoneContractTests(unittest.TestCase):
         self.assertIn("data-runs-status", partial)
         self.assertIn('aria-label="Select for compare"', partial)
         self.assertIn("data-session-key", partial)
+        self.assertIn('class="cell-label"', partial)
+        self.assertNotIn('td.setAttribute', partial)
 
     def test_mermaid_control_icons_and_architecture_frame(self):
         js = (
@@ -543,6 +563,10 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertLess(r.content.find(b'id="runs-status"'), r.content.find(b'id="runs-results"'))
         self.assertIn(b'data-session-key=', r.content)
         self.assertIn(b'aria-label="Select for compare"', r.content)
+        self.assertIn(b'class="cell-label"', r.content)
+        self.assertIn(b">Ticker</span>", r.content)
+        self.assertNotIn(b'aria-label="MoS"', r.content)
+        self.assertNotIn(b'aria-label="Ticker"', r.content)
 
     def test_health(self):
         r = self.client.get("/health")
@@ -558,6 +582,10 @@ class AnalysisWebTests(unittest.TestCase):
         )
         self.assertIn(b"Catalog has", r.content)
         self.assertNotIn(b"stack-table", r.content)
+
+    def test_favicon_is_204(self):
+        r = self.client.get("/favicon.ico")
+        self.assertEqual(r.status_code, 204)
 
     def test_architecture_page(self):
         r = self.client.get("/architecture")
@@ -859,10 +887,7 @@ class AnalysisWebTests(unittest.TestCase):
             css,
             r"\.chart-stage\s*\{[^}]*height:\s*min\(42vh,\s*320px\)",
         )
-        self.assertIn(
-            "@media (max-width: 1100px) {\n  .chart-stage {\n    height: 220px;\n  }\n}",
-            css.replace("\r\n", "\n"),
-        )
+        self.assertNotIn("height: 220px", css)
         arch = (
             Path(__file__).resolve().parents[1] / "routes" / "architecture.py"
         ).read_text(encoding="utf-8")
@@ -999,15 +1024,15 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"Audit (process)", r.content)
         self.assertRegex(
             r.text,
-            r'data-label="Duration"[^>]*>\s*pass\s*<',
+            r'data-label="Duration"[^>]*>\s*<span class="cell-label">Duration</span>\s*pass\s*<',
         )
         self.assertNotRegex(
             r.text,
-            r'data-label="Duration"[^>]*>\s*<span class="badge pass">',
+            r'data-label="Duration"[^>]*>.*<span class="badge pass">',
         )
         self.assertRegex(
             r.text,
-            r'data-label="Audit \(process\)"[^>]*>\s*<span class="badge pass">',
+            r'data-label="Audit \(process\)"[^>]*>\s*<span class="cell-label">Audit \(process\)</span>\s*<span class="badge pass">',
         )
         self.assertIn(b'data-sort="asof_downside_pct"', r.content)
         self.assertIn(b'href="/runs/research:META:2026-08-03"', r.content)

@@ -1,8 +1,9 @@
-"""Copy an IB activity CSV into .local and replace the portfolio sqlite book.
+"""Copy an IB activity CSV into .local and merge it into the portfolio sqlite book.
 
 Usage:
     python -m apps.analysis_web.import_ib
     python -m apps.analysis_web.import_ib --src path/to/U*.csv
+    python -m apps.analysis_web.import_ib --rebuild
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from apps.analysis_web.services.ib_statement import parse_activity_csv
-from apps.analysis_web.services.portfolio_store import replace_statement
+from apps.analysis_web.services.portfolio_store import StoreError, db_path, ingest_statement
 
 
 def statements_dir() -> Path:
@@ -83,52 +84,103 @@ def stock_value_base_sum(stmt) -> tuple[float, int]:
     return total, missing
 
 
-def import_statement(src: Path) -> dict:
-    dest = copy_into_local(src)
-    stmt = parse_activity_csv(dest)
-    replace_statement(stmt)
+def _checksum_warning(stmt) -> str | None:
     stock_sum, missing = stock_value_base_sum(stmt)
     nav_stock = stmt.nav_asset("Stock")
     checksum = nav_stock.current_total if nav_stock is not None else None
-    warn = None
-    if checksum is not None and missing == 0:
-        denom = max(abs(checksum), abs(stock_sum), 1.0)
-        if abs(stock_sum - checksum) / denom > 0.005 and abs(stock_sum - checksum) > 1.0:
-            warn = (
-                f"stock value_base sum {stock_sum:.2f} disagrees with NAV Stock "
-                f"{checksum:.2f} (sleeve totals are checksum only)"
-            )
+    if checksum is None or missing:
+        return None
+    denom = max(abs(checksum), abs(stock_sum), 1.0)
+    if abs(stock_sum - checksum) / denom > 0.005 and abs(stock_sum - checksum) > 1.0:
+        return (
+            f"stock value_base sum {stock_sum:.2f} disagrees with NAV Stock "
+            f"{checksum:.2f} (sleeve totals are checksum only)"
+        )
+    return None
+
+
+def _result(src: Path, dest: Path, stmt, ing) -> dict:
     return {
         "src": str(src),
         "imported": str(dest),
         "account_id": stmt.account_id,
         "period_from": stmt.period_from,
         "period_to": stmt.period_to,
-        "trades_imported": len(stmt.trades),
+        "trades_inserted": ing.inserted,
+        "trades_skipped": ing.skipped,
+        "trades_conflicts": ing.conflicts,
         "positions": len(stmt.positions),
         "json_rewritten": False,
-        "checksum_warning": warn,
+        "checksum_warning": _checksum_warning(stmt),
     }
+
+
+def import_statement(src: Path, *, db: Path | None = None) -> dict:
+    dest = copy_into_local(src)
+    stmt = parse_activity_csv(dest)
+    ing = ingest_statement(stmt, path=db)
+    return _result(src, dest, stmt, ing)
+
+
+def rebuild_book(*, db: Path | None = None) -> list[dict]:
+    """Wipe sqlite and replay every archived U*.csv. The only supported start-over."""
+    csvs = sorted(statements_dir().glob("U*.csv"))
+    if not csvs:
+        raise FileNotFoundError(
+            "No U*.csv in apps/analysis_web/.local/ib/statements/ to rebuild from"
+        )
+    target = db or db_path()
+    if target.is_file():
+        target.unlink()
+    out: list[dict] = []
+    for csv_path in csvs:
+        stmt = parse_activity_csv(csv_path)
+        ing = ingest_statement(stmt, path=target)
+        out.append(_result(csv_path, csv_path, stmt, ing))
+    return out
+
+
+def _print_result(result: dict) -> None:
+    print(f"imported {result['imported']}")
+    print(f"account {result['account_id']} {result['period_from']}..{result['period_to']}")
+    print(
+        f"trades_inserted={result['trades_inserted']} "
+        f"trades_skipped={result['trades_skipped']} "
+        f"trades_conflicts={result['trades_conflicts']}"
+    )
+    print(f"positions={result['positions']}")
+    if result["checksum_warning"]:
+        print(f"WARNING: {result['checksum_warning']}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--src", default=None, help="Activity statement CSV")
+    ap.add_argument(
+        "--rebuild",
+        action="store_true",
+        help="Delete sqlite and replay every U*.csv under .local/ib/statements/",
+    )
     args = ap.parse_args(argv)
     try:
+        if args.rebuild:
+            if args.src:
+                src = Path(args.src)
+                if not src.is_file():
+                    raise FileNotFoundError(str(src))
+                copy_into_local(src)
+            results = rebuild_book()
+            for result in results:
+                _print_result(result)
+            return 0
         src = Path(args.src) if args.src else find_default_csv()
         if not src.is_file():
             raise FileNotFoundError(str(src))
         result = import_statement(src)
-    except (OSError, ValueError, FileNotFoundError) as e:
+        _print_result(result)
+    except (OSError, ValueError, FileNotFoundError, StoreError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
-    print(f"imported {result['imported']}")
-    print(f"account {result['account_id']} {result['period_from']}..{result['period_to']}")
-    print(f"trades_imported={result['trades_imported']}")
-    print(f"positions={result['positions']}")
-    if result["checksum_warning"]:
-        print(f"WARNING: {result['checksum_warning']}", file=sys.stderr)
     return 0
 
 

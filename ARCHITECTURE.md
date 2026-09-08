@@ -84,7 +84,7 @@ Mode B may **schedule** a Mode A run (the Analyze page). The website starts the 
 
 ## The data plane
 
-Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness **code** stays outside that tree. Do not store fair values in a second database. Portfolio state lives under `apps/analysis_web/.local/`. Frozen harness copies live under `pins/` — those are code snapshots, not archive records.
+Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness **code** stays outside that tree. Do not store fair values in a second database. Portfolio state lives under `apps/analysis_web/.local/`: sqlite is a **trade ledger plus the latest IB snapshot** (overlapping activity CSVs merge; fills are never deleted). Frozen harness copies live under `pins/` — those are code snapshots, not archive records.
 
 | Folder | What it is | How it may change |
 |--------|------------|-------------------|
@@ -250,7 +250,7 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |
 | `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete. Failed jobs can Retry as a new packet. |
 | `/compare-artifact` | Allowlisted compare-packet file |
-| `/portfolio` | IB statement (or local JSON) joined to latest catalog runs. Live/Downside/Duration use the same cells as Runs. |
+| `/portfolio` | IB book (trade ledger + latest snapshot) or local JSON, joined to latest catalog runs. Live/Downside/Duration use the same cells as Runs. |
 | `/harness` | Pin map and briefing inspector |
 | `/experiments`, `/calibration` | Group by experiment; MoS vs later outcomes |
 | `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, on-figure zoom controls, Reset fits). |

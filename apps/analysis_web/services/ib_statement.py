@@ -3,11 +3,15 @@
 Parses the sectioned Activity Statement export. Does not open sqlite, join
 the research catalog, or map IB symbols to catalog tickers. Forex close
 rates are copied onto the object; conversion is ``IbStatement.value_base``.
+
+``IbStatement`` is one CSV report. ``IbBook`` is the stored book: latest
+snapshot plus the account trade ledger.
 """
 
 from __future__ import annotations
 
 import csv
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -98,9 +102,66 @@ class Trade:
     code: str = ""
 
 
+def trade_fingerprint(account_id: str, trade: Trade) -> str:
+    """Stable identity for one fill. MTM, basis, realized P/L, commission excluded."""
+    return json.dumps(
+        [
+            (account_id or "").strip(),
+            (trade.asset_category or "").strip(),
+            (trade.currency or "").strip(),
+            (trade.ib_symbol or "").strip(),
+            (trade.traded_at or "").strip(),
+            trade.quantity,
+            trade.trade_price,
+            (trade.discriminator or "").strip(),
+        ],
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+
+
+def dedupe_trades(account_id: str, trades: list[Trade]) -> list[Trade]:
+    """Keep first occurrence of each fingerprint (in-file overlap / second Trades table)."""
+    seen: set[str] = set()
+    out: list[Trade] = []
+    for t in trades:
+        fp = trade_fingerprint(account_id, t)
+        if fp in seen:
+            continue
+        seen.add(fp)
+        out.append(t)
+    return out
+
+
+@dataclass
+class IngestResult:
+    statement_id: int
+    account_id: str
+    period_from: str
+    period_to: str
+    inserted: int
+    skipped: int
+    conflicts: int
+
+
+@dataclass
+class IbBook:
+    """Latest snapshot plus the account trade ledger.
+
+    ``snapshot.period_from`` / ``snapshot.period_to`` apply to snapshot fields
+    only, never to ``trades``. ``snapshot.trades`` is unused; fills live here.
+    """
+
+    snapshot: IbStatement
+    trades: list[Trade] = field(default_factory=list)
+
+
 @dataclass
 class IbStatement:
-    """One activity statement. Identity of a holding is ``ib_symbol``."""
+    """One activity statement CSV report. Identity of a holding is ``ib_symbol``.
+
+    ``period_from`` / ``period_to`` apply to this file only.
+    """
 
     account_id: str
     period_from: str
@@ -431,6 +492,8 @@ def parse_activity_csv(path: Path | str) -> IbStatement:
     base = (acct.get("Base Currency") or "HKD").strip() or "HKD"
     if base not in forex_closes:
         forex_closes[base] = 1.0
+
+    trades = dedupe_trades(account_id, trades)
 
     return IbStatement(
         account_id=account_id,

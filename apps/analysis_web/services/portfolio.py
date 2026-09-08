@@ -1,8 +1,8 @@
 """Portfolio book loader + catalog join (display only; no FV invention).
 
-When ``.local/portfolio.sqlite`` exists it is the only book (IB statement).
-``portfolio.json`` is the fallback if sqlite is missing. An unreadable sqlite
-fails the page; it does not fall back to JSON.
+When ``.local/portfolio.sqlite`` exists it is the only book (IB ledger +
+latest snapshot). ``portfolio.json`` is the fallback if sqlite is missing.
+An unreadable sqlite fails the page; it does not fall back to JSON.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import Any
 from packages.catalog_api.client import CatalogApi, DbMissing
 
 from apps.analysis_web.config import local_dir
-from apps.analysis_web.services.ib_statement import IbStatement
+from apps.analysis_web.services.ib_statement import IbBook, IbStatement
 
 
 DEFAULT_BOOK_NAME = "portfolio.json"
@@ -94,22 +94,22 @@ def mask_account(account_id: str) -> str:
     return f"{s[:5]}…{s[-3:]}"
 
 
-def load_ib_statement() -> tuple[IbStatement | None, str | None]:
-    """Return (statement, error). error set ⇒ sqlite present but unusable."""
-    from apps.analysis_web.services.portfolio_store import StoreError, db_path, load as load_stmt
+def load_ib_book() -> tuple[IbBook | None, str | None]:
+    """Return (book, error). error set ⇒ sqlite present but unusable."""
+    from apps.analysis_web.services.portfolio_store import StoreError, db_path, load as load_sql
 
     p = db_path()
     if not p.is_file():
         return None, None
     try:
-        stmt = load_stmt()
+        book = load_sql()
     except StoreError as e:
         return None, str(e)
     except OSError as e:
         return None, f"Failed to read IB book: {e}"
-    if stmt is None:
+    if book is None:
         return None, "IB book has no statement"
-    return stmt, None
+    return book, None
 
 
 def load_book(path: Path | None = None) -> PortfolioBook:
@@ -290,12 +290,13 @@ def _catalog_fields(run: dict[str, Any] | None) -> dict[str, Any]:
     }
 
 
-def _view_from_statement(
+def _view_from_ib_book(
     api: CatalogApi,
-    stmt: IbStatement,
+    ib_book: IbBook,
     *,
     pass_only: bool = False,
 ) -> dict[str, Any]:
+    stmt = ib_book.snapshot
     stocks = [
         p
         for p in stmt.positions
@@ -366,7 +367,7 @@ def _view_from_statement(
         "ending_nav": stmt.ending_nav,
         "twr_pct": stmt.twr_pct,
         "deposits_total": stmt.deposits_total,
-        "trade_count": len(stmt.trades),
+        "trade_count": len(ib_book.trades),
         "stock_value": stock_nav.current_total if stock_nav else total_base,
         "cash_value": cash.current_total if cash else None,
         "source_csv": stmt.source_csv,
@@ -382,7 +383,7 @@ def _view_from_statement(
         "weighted_mean_mos_pct": (mos_w_sum / mos_w_tot) if mos_w_tot > 0 else None,
         "pass_only": pass_only,
         "weight_mode": "value_base",
-        "trade_count": len(stmt.trades),
+        "trade_count": len(ib_book.trades),
     }
     return {
         "name": f"IB · {mask_account(stmt.account_id)}",
@@ -394,9 +395,11 @@ def _view_from_statement(
         "ib": ib,
         "performance": _performance(stmt),
         "note": (
-            "Holdings, NAV, and TWR are from the IB activity statement. "
-            "asof_price/FV/MoS come from catalog research as-of snapshots, "
-            "not live market marks. TWR is IB-reported for the statement period."
+            "Holdings, NAV, and TWR are from the latest statement period. "
+            "Trades are the union of every imported statement; overlap is not "
+            "double-counted. asof_price/FV/MoS come from catalog research "
+            "as-of snapshots, not live market marks. TWR is IB-reported for "
+            "the statement period."
         ),
     }
 
@@ -405,12 +408,12 @@ def build_portfolio_view(
     api: CatalogApi,
     book: PortfolioBook | None = None,
     *,
-    statement: IbStatement | None = None,
+    ib_book: IbBook | None = None,
     pass_only: bool = False,
 ) -> dict[str, Any]:
-    """Join holdings to latest catalog runs. ``statement`` wins over JSON book."""
-    if statement is not None:
-        return _view_from_statement(api, statement, pass_only=pass_only)
+    """Join holdings to latest catalog runs. ``ib_book`` wins over JSON book."""
+    if ib_book is not None:
+        return _view_from_ib_book(api, ib_book, pass_only=pass_only)
 
     if book is None:
         book = load_book()
@@ -485,7 +488,7 @@ def active_portfolio_view(
     pass_only: bool = False,
 ) -> dict[str, Any]:
     """Sqlite book if present; JSON fallback only when sqlite is missing."""
-    stmt, err = load_ib_statement()
+    ib_book, err = load_ib_book()
     if err:
         return {
             "name": "IB book",
@@ -498,8 +501,8 @@ def active_portfolio_view(
             "performance": _empty_performance(),
             "note": "",
         }
-    if stmt is not None:
-        return build_portfolio_view(api, statement=stmt, pass_only=pass_only)
+    if ib_book is not None:
+        return build_portfolio_view(api, ib_book=ib_book, pass_only=pass_only)
     return build_portfolio_view(api, load_book(), pass_only=pass_only)
 
 

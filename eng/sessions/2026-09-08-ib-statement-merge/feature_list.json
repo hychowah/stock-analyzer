@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Fill issue + plan absorb (IbBook, not restuffed statement)",
+      "passes": true,
+      "verify": "issue.json success_criteria set"
+    },
+    {
+      "id": "store",
+      "description": "IbBook + ingest_statement ledger merge; schema v2; load composes snapshot + trades",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_ib_statement.py overlap/reverse/reingest/migrate"
+    },
+    {
+      "id": "cli-view",
+      "description": "import_ib inserted/skipped/conflicts + --rebuild; /portfolio disclaimer; README + ARCHITECTURE",
+      "passes": true,
+      "verify": "CLI keys; page union line; live sqlite 130 trades after migrate"
+    },
+    {
+      "id": "verify",
+      "description": "eng_verify green; browser /portfolio",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py PASS 859; Playwright 8772 /portfolio 130 trades 21 names"
+    }
+  ]
+}

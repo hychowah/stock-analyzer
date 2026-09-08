@@ -1,0 +1,33 @@
+{
+  "goal": "Merge overlapping IB activity statements into a trade ledger plus latest snapshot (IbBook)",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not write IB data into archive/catalog",
+    "Do not invent FV/MoS or rebuild holdings from fills",
+    "No trade blotter UI, PDF parse, live IB API, or portfolio.json dual-write"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "IbStatement is one CSV report; load() returns IbBook (latest snapshot + account trade ledger); snapshot.trades is not the all-time list",
+    "ingest_statement inserts new fills, skips overlap, never deletes trades; snapshot from newest period_to; second account_id fails loud",
+    "Overlap A then B and B then A yield the same union; re-ingest A does not drop B; --rebuild replays archived CSVs",
+    "CLI prints inserted/skipped/conflicts; /portfolio trade_count is the ledger; disclaimer states snapshot vs trades",
+    "pytest apps/analysis_web/tests and eng_verify.py pass; no .local IB files committed"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

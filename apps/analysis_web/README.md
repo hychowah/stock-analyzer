@@ -89,7 +89,7 @@ Env: `COMPARE_SPAWN=fake` writes a stub compare packet (tests). `AGENT_SPAWN=fak
 
 ## App-local state
 
-- IB book (preferred): `apps/analysis_web/.local/portfolio.sqlite` — ingest with `python -m apps.analysis_web.import_ib` (optional `--src`). Copies `U*.csv` (and sibling `.pdf`) into `.local/ib/statements/`. **PII; gitignored. Import does not write `portfolio.json`.**
+- IB book (preferred): `apps/analysis_web/.local/portfolio.sqlite` — a trade ledger plus the latest statement snapshot. Ingest with `python -m apps.analysis_web.import_ib` (optional `--src`). Overlapping CSVs merge: new fills append, existing fills are skipped, trades are never deleted. `--rebuild` wipes sqlite and replays every `U*.csv` under `.local/ib/statements/` (the only start-over). Copies `U*.csv` (and sibling `.pdf`) into that folder. **PII; gitignored. Import does not write `portfolio.json`.**
 - JSON fallback (only when sqlite is missing): `apps/analysis_web/.local/portfolio.json`
 - Example: `portfolio.example.json` (committed)
 - **Never** store holdings under `archive/research/`

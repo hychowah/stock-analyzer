@@ -1,0 +1,30 @@
+{
+  "session": "2026-09-08-ib-statement-merge",
+  "feature": "Merge overlapping IB activity CSVs into a trade ledger + latest snapshot",
+  "summary": "IbStatement stays one CSV report. load() returns IbBook (latest snapshot + account ledger). ingest_statement inserts new fills, skips overlap, never deletes trades. Snapshot from newest period_to. --rebuild replays archived U*.csv. Live v1 sqlite migrated in place (130 trades kept).",
+  "verify_commands_run": [
+    "python -m pytest apps/analysis_web/tests/test_ib_statement.py",
+    "python -m pytest apps/analysis_web/tests",
+    "python scripts/eng_verify.py",
+    "PYTHONPATH=. python tmp/check_live_ib_merge.py",
+    "curl http://127.0.0.1:8772/portfolio and /api/portfolio; Playwright desktop+mobile"
+  ],
+  "verify": "test_ib_statement 20 passed; analysis_web tests 251 passed; eng_verify PASS 859; live book 130 trades / 21 positions after v2 migrate; overlap temp db 130 skipped + 1 inserted = 131; Playwright 8772 /portfolio trade_count 130, 21 names, union disclaimer",
+  "notes": [
+    "Interfaces: parse_activity_csv → IbStatement; ingest_statement → IngestResult; load → IbBook; build_portfolio_view(ib_book=).",
+    "Trade identity is fingerprint (account, category, currency, symbol, traded_at, qty, price, discriminator). First-write-wins. MTM not in the key.",
+    "snapshot.trades is empty on load so period dates cannot silently filter the ledger.",
+    "Import still copies CSV/PDF into .local/ib/statements/ and does not write portfolio.json.",
+    "Existing :8765 will not pick this up until restart (uncommitted files)."
+  ],
+  "follow_ups": [
+    "Trade blotter UI",
+    "Daily NAV curve from stored trades + Yahoo + FX"
+  ],
+  "risks": [
+    "Do not commit live statement CSV/PDF or portfolio.sqlite (PII, gitignored).",
+    "Fingerprint without Trade ID can collide on two true fills with the same symbol/time/qty/price.",
+    "A 3-month file with a later period_to will drive TWR/NAV while trades stay all-time — the page disclaimer states that."
+  ],
+  "proposed_commit": "Merge overlapping IB statements into a trade ledger plus latest snapshot"
+}

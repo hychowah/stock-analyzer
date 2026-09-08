@@ -1,0 +1,9 @@
+{
+  "slug": "ib-statement-merge",
+  "session_key": "2026-09-08-ib-statement-merge",
+  "status": "complete",
+  "created_at": "2026-09-08T04:24:12Z",
+  "updated_at": "2026-09-08T05:24:00Z",
+  "work_type": "W4",
+  "resume_hint": "Restart the UI to see /portfolio from the ledger; do not commit .local IB files. Ask before git commit."
+}

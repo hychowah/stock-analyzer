@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import sqlite3
 import tempfile
 import unittest
 from dataclasses import asdict
@@ -13,6 +15,7 @@ from apps.analysis_web.tests.test_portfolio import _mini_archive
 
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "ib_activity_mini.csv"
+OVERLAP = Path(__file__).resolve().parent / "fixtures" / "ib_activity_overlap.csv"
 
 
 def _strings(obj) -> str:
@@ -94,27 +97,176 @@ class CatalogMapTests(unittest.TestCase):
         self.assertEqual(map_catalog_ticker("4516.T", "TSEJ"), "4516.T")
 
 
+def _ingest_both(db: Path, *, reverse: bool = False):
+    from apps.analysis_web.services.ib_statement import parse_activity_csv
+    from apps.analysis_web.services.portfolio_store import ingest_statement
+
+    a = parse_activity_csv(FIXTURE)
+    b = parse_activity_csv(OVERLAP)
+    first, second = (b, a) if reverse else (a, b)
+    ingest_statement(first, path=db)
+    return ingest_statement(second, path=db), a, b
+
+
 class StoreTests(unittest.TestCase):
-    def test_replace_is_idempotent(self):
-        from apps.analysis_web.services.ib_statement import parse_activity_csv
-        from apps.analysis_web.services.portfolio_store import load, replace_statement
+    def test_ingest_is_idempotent(self):
+        from apps.analysis_web.services.ib_statement import IbBook, parse_activity_csv
+        from apps.analysis_web.services.portfolio_store import ingest_statement, load
 
         stmt = parse_activity_csv(FIXTURE)
         td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         try:
             db = Path(td.name) / "portfolio.sqlite"
-            replace_statement(stmt, path=db)
-            replace_statement(stmt, path=db)
+            first = ingest_statement(stmt, path=db)
+            second = ingest_statement(stmt, path=db)
+            self.assertEqual(first.inserted, 4)
+            self.assertEqual(second.inserted, 0)
+            self.assertEqual(second.skipped, 4)
             loaded = load(path=db)
-            self.assertIsNotNone(loaded)
+            self.assertIsInstance(loaded, IbBook)
             assert loaded is not None
             self.assertEqual(len(loaded.trades), 4)
-            self.assertEqual(len(loaded.positions), 2)
-            self.assertEqual(loaded.account_id, "U00000001")
-            self.assertAlmostEqual(loaded.twr_pct or 0, 12.5, places=5)
+            self.assertEqual(loaded.snapshot.trades, [])
+            self.assertEqual(len(loaded.snapshot.positions), 2)
+            self.assertEqual(loaded.snapshot.account_id, "U00000001")
+            self.assertAlmostEqual(loaded.snapshot.twr_pct or 0, 12.5, places=5)
             blob = _strings(loaded)
             self.assertNotIn("FIXTURE USER", blob)
             self.assertNotIn("NOWHERE", blob)
+            m1 = db.stat().st_mtime_ns
+            load(path=db)
+            self.assertEqual(db.stat().st_mtime_ns, m1)
+        finally:
+            td.cleanup()
+
+    def test_overlap_unions_trades_snapshot_from_newer(self):
+        from apps.analysis_web.services.portfolio_store import load
+
+        td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        try:
+            db = Path(td.name) / "portfolio.sqlite"
+            ing, _a, b = _ingest_both(db)
+            self.assertEqual(ing.inserted, 1)
+            self.assertEqual(ing.skipped, 1)
+            loaded = load(path=db)
+            assert loaded is not None
+            self.assertEqual(len(loaded.trades), 5)
+            self.assertEqual(loaded.snapshot.period_from, b.period_from)
+            self.assertEqual(loaded.snapshot.period_to, b.period_to)
+            self.assertEqual([p.ib_symbol for p in loaded.snapshot.positions], ["META"])
+            self.assertEqual(loaded.snapshot.trades, [])
+            syms = {t.ib_symbol for t in loaded.trades}
+            self.assertIn("700", syms)
+            self.assertIn("META", syms)
+        finally:
+            td.cleanup()
+
+    def test_overlap_reverse_order_same_union(self):
+        from apps.analysis_web.services.portfolio_store import load
+
+        td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        try:
+            db = Path(td.name) / "portfolio.sqlite"
+            _ingest_both(db, reverse=True)
+            loaded = load(path=db)
+            assert loaded is not None
+            self.assertEqual(len(loaded.trades), 5)
+            self.assertEqual(loaded.snapshot.period_to, "2026-06-30")
+            self.assertEqual([p.ib_symbol for p in loaded.snapshot.positions], ["META"])
+        finally:
+            td.cleanup()
+
+    def test_reingest_a_does_not_drop_b(self):
+        from apps.analysis_web.services.ib_statement import parse_activity_csv
+        from apps.analysis_web.services.portfolio_store import ingest_statement, load
+
+        td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        try:
+            db = Path(td.name) / "portfolio.sqlite"
+            _ingest_both(db)
+            ingest_statement(parse_activity_csv(FIXTURE), path=db)
+            loaded = load(path=db)
+            assert loaded is not None
+            self.assertEqual(len(loaded.trades), 5)
+            self.assertEqual(loaded.snapshot.period_to, "2026-06-30")
+        finally:
+            td.cleanup()
+
+    def test_second_account_refused(self):
+        from apps.analysis_web.services.ib_statement import parse_activity_csv
+        from apps.analysis_web.services.portfolio_store import StoreError, ingest_statement
+
+        td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        try:
+            db = Path(td.name) / "portfolio.sqlite"
+            stmt = parse_activity_csv(FIXTURE)
+            ingest_statement(stmt, path=db)
+            other = parse_activity_csv(FIXTURE)
+            other.account_id = "U99999999"
+            with self.assertRaises(StoreError) as ctx:
+                ingest_statement(other, path=db)
+            self.assertIn("refusing", str(ctx.exception))
+        finally:
+            td.cleanup()
+
+    def test_v1_sqlite_migrates_on_load(self):
+        from apps.analysis_web.services.ib_statement import IbBook, parse_activity_csv
+        from apps.analysis_web.services.portfolio_store import ingest_statement, load
+
+        stmt = parse_activity_csv(FIXTURE)
+        td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        try:
+            db = Path(td.name) / "portfolio.sqlite"
+            ingest_statement(stmt, path=db)
+            conn = sqlite3.connect(str(db))
+            conn.execute("ALTER TABLE trades RENAME TO trades_new")
+            conn.executescript(
+                """
+                CREATE TABLE trades (
+                  statement_id INTEGER NOT NULL REFERENCES statements(id) ON DELETE CASCADE,
+                  row_index INTEGER NOT NULL,
+                  discriminator TEXT,
+                  asset_category TEXT,
+                  currency TEXT,
+                  ib_symbol TEXT NOT NULL,
+                  traded_at TEXT,
+                  quantity REAL,
+                  trade_price REAL,
+                  close_price REAL,
+                  proceeds REAL,
+                  commission REAL,
+                  basis REAL,
+                  realized_pl REAL,
+                  mtm_pl REAL,
+                  code TEXT
+                );
+                INSERT INTO trades (
+                  statement_id, row_index, discriminator, asset_category, currency,
+                  ib_symbol, traded_at, quantity, trade_price, close_price, proceeds,
+                  commission, basis, realized_pl, mtm_pl, code
+                )
+                SELECT first_statement_id, row_index, discriminator, asset_category,
+                       currency, ib_symbol, traded_at, quantity, trade_price, close_price,
+                       proceeds, commission, basis, realized_pl, mtm_pl, code
+                FROM trades_new;
+                DROP TABLE trades_new;
+                INSERT OR REPLACE INTO meta(key, value) VALUES ('schema_version', '1');
+                """
+            )
+            conn.commit()
+            conn.close()
+            loaded = load(path=db)
+            self.assertIsInstance(loaded, IbBook)
+            assert loaded is not None
+            self.assertEqual(len(loaded.trades), 4)
+            self.assertEqual(loaded.snapshot.trades, [])
+            conn = sqlite3.connect(str(db))
+            cols = {r[1] for r in conn.execute("PRAGMA table_info(trades)")}
+            conn.close()
+            self.assertIn("fingerprint", cols)
+            m1 = db.stat().st_mtime_ns
+            load(path=db)
+            self.assertEqual(db.stat().st_mtime_ns, m1)
         finally:
             td.cleanup()
 
@@ -131,7 +283,8 @@ class ImportDoesNotWriteJsonTests(unittest.TestCase):
             local.mkdir()
             cfg.local_dir = lambda: local  # type: ignore[assignment]
             result = import_statement(FIXTURE)
-            self.assertEqual(result["trades_imported"], 4)
+            self.assertEqual(result["trades_inserted"], 4)
+            self.assertEqual(result["trades_skipped"], 0)
             self.assertFalse(result["json_rewritten"])
             self.assertFalse((local / "portfolio.json").exists())
             self.assertTrue((local / "portfolio.sqlite").is_file())
@@ -140,18 +293,44 @@ class ImportDoesNotWriteJsonTests(unittest.TestCase):
             cfg.local_dir = orig  # type: ignore[assignment]
             td.cleanup()
 
+    def test_rebuild_replays_archived_csvs(self):
+        import apps.analysis_web.config as cfg
+        from apps.analysis_web.import_ib import rebuild_book
+        from apps.analysis_web.services.portfolio_store import load
+
+        td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        orig = cfg.local_dir
+        try:
+            local = Path(td.name) / "local"
+            dest = local / "ib" / "statements"
+            dest.mkdir(parents=True)
+            shutil.copy(FIXTURE, dest / "U00000001_a.csv")
+            shutil.copy(OVERLAP, dest / "U00000001_b.csv")
+            cfg.local_dir = lambda: local  # type: ignore[assignment]
+            results = rebuild_book()
+            self.assertEqual(len(results), 2)
+            loaded = load()
+            assert loaded is not None
+            self.assertEqual(len(loaded.trades), 5)
+            self.assertEqual(loaded.snapshot.period_to, "2026-06-30")
+        finally:
+            cfg.local_dir = orig  # type: ignore[assignment]
+            td.cleanup()
+
 
 class IbPortfolioViewTests(unittest.TestCase):
     def test_ib_identity_and_weights(self):
         from packages.catalog_api.client import CatalogApi
-        from apps.analysis_web.services.ib_statement import parse_activity_csv
+        from apps.analysis_web.services.ib_statement import IbBook, parse_activity_csv
         from apps.analysis_web.services.portfolio import build_portfolio_view
 
         td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         try:
             api = CatalogApi(archive_root=_mini_archive(Path(td.name)), readonly=True)
             stmt = parse_activity_csv(FIXTURE)
-            view = build_portfolio_view(api, statement=stmt, pass_only=False)
+            view = build_portfolio_view(
+                api, ib_book=IbBook(snapshot=stmt, trades=list(stmt.trades)), pass_only=False
+            )
             by = {p["ib_symbol"]: p for p in view["positions"]}
             self.assertEqual(by["700"]["ib_symbol"], "700")
             self.assertEqual(by["700"]["catalog_ticker"], "0700.HK")
@@ -182,12 +361,12 @@ class IbPortfolioHttpTests(unittest.TestCase):
 
         import apps.analysis_web.config as cfg
         from apps.analysis_web.services.ib_statement import parse_activity_csv
-        from apps.analysis_web.services.portfolio_store import replace_statement
+        from apps.analysis_web.services.portfolio_store import ingest_statement
 
         self._orig_local = cfg.local_dir
         cfg.local_dir = lambda: self._local  # type: ignore[assignment]
         stmt = parse_activity_csv(FIXTURE)
-        replace_statement(stmt, path=self._local / "portfolio.sqlite")
+        ingest_statement(stmt, path=self._local / "portfolio.sqlite")
         # JSON book must not win
         (self._local / "portfolio.json").write_text(
             json.dumps(
@@ -248,6 +427,7 @@ class IbPortfolioHttpTests(unittest.TestCase):
         self.assertIn(b"Mark-to-market P/L", r.content)
         self.assertIn(b"12.50%", r.content)
         self.assertIn(b">700<", r.content)
+        self.assertIn(b"union of every imported statement", r.content)
         self.assertNotIn(b"should-not-appear", r.content)
         self.assertNotIn(b"portfolio_chart.js", r.content)
 

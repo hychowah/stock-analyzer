@@ -45,7 +45,7 @@
       <tr><th>Currency</th><td>{{ view.ib.base_currency }}</td></tr>
     </table>
   </div>
-  <p class="muted" style="margin-top:0.5rem">TWR is IB-reported time-weighted return for the statement period.</p>
+  <p class="muted" style="margin-top:0.5rem">Holdings, NAV, and TWR are from the latest statement period. Trades are the union of every imported statement; overlap is not double-counted.</p>
   {% endif %}
   {% if view.summary and not view.error %}
   <div class="grid2" style="margin-top:0.75rem">

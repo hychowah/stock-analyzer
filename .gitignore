@@ -69,3 +69,9 @@ archive/catalog/*.sqlite-*
 *.pdf
 *.png
 !harness/**/*.png
+
+# Playwright MCP dump dir (default tool path)
+.playwright-mcp/
+
+# Agent-chosen scratch
+/tmp/

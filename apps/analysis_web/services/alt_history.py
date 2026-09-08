@@ -509,15 +509,15 @@ def compare_path(
     bars_by_listing: dict[str, tuple[PriceBar, ...] | list[PriceBar]],
     *,
     until: str | None = None,
-    since: str | None = None,
 ) -> list[dict[str, Any]]:
     """NAV path as one walk: overlay once, two running books, last close ≤ day.
 
-    ``compare_at`` is the single-day identity check, not this algorithm.
+    Always starts at ``hist.fork_date``. Overlay alignment is the overlay's
+    problem. ``compare_at`` is the single-day identity check, not this
+    algorithm.
     """
     end = _day(until or utc_today())
-    start = _day(since or hist.fork_date)
-    days = path_dates(bars_by_listing, start, end)
+    days = path_dates(bars_by_listing, hist.fork_date, end)
     overlay = overlay_fills(hist.seed, hist.fills)
     real = tuple(sorted(hist.real_fills(), key=_fill_order))
     alt_fills = tuple(sorted(overlay, key=_fill_order))

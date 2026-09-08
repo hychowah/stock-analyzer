@@ -1,0 +1,16 @@
+{
+  "features": [
+    {
+      "id": "typed-views",
+      "description": "PaperView / HoldingsView / PathView; HTML adapter; one holdings URL; GET /{id} is the history document",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_alt_history.py -q"
+    },
+    {
+      "id": "path-at-fork",
+      "description": "Drop compare_path since; list overlay joins walks on date; editor path equals card path",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py -q"
+    }
+  ]
+}

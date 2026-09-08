@@ -33,10 +33,11 @@ from apps.analysis_web.services.alt_history_store import (
 from apps.analysis_web.services.alt_history_view import (
     close_getter,
     earliest_stock_date,
-    holdings_payload,
+    editor_page,
+    history_document,
+    holdings_on,
     list_payload,
-    paper_on,
-    path_payload,
+    path_on,
 )
 from apps.analysis_web.services.portfolio import load_ib_book
 from apps.analysis_web.services.price_history import HistoryService
@@ -160,7 +161,7 @@ def page_history_detail(
             title="What-if",
             message=e.message,
         )
-    payload = paper_on(
+    payload = editor_page(
         hist,
         view_date=date or None,
         universe=buy_universe(api),
@@ -254,7 +255,7 @@ def post_decision(
             raise ReplayError("bad_side", "Choose buy or sell")
         save(with_hyp_fill(hist, fill))
     except ReplayError as e:
-        payload = paper_on(
+        payload = editor_page(
             hist,
             view_date=day,
             universe=buy_universe(api),
@@ -288,7 +289,7 @@ def post_delete_decision(
     try:
         save(drop_hyp_fill(hist, decision_id))
     except ReplayError as e:
-        payload = paper_on(
+        payload = editor_page(
             hist,
             universe=buy_universe(api),
             error=e.message,
@@ -347,29 +348,14 @@ def api_histories(
 
 
 @router.get("/api/portfolio/histories/{history_id}")
-def api_history(
-    history_id: int,
-    date: str = Query(""),
-    svc: HistoryService = Depends(get_history_service),
-):
+def api_history(history_id: int):
     try:
         hist = get_history(history_id)
     except NotFoundError:
         return JSONResponse({"error": "not_found"}, status_code=404)
     except ReplayError as e:
         return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
-    payload = holdings_payload(hist, svc, view_date=date or None)
-    return {
-        "id": hist.id,
-        "name": hist.name,
-        "fork_date": hist.fork_date,
-        "view_date": payload["view_date"],
-        "cash": payload["cash"],
-        "held": payload["held"],
-        "decisions": payload["decisions"],
-        "caveats": list(payload["caveats"]),
-        "base_currency": payload["base_currency"],
-    }
+    return history_document(hist)
 
 
 @router.get("/api/portfolio/histories/{history_id}/holdings")
@@ -384,15 +370,9 @@ def api_history_holdings(
         return JSONResponse({"error": "not_found"}, status_code=404)
     except ReplayError as e:
         return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
-    payload = holdings_payload(hist, svc, view_date=date or None)
-    return {
-        "id": hist.id,
-        "view_date": payload["view_date"],
-        "fork_date": payload["fork_date"],
-        "cash": payload["cash"],
-        "held": payload["held"],
-        "base_currency": payload["base_currency"],
-    }
+    body = holdings_on(hist, svc, view_date=date or None).as_json()
+    body["id"] = hist.id
+    return body
 
 
 @router.get("/api/portfolio/histories/{history_id}/path")
@@ -406,18 +386,9 @@ def api_history_path(
         return JSONResponse({"error": "not_found"}, status_code=404)
     except ReplayError as e:
         return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
-    payload = path_payload(hist, svc)
-    return {
-        "id": hist.id,
-        "fork_date": payload["fork_date"],
-        "until": payload["until"],
-        "base_currency": payload["base_currency"],
-        "actual_nav": payload["actual_nav"],
-        "alt_nav": payload["alt_nav"],
-        "delta": payload["delta"],
-        "path": payload["path"],
-        "svg": payload["svg"],
-    }
+    body = path_on(hist, svc).as_json()
+    body["id"] = hist.id
+    return body
 
 
 @router.get("/api/portfolio/histories/{history_id}/path.svg")
@@ -431,7 +402,7 @@ def api_history_path_svg(
         return JSONResponse({"error": "not_found"}, status_code=404)
     except ReplayError as e:
         return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
-    svg = path_payload(hist, svc)["svg"] or (
+    svg = path_on(hist, svc).svg or (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 160"></svg>'
     )
     return Response(content=svg, media_type="image/svg+xml")

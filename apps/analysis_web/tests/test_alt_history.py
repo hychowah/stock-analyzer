@@ -510,6 +510,37 @@ class ComparePathTests(unittest.TestCase):
             self.assertAlmostEqual(point["alt_nav"], row["alt_nav"], places=5)
             self.assertAlmostEqual(point["actual_nav"], row["actual_nav"], places=5)
 
+    def test_path_starts_at_fork_and_has_no_since(self):
+        import inspect
+
+        hist = history_from_ib(self.ib, name="t")
+        path = compare_path(hist, self.bars, until="2026-04-01")
+        self.assertEqual(path[0]["t"], hist.fork_date)
+        self.assertNotIn("since", inspect.signature(compare_path).parameters)
+
+    def test_overlay_joins_walks_on_date(self):
+        from apps.analysis_web.services.alt_history_view import overlay_svg_from_cards
+
+        cards = [
+            {
+                "name": "early",
+                "path": [
+                    {"t": "2026-01-01", "actual_nav": 10.0, "alt_nav": 10.0},
+                    {"t": "2026-01-02", "actual_nav": 11.0, "alt_nav": 12.0},
+                ],
+            },
+            {
+                "name": "late",
+                "path": [
+                    {"t": "2026-01-02", "actual_nav": 11.0, "alt_nav": 9.0},
+                ],
+            },
+        ]
+        svg = overlay_svg_from_cards(cards, "2026-01-01", "2026-01-02")
+        self.assertIn("nav-chart-svg", svg)
+        self.assertIn("early", svg)
+        self.assertIn("late", svg)
+
 
 class StoreTests(unittest.TestCase):
     def setUp(self):

@@ -1,13 +1,14 @@
 """Assemble what-if page payloads. Three views; do not call Live NAV.
 
-paper_on      — lots / cash / deceased. Replay only; no Yahoo.
-holdings_payload — paper plus that day's closes.
-path_payload  — one NAV walk; last point is header Δ.
+PaperView     — lots and cash as of D. Replay only; no Yahoo, no path.
+HoldingsView  — lots + closes + cash as of D. Never path, never cash-today.
+PathView      — one NAV walk from fork; last point is header Δ.
 """
 
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from html import escape
 from typing import Any, Callable
 
@@ -87,16 +88,101 @@ def _span(hist: History) -> str:
     return f"{min(days)} → {max(days)}"
 
 
+@dataclass(frozen=True)
+class HeldLot:
+    listing: str
+    qty: float
+    ib_symbol: str | None = None
+    catalog_ticker: str | None = None
+    currency: str = ""
+    deceased: bool = False
+    close: float | None = None
+    value_base: float | None = None
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "listing": self.listing,
+            "qty": self.qty,
+            "ib_symbol": self.ib_symbol,
+            "catalog_ticker": self.catalog_ticker,
+            "currency": self.currency,
+            "deceased": self.deceased,
+            "close": self.close,
+            "value_base": self.value_base,
+        }
+
+
+@dataclass(frozen=True)
+class PaperView:
+    """Paper book as of D. No path, no Δ, no Yahoo."""
+
+    history: History
+    view_date: str
+    until: str
+    fork_date: str
+    held: tuple[HeldLot, ...]
+    cash: float | None
+    caveats: tuple[str, ...]
+    universe: tuple[dict[str, Any], ...]
+    decisions: tuple[dict[str, Any], ...]
+    error: str | None
+    base_currency: str
+
+
+@dataclass(frozen=True)
+class HoldingsView:
+    """Lots + marks + cash as of D. Not cash-today. Not the path."""
+
+    view_date: str
+    fork_date: str
+    held: tuple[HeldLot, ...]
+    cash: float | None
+    base_currency: str
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "view_date": self.view_date,
+            "fork_date": self.fork_date,
+            "held": [lot.as_json() for lot in self.held],
+            "cash": self.cash,
+            "base_currency": self.base_currency,
+        }
+
+
+@dataclass(frozen=True)
+class PathView:
+    """NAV walk from fork. Last point is header Δ. No lots."""
+
+    fork_date: str
+    until: str
+    path: list[dict[str, Any]]
+    svg: str
+    actual_nav: float | None
+    alt_nav: float | None
+    delta: float | None
+    base_currency: str
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "fork_date": self.fork_date,
+            "until": self.until,
+            "base_currency": self.base_currency,
+            "actual_nav": self.actual_nav,
+            "alt_nav": self.alt_nav,
+            "delta": self.delta,
+            "path": self.path,
+            "svg": self.svg,
+        }
+
+
 def card_for(
     hist: History,
     bars: dict[str, tuple[PriceBar, ...]],
     *,
     until: str,
-    since: str | None = None,
 ) -> dict[str, Any]:
     fork = hist.fork_date
-    path = compare_path(hist, bars, until=until, since=since)
-    last = path[-1] if path else None
+    walked = path_on_bars(hist, bars, until=until)
     return {
         "id": hist.id,
         "name": hist.name,
@@ -104,11 +190,11 @@ def card_for(
         "fork_date": fork,
         "n_decisions": len(hist.hyp_fills()),
         "date_span": _span(hist),
-        "actual_nav": None if last is None else last["actual_nav"],
-        "alt_nav": None if last is None else last["alt_nav"],
-        "delta": None if last is None else last["delta"],
-        "path": path,
-        "svg": nav_path_svg(path),
+        "actual_nav": walked.actual_nav,
+        "alt_nav": walked.alt_nav,
+        "delta": walked.delta,
+        "path": walked.path,
+        "svg": walked.svg,
     }
 
 
@@ -126,7 +212,7 @@ def list_payload(
         listings.update(listings_for_path(hist))
     start = min(forks) if forks else end
     bars = load_bars(svc, sorted(listings), start=start, end=end)
-    cards = [card_for(hist, bars, until=end, since=start) for hist in histories]
+    cards = [card_for(hist, bars, until=end) for hist in histories]
     overlay = None
     if len(cards) >= 2:
         overlay = overlay_svg_from_cards(cards, start, end)
@@ -151,31 +237,31 @@ def _clamp_view(hist: History, view_date: str | None, until: str) -> str:
     return view
 
 
-def _held_rows(
+def _held_lots(
     hist: History,
     view: str,
     until: str,
     marked: MarkedNav | None = None,
-) -> list[dict[str, Any]]:
+) -> tuple[HeldLot, ...]:
     held = state_on(hist, view)
     today_actual_lots = {lot.listing for lot in actual_state(hist, until).lots}
     by_listing = {} if marked is None else {r.listing: r for r in marked.rows}
-    rows: list[dict[str, Any]] = []
+    rows: list[HeldLot] = []
     for lot in held.lots:
         row = by_listing.get(lot.listing)
         rows.append(
-            {
-                "listing": lot.listing,
-                "ib_symbol": lot.ib_symbol,
-                "catalog_ticker": lot.catalog_ticker,
-                "qty": lot.qty,
-                "currency": lot.currency,
-                "close": None if row is None else row.close,
-                "value_base": None if row is None else row.value_base,
-                "deceased": lot.listing not in today_actual_lots,
-            }
+            HeldLot(
+                listing=lot.listing,
+                qty=lot.qty,
+                ib_symbol=lot.ib_symbol,
+                catalog_ticker=lot.catalog_ticker,
+                currency=lot.currency,
+                deceased=lot.listing not in today_actual_lots,
+                close=None if row is None else row.close,
+                value_base=None if row is None else row.value_base,
+            )
         )
-    return rows
+    return tuple(rows)
 
 
 def paper_on(
@@ -185,72 +271,119 @@ def paper_on(
     until: str | None = None,
     universe: list[dict[str, Any]] | None = None,
     error: str | None = None,
-) -> dict[str, Any]:
+) -> PaperView:
     """Paper book as of D. Replay only — no Yahoo, no path."""
     end = until or utc_today()
     view = _clamp_view(hist, view_date, end)
-    today_book = state_on(hist, end)
+    as_of = state_on(hist, view)
+    return PaperView(
+        history=hist,
+        view_date=view,
+        until=end,
+        fork_date=hist.fork_date,
+        held=_held_lots(hist, view, end),
+        cash=as_of.cash_base,
+        caveats=as_of.caveats,
+        universe=tuple(universe or []),
+        decisions=tuple(f.as_json() for f in hist.hyp_fills()),
+        error=error,
+        base_currency=hist.seed.base_currency,
+    )
+
+
+def editor_page(
+    hist: History,
+    *,
+    view_date: str | None = None,
+    until: str | None = None,
+    universe: list[dict[str, Any]] | None = None,
+    error: str | None = None,
+) -> dict[str, Any]:
+    """HTML adapter: PaperView plus cash today. Header NAV is absent."""
+    paper = paper_on(
+        hist, view_date=view_date, until=until, universe=universe, error=error
+    )
+    today = state_on(hist, paper.until)
     return {
-        "history": hist,
-        "fork_date": hist.fork_date,
-        "view_date": view,
-        "until": end,
-        "min_date": hist.fork_date,
-        "max_date": end,
-        "base_currency": hist.seed.base_currency,
-        "caveats": today_book.caveats,
-        "cash": today_book.cash_base,
-        "held": _held_rows(hist, view, end),
-        "universe": universe or [],
-        "decisions": [f.as_json() for f in hist.hyp_fills()],
-        "actual_nav": None,
-        "alt_nav": None,
-        "delta": None,
-        "path": [],
-        "svg": "",
-        "error": error,
+        "history": paper.history,
+        "fork_date": paper.fork_date,
+        "view_date": paper.view_date,
+        "until": paper.until,
+        "min_date": paper.fork_date,
+        "max_date": paper.until,
+        "base_currency": paper.base_currency,
+        "caveats": paper.caveats,
+        "cash_today": today.cash_base,
+        "held": paper.held,
+        "universe": paper.universe,
+        "decisions": paper.decisions,
+        "error": paper.error,
     }
 
 
-def holdings_payload(
+def holdings_on(
     hist: History,
     svc: HistoryService,
     *,
     view_date: str | None = None,
     until: str | None = None,
-) -> dict[str, Any]:
-    """Paper as of D plus that day's closes. Never the NAV path."""
+) -> HoldingsView:
+    """Lots + closes + cash as of D. Never the NAV path. Never cash-today."""
     paper = paper_on(hist, view_date=view_date, until=until)
-    view = paper["view_date"]
-    end = paper["until"]
-    listings = [str(row["listing"]) for row in paper["held"] if row.get("listing")]
-    bars = load_bars(svc, listings, start=hist.fork_date, end=end)
-    marked = mark_alt(hist, view, prices_on(bars, view))
-    paper["held"] = _held_rows(hist, view, end, marked)
-    return paper
+    listings = [lot.listing for lot in paper.held if lot.listing]
+    bars = load_bars(svc, listings, start=hist.fork_date, end=paper.until)
+    marked = mark_alt(hist, paper.view_date, prices_on(bars, paper.view_date))
+    return HoldingsView(
+        view_date=paper.view_date,
+        fork_date=paper.fork_date,
+        held=_held_lots(hist, paper.view_date, paper.until, marked),
+        cash=paper.cash,
+        base_currency=paper.base_currency,
+    )
 
 
-def path_payload(
+def path_on_bars(
+    hist: History,
+    bars: dict[str, tuple[PriceBar, ...]],
+    *,
+    until: str,
+) -> PathView:
+    path = compare_path(hist, bars, until=until)
+    last = path[-1] if path else None
+    return PathView(
+        fork_date=hist.fork_date,
+        until=until,
+        path=path,
+        svg=nav_path_svg(path),
+        actual_nav=None if last is None else last["actual_nav"],
+        alt_nav=None if last is None else last["alt_nav"],
+        delta=None if last is None else last["delta"],
+        base_currency=hist.seed.base_currency,
+    )
+
+
+def path_on(
     hist: History,
     svc: HistoryService,
     *,
     until: str | None = None,
-) -> dict[str, Any]:
-    """NAV walk. Last point is header Δ. No holdings table."""
+) -> PathView:
+    """NAV walk from fork. Last point is header Δ. No holdings table."""
     end = until or utc_today()
     listings = listings_for_path(hist)
     bars = load_bars(svc, listings, start=hist.fork_date, end=end)
-    path = compare_path(hist, bars, until=end)
-    last = path[-1] if path else None
+    return path_on_bars(hist, bars, until=end)
+
+
+def history_document(hist: History) -> dict[str, Any]:
+    """Identity + fills. No Yahoo, no lots, no path."""
     return {
+        "id": hist.id,
+        "name": hist.name,
+        "notes": hist.notes,
         "fork_date": hist.fork_date,
-        "until": end,
+        "decisions": [f.as_json() for f in hist.hyp_fills()],
         "base_currency": hist.seed.base_currency,
-        "actual_nav": None if last is None else last["actual_nav"],
-        "alt_nav": None if last is None else last["alt_nav"],
-        "delta": None if last is None else last["delta"],
-        "path": path,
-        "svg": nav_path_svg(path),
     }
 
 

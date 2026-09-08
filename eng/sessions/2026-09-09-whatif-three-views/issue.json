@@ -1,0 +1,36 @@
+{
+  "goal": "Typed what-if views: paper, holdings-as-of-D, and path are three records; one holdings URL; compare_path starts at fork.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not call Live NAV from what-if",
+    "Do not persist derived NAV paths",
+    "Do not change overlay clip / replay identity"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "PaperView has no path/Δ fields",
+    "Holdings JSON cash is as of the view date",
+    "GET /api/portfolio/histories/{id} is the document, not holdings",
+    "compare_path has no since; editor path equals list card path",
+    "HTML editor GET still does not fetch Yahoo",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_mark_book.py apps/analysis_web/tests/test_book_state.py -q",
+    "python scripts/eng_verify.py"
+  ]
+}

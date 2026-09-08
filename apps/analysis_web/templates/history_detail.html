@@ -19,13 +19,13 @@
   <p class="muted">Paper copy of your IB stock trades from {{ payload.fork_date }}. What-if fills sit on that copy. Later real sells of a name you already sold here are skipped.</p>
   <div class="grid2">
     <table>
-      <tr><th>Alt NAV (today)</th><td class="num" id="hist-alt-nav">{{ payload.alt_nav | fmt_num }}</td></tr>
-      <tr><th>Actual NAV (today)</th><td class="num" id="hist-actual-nav">{{ payload.actual_nav | fmt_num }}</td></tr>
+      <tr><th>Alt NAV (today)</th><td class="num" id="hist-alt-nav">—</td></tr>
+      <tr><th>Actual NAV (today)</th><td class="num" id="hist-actual-nav">—</td></tr>
     </table>
     <table>
       <tr><th>Δ vs actual (today)</th>
-          <td class="num" id="hist-delta">{{ payload.delta | fmt_num }}</td></tr>
-      <tr><th>Cash (today)</th><td class="num">{{ payload.cash | fmt_num }} {{ payload.base_currency }}</td></tr>
+          <td class="num" id="hist-delta">—</td></tr>
+      <tr><th>Cash (today)</th><td class="num">{{ payload.cash_today | fmt_num }} {{ payload.base_currency }}</td></tr>
     </table>
   </div>
   <p class="muted">Lots load first. Header Δ and the chart fill from the daily-close path (right end of the chart), not live last print. FX is the statement Forex close frozen at copy. The date picker is the paper book on that day, not a second NAV.</p>

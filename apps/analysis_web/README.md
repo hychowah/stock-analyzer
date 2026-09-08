@@ -53,8 +53,8 @@ Or: `bash apps/analysis_web/init.sh`
 | `/api/portfolio` | JSON portfolio summary + positions + `ib` + `performance` (statement join; no Yahoo) |
 | `/api/portfolio/live-nav` | Statement NAV adjusted by holdings × Yahoo last print. Aggregates + `quotes` (QuotePrint JSON) + per-lot `rows`. Display math; FX is the statement Forex close |
 | `/api/portfolio/histories` | List alternative histories + today Δ from the cash-book mark (daily close), not Live NAV |
-| `/api/portfolio/histories/{id}` | Holdings as of `date` (lots + closes). No path. |
-| `/api/portfolio/histories/{id}/holdings` | Same holdings view. Date change uses this, not a path rebuild. |
+| `/api/portfolio/histories/{id}` | History document (name, fork, fills). No holdings, no path, no Yahoo. |
+| `/api/portfolio/histories/{id}/holdings` | Lots + closes + cash as of `date`. Date change uses this, not a path rebuild. |
 | `/api/portfolio/histories/{id}/path` | NAV walk + SVG. Last point is header Δ. No holdings. |
 | `/api/portfolio/histories/{id}/path.svg` | Same path as an SVG image (no-JS chart). |
 | `/health` | Catalog health plus the git SHA this UI process booted at |

@@ -276,12 +276,16 @@ class HistoryHttpTests(unittest.TestCase):
         ranges = {key for _sym, key in self._backend.calls}
         self.assertNotIn("max", ranges)
 
-        one = self.client.get(f"/api/portfolio/histories/{hid}?date=2026-03-31")
-        self.assertEqual(one.status_code, 200)
-        one_body = one.json()
-        self.assertIn("held", one_body)
+        doc = self.client.get(f"/api/portfolio/histories/{hid}")
+        self.assertEqual(doc.status_code, 200)
+        one_body = doc.json()
+        self.assertEqual(one_body["name"], "Split")
+        self.assertIn("decisions", one_body)
+        self.assertIn("fork_date", one_body)
+        self.assertNotIn("held", one_body)
         self.assertNotIn("path", one_body)
         self.assertNotIn("delta", one_body)
+        self.assertNotIn("view_date", one_body)
 
         path = self.client.get(f"/api/portfolio/histories/{hid}/path")
         self.assertEqual(path.status_code, 200)
@@ -322,3 +326,48 @@ class HistoryHttpTests(unittest.TestCase):
         ).json()
         meta_after = next(row for row in after["held"] if row["listing"] == "META")
         self.assertAlmostEqual(meta_after["qty"], meta["qty"] - 1, places=5)
+
+    def test_holdings_cash_is_as_of_view_date(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Cash D"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        from apps.analysis_web.services.alt_history import state_on
+        from apps.analysis_web.services.alt_history_store import get_history
+
+        hist = get_history(int(hid))
+        fork_held = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date={hist.fork_date}"
+        ).json()
+        late_held = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        ).json()
+        self.assertAlmostEqual(
+            fork_held["cash"], state_on(hist, hist.fork_date).cash_base or 0, places=5
+        )
+        self.assertAlmostEqual(
+            late_held["cash"], state_on(hist, "2026-03-31").cash_base or 0, places=5
+        )
+        self.assertNotAlmostEqual(fork_held["cash"], late_held["cash"], places=5)
+        html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
+        self.assertIn(b"Cash (today)", html.content)
+        self.assertNotIn(b'"path"', html.content)
+
+    def test_paper_view_has_no_path_fields(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Types"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        from apps.analysis_web.services.alt_history_store import get_history
+        from apps.analysis_web.services.alt_history_view import PaperView, paper_on
+
+        paper = paper_on(get_history(int(hid)), view_date="2026-03-31")
+        self.assertIsInstance(paper, PaperView)
+        self.assertFalse(hasattr(paper, "path"))
+        self.assertFalse(hasattr(paper, "delta"))
+        self.assertFalse(hasattr(paper, "svg"))
+        self.assertFalse(hasattr(paper, "actual_nav"))

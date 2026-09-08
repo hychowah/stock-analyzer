@@ -1,0 +1,6 @@
+{
+  "session_key": "2026-09-09-whatif-three-views",
+  "status": "complete",
+  "summary": "What-if views are three types: PaperView, HoldingsView, PathView. GET /{id} is the history document. Holdings cash is as of D. compare_path starts at fork.",
+  "commit_subject": "Split what-if into typed paper, holdings, and path views"
+}

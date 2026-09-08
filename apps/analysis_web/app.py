@@ -32,7 +32,7 @@ from starlette.types import Scope
 
 from apps.analysis_web.config import archive_root, static_dir
 from apps.analysis_web.identity import boot_git_sha
-from apps.analysis_web.routes import analyze, api, architecture, artifacts, compares, events, harness, pages
+from apps.analysis_web.routes import analyze, api, architecture, artifacts, compares, events, harness, histories, pages
 from apps.analysis_web.services.price_history import (
     HistoryService,
     YahooHistoryBackend,
@@ -116,6 +116,7 @@ def create_app() -> FastAPI:
     app.include_router(analyze.router)
     app.include_router(harness.router)
     app.include_router(compares.router)
+    app.include_router(histories.router)
     app.include_router(api.router)
     app.include_router(events.router)
     app.include_router(artifacts.router)

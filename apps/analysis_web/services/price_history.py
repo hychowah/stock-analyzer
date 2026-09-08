@@ -55,6 +55,19 @@ class PriceBar:
         return {"t": self.t, "close": self.close}
 
 
+def close_on(bars: tuple[PriceBar, ...] | list[PriceBar], date: str) -> PriceBar | None:
+    """Last bar on or before ``date`` (YYYY-MM-DD). None if every bar is later."""
+    day = (date or "").strip()[:10]
+    if len(day) < 10:
+        return None
+    best: PriceBar | None = None
+    for bar in bars:
+        t = (bar.t or "")[:10]
+        if t and t <= day and (best is None or t >= best.t[:10]):
+            best = bar
+    return best
+
+
 @dataclass(frozen=True)
 class PriceHistory:
     """One listing's daily closes for a range. error set ⇒ bars may be empty."""

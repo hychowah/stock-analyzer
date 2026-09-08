@@ -1,0 +1,38 @@
+{
+  "goal": "Alternative histories under /portfolio/histories: fork the IB cash book, apply priced hypothetical fills, mark actual and alt with the same daily-close identity",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not change Live NAV or mix the trade ledger into /portfolio",
+    "Do not call /api/portfolio/live-nav or last print from what-if pages",
+    "Do not write decisions into archive/ or portfolio.sqlite trades",
+    "Do not bump harness/VERSION (UI only)",
+    "Do not build a strategy runner"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "BookState + as_of_book reconstructs mini fixture lots (Jan 5 empty, Jan 12 700=100, Feb 1 META=12, Mar 31 snapshot) with listing on the lot",
+    "mark(state) identity is cash + Σ qty × daily close × stmt_fx; unquoted lot contributes 0 + flag; does not call mark_live_nav",
+    "replay applies already-priced fills; catalog and Yahoo resolve at POST; fork_date stored; as_of < fork rejected",
+    "Δ(today) on cards equals the chart right endpoint; what-if HTML does not include live_nav.js",
+    "/portfolio still polls only /api/portfolio/live-nav",
+    "ARCHITECTURE.md and README document the cash-book mark vs Live NAV",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_book_state.py apps/analysis_web/tests/test_mark_book.py apps/analysis_web/tests/test_alt_history.py -q"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "session_key": "2026-09-08-alt-history",
+  "status": "wip",
+  "summary": "What-if alternative histories: copy the IB stock ledger into a frozen paper book (seed lots, cash, statement FX, copied fills), apply priced what-if fills, mark actual and alt with the same daily-close identity. Card Δ equals the chart end. Live IB is read only at copy. Live NAV unchanged.",
+  "commit_subject": "Add portfolio what-if histories as a frozen IB paper book, not Live NAV"
+}

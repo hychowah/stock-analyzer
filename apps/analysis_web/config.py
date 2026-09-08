@@ -16,7 +16,7 @@ def app_dir() -> Path:
 
 
 def local_dir() -> Path:
-    """App-local state (portfolio book). Never under archive/research."""
+    """App-local state (IB book and alternative-history overlay). Never under archive/research."""
     return app_dir() / ".local"
 
 

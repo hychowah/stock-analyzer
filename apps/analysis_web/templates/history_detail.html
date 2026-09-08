@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}{{ payload.history.name }} · What-if{% endblock %}
+{% block body_attrs %}{% endblock %}
+{% block content %}
+{% set subnav = 'whatif' %}
+{% set h = payload.history %}
+<div class="card hist-summary">
+  <p><a href="/portfolio/histories">← What-if</a></p>
+  {% include "partials/portfolio_subnav.html" %}
+  <form class="stack-form" method="post" action="/portfolio/histories/{{ h.id }}">
+    <label>Name
+      <input name="name" value="{{ h.name }}" required/>
+    </label>
+    <label>Notes
+      <input name="notes" value="{{ h.notes or '' }}"/>
+    </label>
+    <p><button type="submit" class="secondary">Save</button></p>
+  </form>
+  <p class="muted">Paper copy of your IB stock trades from {{ payload.fork_date }}. What-if fills sit on that copy. Later real sells of a name you already sold here are skipped.</p>
+  <div class="grid2">
+    <table>
+      <tr><th>Alt NAV (today)</th><td class="num" id="hist-alt-nav">{{ payload.alt_nav | fmt_num }}</td></tr>
+      <tr><th>Actual NAV (today)</th><td class="num" id="hist-actual-nav">{{ payload.actual_nav | fmt_num }}</td></tr>
+    </table>
+    <table>
+      <tr><th>Δ vs actual (today)</th>
+          <td class="num {% if payload.delta is not none and payload.delta > 0 %}delta-pos{% elif payload.delta is not none and payload.delta < 0 %}delta-neg{% endif %}" id="hist-delta">{{ payload.delta | fmt_num }}</td></tr>
+      <tr><th>Cash (today)</th><td class="num">{{ payload.cash | fmt_num }} {{ payload.base_currency }}</td></tr>
+    </table>
+  </div>
+  <p class="muted">Header is today — the right end of the chart. The date picker below is the paper book on that day, not a second NAV. Daily close, not live last print. FX is the statement Forex close frozen at copy.</p>
+  {% for c in payload.caveats %}
+  <p class="muted">{{ c }}</p>
+  {% endfor %}
+  {% if payload.error %}<p class="err" role="alert">{{ payload.error }}</p>{% endif %}
+  <form method="post" action="/portfolio/histories/{{ h.id }}/copy" style="display:inline">
+    <button type="submit" class="secondary">Duplicate</button>
+  </form>
+  <form method="post" action="/portfolio/histories/{{ h.id }}/delete" style="display:inline"
+        onsubmit="return confirm('Delete this history?');">
+    <button type="submit" class="secondary">Delete</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Holdings on this day</h2>
+  <form class="filters" method="get" action="/portfolio/histories/{{ h.id }}">
+    <div class="filters-row">
+      <label>Date
+        <input type="date" name="date" value="{{ payload.view_date }}"
+               min="{{ payload.fork_date }}" max="{{ payload.max_date }}" required/>
+      </label>
+      <button type="submit">Show holdings</button>
+    </div>
+  </form>
+  <p class="muted">What the paper book held on {{ payload.view_date }}. Names marked “sold later” are gone from today’s copied actual — not from a live IB walk.</p>
+  {% if payload.held %}
+  <div class="table-freeze">
+  <table>
+    <thead><tr><th>Listing</th><th>Qty</th><th>Close</th><th>Value</th><th>Sell</th></tr></thead>
+    <tbody>
+      {% for lot in payload.held %}
+      <tr>
+        <td class="mono">{{ lot.listing }}{% if lot.ib_symbol and lot.ib_symbol != lot.listing %} <span class="muted">{{ lot.ib_symbol }}</span>{% endif %}{% if lot.deceased %} <span class="badge">sold later</span>{% endif %}</td>
+        <td class="num">{{ lot.qty | fmt_num(2) }}</td>
+        <td class="num">{{ lot.close | fmt_num }}</td>
+        <td class="num">{{ lot.value_base | fmt_num }}</td>
+        <td>
+          <form method="post" action="/portfolio/histories/{{ h.id }}/decisions" class="hist-sell-row">
+            <input type="hidden" name="side" value="sell"/>
+            <input type="hidden" name="listing" value="{{ lot.listing }}"/>
+            <input type="hidden" name="as_of" value="{{ payload.view_date }}"/>
+            <label class="sr-only">Qty to sell
+              <input name="quantity" type="number" step="any" min="0" max="{{ lot.qty }}" value="{{ lot.qty }}" required/>
+            </label>
+            <button type="submit">Sell</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No stock lots on this date.</p>
+  {% endif %}
+</div>
+
+{% if payload.decisions %}
+<div class="card">
+  <h2>What-if fills</h2>
+  <div class="timeline">
+    {% for d in payload.decisions %}
+    <form class="timeline-chip" method="post" action="/portfolio/histories/{{ h.id }}/decisions/{{ d.id }}/delete">
+      <a href="/portfolio/histories/{{ h.id }}?date={{ d.as_of }}">{{ d.as_of }} · {{ d.side }} {{ d.listing }} · {{ d.quantity | fmt_num(2) }}</a>
+      <button type="submit" class="secondary">Remove</button>
+    </form>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<details class="card">
+  <summary>Buy a researched name on {{ payload.view_date }}</summary>
+  <p class="muted">Today’s catalog. Search filters this table. Quantity is required.</p>
+  <p><label>Filter <input id="hist-universe-filter" type="search" placeholder="MELI"/></label></p>
+  <div class="table-freeze">
+  <table id="hist-universe">
+    <thead><tr><th>Ticker</th><th>Verdict</th><th>MoS %</th><th>Session</th><th></th></tr></thead>
+    <tbody>
+      {% for row in payload.universe %}
+      <tr data-ticker="{{ row.ticker }}">
+        <td class="mono">{{ row.ticker }}</td>
+        <td>{{ row.audit_verdict or '—' }}</td>
+        <td class="num">{{ row.margin_of_safety_pct | fmt_num(1) }}</td>
+        <td class="mono">{{ row.session_date or '' }}</td>
+        <td>
+          <form method="post" action="/portfolio/histories/{{ h.id }}/decisions">
+            <input type="hidden" name="side" value="buy"/>
+            <input type="hidden" name="ticker" value="{{ row.ticker }}"/>
+            <input type="hidden" name="as_of" value="{{ payload.view_date }}"/>
+            <label class="sr-only">Qty <input name="quantity" type="number" step="any" min="0" placeholder="qty" required style="width:5rem"/></label>
+            <button type="submit">Buy</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</details>
+
+{% if payload.svg %}
+<div class="card">
+  <h2>Actual vs this history</h2>
+  <p class="muted">{{ payload.fork_date }} → {{ payload.until }} · daily close · {{ payload.base_currency }}</p>
+  <div class="nav-chart" id="hist-chart"
+       data-delta="{{ payload.delta if payload.delta is not none else '' }}">
+    {{ payload.svg | safe }}
+  </div>
+  <p id="hist-chart-readout" class="muted"></p>
+  <script type="application/json" id="hist-path">{{ payload.path | tojson }}</script>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/alt_history.js" defer></script>
+{% endblock %}

@@ -4,6 +4,8 @@
 {% block content %}
 <div class="card">
   <h1>Portfolio{% if view.name %} · {{ view.name }}{% endif %}</h1>
+  {% set subnav = 'book' %}
+  {% include "partials/portfolio_subnav.html" %}
   <p class="muted">
     {% if view.ib %}IB statement + catalog overlay{% else %}Book + latest catalog join{% endif %}
     · live

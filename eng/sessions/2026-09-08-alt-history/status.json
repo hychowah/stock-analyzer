@@ -1,0 +1,9 @@
+{
+  "slug": "alt-history",
+  "session_key": "2026-09-08-alt-history",
+  "status": "wip",
+  "created_at": "2026-09-08T08:16:50Z",
+  "updated_at": "2026-09-08T16:00:00Z",
+  "work_type": "W4",
+  "resume_hint": "frozen-paper-book and history-only-after-copy are in the tree. Verifier has not flipped those passes flags. User agreed to commit via /smart-commit."
+}

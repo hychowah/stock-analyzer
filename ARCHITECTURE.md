@@ -16,7 +16,7 @@ This repo is **two modes of work** over one `archive/` disk (the folder that hol
 
 **Mode B** builds the product around those files. One website is both the reading room and the job starter. The catalog API (`catalog_api`) is an in-process library plus a small CLI — not a second HTTP server.
 
-The pipeline never “remembers” a conclusion in chat. **Files on disk are the record.** The website never invents a fair value or a margin of safety (how cheap the stock is versus that fair value). It may show live Yahoo prices, compute **Downside %** from the **stored** bear fair value versus price, and show **Live NAV** as statement ending NAV adjusted by holdings × Yahoo last print (FX frozen at the statement). That is display math, not a second valuation.
+The pipeline never “remembers” a conclusion in chat. **Files on disk are the record.** The website never invents a fair value or a margin of safety (how cheap the stock is versus that fair value). It may show live Yahoo prices, compute **Downside %** from the **stored** bear fair value versus price, show **Live NAV** as statement ending NAV adjusted by holdings × Yahoo last print (FX frozen at the statement), and show **alternative-history NAV** as a cash book (a frozen copy of IB lots and stock fills, plus what-if fills) marked with Yahoo daily closes. That is display math, not a second valuation. Alternative-history Δ is not Live NAV: same mark on the copy’s actual (replay of the frozen seed and copied fills) and the what-if book, daily close, card and chart end are the same number. A later IB re-ingest does not change a saved history.
 
 Default data root: `archive/` at the project root. `ARCHIVE_ROOT` can point catalog, UI, and tests at another tree. Real Grok Analyze from the website or CLI uses the default archive only.
 
@@ -84,7 +84,7 @@ Mode B may **schedule** a Mode A run (the Analyze page). The website starts the 
 
 ## The data plane
 
-Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness **code** stays outside that tree. Do not store fair values in a second database. Portfolio state lives under `apps/analysis_web/.local/`: sqlite is a **trade ledger plus the latest IB snapshot** (overlapping activity CSVs merge; fills are never deleted). Frozen harness copies live under `pins/` — those are code snapshots, not archive records.
+Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness **code** stays outside that tree. Do not store fair values in a second database. Portfolio state lives under `apps/analysis_web/.local/`: sqlite is a **trade ledger plus the latest IB snapshot** (overlapping activity CSVs merge; fills are never deleted). Alternative histories are a second sqlite next to it (`alt_histories.sqlite`): at copy time the IB stock book is frozen (seed lots + cash + statement FX and copied stock fills); what-if fills sit on that copy. Later reads do not open the live IB book. They never write the IB trade ledger. Frozen harness copies live under `pins/` — those are code snapshots, not archive records.
 
 | Folder | What it is | How it may change |
 |--------|------------|-------------------|
@@ -234,7 +234,7 @@ Tests sit next to the code they cover (`packages/*/tests`, `apps/analysis_web/te
 
 `python3 -m apps.analysis_web` → [http://127.0.0.1:8765/](http://127.0.0.1:8765/)
 
-Stack: FastAPI, Jinja templates, a little static JS (search, live reload, charts). It reads `ARCHIVE_ROOT` (catalog/UI/tests) and **does not author** research phases or fair values. The website never invents a fair value. It may show live Yahoo prices, Downside % from stored bear fair value versus price, and Live NAV from holdings × Yahoo last print — display math, not a second valuation.
+Stack: FastAPI, Jinja templates, a little static JS (search, live reload, charts). It reads `ARCHIVE_ROOT` (catalog/UI/tests) and **does not author** research phases or fair values. The website never invents a fair value. It may show live Yahoo prices, Downside % from stored bear fair value versus price, Live NAV from holdings × Yahoo last print, and alternative-history NAV from a frozen paper copy of the IB stock book marked with daily closes — display math, not a second valuation.
 
 The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a quieter Lab (Harness, Architecture, Experiments, Calibration, Health). Full HTML pages go through one `render_page` helper that injects the current section; the template matches that value, not the raw URL.
 
@@ -250,7 +250,10 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |
 | `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete. Failed jobs can Retry as a new packet. |
 | `/compare-artifact` | Allowlisted compare-packet file |
-| `/portfolio` | IB book (trade ledger + latest snapshot) or local JSON, joined to latest catalog runs. The header is **Live NAV** and day P/L (not statement period or ending NAV). Live NAV is holdings × Yahoo last print plus statement cash; FX is the statement Forex close. One marked-book poll paints Live NAV, Live cells, live value, and Downside. |
+| `/portfolio` | IB book (trade ledger + latest snapshot) or local JSON, joined to latest catalog runs. The header is **Live NAV** and day P/L (not statement period or ending NAV). Live NAV is holdings × Yahoo last print plus statement cash; FX is the statement Forex close. One marked-book poll paints Live NAV, Live cells, live value, and Downside. Sub-nav: Book · What-if. |
+| `/portfolio/histories` | Alternative histories: frozen paper copies of the IB stock ledger (seed + copied fills). List cards and overlay chart. Does not open the live IB book. |
+| `/portfolio/histories/new` | Name only. The only IB read: copies stock trades and freezes seed lots, cash, and statement FX. Later IB re-ingest does not change the copy. |
+| `/portfolio/histories/{id}` | Pick a date, see holdings that day (including names later sold on this copy), sell those lots, buy from today’s catalog. Header NAV is today / chart end. Actual is this copy, not a live IB walk. Does not call Live NAV. Works if the IB file is later missing. |
 | `/harness` | Pin map and briefing inspector |
 | `/experiments`, `/calibration` | Group by experiment; MoS vs later outcomes |
 | `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, on-figure zoom controls, Reset fits). |
@@ -260,7 +263,7 @@ Remaining JSON APIs, query params, and live-reload notes: `apps/analysis_web/REA
 
 Live reload: the runs table can refresh when the catalog changes (SSE, with a poll fallback) without wiping an in-progress search.
 
-Quotes and price history read catalog `quote_listing` (stamp, else snapshot, else folder ticker). Portfolio Live NAV uses `print_listing` for the **holding’s market** (IB symbol + exchange; suffix-style Yahoo forms such as `MC.PA`). Catalog overlays that point at a different listing (GDS `HY9H` → Korean `000660.KS`) are for research join only and are not last prints of the lot. The Yahoo fetch layer (`apps/analysis_web/services/yahoo_bars.py`) resolves that string to a chart and returns rows keyed by the request. It does not rewrite the catalog or keep a per-issuer map. `/portfolio` polls `GET /api/portfolio/live-nav` only — not `/api/quotes`.
+Quotes and price history read catalog `quote_listing` (stamp, else snapshot, else folder ticker). Portfolio Live NAV uses `print_listing` for the **holding’s market** (IB symbol + exchange; suffix-style Yahoo forms such as `MC.PA`). Catalog overlays that point at a different listing (GDS `HY9H` → Korean `000660.KS`) are for research join only and are not last prints of the lot. The Yahoo fetch layer (`apps/analysis_web/services/yahoo_bars.py`) resolves that string to a chart and returns rows keyed by the request. It does not rewrite the catalog or keep a per-issuer map. `/portfolio` polls `GET /api/portfolio/live-nav` only — not `/api/quotes`. `/portfolio/histories` does not poll Live NAV or last print; it marks a frozen paper copy with Yahoo daily closes. Actual is replay of that copy’s seed and real fills. FX is the statement Forex map frozen at copy. The live IB file is opened only on Copy my trades. Card Δ and the chart’s right end are the same number.
 
 ---
 
@@ -285,7 +288,7 @@ Harness identity for a run: `harness_version` (from `harness/VERSION` at **scaff
 These must stay true. Breaking one usually means silent wrong numbers or rewritten history.
 
 1. **Completed `archive/research/` and `archive/outcomes/` must not be rewritten.** That is process law, not a filesystem lock. Never rewrite them to fix the UI or a test. New analysis → new session key.
-2. **No second store of fair values.** The website and catalog read snapshots and session files. They do not compute a competing FV. Display math (live Yahoo price, Downside % from stored bear FV vs price, Live NAV from holdings × last print) is not a second valuation.
+2. **No second store of fair values.** The website and catalog read snapshots and session files. They do not compute a competing FV. Display math (live Yahoo price, Downside % from stored bear FV vs price, Live NAV from holdings × last print, alternative-history NAV from cash + lots × daily close) is not a second valuation.
 3. **Catalog is an index you can rebuild.** If SQLite and disk disagree, rebuild from disk. Do not treat the DB as the original.
 4. **Library is documents, not conclusions.** Bind into the current session; do not mine other sessions for last week’s MoS.
 5. **Mode B home is `eng/`.** Do not create a top-level `build/` harness (that name is gitignored).

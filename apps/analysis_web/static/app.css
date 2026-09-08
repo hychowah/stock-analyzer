@@ -1028,4 +1028,96 @@ th.num a.sort {
   main:has(#compare-bar.is-on) {
     padding-bottom: 5rem;
   }
+  .hist-cols {
+    display: flex;
+    flex-direction: column;
+  }
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: -1px;
+}
+.hist-subnav {
+  margin: 0.35rem 0 0.75rem;
+}
+.hist-cards {
+  display: grid;
+  gap: 0.75rem;
+}
+.hist-card h2 {
+  margin-top: 0;
+}
+.delta-pos {
+  color: #14532d;
+}
+.delta-neg {
+  color: #7f1d1d;
+}
+.timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.timeline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+}
+.timeline-chip button {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  min-height: 0;
+}
+.hist-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.hist-sell-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hist-sell-row input[type="number"] {
+  width: 5.5rem;
+}
+.nav-chart {
+  margin-top: 0.5rem;
+}
+.nav-chart-svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  background: var(--chart-stage);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.nav-path-actual {
+  stroke: var(--muted);
+  stroke-width: 2;
+}
+.nav-path-alt {
+  stroke: var(--link);
+  stroke-width: 2.25;
+}
+.nav-path-h1 { stroke: #15803d; }
+.nav-path-h2 { stroke: #7c3aed; }
+.nav-path-h3 { stroke: #b45309; }
+.nav-path-h4 { stroke: #be185d; }
+.nav-path-h5 { stroke: #0f766e; }
+html[data-theme="dark"] .delta-pos { color: #86efac; }
+html[data-theme="dark"] .delta-neg { color: #fca5a5; }
+

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}What-if{% endblock %}
+{% block body_attrs %}{% endblock %}
+{% block content %}
+{% set subnav = 'whatif' %}
+<div class="card">
+  <h1>Alternative histories</h1>
+  {% include "partials/portfolio_subnav.html" %}
+  <p class="muted">Copy your IB trades, pick a date, sell what you held that day — including names you later sold. Buy from names you have researched.</p>
+  <p class="muted">Yahoo daily close, not IB fills, not live last print. FX is the statement Forex close frozen at copy. This does not change your IB book. Header numbers are today — the right end of the chart.</p>
+  {% if error %}<p class="err" role="alert">{{ error }}</p>{% endif %}
+  <p><a class="btn" href="/portfolio/histories/new">Copy my trades</a></p>
+</div>
+
+{% if payload.overlay_svg %}
+<div class="card">
+  <h2>All histories vs actual</h2>
+  <p class="muted">Daily close · {{ payload.base_currency }} · actual is the solid line</p>
+  <div class="nav-chart">{{ payload.overlay_svg | safe }}</div>
+</div>
+{% endif %}
+
+{% if payload.cards %}
+<div class="hist-cards">
+  {% for c in payload.cards %}
+  <div class="card hist-card">
+    <h2><a href="/portfolio/histories/{{ c.id }}">{{ c.name }}</a></h2>
+    <p class="muted">Copied from {{ c.fork_date }} · {{ c.n_decisions }} what-if fill{% if c.n_decisions != 1 %}s{% endif %}{% if c.n_decisions %} · {{ c.date_span }}{% endif %}</p>
+    <p>
+      Alt {{ c.alt_nav | fmt_num }}
+      · actual {{ c.actual_nav | fmt_num }}
+      ·
+      <span class="{% if c.delta is not none and c.delta > 0 %}delta-pos{% elif c.delta is not none and c.delta < 0 %}delta-neg{% endif %}">
+        Δ {{ c.delta | fmt_num }}
+      </span>
+      {{ payload.base_currency }}
+    </p>
+    {% if c.svg %}
+    <div class="nav-chart">{{ c.svg | safe }}</div>
+    {% endif %}
+    <form method="post" action="/portfolio/histories/{{ c.id }}/copy" style="display:inline">
+      <button type="submit" class="secondary">Duplicate</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% elif not error %}
+<div class="card">
+  <p>No histories yet. Copy your trades, then pick a date and sell a holding you had that day.</p>
+</div>
+{% endif %}
+{% endblock %}

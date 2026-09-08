@@ -464,4 +464,5 @@ def page_portfolio(
         "portfolio.html",
         view=view,
         pass_only=po,
+        subnav="book",
     )

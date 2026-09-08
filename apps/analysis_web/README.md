@@ -33,7 +33,10 @@ Or: `bash apps/analysis_web/init.sh`
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown title + TOC + sibling `.md` links on `/artifact`; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
-| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs. Header is Live NAV + day P/L (not statement period or ending NAV). One poll (`/api/portfolio/live-nav`) paints Live NAV, Live cells, live value, and Downside. Does not call `/api/quotes`. Change-in-NAV waterfall + MTM bars |
+| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs. Header is Live NAV + day P/L (not statement period or ending NAV). One poll (`/api/portfolio/live-nav`) paints Live NAV, Live cells, live value, and Downside. Does not call `/api/quotes`. Change-in-NAV waterfall + MTM bars. Sub-nav Book · What-if. |
+| `/portfolio/histories` | Alternative histories (what-if). Frozen paper copies of the IB stock ledger (seed + fills); overlay chart when two or more exist. Does not call `/api/portfolio/live-nav`. Does not open the live IB book. |
+| `/portfolio/histories/new` | The only IB read: copy stock trades and freeze seed lots, cash, and statement FX. A later IB re-ingest does not change the copy. |
+| `/portfolio/histories/{id}` | Date → holdings that day (including names later sold on this copy) → sell. Header numbers are today. Actual is this copy. Works if the IB file is later missing. |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`). List does not SSE-reload. |
 | `/analyze/new` | Start analysis (ticker + as-of + harness first; advanced in details). Busy stays on the form. |
 | `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
@@ -49,6 +52,8 @@ Or: `bash apps/analysis_web/init.sh`
 | `/api/compares/{compare_id}` | JSON job status |
 | `/api/portfolio` | JSON portfolio summary + positions + `ib` + `performance` (statement join; no Yahoo) |
 | `/api/portfolio/live-nav` | Statement NAV adjusted by holdings × Yahoo last print. Aggregates + `quotes` (QuotePrint JSON) + per-lot `rows`. Display math; FX is the statement Forex close |
+| `/api/portfolio/histories` | List alternative histories + today Δ from the cash-book mark (daily close), not Live NAV |
+| `/api/portfolio/histories/{id}` | One history: alt book at view date, decisions, path |
 | `/health` | Catalog health plus the git SHA this UI process booted at |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
@@ -93,6 +98,7 @@ Env: `COMPARE_SPAWN=fake` writes a stub compare packet (tests). `AGENT_SPAWN=fak
 ## App-local state
 
 - IB book (preferred): `apps/analysis_web/.local/portfolio.sqlite` — a trade ledger plus the latest statement snapshot. Ingest with `python -m apps.analysis_web.import_ib` (optional `--src`). Overlapping CSVs merge: new fills append, existing fills are skipped, trades are never deleted. `--rebuild` wipes sqlite and replays every `U*.csv` under `.local/ib/statements/` (the only start-over). Copies `U*.csv` (and sibling `.pdf`) into that folder. **PII; gitignored. Import does not write `portfolio.json`.**
+- Alternative histories: `apps/analysis_web/.local/alt_histories.sqlite` — frozen seed (lots + cash + statement FX) plus copied IB stock fills plus what-if fills. Never writes `portfolio.sqlite` trades. Live IB is read only at copy. Replay on read; NAV is not stored. Later real sells of a name you already sold in the paper book are clipped before strict replay.
 - JSON fallback (only when sqlite is missing): `apps/analysis_web/.local/portfolio.json`
 - Example: `portfolio.example.json` (committed)
 - **Never** store holdings under `archive/research/`

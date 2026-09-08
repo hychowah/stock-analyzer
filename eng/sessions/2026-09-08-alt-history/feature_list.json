@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "id": "book-state",
+      "description": "BookState/Lot with listing on the lot; as_of_book ledger walk + cash; stocks only; caveats on the state",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_book_state.py -q"
+    },
+    {
+      "id": "replay-mark",
+      "description": "replay priced fills + mark sibling of mark_live_nav; store fork_date + priced fills; no IB writes; Δ(today) equals last path point",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_mark_book.py apps/analysis_web/tests/test_alt_history.py -q"
+    },
+    {
+      "id": "pages-composer",
+      "description": "Portfolio sub-nav, list/new/editor, POST resolves catalog+close, sell from alt state; ARCHITECTURE.md + README; no live_nav.js on what-if",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_histories.py -q"
+    },
+    {
+      "id": "compare-ux",
+      "description": "Card Δ equals chart end; server SVG path; list overlay; duplicate; desktop + 390px Playwright; /portfolio still live-nav only",
+      "passes": true,
+      "verify": "python3 scripts/eng_verify.py; Playwright :8774 composer + overlay; /portfolio GET /api/portfolio/live-nav only"
+    },
+    {
+      "id": "ledger-copy-ui",
+      "description": "Copy IB trades; date-first holdings including later-sold names; History trial-replay on add/delete; listing-keyed lots; today on the summary",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_book_state.py -q"
+    },
+    {
+      "id": "frozen-paper-book",
+      "description": "Persist seed on History at copy; Actual=replay(seed, real fills); Alt=replay(seed, overlay fills); oversell clip outside replay; save(History); plan.md matches",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_book_state.py -q"
+    },
+    {
+      "id": "history-only-after-copy",
+      "description": "IB load only at copy; freeze statement FX on seed; list/editor/JSON/POST buy-sell take History not IbBook; GET what-if works without portfolio.sqlite",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_book_state.py -q"
+    }
+  ]
+}

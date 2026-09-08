@@ -1,4 +1,3 @@
-{% macro cell_label(text) %}<span class="cell-label">{{ text }}</span>{% endmacro %}
 {% macro sort_th(col, label, extra_class='') %}
 <th class="{{ extra_class }}">
   <a class="sort{% if sort == col %} is-active{% endif %}"
@@ -19,7 +18,8 @@
 </div>
 {% else %}
 <div class="card" data-runs-status="{{ runs|length }} shown{% if total is not none %} · {{ total }} matching{% endif %} · max {{ limit }} · live is Yahoo last print">
-  <table class="runs-table stack-table">
+  <div class="table-freeze">
+  <table class="runs-table">
     <thead>
       <tr>
         <th class="pick" aria-label="Select for compare"></th>
@@ -32,10 +32,10 @@
         {{ sort_th('asof_downside_pct', 'Downside', 'num') }}
         <th>Duration</th>
         {{ sort_th('audit_verdict', 'Audit (process)') }}
-        {{ sort_th('harness_version', 'Harness', 'desktop-only') }}
-        {{ sort_th('primary_sector', 'Sector', 'desktop-only') }}
-        {{ sort_th('region', 'Region', 'desktop-only') }}
-        {{ sort_th('tech_signal', 'Tech', 'desktop-only') }}
+        {{ sort_th('harness_version', 'Harness') }}
+        {{ sort_th('primary_sector', 'Sector') }}
+        {{ sort_th('region', 'Region') }}
+        {{ sort_th('tech_signal', 'Tech') }}
       </tr>
     </thead>
     <tbody>
@@ -49,24 +49,24 @@
                    data-ticker="{{ r.ticker }}" data-session-key="{{ r.session_key }}"
                    aria-label="Select {{ r.ticker }} {{ r.session_key }}"/>
           </td>
-          <td data-label="Ticker">{{ cell_label("Ticker") }}<a class="mono decision" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
-          <td class="mono" data-label="Session">{{ cell_label("Session") }}<a href="/runs/{{ r.run_id }}">{{ r.session_key }}</a></td>
-          <td class="num" data-label="As-of">{{ cell_label("As-of") }}{{ r.asof_price | fmt_num }}{% if r.currency %} {{ r.currency }}{% endif %}</td>
-          <td class="num quote-live" data-label="Live" data-quote-cell{% if r.quote_listing %} data-quote-symbol="{{ r.quote_listing }}" data-quote-source="{{ r.quote_listing_source or '' }}"{% endif %}>{{ cell_label("Live") }}—</td>
-          <td class="num decision" data-label="FV">{{ cell_label("FV") }}{{ r.fv_base | fmt_num }}</td>
-          <td class="num decision" data-label="MoS">{{ cell_label("MoS") }}{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
-          <td class="num decision{% if ds is not none and ds < 0 %} below-bear{% endif %}" data-label="Downside"
+          <td><a class="mono decision" href="/runs/{{ r.run_id }}">{{ r.ticker }}</a></td>
+          <td class="mono"><a href="/runs/{{ r.run_id }}">{{ r.session_key }}</a></td>
+          <td class="num">{{ r.asof_price | fmt_num }}{% if r.currency %} {{ r.currency }}{% endif %}</td>
+          <td class="num quote-live" data-quote-cell{% if r.quote_listing %} data-quote-symbol="{{ r.quote_listing }}" data-quote-source="{{ r.quote_listing_source or '' }}"{% endif %}>—</td>
+          <td class="num decision">{{ r.fv_base | fmt_num }}</td>
+          <td class="num decision">{{ r.margin_of_safety_pct | fmt_num(1) }}</td>
+          <td class="num decision{% if ds is not none and ds < 0 %} below-bear{% endif %}"
               data-downside-pct
               data-vintage="as-of"
               {% if r.fv_bear is not none %}data-fv-bear="{{ r.fv_bear }}"{% endif %}
               {% if r.asof_price is not none %}data-asof-price="{{ r.asof_price }}"{% endif %}
-              {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ cell_label("Downside") }}{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
-          <td class="decision" data-label="Duration"{% if r.decision_action %} title="{{ r.decision_action }}"{% endif %}>{{ cell_label("Duration") }}{% if r.decision_action %}{{ r.decision_action | duration_label }}{% else %}—{% endif %}</td>
-          <td data-label="Audit (process)">{{ cell_label("Audit (process)") }}{{ r.audit_verdict | verdict_badge }}</td>
-          <td class="mono desktop-only" data-label="Harness">{{ cell_label("Harness") }}{% if r.harness_version %}<a class="version-filter" data-version="{{ r.harness_version }}" href="{{ filter_href(harness_version=r.harness_version) }}">{{ r.harness_version }}</a>{% endif %}</td>
-          <td class="desktop-only" data-label="Sector">{{ cell_label("Sector") }}{{ r.primary_sector or '' }}</td>
-          <td class="desktop-only" data-label="Region">{{ cell_label("Region") }}{{ r.region or '' }}</td>
-          <td class="desktop-only" data-label="Tech">{{ cell_label("Tech") }}{{ r.tech_signal or '' }}</td>
+              {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
+          <td class="decision"{% if r.decision_action %} title="{{ r.decision_action }}"{% endif %}>{% if r.decision_action %}{{ r.decision_action | duration_label }}{% else %}—{% endif %}</td>
+          <td>{{ r.audit_verdict | verdict_badge }}</td>
+          <td class="mono">{% if r.harness_version %}<a class="version-filter" data-version="{{ r.harness_version }}" href="{{ filter_href(harness_version=r.harness_version) }}">{{ r.harness_version }}</a>{% endif %}</td>
+          <td>{{ r.primary_sector or '' }}</td>
+          <td>{{ r.region or '' }}</td>
+          <td>{{ r.tech_signal or '' }}</td>
         </tr>
         {% endfor %}
       {% else %}
@@ -74,5 +74,6 @@
       {% endif %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endif %}

@@ -32,17 +32,18 @@
   {% if report.error %}<p class="err">Error: {{ report.error }}</p>{% endif %}
 </div>
 <div class="card">
-  <table class="stack-table">
+  <div class="table-freeze">
+  <table>
     <thead><tr><th>MoS bucket</th><th>n</th><th>scored</th><th>hit rate</th><th>mean ret %</th></tr></thead>
     <tbody>
       {% if buckets %}
         {% for row in buckets %}
         <tr>
-          <td class="mono" data-label="MoS bucket">{{ row.name }}</td>
-          <td class="num" data-label="n">{{ row.n }}</td>
-          <td class="num" data-label="scored">{{ row.n_scored }}</td>
-          <td class="num" data-label="hit rate">{{ row.rate_s }}</td>
-          <td class="num" data-label="mean ret %">{{ row.mean_s }}</td>
+          <td class="mono">{{ row.name }}</td>
+          <td class="num">{{ row.n }}</td>
+          <td class="num">{{ row.n_scored }}</td>
+          <td class="num">{{ row.rate_s }}</td>
+          <td class="num">{{ row.mean_s }}</td>
         </tr>
         {% endfor %}
       {% else %}
@@ -50,5 +51,6 @@
       {% endif %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endblock %}

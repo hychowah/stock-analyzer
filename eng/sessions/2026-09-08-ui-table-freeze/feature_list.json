@@ -1,0 +1,34 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read plan: wrap-only freeze pane, lead-strip CSS, frozen-strip paint, delete stack-table cards",
+      "passes": false,
+      "verify": "issue.json names freeze pane and wrap-only callers"
+    },
+    {
+      "id": "freeze-module",
+      "description": ".table-freeze CSS at all widths: 2D pane, lead-strip sticky, opaque frozen cells only",
+      "passes": false,
+      "verify": "app.css has .table-freeze overflow auto max-height 70vh; no blanket th,td background; no .sticky-id; no stack-table phone restyle"
+    },
+    {
+      "id": "wrap-lists",
+      "description": "Wrap Runs, Portfolio positions, Analyze, Compares, Experiments, Calibration; drop stack-table, desktop-only, data-label, cell-label",
+      "passes": false,
+      "verify": "those templates have table-freeze; runs_table has no stack-table or sticky-id"
+    },
+    {
+      "id": "tests-readme",
+      "description": "Rewrite stack-table contracts to freeze pane; README matches",
+      "passes": false,
+      "verify": "tests assert table-freeze and forbid stack-table thead display none"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "python scripts/eng_verify.py"
+    }
+  ]
+}

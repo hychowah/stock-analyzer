@@ -18,7 +18,8 @@
 </div>
 <div class="card">
   {% if jobs %}
-  <table class="stack-table">
+  <div class="table-freeze">
+  <table>
     <thead>
       <tr>
         <th>Ticker</th>
@@ -31,15 +32,16 @@
     <tbody>
       {% for j in jobs %}
       <tr>
-        <td class="mono" data-label="Ticker"><a href="/compares/{{ j.compare_id }}">{{ j.ticker }}</a></td>
-        <td class="mono" data-label="A vs B">{{ j.session_a }} vs {{ j.session_b }}</td>
-        <td class="mono" data-label="As-of">{{ j.asof }}</td>
-        <td data-label="Status"><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
-        <td class="mono muted" data-label="Updated">{{ j.updated_at }}</td>
+        <td class="mono"><a href="/compares/{{ j.compare_id }}">{{ j.ticker }}</a></td>
+        <td class="mono">{{ j.session_a }} vs {{ j.session_b }}</td>
+        <td class="mono">{{ j.asof }}</td>
+        <td><span class="badge status-{{ j.status }}">{{ j.status }}</span></td>
+        <td class="mono muted">{{ j.updated_at }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
   {% elif not error %}
   <p class="muted">No compare packets yet. Select two same-ticker runs and hit Compare.</p>
   {% endif %}

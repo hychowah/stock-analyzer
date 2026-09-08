@@ -213,9 +213,10 @@ button:focus-visible {
 /*
  * Narrow layout contract (max-width: 1100px).
  * 1100px is main's max-width. One policy: Menu / Lab / Filters disclose,
- * stack-table cards, grid2, forms, 44px targets, 16px inputs, ticker
- * flex 1 1 100%, overflow-x on report/matrix tables, architecture-figure
- * frame, and the .chart-stage query. Desktop disclose hide is
+ * grid2, forms, 44px targets, 16px inputs, ticker flex 1 1 100%,
+ * overflow-x on report/matrix tables (.table-scroll), architecture-figure
+ * frame, and the .chart-stage query. Entity lists use .table-freeze at
+ * every width (not stacked cards). Desktop disclose hide is
  * min-width: 1101px. Do not reintroduce 800px. .chart-stage HEIGHT
  * values are ui-run-reading (Wave 4a).
  *
@@ -228,8 +229,7 @@ button:focus-visible {
  * (not display:contents). .header-nav is the outer row.
  * A disclose checkbox inside a form must not have name (would submit).
  */
-.disclose,
-.cell-label {
+.disclose {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -317,74 +317,6 @@ button:focus-visible {
     min-height: 44px;
   }
 }
-/*
- * .stack-table: opt-in one-entity-per-row lists (Runs, Portfolio positions,
- * Analyze jobs, Compares, Experiments, Calibration). Not for property-row
- * tables (Health, NAV summaries, run-detail valuation).
- * Phone (1100px): thead hidden (display:none, not clipped — sort links
- * must not be invisible tab stops); each tr is a card; td labeled from
- * data-label. td.desktop-only is hidden. td[colspan] stays one muted
- * message, no label. The wrapping page .card is not restyled.
- */
-@media (max-width: 1100px) {
-  .stack-table thead {
-    display: none;
-  }
-  .stack-table,
-  .stack-table tbody {
-    display: block;
-    width: 100%;
-  }
-  .stack-table tr {
-    display: block;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.5rem 0.75rem;
-    margin-bottom: 0.75rem;
-  }
-  .stack-table td {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 1rem;
-    border-bottom: 0;
-    padding: 0.28rem 0;
-    text-align: left;
-  }
-  .stack-table td.num {
-    text-align: left;
-  }
-  .stack-table td::before {
-    content: attr(data-label);
-    color: var(--muted);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    flex: 0 0 auto;
-  }
-  .stack-table td.pick {
-    justify-content: flex-start;
-    align-items: center;
-    min-height: 44px;
-    min-width: 44px;
-  }
-  .stack-table td.pick input {
-    width: 22px;
-    height: 22px;
-  }
-  .stack-table td.pick::before {
-    content: none;
-  }
-  .stack-table td.desktop-only {
-    display: none;
-  }
-  .stack-table td[colspan] {
-    display: block;
-  }
-  .stack-table td[colspan]::before {
-    content: none;
-  }
-}
 main {
   max-width: 1100px;
   margin: 1rem auto;
@@ -397,12 +329,6 @@ main {
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-@media (min-width: 1101px) {
-  .card:has(.runs-table),
-  .card:has(.stack-table) {
-    overflow-x: auto;
-  }
 }
 table {
   width: 100%;
@@ -653,6 +579,64 @@ td.pick {
 .table-scroll {
   overflow-x: auto;
   max-width: 100%;
+}
+/*
+ * .table-freeze: 2D viewport for entity lists (Runs, Portfolio positions,
+ * Analyze jobs, Compares, Experiments, Calibration). Ancestors must not
+ * overflow. 70vh is the height cap (not page-chrome math). Frozen cells
+ * (thead, first column, and the cell after .pick) are opaque so scrolled
+ * numbers do not show through. Unfrozen cells stay transparent so row
+ * hover still works. Callers wrap the table; they do not set left.
+ */
+.table-freeze {
+  --freeze-lead: 2.75rem;
+  overflow: auto;
+  max-width: 100%;
+  max-height: 70vh;
+}
+.table-freeze table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  min-width: 100%;
+}
+.table-freeze th,
+.table-freeze td {
+  white-space: nowrap;
+}
+.table-freeze thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
+  box-shadow: 0 1px 0 var(--border);
+}
+.table-freeze th:first-child,
+.table-freeze td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--card);
+}
+.table-freeze .pick {
+  width: var(--freeze-lead);
+  min-width: var(--freeze-lead);
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.table-freeze .pick + * {
+  position: sticky;
+  left: var(--freeze-lead);
+  z-index: 1;
+  background: var(--card);
+}
+.table-freeze thead th:first-child,
+.table-freeze thead .pick + * {
+  z-index: 3;
+}
+.table-freeze tbody tr:hover > :first-child,
+.table-freeze tbody tr:hover .pick + * {
+  background: var(--hover);
 }
 .report-toc {
   margin: 0 0 1rem;
@@ -1009,9 +993,18 @@ th.num a.sort {
     min-height: 44px;
   }
   .report-body,
-  .card > table:not(.stack-table) {
+  .card > table {
     overflow-x: auto;
     max-width: 100%;
+  }
+  .table-freeze thead a.sort {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .table-freeze td.pick input {
+    width: 22px;
+    height: 22px;
   }
   /* Fixed: the bar lives in the short filter card, so sticky bottom cannot follow the list. */
   #compare-bar.is-on {

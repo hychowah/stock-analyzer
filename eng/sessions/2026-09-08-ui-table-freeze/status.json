@@ -1,0 +1,9 @@
+{
+  "slug": "ui-table-freeze",
+  "session_key": "2026-09-08-ui-table-freeze",
+  "status": "verify_ready",
+  "created_at": "2026-09-08T01:31:38Z",
+  "updated_at": "2026-09-08T01:40:00Z",
+  "work_type": "W4",
+  "resume_hint": "Implemented and browser-verified. Propose commit; do not commit until the user agrees."
+}

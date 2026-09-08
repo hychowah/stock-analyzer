@@ -2,7 +2,6 @@
 {% block title %}Portfolio{% endblock %}
 {% block body_attrs %}data-live-reload="1"{% endblock %}
 {% block content %}
-{% macro cell_label(text) %}<span class="cell-label">{{ text }}</span>{% endmacro %}
 <div class="card">
   <h1>Portfolio{% if view.name %} · {{ view.name }}{% endif %}</h1>
   <p class="muted">
@@ -128,7 +127,8 @@
 
 {% if view.positions %}
 <div class="card">
-  <table class="stack-table">
+  <div class="table-freeze">
+  <table>
     <thead>
       <tr>
         <th>Symbol</th>
@@ -142,8 +142,7 @@
     <tbody>
       {% for p in view.positions %}
       <tr>
-        <td class="mono" data-label="Symbol">
-          {{ cell_label("Symbol") }}
+        <td class="mono">
           {% if p.run_id %}
             <a href="/runs/{{ p.run_id }}">{{ p.ib_symbol or p.ticker }}</a>
           {% else %}
@@ -154,38 +153,39 @@
           {% endif %}
         </td>
         {% if view.ib %}
-        <td class="muted desktop-only" data-label="Exch">{{ cell_label("Exch") }}{{ p.listing_exch or '' }}</td>
-        <td class="num desktop-only" data-label="Qty">{{ cell_label("Qty") }}{{ p.quantity | fmt_num(0) }}</td>
-        <td class="num desktop-only" data-label="IB Close">{{ cell_label("IB Close") }}{{ p.close_price | fmt_num }}</td>
-        <td class="num desktop-only" data-label="Value (base)">{{ cell_label("Value (base)") }}{{ p.value_base | fmt_num }}</td>
+        <td class="muted">{{ p.listing_exch or '' }}</td>
+        <td class="num">{{ p.quantity | fmt_num(0) }}</td>
+        <td class="num">{{ p.close_price | fmt_num }}</td>
+        <td class="num">{{ p.value_base | fmt_num }}</td>
         {% endif %}
         {% set ds = downside_pct(p.asof_price, p.fv_bear) %}
         {% set ds_title = downside_title(p.asof_price, p.fv_bear, 'as-of') %}
-        <td class="num" data-label="Weight">{{ cell_label("Weight") }}{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
-        <td class="num" data-label="As-of">{{ cell_label("As-of") }}{{ p.asof_price | fmt_num }}</td>
-        <td class="num quote-live" data-label="Live" data-quote-cell{% if p.quote_listing %} data-quote-symbol="{{ p.quote_listing }}" data-quote-source="{{ p.quote_listing_source or '' }}"{% endif %}>{{ cell_label("Live") }}—</td>
-        <td class="num" data-label="FV base">{{ cell_label("FV base") }}{{ p.fv_base | fmt_num }}</td>
-        <td class="num" data-label="MoS %">{{ cell_label("MoS %") }}{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
-        <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}" data-label="Downside"
+        <td class="num">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
+        <td class="num">{{ p.asof_price | fmt_num }}</td>
+        <td class="num quote-live" data-quote-cell{% if p.quote_listing %} data-quote-symbol="{{ p.quote_listing }}" data-quote-source="{{ p.quote_listing_source or '' }}"{% endif %}>—</td>
+        <td class="num">{{ p.fv_base | fmt_num }}</td>
+        <td class="num">{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
+        <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}"
             data-downside-pct
             data-vintage="as-of"
             {% if p.fv_bear is not none %}data-fv-bear="{{ p.fv_bear }}"{% endif %}
             {% if p.asof_price is not none %}data-asof-price="{{ p.asof_price }}"{% endif %}
-            {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ cell_label("Downside") }}{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
-        <td class="decision" data-label="Duration"{% if p.decision_action %} title="{{ p.decision_action }}"{% endif %}>{{ cell_label("Duration") }}{% if p.decision_action %}{{ p.decision_action | duration_label }}{% else %}—{% endif %}</td>
-        <td data-label="Audit">{{ cell_label("Audit") }}{{ p.audit_verdict | verdict_badge }}</td>
-        <td class="desktop-only" data-label="Tech">{{ cell_label("Tech") }}{{ p.tech_signal or '' }}</td>
-        <td class="mono muted" data-label="Session">{{ cell_label("Session") }}{{ p.session_key or '—' }}</td>
-        <td class="desktop-only" data-label="Sector">{{ cell_label("Sector") }}{{ p.primary_sector or '' }}</td>
+            {% if ds_title %}title="{{ ds_title }}"{% endif %}>{{ ds | fmt_num(1) }}<span class="downside-vintage muted"> as-of</span></td>
+        <td class="decision"{% if p.decision_action %} title="{{ p.decision_action }}"{% endif %}>{% if p.decision_action %}{{ p.decision_action | duration_label }}{% else %}—{% endif %}</td>
+        <td>{{ p.audit_verdict | verdict_badge }}</td>
+        <td>{{ p.tech_signal or '' }}</td>
+        <td class="mono muted">{{ p.session_key or '—' }}</td>
+        <td>{{ p.primary_sector or '' }}</td>
         {% if not p.run_id or (p.audit_verdict or '')|upper != 'PASS' %}
-        <td data-label="Analyze">{{ cell_label("Analyze") }}<a href="/analyze/new?ticker={{ (p.catalog_ticker or p.ib_symbol or p.ticker) | urlencode }}">Analyze</a></td>
+        <td><a href="/analyze/new?ticker={{ (p.catalog_ticker or p.ib_symbol or p.ticker) | urlencode }}">Analyze</a></td>
         {% else %}
-        <td class="muted" data-label="Analyze">{{ cell_label("Analyze") }}—</td>
+        <td class="muted">—</td>
         {% endif %}
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 </div>
 {% endif %}
 {% endblock %}

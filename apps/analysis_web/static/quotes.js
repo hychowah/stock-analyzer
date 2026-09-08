@@ -59,36 +59,18 @@
     });
   }
 
-  function takeCellLabel(el) {
-    var n = el.querySelector(":scope > .cell-label");
-    if (n) {
-      el.removeChild(n);
-    }
-    return n;
-  }
-
-  function restoreCellLabel(el, n) {
-    if (n) {
-      el.insertBefore(n, el.firstChild);
-    }
-  }
-
   function clearCell(el) {
-    var label = takeCellLabel(el);
     while (el.firstChild) {
       el.removeChild(el.firstChild);
     }
-    restoreCellLabel(el, label);
   }
 
   function fillCell(el, q) {
-    var label = takeCellLabel(el);
     el.classList.remove("chg-up", "chg-down");
     el.removeAttribute("aria-busy");
     clearCell(el);
     if (!q || q.error) {
       el.appendChild(document.createTextNode("—"));
-      restoreCellLabel(el, label);
       el.title = (q && q.error) || "no quote";
       return;
     }
@@ -131,7 +113,6 @@
     if (bits.length) {
       el.title = bits.join(" · ");
     }
-    restoreCellLabel(el, label);
   }
 
   function parseAttrNum(el, name) {
@@ -189,13 +170,11 @@
       var value = downsidePct(price, fvBear);
       el.setAttribute("data-vintage", vintage);
       el.classList.toggle("below-bear", value != null && value < 0);
-      var downLabel = takeCellLabel(el);
       el.textContent = fmtDownside(value);
       var vintageEl = document.createElement("span");
       vintageEl.className = "downside-vintage muted";
       vintageEl.textContent = " " + vintage;
       el.appendChild(vintageEl);
-      restoreCellLabel(el, downLabel);
       if (value == null || price == null || fvBear == null) {
         el.removeAttribute("title");
         continue;
@@ -220,18 +199,14 @@
       if (!s) {
         el.classList.remove("chg-up", "chg-down");
         el.removeAttribute("aria-busy");
-        var unstamped = takeCellLabel(el);
         el.textContent = "—";
-        restoreCellLabel(el, unstamped);
         el.title = "unstamped";
         continue;
       }
       if (requested && !requested[s]) {
         el.classList.remove("chg-up", "chg-down");
         el.removeAttribute("aria-busy");
-        var capped = takeCellLabel(el);
         el.textContent = "—";
-        restoreCellLabel(el, capped);
         el.title = "over quote cap";
         continue;
       }
@@ -256,9 +231,7 @@
         continue;
       }
       el.setAttribute("aria-busy", "true");
-      var loading = takeCellLabel(el);
       el.textContent = "…";
-      restoreCellLabel(el, loading);
     }
   }
 

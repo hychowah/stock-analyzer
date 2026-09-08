@@ -1,0 +1,35 @@
+{
+  "goal": "Entity lists are a spreadsheet freeze pane at every width: titles and lead identity stay; phone stays a table, not stacked cards",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not sticky the site header",
+    "Do not invent fair values",
+    "Do not add a .sticky-id class; callers wrap only"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    ".table-freeze is the only 2D scrollport (overflow auto, max-height 70vh) at all widths",
+    "Lead strip freeze: first column, plus .pick + next on Runs; no .sticky-id",
+    "Opaque paint only on frozen cells; unfrozen cells keep row hover",
+    "Phone stack-table card restyle and desktop-only column hide are gone",
+    "eng_verify.py passes",
+    "Browser: desktop and phone 390px pane-scroll, page not sideways"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests -q"
+  ]
+}

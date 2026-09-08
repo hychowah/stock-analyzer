@@ -201,8 +201,9 @@ class QuoteLiveChgCssTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('classList.remove("chg-up", "chg-down")', qjs)
-        self.assertIn("takeCellLabel", qjs)
-        self.assertIn("restoreCellLabel", qjs)
+        self.assertNotIn("takeCellLabel", qjs)
+        self.assertNotIn("restoreCellLabel", qjs)
+        self.assertNotIn("cell-label", qjs)
         self.assertIn('chg.className = "quote-chip"', qjs)
         self.assertIn("quote-chip", qjs)
         self.assertIn('aria-busy', qjs)
@@ -368,38 +369,71 @@ class PhoneChromeTests(unittest.TestCase):
         )
 
 
-class PhoneStackTableTests(unittest.TestCase):
-    def test_css_stack_table_contract(self):
+class FreezePaneTests(unittest.TestCase):
+    def test_css_freeze_pane_contract(self):
         css = (Path(__file__).resolve().parents[1] / "static" / "app.css").read_text(
             encoding="utf-8"
         )
-        self.assertIn(".stack-table", css)
-        self.assertIn("content: attr(data-label)", css)
-        self.assertIn("td.desktop-only", css)
-        self.assertIn("td[colspan]", css)
+        self.assertIn(".table-freeze", css)
+        self.assertIn("overflow: auto", _css_rule_bodies(css, ".table-freeze"))
+        self.assertIn("max-height: 70vh", _css_rule_bodies(css, ".table-freeze"))
+        self.assertIn("--freeze-lead", css)
+        self.assertIn("top: 0", _css_rule_bodies(css, ".table-freeze thead th"))
+        self.assertIn("left: 0", css)
+        self.assertIn(".pick + *", css)
+        self.assertIn("var(--freeze-lead)", css)
+        self.assertNotIn(".sticky-id", css)
+        self.assertNotIn(".stack-table", css)
+        self.assertNotIn(".cell-label", css)
+        self.assertNotIn("content: attr(data-label)", css)
+        self.assertNotIn("td.desktop-only", css)
+        self.assertNotIn(".card:has(.stack-table)", css)
+        self.assertNotIn(".card:has(.runs-table)", css)
+        freeze_bg = _css_rule_bodies(css, ".table-freeze th,\n.table-freeze td")
+        if not freeze_bg:
+            freeze_bg = _css_rule_bodies(css, ".table-freeze th, .table-freeze td")
+        self.assertNotIn("background", freeze_bg)
+        self.assertIn("white-space: nowrap", freeze_bg)
 
-    def test_runs_partial_labels(self):
+    def test_runs_partial_freeze(self):
         html = (
             Path(__file__).resolve().parents[1]
             / "templates"
             / "partials"
             / "runs_table.html"
         ).read_text(encoding="utf-8")
-        self.assertIn("stack-table", html)
-        self.assertIn('data-label="Ticker"', html)
-        self.assertIn('data-label="Live"', html)
-        self.assertIn('data-label="MoS"', html)
-        self.assertIn('data-label="Duration"', html)
-        self.assertIn('data-label="Audit (process)"', html)
-        self.assertIn("desktop-only", html)
-        self.assertIn('data-label="Harness"', html)
+        self.assertIn("table-freeze", html)
+        self.assertIn("runs-table", html)
         self.assertIn("compare-pick", html)
-
-    def test_health_template_not_stack_table(self):
-        html = (
-            Path(__file__).resolve().parents[1] / "templates" / "health.html"
-        ).read_text(encoding="utf-8")
         self.assertNotIn("stack-table", html)
+        self.assertNotIn("desktop-only", html)
+        self.assertNotIn("sticky-id", html)
+        self.assertNotIn("data-label", html)
+        self.assertNotIn("cell-label", html)
+
+    def test_entity_lists_wrapped(self):
+        root = Path(__file__).resolve().parents[1] / "templates"
+        for rel in (
+            "portfolio.html",
+            "analyze.html",
+            "compares.html",
+            "experiments.html",
+            "calibration.html",
+        ):
+            html = (root / rel).read_text(encoding="utf-8")
+            self.assertIn("table-freeze", html, rel)
+            self.assertNotIn("stack-table", html, rel)
+            self.assertNotIn("sticky-id", html, rel)
+
+    def test_health_and_run_detail_not_freeze_lists(self):
+        root = Path(__file__).resolve().parents[1] / "templates"
+        health = (root / "health.html").read_text(encoding="utf-8")
+        self.assertNotIn("stack-table", health)
+        self.assertNotIn("table-freeze", health)
+        detail = (root / "run_detail.html").read_text(encoding="utf-8")
+        self.assertNotIn("stack-table", detail)
+        self.assertNotIn("table-freeze", detail)
+        self.assertEqual(detail.count("table-scroll"), 3)
 
 
 class PhoneControlsTests(unittest.TestCase):
@@ -492,13 +526,10 @@ class A11yPhoneContractTests(unittest.TestCase):
         self.assertIn("color: var(--header-link)", _css_rule_bodies(css, ".header-tagline"))
         self.assertIn("color: var(--header-link)", _css_rule_bodies(css, ".header-lab a"))
 
-    def test_stack_table_thead_not_clipped(self):
+    def test_freeze_thead_not_hidden(self):
         css = self._css().replace("\r\n", "\n")
-        self.assertIn(".stack-table thead {\n    display: none;\n  }", css)
-        thead_at = css.index(".stack-table thead {")
-        thead_block = css[thead_at : css.index("}", thead_at)]
-        self.assertNotIn("clip:", thead_block)
-        self.assertNotIn("overflow: hidden", thead_block)
+        self.assertNotIn(".stack-table thead", css)
+        self.assertNotIn("display: none", _css_rule_bodies(css, ".table-freeze thead th"))
 
     def test_runs_js_list_replacement_contract(self):
         js = (Path(__file__).resolve().parents[1] / "static" / "runs.js").read_text(
@@ -540,7 +571,8 @@ class A11yPhoneContractTests(unittest.TestCase):
         self.assertIn("data-runs-status", partial)
         self.assertIn('aria-label="Select for compare"', partial)
         self.assertIn("data-session-key", partial)
-        self.assertIn('class="cell-label"', partial)
+        self.assertIn("table-freeze", partial)
+        self.assertNotIn('class="cell-label"', partial)
         self.assertNotIn('td.setAttribute', partial)
 
     def test_mermaid_control_icons_and_architecture_frame(self):
@@ -587,16 +619,17 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"500", r.content)
         self.assertIn(b"Harness", r.content)
         self.assertIn(b"2.5.0", r.content)
-        self.assertIn(b"stack-table", r.content)
+        self.assertIn(b"table-freeze", r.content)
+        self.assertNotIn(b"stack-table", r.content)
         self.assertNotIn(b"Analyze running", r.content)
-        self.assertIn(b'data-label="Ticker"', r.content)
+        self.assertIn(b'data-sort="ticker"', r.content)
         self.assertIn(b'id="runs-status"', r.content)
         self.assertIn(b'id="runs-flash"', r.content)
         self.assertLess(r.content.find(b'id="runs-status"'), r.content.find(b'id="runs-results"'))
         self.assertIn(b'data-session-key=', r.content)
         self.assertIn(b'aria-label="Select for compare"', r.content)
-        self.assertIn(b'class="cell-label"', r.content)
-        self.assertIn(b">Ticker</span>", r.content)
+        self.assertNotIn(b'class="cell-label"', r.content)
+        self.assertNotIn(b'data-label="Ticker"', r.content)
         self.assertNotIn(b'aria-label="MoS"', r.content)
         self.assertNotIn(b'aria-label="Ticker"', r.content)
 
@@ -1099,15 +1132,11 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"Audit (process)", r.content)
         self.assertRegex(
             r.text,
-            r'data-label="Duration"[^>]*>\s*<span class="cell-label">Duration</span>\s*Do not initiate\s*<',
-        )
-        self.assertNotRegex(
-            r.text,
-            r'data-label="Duration"[^>]*>.*<span class="badge pass">',
+            r'<td class="decision"[^>]*>Do not initiate',
         )
         self.assertRegex(
             r.text,
-            r'data-label="Audit \(process\)"[^>]*>\s*<span class="cell-label">Audit \(process\)</span>\s*<span class="badge pass">',
+            r"<td>\s*<span class=\"badge pass\">",
         )
         self.assertIn(b'data-sort="asof_downside_pct"', r.content)
         self.assertIn(b'href="/runs/research:META:2026-08-03"', r.content)
@@ -1337,9 +1366,10 @@ class AnalysisWebQueryTests(unittest.TestCase):
         self.assertNotIn(b"Stock Research", r.content)
         self.assertNotIn(b"skip-link", r.content)
         self.assertIn(b"runs-table", r.content)
-        self.assertIn(b"stack-table", r.content)
+        self.assertIn(b"table-freeze", r.content)
+        self.assertNotIn(b"stack-table", r.content)
         self.assertIn(b"compare-pick", r.content)
-        self.assertIn(b'data-label="Ticker"', r.content)
+        self.assertNotIn(b'data-label="Ticker"', r.content)
         self.assertIn(b"data-runs-status", r.content)
         self.assertNotIn(b'id="runs-status"', r.content)
         self.assertNotIn(b"aria-live", r.content)

@@ -55,8 +55,9 @@ class HistoryHttpTests(unittest.TestCase):
         port.local_dir = cfg2.local_dir  # type: ignore[assignment]
 
         self._app = app_mod.create_app()
+        self._backend = FakeHistoryBackend(_bars())
         self._app.state.history_service = HistoryService(
-            FakeHistoryBackend(_bars()), ttl_sec=60
+            self._backend, ttl_sec=60
         )
         from fastapi.testclient import TestClient
 
@@ -94,6 +95,7 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertNotIn(b"live_nav.js", r.content)
 
     def test_new_stores_fork_and_editor(self):
+        self._backend.calls.clear()
         r = self.client.post(
             "/portfolio/histories/new",
             data={"name": "Missed AAPL"},
@@ -105,6 +107,9 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertNotIn(b"live_nav.js", r.content)
         self.assertIn(b"alt_history.js", r.content)
         self.assertIn(b"META", r.content)
+        self.assertIn(b'<label>Qty', r.content)
+        self.assertNotIn(b'sr-only', r.content)
+        self.assertEqual(self._backend.calls, [])
 
     def test_unknown_id_404(self):
         r = self.client.get("/portfolio/histories/9999")
@@ -147,7 +152,7 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertIn(b"buy AAPL", buy.content)
         self.assertNotIn(b"live_nav.js", buy.content)
 
-        api = self.client.get(f"/api/portfolio/histories/{hid}")
+        api = self.client.get(f"/api/portfolio/histories/{hid}/path")
         self.assertEqual(api.status_code, 200)
         body = api.json()
         self.assertIsNotNone(body["delta"])
@@ -156,6 +161,7 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertAlmostEqual(body["delta"], last["delta"], places=5)
         self.assertAlmostEqual(body["alt_nav"], last["alt_nav"], places=5)
         self.assertAlmostEqual(body["actual_nav"], last["actual_nav"], places=5)
+        self.assertNotIn("held", body)
 
         html = buy.text
         m = re.search(r'id="hist-delta"[^>]*>([^<]+)', html)
@@ -241,6 +247,78 @@ class HistoryHttpTests(unittest.TestCase):
         )
         self.assertEqual(sell.status_code, 200)
         self.assertIn(b"sell META", sell.content)
-        api = self.client.get(f"/api/portfolio/histories/{hid}")
+        api = self.client.get(f"/api/portfolio/histories/{hid}/path")
         self.assertEqual(api.status_code, 200)
         self.assertIsNotNone(api.json()["delta"])
+
+    def test_views_are_split_and_date_skips_path(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Split"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        self._backend.calls.clear()
+        html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
+        self.assertEqual(html.status_code, 200)
+        self.assertIn(b"Holdings on this day", html.content)
+        self.assertEqual(self._backend.calls, [])
+
+        held = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        )
+        self.assertEqual(held.status_code, 200)
+        body = held.json()
+        self.assertIn("held", body)
+        self.assertNotIn("path", body)
+        self.assertEqual(body["view_date"], "2026-03-31")
+        self.assertTrue(any(row["listing"] == "META" for row in body["held"]))
+        ranges = {key for _sym, key in self._backend.calls}
+        self.assertNotIn("max", ranges)
+
+        one = self.client.get(f"/api/portfolio/histories/{hid}?date=2026-03-31")
+        self.assertEqual(one.status_code, 200)
+        one_body = one.json()
+        self.assertIn("held", one_body)
+        self.assertNotIn("path", one_body)
+        self.assertNotIn("delta", one_body)
+
+        path = self.client.get(f"/api/portfolio/histories/{hid}/path")
+        self.assertEqual(path.status_code, 200)
+        pbody = path.json()
+        self.assertIn("path", pbody)
+        self.assertNotIn("held", pbody)
+        self.assertIsNotNone(pbody["delta"])
+        svg = self.client.get(f"/api/portfolio/histories/{hid}/path.svg")
+        self.assertEqual(svg.status_code, 200)
+        self.assertIn("image/svg+xml", svg.headers.get("content-type", ""))
+
+    def test_partial_sell_leaves_remainder(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Partial"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        before = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        ).json()
+        meta = next(row for row in before["held"] if row["listing"] == "META")
+        self.assertGreater(meta["qty"], 1)
+        sell = self.client.post(
+            f"/portfolio/histories/{hid}/decisions",
+            data={
+                "side": "sell",
+                "listing": "META",
+                "as_of": "2026-03-31",
+                "quantity": "1",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(sell.status_code, 200)
+        self.assertIn(b"sell META", sell.content)
+        after = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        ).json()
+        meta_after = next(row for row in after["held"] if row["listing"] == "META")
+        self.assertAlmostEqual(meta_after["qty"], meta["qty"] - 1, places=5)

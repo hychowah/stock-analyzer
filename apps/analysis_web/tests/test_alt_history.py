@@ -8,6 +8,8 @@ from pathlib import Path
 
 from packages.catalog_api.client import CatalogApi
 
+from datetime import date, timedelta
+
 from apps.analysis_web.services.alt_history import (
     PricedFill,
     ReplayError,
@@ -17,6 +19,8 @@ from apps.analysis_web.services.alt_history import (
     drop_hyp_fill,
     history_from_ib,
     overlay_fills,
+    path_dates,
+    prices_on,
     resolve_buy,
     resolve_sell,
     replay,
@@ -437,6 +441,32 @@ class CopyLedgerTests(unittest.TestCase):
             td.cleanup()
 
 
+def _naive_path(hist, bars, until):
+    points = []
+    for day in path_dates(bars, hist.fork_date, until):
+        row = compare_at(hist, day, prices_on(bars, day))
+        points.append(
+            {
+                "t": day,
+                "actual_nav": row["actual_nav"],
+                "alt_nav": row["alt_nav"],
+                "delta": row["delta"],
+            }
+        )
+    return points
+
+
+def _daily_bars(start: str, end: str, px: float) -> tuple[PriceBar, ...]:
+    d = date.fromisoformat(start)
+    last = date.fromisoformat(end)
+    out: list[PriceBar] = []
+    while d <= last:
+        if d.weekday() < 5:
+            out.append(PriceBar(d.isoformat(), px))
+        d += timedelta(days=1)
+    return tuple(out)
+
+
 class ComparePathTests(unittest.TestCase):
     def setUp(self):
         self.ib = _ib()
@@ -456,6 +486,29 @@ class ComparePathTests(unittest.TestCase):
         self.assertAlmostEqual(last["alt_nav"], today["alt_nav"], places=5)
         self.assertAlmostEqual(last["actual_nav"], today["actual_nav"], places=5)
         self.assertNotAlmostEqual(today["alt_nav"], today["actual_nav"], places=5)
+
+    def test_walk_matches_per_day_restart_and_prefix_overlay(self):
+        hist = with_hyp_fill(history_from_ib(self.ib, name="t"), _fill())
+        bars = {
+            "META": _daily_bars("2026-01-10", "2026-04-01", 50.0),
+            "0700.HK": _daily_bars("2026-01-10", "2026-04-01", 10.0),
+            "AAPL": _daily_bars("2026-01-10", "2026-04-01", 200.0),
+        }
+        until = "2026-04-01"
+        walked = compare_path(hist, bars, until=until)
+        naive = _naive_path(hist, bars, until)
+        self.assertEqual(len(walked), len(naive))
+        self.assertGreater(len(walked), 20)
+        for got, want in zip(walked, naive):
+            self.assertEqual(got["t"], want["t"])
+            self.assertAlmostEqual(got["actual_nav"], want["actual_nav"], places=5)
+            self.assertAlmostEqual(got["alt_nav"], want["alt_nav"], places=5)
+            self.assertAlmostEqual(got["delta"], want["delta"], places=5)
+        for day in (hist.fork_date, "2026-03-31", until):
+            point = next(p for p in walked if p["t"] == day)
+            row = compare_at(hist, day, prices_on(bars, day))
+            self.assertAlmostEqual(point["alt_nav"], row["alt_nav"], places=5)
+            self.assertAlmostEqual(point["actual_nav"], row["actual_nav"], places=5)
 
 
 class StoreTests(unittest.TestCase):

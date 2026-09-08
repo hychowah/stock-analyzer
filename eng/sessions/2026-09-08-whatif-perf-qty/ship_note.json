@@ -1,0 +1,6 @@
+{
+  "session_key": "2026-09-08-whatif-perf-qty",
+  "status": "complete",
+  "summary": "What-if copy and date holdings no longer rebuild the NAV path. Editor HTML is the paper book; holdings-as-of and the path are separate GETs. Sell quantity is visible; partial sells leave remainder. compare_path is one walk. Live NAV unchanged.",
+  "commit_subject": "Speed what-if copy and date holdings; sell takes a quantity"
+}

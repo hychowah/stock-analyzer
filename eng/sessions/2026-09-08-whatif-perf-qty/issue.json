@@ -1,0 +1,36 @@
+{
+  "goal": "What-if copy and date-holdings must be fast; sell must take a visible quantity, not the whole lot.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not call Live NAV from what-if",
+    "Do not persist derived NAV paths",
+    "Do not change overlay clip / replay identity"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Copy POST does not fetch Yahoo or compute the NAV path",
+    "Show holdings on a date does not rebuild compare_path",
+    "compare_path is one walk; points match compare_at",
+    "Sell quantity is visible; partial sell leaves remainder",
+    "eng_verify.py passes",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_mark_book.py apps/analysis_web/tests/test_book_state.py -q",
+    "python scripts/eng_verify.py"
+  ]
+}

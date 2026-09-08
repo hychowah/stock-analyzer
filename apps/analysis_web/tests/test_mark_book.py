@@ -76,3 +76,5 @@ class CloseOnTests(unittest.TestCase):
         self.assertAlmostEqual(close_on(bars, "2026-03-31").close, 50.0, places=5)  # type: ignore[union-attr]
         self.assertAlmostEqual(close_on(bars, "2026-04-01").close, 50.0, places=5)  # type: ignore[union-attr]
         self.assertIsNone(close_on(bars, "2026-03-01"))
+        self.assertAlmostEqual(close_on(bars, "2026-04-02").close, 52.0, places=5)  # type: ignore[union-attr]
+        self.assertIsNone(close_on((), "2026-03-31"))

@@ -421,6 +421,48 @@ def prices_on(
     return out
 
 
+def _apply_through(
+    state: BookState,
+    fills: tuple[PricedFill, ...] | list[PricedFill],
+    index: int,
+    day: str,
+) -> tuple[BookState, int]:
+    batch: list[PricedFill] = []
+    n = len(fills)
+    while index < n and fills[index].as_of <= day:
+        batch.append(fills[index])
+        index += 1
+    if batch:
+        state = replay(state, batch)
+    return state, index
+
+
+def _pointer_prices(
+    bars_by_listing: dict[str, tuple[PriceBar, ...] | list[PriceBar]],
+    days: list[str],
+) -> list[dict[str, float]]:
+    listings = list(bars_by_listing.keys())
+    series = [bars_by_listing[k] for k in listings]
+    idxs = [0] * len(listings)
+    last: dict[str, float] = {}
+    out: list[dict[str, float]] = []
+    for day in days:
+        for j, listing in enumerate(listings):
+            bars = series[j]
+            i = idxs[j]
+            n = len(bars)
+            while i < n:
+                t = (bars[i].t or "")[:10]
+                if t and t <= day:
+                    last[listing.strip().upper()] = bars[i].close
+                    i += 1
+                else:
+                    break
+            idxs[j] = i
+        out.append(dict(last))
+    return out
+
+
 def mark_actual(hist: History, date: str, prices: dict[str, float]) -> MarkedNav:
     return mark_book(actual_state(hist, date), prices)
 
@@ -467,18 +509,35 @@ def compare_path(
     bars_by_listing: dict[str, tuple[PriceBar, ...] | list[PriceBar]],
     *,
     until: str | None = None,
+    since: str | None = None,
 ) -> list[dict[str, Any]]:
+    """NAV path as one walk: overlay once, two running books, last close ≤ day.
+
+    ``compare_at`` is the single-day identity check, not this algorithm.
+    """
     end = _day(until or utc_today())
+    start = _day(since or hist.fork_date)
+    days = path_dates(bars_by_listing, start, end)
+    overlay = overlay_fills(hist.seed, hist.fills)
+    real = tuple(sorted(hist.real_fills(), key=_fill_order))
+    alt_fills = tuple(sorted(overlay, key=_fill_order))
+    actual = hist.seed
+    alt = hist.seed
+    i_real = 0
+    i_alt = 0
+    price_days = _pointer_prices(bars_by_listing, days)
     points: list[dict[str, Any]] = []
-    for day in path_dates(bars_by_listing, hist.fork_date, end):
-        prices = prices_on(bars_by_listing, day)
-        row = compare_at(hist, day, prices)
+    for day, prices in zip(days, price_days):
+        actual, i_real = _apply_through(actual, real, i_real, day)
+        alt, i_alt = _apply_through(alt, alt_fills, i_alt, day)
+        a = mark_book(actual, prices)
+        b = mark_book(alt, prices)
         points.append(
             {
                 "t": day,
-                "actual_nav": row["actual_nav"],
-                "alt_nav": row["alt_nav"],
-                "delta": row["delta"],
+                "actual_nav": a.nav,
+                "alt_nav": b.nav,
+                "delta": b.nav - a.nav,
             }
         )
     return points

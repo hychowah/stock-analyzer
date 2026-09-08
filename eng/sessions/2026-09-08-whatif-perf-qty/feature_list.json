@@ -1,0 +1,22 @@
+{
+  "features": [
+    {
+      "id": "path-walk",
+      "description": "Incremental compare_path (one overlay, two running books, pointer closes) + bisect close_on + range_for_span in price_history; points match compare_at",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_mark_book.py apps/analysis_web/tests/test_price_history.py -q"
+    },
+    {
+      "id": "three-views",
+      "description": "paper_on / holdings / path are separate; HTML editor GET has no Yahoo; date change is holdings-only; GET /api/.../{id} is holdings-as-of",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_alt_history.py -q"
+    },
+    {
+      "id": "visible-qty",
+      "description": "Sell and buy quantity visible on the editor; partial sell HTTP leaves remainder",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_histories.py -q"
+    }
+  ]
+}

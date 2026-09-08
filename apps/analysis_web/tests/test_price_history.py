@@ -18,6 +18,7 @@ from apps.analysis_web.services.price_history import (
     bars_from_closes,
     parse_history_symbol,
     parse_range,
+    range_for_span,
 )
 from apps.analysis_web.services.yahoo_bars import bar_date, close_series
 
@@ -73,6 +74,19 @@ class ParseAndBarsTests(unittest.TestCase):
         bars = bars_from_closes(rows)
         self.assertEqual(bars[0].t, "2026-01-02")
         self.assertEqual(bars[0].close, 10.5)
+
+    def test_bars_from_closes_sorts_by_day(self):
+        bars = bars_from_closes(
+            [(30.0, "2026-03-03"), (10.0, "2026-03-01"), (20.0, "2026-03-02")]
+        )
+        self.assertEqual([b.t for b in bars], ["2026-03-01", "2026-03-02", "2026-03-03"])
+
+    def test_range_for_span_is_trailing_from_end(self):
+        self.assertEqual(range_for_span("2026-01-10", "2026-09-08"), "1y")
+        self.assertEqual(range_for_span("2024-10-01", "2026-09-08"), "2y")
+        self.assertEqual(range_for_span("2022-01-01", "2026-09-08"), "5y")
+        self.assertEqual(range_for_span("2018-01-01", "2026-09-08"), "max")
+        self.assertEqual(range_for_span("2018-01-01", "2018-06-01"), "1y")
 
 
 class FakeBackendAndCacheTests(unittest.TestCase):

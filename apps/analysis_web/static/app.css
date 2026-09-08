@@ -1091,6 +1091,12 @@ th.num a.sort {
   align-items: center;
   gap: 0.35rem;
 }
+.hist-sell-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+}
 .hist-sell-row input[type="number"] {
   width: 5.5rem;
 }

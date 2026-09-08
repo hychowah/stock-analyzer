@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "print-listing-lots",
+      "description": "Join emits print_listing + stmt_fx. Lots are the marker input. Template uses print_listing only. Print listing is the holding market, not a cross-listed catalog ticker.",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_live_nav.py::PrintListingJoinTests -q"
+    },
+    {
+      "id": "marked-book-api",
+      "description": "mark_live_nav(lots, …) + GET /api/portfolio/live-nav (chunks of 50, quotes + rows) + FakeQuoteBackend tests",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_live_nav.py -q"
+    },
+    {
+      "id": "one-portfolio-poll",
+      "description": "quotes.js opt-out + quotes-applied; live_nav.js is the only fetch on /portfolio; status has one writer",
+      "passes": true,
+      "verify": "pytest apps/analysis_web/tests/test_live_nav.py::QuotesJsOptOutTests -q; Playwright :8773 no /api/quotes on /portfolio"
+    },
+    {
+      "id": "docs-verify",
+      "description": "README + ARCHITECTURE.md; eng_verify; browser smoke (no /api/quotes on portfolio; Runs still polls)",
+      "passes": true,
+      "verify": "python3 scripts/eng_verify.py PASS 877; Playwright :8773 Live NAV 1,984,732.69 HKD live, Runs GET /api/quotes"
+    }
+  ]
+}

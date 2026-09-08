@@ -33,7 +33,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/artifact?run_id=…&path=reports/…` | Report view (markdown title + TOC + sibling `.md` links on `/artifact`; `raw=1` for source) |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
-| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs; Live/Downside/Duration match Runs; Change-in-NAV waterfall + MTM bars |
+| `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs. Header is Live NAV + day P/L (not statement period or ending NAV). One poll (`/api/portfolio/live-nav`) paints Live NAV, Live cells, live value, and Downside. Does not call `/api/quotes`. Change-in-NAV waterfall + MTM bars |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`). List does not SSE-reload. |
 | `/analyze/new` | Start analysis (ticker + as-of + harness first; advanced in details). Busy stays on the form. |
 | `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
@@ -47,11 +47,12 @@ Or: `bash apps/analysis_web/init.sh`
 | `/compare-artifact?compare_id=…&path=…` | Allowlisted packet file (markdown rendered) |
 | `/api/compares` | GET list / POST start (`run_id_a`, `run_id_b`) |
 | `/api/compares/{compare_id}` | JSON job status |
-| `/api/portfolio` | JSON portfolio summary + positions + `ib` + `performance` |
+| `/api/portfolio` | JSON portfolio summary + positions + `ib` + `performance` (statement join; no Yahoo) |
+| `/api/portfolio/live-nav` | Statement NAV adjusted by holdings × Yahoo last print. Aggregates + `quotes` (QuotePrint JSON) + per-lot `rows`. Display math; FX is the statement Forex close |
 | `/health` | Catalog health plus the git SHA this UI process booted at |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
-| `/api/quotes` | Last print for catalog `quote_listing` values. Chart-name repair is in `yahoo_bars`; rows stay keyed by the request. |
+| `/api/quotes` | Last print for catalog `quote_listing` values (Runs and run detail). Chart-name repair is in `yahoo_bars`; rows stay keyed by the request. Portfolio does not call this. |
 | `/api/price-history` | Daily closes for one `quote_listing` (`symbol`, `range=1m\|3m\|6m\|1y\|2y\|5y\|max`) |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
 | `/api/fingerprint` | Poll fallback token for live reload |
@@ -80,6 +81,8 @@ The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **La
 | `limit` | Page size, 1–200; default 50 is omitted from the query string |
 
 No-JS: the GET form still submits. Invalid ranges (min > max, bad date) return HTTP 400. Unknown ticker / prefix returns HTTP 404 and an abort card.
+
+Portfolio live marks (`data-quote-poll="0"` + `static/live_nav.js`): one GET `/api/portfolio/live-nav`; `quotes.js` paints Live/Downside from `quotes-applied` and does not fetch `/api/quotes` on that page.
 
 Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s fingerprint poll if SSE is unhealthy. On the runs page (`data-live-partial="1"`) a catalog change refetches `/fragments/runs` instead of a full reload, so an in-progress ticker search is not wiped. Analyze and Compare list/detail pages do not opt in; a running job patches status in JS and uses `<meta refresh=15>`.
 

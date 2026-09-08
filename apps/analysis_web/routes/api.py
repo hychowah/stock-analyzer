@@ -152,6 +152,73 @@ def api_portfolio(
     return active_portfolio_view(api, pass_only=po)
 
 
+def _empty_live_nav(*, ttl_sec: int, error: str | None = None) -> dict[str, Any]:
+    return {
+        "error": error,
+        "base_currency": "",
+        "statement_nav": None,
+        "live_nav": None,
+        "delta": None,
+        "delta_pct": None,
+        "day_pl": None,
+        "cash_statement": None,
+        "stock_live": None,
+        "vintage": None,
+        "fx_vintage": "statement",
+        "period_to": None,
+        "n_positions": 0,
+        "n_repriced": 0,
+        "n_unquoted": 0,
+        "as_of": None,
+        "ttl_sec": ttl_sec,
+        "quotes": [],
+        "rows": [],
+    }
+
+
+@router.get("/portfolio/live-nav")
+def api_portfolio_live_nav(
+    pass_only: str = "0",
+    api: CatalogApi = Depends(get_api),
+    svc: QuoteService = Depends(get_quote_service),
+) -> dict[str, Any]:
+    """Statement NAV adjusted by holdings × Yahoo last print. Display math."""
+    from apps.analysis_web.services.live_nav import (
+        fetch_prints,
+        lots_from_view,
+        mark_live_nav,
+    )
+    from apps.analysis_web.services.portfolio import active_portfolio_view
+
+    po = pass_only not in ("", "0", "false", "False")
+    view = active_portfolio_view(api, pass_only=po)
+    if view.get("error"):
+        return _empty_live_nav(ttl_sec=svc.ttl_sec, error=str(view["error"]))
+    lots = lots_from_view(view)
+    listings = [lot.listing for lot in lots if lot.listing]
+    prints = fetch_prints(svc.get_many, listings)
+    by = {q.symbol.upper(): q for q in prints}
+    ib = view.get("ib") or {}
+    ending = ib.get("ending_nav")
+    try:
+        ending_nav = float(ending) if ending is not None else None
+    except (TypeError, ValueError):
+        ending_nav = None
+    cash = ib.get("cash_value")
+    try:
+        cash_f = float(cash) if cash is not None else None
+    except (TypeError, ValueError):
+        cash_f = None
+    marked = mark_live_nav(lots, by, ending_nav=ending_nav, cash=cash_f)
+    marked["base_currency"] = (
+        str(view.get("currency") or ib.get("base_currency") or "")
+    )
+    marked["period_to"] = ib.get("period_to")
+    marked["ttl_sec"] = svc.ttl_sec
+    marked["error"] = None
+    return marked
+
+
 class CompareStartBody(BaseModel):
     run_id_a: str = Field(..., min_length=1)
     run_id_b: str = Field(..., min_length=1)

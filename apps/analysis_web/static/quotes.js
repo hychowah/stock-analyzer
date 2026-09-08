@@ -1,8 +1,10 @@
 /**
- * Fill [data-quote-cell][data-quote-symbol] from GET /api/quotes.
- * After prints land, recompute [data-downside-pct] from live (else as-of) vs data-fv-bear.
- * data-quote-symbol is catalog quote_listing; chart-name repair is server-side.
- * Rebind after #runs-results swap via quotes-refresh. Pause when the tab is hidden.
+ * Fill [data-quote-cell][data-quote-symbol] from GET /api/quotes, or from
+ * a quotes-applied event (portfolio hands a quotes array; this file does
+ * not fetch there). After prints land, recompute [data-downside-pct].
+ * data-quote-symbol is the listing the server used for Yahoo.
+ * Rebind after #runs-results swap via quotes-refresh. Pause when hidden.
+ * body[data-quote-poll="0"] disables this file's poll and #quote-status.
  */
 (function () {
   "use strict";
@@ -11,6 +13,11 @@
   var DEFAULT_TTL_MS = 120000;
   var timer = null;
   var ttlMs = DEFAULT_TTL_MS;
+
+  function pollOptedOut() {
+    var b = document.body;
+    return !!(b && b.getAttribute("data-quote-poll") === "0");
+  }
 
   function uniqueSymbols() {
     var nodes = document.querySelectorAll("[data-quote-symbol]");
@@ -236,6 +243,9 @@
   }
 
   function poll() {
+    if (pollOptedOut()) {
+      return;
+    }
     if (document.visibilityState !== "visible") {
       return;
     }
@@ -298,14 +308,27 @@
   }
 
   function start() {
+    if (pollOptedOut()) {
+      return;
+    }
     poll();
     armTimer();
   }
 
+  document.addEventListener("quotes-applied", function (ev) {
+    var detail = (ev && ev.detail) || {};
+    applyQuotes(detail.quotes, detail.requested || null);
+  });
   document.addEventListener("quotes-refresh", function () {
+    if (pollOptedOut()) {
+      return;
+    }
     poll();
   });
   document.addEventListener("visibilitychange", function () {
+    if (pollOptedOut()) {
+      return;
+    }
     if (document.visibilityState === "visible") {
       poll();
     }

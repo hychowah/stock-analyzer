@@ -425,9 +425,11 @@ class IbPortfolioHttpTests(unittest.TestCase):
         self.assertIn(b"left:50%", r.content)
         self.assertIn(b"right:50%", r.content)
         self.assertIn(b"Mark-to-market P/L", r.content)
-        self.assertIn(b"12.50%", r.content)
         self.assertIn(b">700<", r.content)
-        self.assertIn(b"union of every imported statement", r.content)
+        self.assertIn(b'id="live-nav"', r.content)
+        self.assertNotIn(b">Ending NAV<", r.content)
+        self.assertNotIn(b">Period<", r.content)
+        self.assertNotIn(b">IB TWR<", r.content)
         self.assertNotIn(b"should-not-appear", r.content)
         self.assertNotIn(b"portfolio_chart.js", r.content)
 

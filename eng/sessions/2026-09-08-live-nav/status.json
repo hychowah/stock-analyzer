@@ -1,0 +1,9 @@
+{
+  "slug": "live-nav",
+  "session_key": "2026-09-08-live-nav",
+  "status": "verified",
+  "created_at": "2026-09-08T06:21:44Z",
+  "updated_at": "2026-09-08T06:45:00Z",
+  "work_type": "W4",
+  "resume_hint": "Live NAV shipped on /portfolio. Restart the UI process to pick up the code. Do not git commit until the user agrees."
+}

@@ -1,0 +1,34 @@
+{
+  "goal": "Live NAV on /portfolio from holdings x Yahoo last print; one marked-book poll",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not stream IB TWS, reprice FX live, invent TWR, or store marks",
+    "Do not bump harness/VERSION (UI only)"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "print_listing is the holding market (holding_print_listing); catalog overlay is research-only; uncovered 700+SEHK quotes as 0700.HK; HY9H stays HY9H not 000660.KS",
+    "mark_live_nav(lots, quotes) identity: META 55 vs stmt 50 at FX 8 → live NAV 5900 on fixture ending 5500",
+    "GET /api/portfolio/live-nav returns aggregates + quotes + rows; /api/portfolio stays statement-only",
+    "/portfolio sets data-quote-poll=0; live_nav.js polls live-nav; quotes.js does not fetch /api/quotes there",
+    "ARCHITECTURE.md and README document Live NAV as display math",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_live_nav.py apps/analysis_web/tests/test_portfolio.py apps/analysis_web/tests/test_quotes.py -q"
+  ]
+}

@@ -1,7 +1,9 @@
 """Last-print quotes for the analysis UI.
 
-Callers pass catalog `quote_listing` strings. Chart-name repair lives in
-yahoo_bars. This module does not know catalog identity, FV, or MoS.
+Callers pass Yahoo listing strings: catalog ``quote_listing`` on Runs and
+``/api/quotes``, holding ``print_listing`` on portfolio live-nav. Chart-name
+repair lives in yahoo_bars. This module does not know catalog identity, FV,
+or MoS.
 LookupBackend stays a Mode A existence check — do not merge the two.
 
 YahooPrintBackend returns a last available print: last 1-minute bar when

@@ -21,10 +21,15 @@ from apps.analysis_web.services.ib_statement import IbBook, IbStatement
 DEFAULT_BOOK_NAME = "portfolio.json"
 
 # Overlay only. The book always shows ib_symbol.
-_CATALOG_OVERRIDES = {
-    "HY9H": "000660.KS",
+# Suffix-style Yahoo forms may be used as print listings. Cross-listings
+# (GDS/ADR → local common) are catalog-only — never a last print of the lot.
+_PRINT_OVERRIDES = {
     "MC": "MC.PA",
     "ADYEN": "ADYEN",
+}
+_CATALOG_OVERRIDES = {
+    **_PRINT_OVERRIDES,
+    "HY9H": "000660.KS",
 }
 _US_EXCHANGES = frozenset({"NYSE", "NASDAQ", "ARCA", "AMEX", "BATS", "NYSEARCA"})
 
@@ -52,11 +57,33 @@ def book_path(*, filename: str = DEFAULT_BOOK_NAME) -> Path:
 
 def map_catalog_ticker(ib_symbol: str, listing_exch: str | None = None) -> str | None:
     """View-time overlay: IB symbol + listing → catalog ticker. Not stored."""
+    return _map_ticker(ib_symbol, listing_exch, overrides=_CATALOG_OVERRIDES)
+
+
+def holding_print_listing(ib_symbol: str, listing_exch: str | None = None) -> str | None:
+    """Yahoo listing for this holding's market. No GDS/local catalog overlay.
+
+    Unknown exchanges keep the IB symbol so a Frankfurt GDS is not marked
+    with the Korean common's KRW print.
+    """
+    mapped = _map_ticker(ib_symbol, listing_exch, overrides=_PRINT_OVERRIDES)
+    if mapped:
+        return mapped
+    sym = (ib_symbol or "").strip().upper()
+    return sym or None
+
+
+def _map_ticker(
+    ib_symbol: str,
+    listing_exch: str | None,
+    *,
+    overrides: dict[str, str],
+) -> str | None:
     sym = (ib_symbol or "").strip().upper()
     if not sym:
         return None
-    if sym in _CATALOG_OVERRIDES:
-        return _CATALOG_OVERRIDES[sym]
+    if sym in overrides:
+        return overrides[sym]
     exch = (listing_exch or "").strip().upper()
     if exch == "SEHK":
         digits = sym.split(".")[0]
@@ -350,6 +377,10 @@ def _view_from_ib_book(
                 "value_base": vb,
                 "unrealized_pl": pos.unrealized_pl,
                 **fields,
+                "print_listing": holding_print_listing(
+                    pos.ib_symbol, pos.listing_exch
+                ),
+                "stmt_fx": stmt.forex_close(pos.currency),
             }
         )
 
@@ -395,11 +426,9 @@ def _view_from_ib_book(
         "ib": ib,
         "performance": _performance(stmt),
         "note": (
-            "Holdings, NAV, and TWR are from the latest statement period. "
-            "Trades are the union of every imported statement; overlap is not "
-            "double-counted. asof_price/FV/MoS come from catalog research "
-            "as-of snapshots, not live market marks. TWR is IB-reported for "
-            "the statement period."
+            "Live NAV is holdings × Yahoo last print plus statement cash; "
+            "FX is the statement Forex close. asof_price/FV/MoS come from "
+            "catalog research as-of snapshots, not live market marks."
         ),
     }
 
@@ -448,8 +477,11 @@ def build_portfolio_view(
                 "yahoo_listing": pos.ticker,
                 "weight": w,
                 "shares": pos.shares,
+                "quantity": pos.shares,
                 "notes": pos.notes,
                 **fields,
+                "print_listing": holding_print_listing(pos.ticker, None),
+                "stmt_fx": 1.0,
             }
         )
 
@@ -477,7 +509,8 @@ def build_portfolio_view(
         "performance": _empty_performance(),
         "note": (
             "asof_price/FV/MoS come from catalog research as-of snapshots, "
-            "not live market marks."
+            "not live market marks. Live NAV needs shares on every row "
+            "(or an IB statement)."
         ),
     }
 

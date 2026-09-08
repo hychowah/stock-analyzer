@@ -16,7 +16,7 @@ This repo is **two modes of work** over one `archive/` disk (the folder that hol
 
 **Mode B** builds the product around those files. One website is both the reading room and the job starter. The catalog API (`catalog_api`) is an in-process library plus a small CLI — not a second HTTP server.
 
-The pipeline never “remembers” a conclusion in chat. **Files on disk are the record.** The website never invents a fair value or a margin of safety (how cheap the stock is versus that fair value). It may show live Yahoo prices and compute **Downside %** from the **stored** bear fair value versus price. That is display math, not a second valuation.
+The pipeline never “remembers” a conclusion in chat. **Files on disk are the record.** The website never invents a fair value or a margin of safety (how cheap the stock is versus that fair value). It may show live Yahoo prices, compute **Downside %** from the **stored** bear fair value versus price, and show **Live NAV** as statement ending NAV adjusted by holdings × Yahoo last print (FX frozen at the statement). That is display math, not a second valuation.
 
 Default data root: `archive/` at the project root. `ARCHIVE_ROOT` can point catalog, UI, and tests at another tree. Real Grok Analyze from the website or CLI uses the default archive only.
 
@@ -234,7 +234,7 @@ Tests sit next to the code they cover (`packages/*/tests`, `apps/analysis_web/te
 
 `python3 -m apps.analysis_web` → [http://127.0.0.1:8765/](http://127.0.0.1:8765/)
 
-Stack: FastAPI, Jinja templates, a little static JS (search, live reload, charts). It reads `ARCHIVE_ROOT` (catalog/UI/tests) and **does not author** research phases or fair values. The website never invents a fair value. It may show live Yahoo prices and Downside % from stored bear fair value versus price — display math, not a second valuation.
+Stack: FastAPI, Jinja templates, a little static JS (search, live reload, charts). It reads `ARCHIVE_ROOT` (catalog/UI/tests) and **does not author** research phases or fair values. The website never invents a fair value. It may show live Yahoo prices, Downside % from stored bear fair value versus price, and Live NAV from holdings × Yahoo last print — display math, not a second valuation.
 
 The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a quieter Lab (Harness, Architecture, Experiments, Calibration, Health). Full HTML pages go through one `render_page` helper that injects the current section; the template matches that value, not the raw URL.
 
@@ -250,7 +250,7 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |
 | `/compares/{compare_id}` | Job status, headline table, README + `99_synthesis.md` when complete. Failed jobs can Retry as a new packet. |
 | `/compare-artifact` | Allowlisted compare-packet file |
-| `/portfolio` | IB book (trade ledger + latest snapshot) or local JSON, joined to latest catalog runs. Live/Downside/Duration use the same cells as Runs. |
+| `/portfolio` | IB book (trade ledger + latest snapshot) or local JSON, joined to latest catalog runs. The header is **Live NAV** and day P/L (not statement period or ending NAV). Live NAV is holdings × Yahoo last print plus statement cash; FX is the statement Forex close. One marked-book poll paints Live NAV, Live cells, live value, and Downside. |
 | `/harness` | Pin map and briefing inspector |
 | `/experiments`, `/calibration` | Group by experiment; MoS vs later outcomes |
 | `/architecture` | Human map: live `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (drag to pan, wheel to zoom, on-figure zoom controls, Reset fits). |
@@ -260,7 +260,7 @@ Remaining JSON APIs, query params, and live-reload notes: `apps/analysis_web/REA
 
 Live reload: the runs table can refresh when the catalog changes (SSE, with a poll fallback) without wiping an in-progress search.
 
-Quotes and price history read catalog `quote_listing` (stamp, else snapshot, else folder ticker). The Yahoo fetch layer (`apps/analysis_web/services/yahoo_bars.py`) resolves that string to a chart and returns rows keyed by the request. It does not rewrite the catalog or keep a per-issuer map.
+Quotes and price history read catalog `quote_listing` (stamp, else snapshot, else folder ticker). Portfolio Live NAV uses `print_listing` for the **holding’s market** (IB symbol + exchange; suffix-style Yahoo forms such as `MC.PA`). Catalog overlays that point at a different listing (GDS `HY9H` → Korean `000660.KS`) are for research join only and are not last prints of the lot. The Yahoo fetch layer (`apps/analysis_web/services/yahoo_bars.py`) resolves that string to a chart and returns rows keyed by the request. It does not rewrite the catalog or keep a per-issuer map. `/portfolio` polls `GET /api/portfolio/live-nav` only — not `/api/quotes`.
 
 ---
 
@@ -285,7 +285,7 @@ Harness identity for a run: `harness_version` (from `harness/VERSION` at **scaff
 These must stay true. Breaking one usually means silent wrong numbers or rewritten history.
 
 1. **Completed `archive/research/` and `archive/outcomes/` must not be rewritten.** That is process law, not a filesystem lock. Never rewrite them to fix the UI or a test. New analysis → new session key.
-2. **No second store of fair values.** The website and catalog read snapshots and session files. They do not compute a competing FV. Display math (live Yahoo price, Downside % from stored bear FV vs price) is not a second valuation.
+2. **No second store of fair values.** The website and catalog read snapshots and session files. They do not compute a competing FV. Display math (live Yahoo price, Downside % from stored bear FV vs price, Live NAV from holdings × last print) is not a second valuation.
 3. **Catalog is an index you can rebuild.** If SQLite and disk disagree, rebuild from disk. Do not treat the DB as the original.
 4. **Library is documents, not conclusions.** Bind into the current session; do not mine other sessions for last week’s MoS.
 5. **Mode B home is `eng/`.** Do not create a top-level `build/` harness (that name is gitignored).

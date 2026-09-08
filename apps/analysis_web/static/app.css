@@ -390,6 +390,10 @@ table:has(thead) tr:hover {
   font-weight: 400;
   font-size: 0.75rem;
 }
+.live-nav-vintage {
+  font-weight: 400;
+  font-size: 0.75rem;
+}
 .decision-strip {
   margin: 0.75rem 0 1.25rem;
 }

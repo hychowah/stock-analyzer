@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Portfolio{% endblock %}
-{% block body_attrs %}data-live-reload="1"{% endblock %}
+{% block body_attrs %}data-live-reload="1" data-quote-poll="0"{% endblock %}
 {% block content %}
 <div class="card">
   <h1>Portfolio{% if view.name %} · {{ view.name }}{% endif %}</h1>
@@ -29,23 +29,18 @@
   <div class="grid2" style="margin-top:0.75rem">
     <table>
       <tr><th>Account</th><td class="mono">{{ view.ib.account_masked }}</td></tr>
-      <tr><th>Period</th>
-          <td class="mono">{{ view.ib.period_from }} → {{ view.ib.period_to }}</td></tr>
-      <tr><th>Ending NAV</th>
-          <td class="num">{{ view.ib.ending_nav | fmt_num }} {{ view.ib.base_currency }}</td></tr>
-      <tr><th>Deposits</th>
-          <td class="num">{{ view.ib.deposits_total | fmt_num }}</td></tr>
+      <tr><th>Live NAV</th>
+          <td class="num" id="live-nav"
+              data-base-currency="{{ view.ib.base_currency }}">—</td></tr>
     </table>
     <table>
-      <tr><th>IB TWR</th>
-          <td class="num">{% if view.ib.twr_pct is not none %}{{ '%.2f'|format(view.ib.twr_pct) }}%{% else %}—{% endif %}</td></tr>
-      <tr><th>Stock / cash</th>
-          <td class="num">{{ view.ib.stock_value | fmt_num }} / {{ view.ib.cash_value | fmt_num }}</td></tr>
-      <tr><th>Trades</th><td class="num">{{ view.ib.trade_count }}</td></tr>
+      <tr><th>Day P/L</th>
+          <td class="num" id="live-nav-day" title="vs prior daily close">—</td></tr>
       <tr><th>Currency</th><td>{{ view.ib.base_currency }}</td></tr>
     </table>
   </div>
-  <p class="muted" style="margin-top:0.5rem">Holdings, NAV, and TWR are from the latest statement period. Trades are the union of every imported statement; overlap is not double-counted.</p>
+  <p class="muted" style="margin-top:0.5rem">Live NAV is holdings × Yahoo last print plus statement cash. FX is the statement Forex close.</p>
+  <p id="quote-status" class="muted" hidden></p>
   {% endif %}
   {% if view.summary and not view.error %}
   <div class="grid2" style="margin-top:0.75rem">
@@ -66,6 +61,19 @@
       <tr><th>Currency</th><td>{{ view.currency }}</td></tr>
     </table>
   </div>
+  {% if not view.ib %}
+  <div class="grid2" style="margin-top:0.75rem">
+    <table>
+      <tr><th>Live NAV</th>
+          <td class="num" id="live-nav" data-base-currency="{{ view.currency }}">—</td></tr>
+    </table>
+    <table>
+      <tr><th>Day P/L</th>
+          <td class="num" id="live-nav-day" title="vs prior daily close">—</td></tr>
+    </table>
+  </div>
+  <p id="quote-status" class="muted" hidden></p>
+  {% endif %}
   <p class="muted" style="margin-top:0.75rem">{{ view.note }}</p>
   {% endif %}
 </div>
@@ -132,7 +140,8 @@
     <thead>
       <tr>
         <th>Symbol</th>
-        {% if view.ib %}<th>Exch</th><th>Qty</th><th>IB Close</th><th>Value (base)</th>{% endif %}
+        {% if view.ib %}<th>Exch</th><th>Qty</th>{% endif %}
+        <th>Live value</th>
         <th>Weight</th><th>As-of</th><th>Live</th><th>FV base</th><th>MoS %</th>
         <th>Downside</th><th>Duration</th>
         <th>Audit</th><th>Tech</th><th>Session</th><th>Sector</th>
@@ -155,14 +164,13 @@
         {% if view.ib %}
         <td class="muted">{{ p.listing_exch or '' }}</td>
         <td class="num">{{ p.quantity | fmt_num(0) }}</td>
-        <td class="num">{{ p.close_price | fmt_num }}</td>
-        <td class="num">{{ p.value_base | fmt_num }}</td>
         {% endif %}
         {% set ds = downside_pct(p.asof_price, p.fv_bear) %}
         {% set ds_title = downside_title(p.asof_price, p.fv_bear, 'as-of') %}
+        <td class="num" data-live-value data-ib-symbol="{{ p.ib_symbol or p.ticker }}">—</td>
         <td class="num">{{ '%.1f'|format((p.weight or 0) * 100) }}%</td>
         <td class="num">{{ p.asof_price | fmt_num }}</td>
-        <td class="num quote-live" data-quote-cell{% if p.quote_listing %} data-quote-symbol="{{ p.quote_listing }}" data-quote-source="{{ p.quote_listing_source or '' }}"{% endif %}>—</td>
+        <td class="num quote-live" data-quote-cell{% if p.print_listing %} data-quote-symbol="{{ p.print_listing }}"{% if p.quote_listing_source %} data-quote-source="{{ p.quote_listing_source }}"{% endif %}{% endif %}>—</td>
         <td class="num">{{ p.fv_base | fmt_num }}</td>
         <td class="num">{{ p.margin_of_safety_pct | fmt_num(1) }}</td>
         <td class="num{% if ds is not none and ds < 0 %} below-bear{% endif %}"
@@ -188,4 +196,7 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/live_nav.js" defer></script>
 {% endblock %}

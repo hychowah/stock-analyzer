@@ -104,10 +104,10 @@ def api_get_run(run_id: str, api: CatalogApi = Depends(get_api)) -> dict[str, An
 
 @router.get("/quotes")
 def api_quotes(
-    symbols: str = Query("", description="Comma-separated Yahoo listing symbols"),
+    symbols: str = Query("", description="Comma-separated catalog quote_listing values"),
     svc: QuoteService = Depends(get_quote_service),
 ) -> dict[str, Any]:
-    """Last print for listing symbols. Does not accept typed catalog tickers."""
+    """Last print for requested listings. Chart-name repair is in yahoo_bars."""
     try:
         listings = parse_symbol_query(symbols)
     except ValueError as e:
@@ -122,13 +122,13 @@ def api_quotes(
 
 @router.get("/price-history")
 def api_price_history(
-    symbol: str = Query("", description="One Yahoo listing symbol"),
+    symbol: str = Query("", description="One catalog quote_listing"),
     range_key: str = Query(
         "1y", alias="range", description="1m, 3m, 6m, 1y, 2y, 5y, or max"
     ),
     svc: HistoryService = Depends(get_history_service),
 ) -> dict[str, Any]:
-    """Daily closes for one listing. Does not accept typed catalog tickers."""
+    """Daily closes for one requested listing. Chart-name repair is in yahoo_bars."""
     try:
         listing = parse_history_symbol(symbol)
         parsed_range = parse_range(range_key)

@@ -260,7 +260,7 @@ Remaining JSON APIs, query params, and live-reload notes: `apps/analysis_web/REA
 
 Live reload: the runs table can refresh when the catalog changes (SSE, with a poll fallback) without wiping an in-progress search.
 
-Quotes and price history use catalog `quote_listing` (listing **stamp**, else snapshot, else ticker). The catalog ticker is the folder name; the listing is what you look up in the market.
+Quotes and price history read catalog `quote_listing` (stamp, else snapshot, else folder ticker). The Yahoo fetch layer (`apps/analysis_web/services/yahoo_bars.py`) resolves that string to a chart and returns rows keyed by the request. It does not rewrite the catalog or keep a per-issuer map.
 
 ---
 

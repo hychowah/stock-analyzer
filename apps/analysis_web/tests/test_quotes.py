@@ -104,6 +104,17 @@ class FakeBackendAndCacheTests(unittest.TestCase):
         svc.get_many(["META"])
         self.assertEqual(len(be.calls), 2)
 
+    def test_errors_are_not_cached(self):
+        be = FakeQuoteBackend({"META": _q("META", 100.0)})
+        svc = QuoteService(be, ttl_sec=60)
+        miss = svc.get_many(["NOPE"])
+        self.assertEqual(miss[0].error, "unavailable")
+        svc.get_many(["NOPE"])
+        self.assertEqual(len(be.calls), 2)
+        svc.get_many(["META"])
+        svc.get_many(["META"])
+        self.assertEqual(len(be.calls), 3)
+
     def test_single_flight(self):
         started = threading.Event()
         release = threading.Event()

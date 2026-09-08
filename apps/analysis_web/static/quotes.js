@@ -1,8 +1,8 @@
 /**
  * Fill [data-quote-cell][data-quote-symbol] from GET /api/quotes.
  * After prints land, recompute [data-downside-pct] from live (else as-of) vs data-fv-bear.
- * Listing symbols only. Rebind after #runs-results swap via quotes-refresh.
- * Pause when the tab is hidden.
+ * data-quote-symbol is catalog quote_listing; chart-name repair is server-side.
+ * Rebind after #runs-results swap via quotes-refresh. Pause when the tab is hidden.
  */
 (function () {
   "use strict";

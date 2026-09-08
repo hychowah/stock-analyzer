@@ -1,8 +1,8 @@
 """Daily close history for the analysis UI.
 
-Callers pass one Yahoo listing symbol (run.quote_listing). This module does
-not know catalog tickers, FV, or MoS. Overlay those on the client from
-catalog fields already on the run page.
+Callers pass one catalog `quote_listing`. Chart-name repair lives in
+yahoo_bars. This module does not know catalog identity, FV, or MoS. Overlay
+those on the client from catalog fields already on the run page.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ from apps.analysis_web.services.yahoo_bars import (
     bar_date,
     download_close_series,
     import_yfinance,
+    resolve_close_series,
+    search_yahoo_quotes,
 )
 
 
@@ -78,7 +80,7 @@ class PriceHistory:
 
 class HistoryBackend(Protocol):
     def history(self, symbol: str, range_key: str) -> PriceHistory:
-        """Daily closes for one Yahoo listing and an allowlisted range key."""
+        """Daily closes for one requested listing and an allowlisted range key."""
         ...
 
 
@@ -130,21 +132,40 @@ def bars_from_closes(rows: list[tuple[float, str | None]]) -> tuple[PriceBar, ..
 
 
 class YahooHistoryBackend:
-    """Daily adjusted close via yfinance. Listing symbols only."""
+    """Daily adjusted close via yahoo_bars for catalog quote_listing strings."""
 
     source = "yahoo"
+
+    def __init__(
+        self,
+        *,
+        yf: Any = None,
+        download: Any = download_close_series,
+        search: Any = search_yahoo_quotes,
+    ):
+        self._yf = yf
+        self._download = download
+        self._search = search
 
     def history(self, symbol: str, range_key: str) -> PriceHistory:
         sym = symbol.strip().upper()
         period = RANGES[range_key]
         try:
-            yf = import_yfinance()
+            yf = self._yf if self._yf is not None else import_yfinance()
         except RuntimeError as e:
             return PriceHistory(
                 symbol=sym, range=range_key, source=self.source, error=str(e)
             )
-        series = download_close_series(yf, [sym], period=period, interval="1d")
-        bars = bars_from_closes(series.get(sym) or [])
+        resolved = resolve_close_series(
+            yf,
+            [sym],
+            period=period,
+            interval="1d",
+            download=self._download,
+            search=self._search,
+        )
+        _yahoo, rows = resolved.get(sym, (sym, []))
+        bars = bars_from_closes(rows)
         if not bars:
             return PriceHistory(
                 symbol=sym, range=range_key, source=self.source, error="unavailable"

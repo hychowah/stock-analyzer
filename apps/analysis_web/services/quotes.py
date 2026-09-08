@@ -1,8 +1,8 @@
 """Last-print quotes for the analysis UI.
 
-Callers pass Yahoo *listing* symbols (run_manifest.quote_symbol). This module
-does not know catalog tickers, FV, or MoS. LookupBackend stays an existence
-check — do not merge the two.
+Callers pass catalog `quote_listing` strings. Chart-name repair lives in
+yahoo_bars. This module does not know catalog identity, FV, or MoS.
+LookupBackend stays a Mode A existence check — do not merge the two.
 
 YahooPrintBackend returns a last available print: last 1-minute bar when
 present, else last daily close. print_kind is 'intraday' or 'daily_close'.
@@ -21,12 +21,13 @@ from typing import Any, Protocol
 from apps.analysis_web.services.yahoo_bars import (
     download_close_series,
     import_yfinance,
+    resolve_close_series,
+    search_yahoo_quotes,
 )
 
 
 DEFAULT_TTL_SEC = 120
 MAX_SYMBOLS = 50
-UNSTAMPED_ERROR = "unstamped"
 
 
 def quote_ttl_sec() -> int:
@@ -61,7 +62,7 @@ class QuotePrint:
 
 class QuoteBackend(Protocol):
     def quote_many(self, symbols: list[str]) -> list[QuotePrint]:
-        """Last print for each Yahoo listing symbol (one row per input, unique)."""
+        """Last print for each requested listing (one row per input, unique)."""
         ...
 
 
@@ -156,26 +157,55 @@ def build_quote(
 
 
 class YahooPrintBackend:
-    """Batch Yahoo last print via yfinance download. Listing symbols only."""
+    """Last print via yahoo_bars for catalog quote_listing strings."""
 
     source = "yahoo"
+
+    def __init__(
+        self,
+        *,
+        yf: Any = None,
+        download: Any = download_close_series,
+        search: Any = search_yahoo_quotes,
+    ):
+        self._yf = yf
+        self._download = download
+        self._search = search
 
     def quote_many(self, symbols: list[str]) -> list[QuotePrint]:
         unique = _unique_listings(symbols)
         if not unique:
             return []
         try:
-            yf = import_yfinance()
+            yf = self._yf if self._yf is not None else import_yfinance()
         except RuntimeError as e:
             return [
                 QuotePrint(symbol=s, source=self.source, error=str(e)) for s in unique
             ]
-        intra_map = download_close_series(yf, unique, period="1d", interval="1m")
-        daily_map = download_close_series(yf, unique, period="5d", interval="1d")
+        daily_resolved = resolve_close_series(
+            yf,
+            unique,
+            period="5d",
+            interval="1d",
+            download=self._download,
+            search=self._search,
+        )
+        yahoo_for_intra: list[str] = []
+        seen_yahoo: set[str] = set()
+        for sym in unique:
+            ysym, daily = daily_resolved.get(sym, (sym, []))
+            if daily and ysym not in seen_yahoo:
+                seen_yahoo.add(ysym)
+                yahoo_for_intra.append(ysym)
+        intra_map = (
+            self._download(yf, yahoo_for_intra, period="1d", interval="1m")
+            if yahoo_for_intra
+            else {}
+        )
         out: list[QuotePrint] = []
         for sym in unique:
-            intra = intra_map.get(sym) or []
-            daily = daily_map.get(sym) or []
+            ysym, daily = daily_resolved.get(sym, (sym, []))
+            intra = intra_map.get(ysym) or []
             last_intra = intra[-1] if intra else (None, None)
             last_daily = daily[-1] if daily else (None, None)
             prev_daily = daily[-2] if len(daily) >= 2 else (None, None)
@@ -195,7 +225,11 @@ class YahooPrintBackend:
 
 
 class QuoteService:
-    """In-process TTL cache + single-flight in front of a QuoteBackend."""
+    """In-process TTL cache + single-flight in front of a QuoteBackend.
+
+    Cache only successful prints (error is None) for ttl_sec. Failures are
+    not stored: a Yahoo blip must not freeze as unavailable.
+    """
 
     def __init__(self, backend: QuoteBackend, *, ttl_sec: int = DEFAULT_TTL_SEC):
         self._backend = backend
@@ -230,7 +264,8 @@ class QuoteService:
                     q = by_sym.get(sym) or QuotePrint(
                         symbol=sym, source="yahoo", error="unavailable"
                     )
-                    self._store[sym] = (expires, q)
+                    if q.error is None:
+                        self._store[sym] = (expires, q)
                     cached[sym] = q
         finally:
             with self._cv:

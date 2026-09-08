@@ -51,8 +51,8 @@ Or: `bash apps/analysis_web/init.sh`
 | `/health` | Catalog health plus the git SHA this UI process booted at |
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
-| `/api/quotes` | Last print for Yahoo listing symbols (not typed catalog tickers) |
-| `/api/price-history` | Daily closes for one listing (`symbol`, `range=1m\|3m\|6m\|1y\|2y\|5y\|max`) |
+| `/api/quotes` | Last print for catalog `quote_listing` values. Chart-name repair is in `yahoo_bars`; rows stay keyed by the request. |
+| `/api/price-history` | Daily closes for one `quote_listing` (`symbol`, `range=1m\|3m\|6m\|1y\|2y\|5y\|max`) |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
 | `/api/fingerprint` | Poll fallback token for live reload |
 

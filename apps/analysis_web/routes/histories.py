@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html import escape as html_escape
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, Query, Request
@@ -41,7 +42,7 @@ from apps.analysis_web.services.alt_history_view import (
 )
 from apps.analysis_web.services.portfolio import load_ib_book
 from apps.analysis_web.services.price_history import HistoryService
-from apps.analysis_web.templating import render_page
+from apps.analysis_web.templating import render_fragment, render_page
 
 router = APIRouter(tags=["histories"])
 
@@ -355,7 +356,7 @@ def api_history(history_id: int):
         return JSONResponse({"error": "not_found"}, status_code=404)
     except ReplayError as e:
         return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
-    return history_document(hist)
+    return history_document(hist).as_json()
 
 
 @router.get("/api/portfolio/histories/{history_id}/holdings")
@@ -373,6 +374,37 @@ def api_history_holdings(
     body = holdings_on(hist, svc, view_date=date or None).as_json()
     body["id"] = hist.id
     return body
+
+
+@router.get(
+    "/fragments/portfolio/histories/{history_id}/held",
+    response_class=HTMLResponse,
+)
+def fragment_held_table(
+    request: Request,
+    history_id: int,
+    date: str = Query(""),
+    svc: HistoryService = Depends(get_history_service),
+) -> HTMLResponse:
+    try:
+        hist = get_history(history_id)
+    except NotFoundError:
+        return HTMLResponse(
+            '<p class="muted">History not found</p>', status_code=404
+        )
+    except ReplayError as e:
+        return HTMLResponse(
+            f'<p class="err" role="alert">{html_escape(e.message)}</p>',
+            status_code=400,
+        )
+    view = holdings_on(hist, svc, view_date=date or None)
+    return render_fragment(
+        request,
+        "partials/held_table.html",
+        history_id=hist.id,
+        view_date=view.view_date,
+        held=view.held,
+    )
 
 
 @router.get("/api/portfolio/histories/{history_id}/path")

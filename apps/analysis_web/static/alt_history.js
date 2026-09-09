@@ -41,17 +41,8 @@
     }
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   var card = document.getElementById("hist-holdings-card");
-  var historyId = card ? card.getAttribute("data-history-id") : "";
-  var holdingsUrl = card ? card.getAttribute("data-holdings-url") : "";
+  var heldUrl = card ? card.getAttribute("data-held-url") : "";
   var pathUrl = card ? card.getAttribute("data-path-url") : "";
 
   function setAsOf(day) {
@@ -61,103 +52,49 @@
     }
   }
 
-  function renderHeld(held, viewDate) {
-    var wrap = document.getElementById("hist-held-table");
+  function applyViewDate(view) {
+    setAsOf(view);
+    if (card) {
+      card.setAttribute("data-view-date", view);
+    }
+    var dateInput = document.getElementById("hist-view-date");
+    if (dateInput && view) {
+      dateInput.value = view;
+    }
+    var buySummary = document.getElementById("hist-buy-summary");
+    if (buySummary && view) {
+      buySummary.textContent = "Buy a researched name on " + view;
+    }
     var caption = document.getElementById("hist-held-caption");
     if (caption) {
       caption.textContent =
         "What the paper book held on " +
-        viewDate +
+        view +
         ". Names marked “sold later” are gone from today’s copied actual — not from a live IB walk.";
     }
-    if (!wrap) {
-      return;
-    }
-    if (!held || !held.length) {
-      wrap.innerHTML = '<p class="muted">No stock lots on this date.</p>';
-      return;
-    }
-    var rows = [];
-    for (var i = 0; i < held.length; i++) {
-      var lot = held[i];
-      var listing = String(lot.listing || "");
-      var extra = "";
-      if (lot.ib_symbol && lot.ib_symbol !== listing) {
-        extra += ' <span class="muted">' + escapeHtml(lot.ib_symbol) + "</span>";
-      }
-      if (lot.deceased) {
-        extra += ' <span class="badge">sold later</span>';
-      }
-      rows.push(
-        "<tr>" +
-          '<td class="mono">' +
-          escapeHtml(listing) +
-          extra +
-          "</td>" +
-          '<td class="num">' +
-          fmt(lot.qty, 2) +
-          "</td>" +
-          '<td class="num">' +
-          fmt(lot.close) +
-          "</td>" +
-          '<td class="num">' +
-          fmt(lot.value_base) +
-          "</td>" +
-          "<td>" +
-          '<form method="post" action="/portfolio/histories/' +
-          encodeURIComponent(historyId) +
-          '/decisions" class="hist-sell-row">' +
-          '<input type="hidden" name="side" value="sell"/>' +
-          '<input type="hidden" name="listing" value="' +
-          escapeHtml(listing) +
-          '"/>' +
-          '<input type="hidden" name="as_of" value="' +
-          escapeHtml(viewDate) +
-          '"/>' +
-          "<label>Qty <input name=\"quantity\" type=\"number\" step=\"any\" min=\"0\" max=\"" +
-          escapeHtml(lot.qty) +
-          '" value="' +
-          escapeHtml(lot.qty) +
-          '" required/></label>' +
-          '<button type="submit">Sell</button>' +
-          "</form></td></tr>"
-      );
-    }
-    wrap.innerHTML =
-      '<div class="table-freeze"><table>' +
-      "<thead><tr><th>Listing</th><th>Qty</th><th>Close</th><th>Value</th><th>Sell</th></tr></thead>" +
-      "<tbody>" +
-      rows.join("") +
-      "</tbody></table></div>";
   }
 
   function loadHoldings(day) {
-    if (!holdingsUrl) {
+    if (!heldUrl) {
       return;
     }
-    var url = holdingsUrl + (day ? "?date=" + encodeURIComponent(day) : "");
-    fetch(url, { headers: { Accept: "application/json" } })
+    var url = heldUrl + (day ? "?date=" + encodeURIComponent(day) : "");
+    fetch(url, { headers: { Accept: "text/html" } })
       .then(function (r) {
         if (!r.ok) {
-          throw new Error("holdings " + r.status);
+          throw new Error("held " + r.status);
         }
-        return r.json();
+        return r.text();
       })
-      .then(function (body) {
-        var view = body.view_date || day;
-        renderHeld(body.held || [], view);
-        setAsOf(view);
-        if (card) {
-          card.setAttribute("data-view-date", view);
+      .then(function (html) {
+        var wrap = document.getElementById("hist-held-table");
+        if (!wrap) {
+          return;
         }
-        var dateInput = document.getElementById("hist-view-date");
-        if (dateInput && view) {
-          dateInput.value = view;
-        }
-        var buySummary = document.getElementById("hist-buy-summary");
-        if (buySummary && view) {
-          buySummary.textContent = "Buy a researched name on " + view;
-        }
+        wrap.innerHTML = html;
+        var root = wrap.querySelector("[data-view-date]");
+        var view = (root && root.getAttribute("data-view-date")) || day;
+        applyViewDate(view);
       })
       .catch(function () {
         /* keep the server-rendered table */
@@ -260,7 +197,7 @@
       });
   }
 
-  if (holdingsUrl) {
+  if (heldUrl) {
     loadHoldings(card ? card.getAttribute("data-view-date") : "");
   }
 })();

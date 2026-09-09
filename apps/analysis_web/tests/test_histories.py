@@ -363,11 +363,68 @@ class HistoryHttpTests(unittest.TestCase):
         )
         hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
         from apps.analysis_web.services.alt_history_store import get_history
-        from apps.analysis_web.services.alt_history_view import PaperView, paper_on
+        from apps.analysis_web.services.alt_history_view import (
+            EditorPage,
+            HoldingsLot,
+            PaperLot,
+            PaperView,
+            editor_page,
+            holdings_on,
+            paper_on,
+        )
 
-        paper = paper_on(get_history(int(hid)), view_date="2026-03-31")
+        hist = get_history(int(hid))
+        paper = paper_on(hist, view_date="2026-03-31")
         self.assertIsInstance(paper, PaperView)
         self.assertFalse(hasattr(paper, "path"))
         self.assertFalse(hasattr(paper, "delta"))
         self.assertFalse(hasattr(paper, "svg"))
         self.assertFalse(hasattr(paper, "actual_nav"))
+        self.assertFalse(hasattr(paper, "universe"))
+        self.assertFalse(hasattr(paper, "decisions"))
+        self.assertFalse(hasattr(paper, "error"))
+        self.assertFalse(hasattr(paper, "until"))
+        self.assertTrue(paper.held)
+        self.assertIsInstance(paper.held[0], PaperLot)
+        self.assertFalse(hasattr(paper.held[0], "close"))
+        self.assertFalse(hasattr(paper.held[0], "value_base"))
+
+        page = editor_page(hist, view_date="2026-03-31")
+        self.assertIsInstance(page, EditorPage)
+        self.assertNotIsInstance(page, dict)
+        self.assertIsInstance(page.paper, PaperView)
+
+        captured: list[tuple[str, str]] = []
+
+        def fake_load(svc, listings, *, start, end):
+            captured.append((start, end))
+            return {}
+
+        from unittest.mock import patch
+
+        with patch(
+            "apps.analysis_web.services.alt_history_view.load_bars", fake_load
+        ):
+            held = holdings_on(
+                hist, self._app.state.history_service, view_date="2026-03-31"
+            )
+        self.assertEqual(captured[0][1], "2026-03-31")
+        self.assertTrue(held.held)
+        self.assertIsInstance(held.held[0], HoldingsLot)
+        self.assertTrue(hasattr(held.held[0], "close"))
+
+        frag = self.client.get(
+            f"/fragments/portfolio/histories/{hid}/held?date=2026-03-31"
+        )
+        self.assertEqual(frag.status_code, 200)
+        self.assertIn(b'name="quantity"', frag.content)
+        self.assertIn(b"data-view-date", frag.content)
+        self.assertIn(b"META", frag.content)
+        html = self.client.get(f"/portfolio/histories/{hid}")
+        self.assertIn(b"data-held-url", html.content)
+        self.assertNotIn(b"data-holdings-url", html.content)
+        js = Path("apps/analysis_web/static/alt_history.js").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("renderHeld", js)
+        self.assertNotIn("<table>", js)

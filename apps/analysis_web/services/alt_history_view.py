@@ -1,8 +1,10 @@
 """Assemble what-if page payloads. Three views; do not call Live NAV.
 
-PaperView     — lots and cash as of D. Replay only; no Yahoo, no path.
-HoldingsView  — lots + closes + cash as of D. Never path, never cash-today.
-PathView      — one NAV walk from fork; last point is header Δ.
+PaperView      — lots and cash as of D. Replay only; no Yahoo, no path, no editor.
+HoldingsView   — lots + closes + cash as of D. Never path, never cash-today.
+PathView       — one NAV walk from fork; last point is header Δ.
+EditorPage     — HTML: paper + cash today + universe + fills + error.
+HistoryDocument — GET /{id}: identity + hyp fills. No lots, no path.
 """
 
 from __future__ import annotations
@@ -89,15 +91,29 @@ def _span(hist: History) -> str:
 
 
 @dataclass(frozen=True)
-class HeldLot:
+class PaperLot:
+    """Lot on the paper book as of D. No close, no value."""
+
     listing: str
     qty: float
     ib_symbol: str | None = None
     catalog_ticker: str | None = None
     currency: str = ""
     deceased: bool = False
-    close: float | None = None
-    value_base: float | None = None
+
+
+@dataclass(frozen=True)
+class HoldingsLot:
+    """Paper lot plus that day's mark. close is None when unquoted."""
+
+    listing: str
+    qty: float
+    close: float | None
+    value_base: float | None
+    ib_symbol: str | None = None
+    catalog_ticker: str | None = None
+    currency: str = ""
+    deceased: bool = False
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -114,18 +130,14 @@ class HeldLot:
 
 @dataclass(frozen=True)
 class PaperView:
-    """Paper book as of D. No path, no Δ, no Yahoo."""
+    """Paper book as of D. No path, no Δ, no Yahoo, no editor extras."""
 
     history: History
     view_date: str
-    until: str
     fork_date: str
-    held: tuple[HeldLot, ...]
+    held: tuple[PaperLot, ...]
     cash: float | None
     caveats: tuple[str, ...]
-    universe: tuple[dict[str, Any], ...]
-    decisions: tuple[dict[str, Any], ...]
-    error: str | None
     base_currency: str
 
 
@@ -135,7 +147,7 @@ class HoldingsView:
 
     view_date: str
     fork_date: str
-    held: tuple[HeldLot, ...]
+    held: tuple[HoldingsLot, ...]
     cash: float | None
     base_currency: str
 
@@ -145,6 +157,69 @@ class HoldingsView:
             "fork_date": self.fork_date,
             "held": [lot.as_json() for lot in self.held],
             "cash": self.cash,
+            "base_currency": self.base_currency,
+        }
+
+
+@dataclass(frozen=True)
+class EditorPage:
+    """HTML editor: paper book plus cash today, buy list, fills, error."""
+
+    paper: PaperView
+    cash_today: float | None
+    universe: tuple[dict[str, Any], ...]
+    decisions: tuple[dict[str, Any], ...]
+    error: str | None
+    min_date: str
+    max_date: str
+
+    @property
+    def history(self) -> History:
+        return self.paper.history
+
+    @property
+    def fork_date(self) -> str:
+        return self.paper.fork_date
+
+    @property
+    def view_date(self) -> str:
+        return self.paper.view_date
+
+    @property
+    def held(self) -> tuple[PaperLot, ...]:
+        return self.paper.held
+
+    @property
+    def caveats(self) -> tuple[str, ...]:
+        return self.paper.caveats
+
+    @property
+    def base_currency(self) -> str:
+        return self.paper.base_currency
+
+    @property
+    def until(self) -> str:
+        return self.max_date
+
+
+@dataclass(frozen=True)
+class HistoryDocument:
+    """GET /{id}: identity + hyp fills. No lots, no path, no Yahoo."""
+
+    id: int | None
+    name: str
+    notes: str
+    fork_date: str
+    fills: tuple[dict[str, Any], ...]
+    base_currency: str
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "notes": self.notes,
+            "fork_date": self.fork_date,
+            "decisions": list(self.fills),
             "base_currency": self.base_currency,
         }
 
@@ -237,28 +312,44 @@ def _clamp_view(hist: History, view_date: str | None, until: str) -> str:
     return view
 
 
-def _held_lots(
-    hist: History,
-    view: str,
-    until: str,
-    marked: MarkedNav | None = None,
-) -> tuple[HeldLot, ...]:
+def _paper_lots(hist: History, view: str, until: str) -> tuple[PaperLot, ...]:
     held = state_on(hist, view)
     today_actual_lots = {lot.listing for lot in actual_state(hist, until).lots}
-    by_listing = {} if marked is None else {r.listing: r for r in marked.rows}
-    rows: list[HeldLot] = []
+    rows: list[PaperLot] = []
     for lot in held.lots:
-        row = by_listing.get(lot.listing)
         rows.append(
-            HeldLot(
+            PaperLot(
                 listing=lot.listing,
                 qty=lot.qty,
                 ib_symbol=lot.ib_symbol,
                 catalog_ticker=lot.catalog_ticker,
                 currency=lot.currency,
                 deceased=lot.listing not in today_actual_lots,
+            )
+        )
+    return tuple(rows)
+
+
+def _holdings_lots(
+    hist: History,
+    view: str,
+    until: str,
+    marked: MarkedNav,
+) -> tuple[HoldingsLot, ...]:
+    by_listing = {r.listing: r for r in marked.rows}
+    rows: list[HoldingsLot] = []
+    for lot in _paper_lots(hist, view, until):
+        row = by_listing.get(lot.listing)
+        rows.append(
+            HoldingsLot(
+                listing=lot.listing,
+                qty=lot.qty,
                 close=None if row is None else row.close,
                 value_base=None if row is None else row.value_base,
+                ib_symbol=lot.ib_symbol,
+                catalog_ticker=lot.catalog_ticker,
+                currency=lot.currency,
+                deceased=lot.deceased,
             )
         )
     return tuple(rows)
@@ -268,25 +359,18 @@ def paper_on(
     hist: History,
     *,
     view_date: str | None = None,
-    until: str | None = None,
-    universe: list[dict[str, Any]] | None = None,
-    error: str | None = None,
 ) -> PaperView:
-    """Paper book as of D. Replay only — no Yahoo, no path."""
-    end = until or utc_today()
+    """Paper book as of D. Replay only — no Yahoo, no path, no editor extras."""
+    end = utc_today()
     view = _clamp_view(hist, view_date, end)
     as_of = state_on(hist, view)
     return PaperView(
         history=hist,
         view_date=view,
-        until=end,
         fork_date=hist.fork_date,
-        held=_held_lots(hist, view, end),
+        held=_paper_lots(hist, view, end),
         cash=as_of.cash_base,
         caveats=as_of.caveats,
-        universe=tuple(universe or []),
-        decisions=tuple(f.as_json() for f in hist.hyp_fills()),
-        error=error,
         base_currency=hist.seed.base_currency,
     )
 
@@ -295,30 +379,21 @@ def editor_page(
     hist: History,
     *,
     view_date: str | None = None,
-    until: str | None = None,
     universe: list[dict[str, Any]] | None = None,
     error: str | None = None,
-) -> dict[str, Any]:
+) -> EditorPage:
     """HTML adapter: PaperView plus cash today. Header NAV is absent."""
-    paper = paper_on(
-        hist, view_date=view_date, until=until, universe=universe, error=error
+    paper = paper_on(hist, view_date=view_date)
+    today = utc_today()
+    return EditorPage(
+        paper=paper,
+        cash_today=state_on(hist, today).cash_base,
+        universe=tuple(universe or []),
+        decisions=tuple(f.as_json() for f in hist.hyp_fills()),
+        error=error,
+        min_date=paper.fork_date,
+        max_date=today,
     )
-    today = state_on(hist, paper.until)
-    return {
-        "history": paper.history,
-        "fork_date": paper.fork_date,
-        "view_date": paper.view_date,
-        "until": paper.until,
-        "min_date": paper.fork_date,
-        "max_date": paper.until,
-        "base_currency": paper.base_currency,
-        "caveats": paper.caveats,
-        "cash_today": today.cash_base,
-        "held": paper.held,
-        "universe": paper.universe,
-        "decisions": paper.decisions,
-        "error": paper.error,
-    }
 
 
 def holdings_on(
@@ -329,16 +404,18 @@ def holdings_on(
     until: str | None = None,
 ) -> HoldingsView:
     """Lots + closes + cash as of D. Never the NAV path. Never cash-today."""
-    paper = paper_on(hist, view_date=view_date, until=until)
-    listings = [lot.listing for lot in paper.held if lot.listing]
-    bars = load_bars(svc, listings, start=hist.fork_date, end=paper.until)
-    marked = mark_alt(hist, paper.view_date, prices_on(bars, paper.view_date))
+    end = until or utc_today()
+    view = _clamp_view(hist, view_date, end)
+    as_of = state_on(hist, view)
+    listings = [lot.listing for lot in as_of.lots if lot.listing]
+    bars = load_bars(svc, listings, start=hist.fork_date, end=view)
+    marked = mark_alt(hist, view, prices_on(bars, view))
     return HoldingsView(
-        view_date=paper.view_date,
-        fork_date=paper.fork_date,
-        held=_held_lots(hist, paper.view_date, paper.until, marked),
-        cash=paper.cash,
-        base_currency=paper.base_currency,
+        view_date=view,
+        fork_date=hist.fork_date,
+        held=_holdings_lots(hist, view, end, marked),
+        cash=as_of.cash_base,
+        base_currency=hist.seed.base_currency,
     )
 
 
@@ -375,16 +452,16 @@ def path_on(
     return path_on_bars(hist, bars, until=end)
 
 
-def history_document(hist: History) -> dict[str, Any]:
+def history_document(hist: History) -> HistoryDocument:
     """Identity + fills. No Yahoo, no lots, no path."""
-    return {
-        "id": hist.id,
-        "name": hist.name,
-        "notes": hist.notes,
-        "fork_date": hist.fork_date,
-        "decisions": [f.as_json() for f in hist.hyp_fills()],
-        "base_currency": hist.seed.base_currency,
-    }
+    return HistoryDocument(
+        id=hist.id,
+        name=hist.name,
+        notes=hist.notes,
+        fork_date=hist.fork_date,
+        fills=tuple(f.as_json() for f in hist.hyp_fills()),
+        base_currency=hist.seed.base_currency,
+    )
 
 
 def _domain(vals: list[float]) -> tuple[float, float]:

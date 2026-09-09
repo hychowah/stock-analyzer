@@ -1,0 +1,33 @@
+{# One holdings table. Paper lots have no close/value (prints —). #}
+<div class="held-table-root" data-view-date="{{ view_date }}">
+{% if held %}
+<div class="table-freeze">
+<table>
+  <thead><tr><th>Listing</th><th>Qty</th><th>Close</th><th>Value</th><th>Sell</th></tr></thead>
+  <tbody>
+    {% for lot in held %}
+    <tr>
+      <td class="mono">{{ lot.listing }}{% if lot.ib_symbol and lot.ib_symbol != lot.listing %} <span class="muted">{{ lot.ib_symbol }}</span>{% endif %}{% if lot.deceased %} <span class="badge">sold later</span>{% endif %}</td>
+      <td class="num">{{ lot.qty | fmt_num(2) }}</td>
+      <td class="num">{{ lot.close | default(none) | fmt_num }}</td>
+      <td class="num">{{ lot.value_base | default(none) | fmt_num }}</td>
+      <td>
+        <form method="post" action="/portfolio/histories/{{ history_id }}/decisions" class="hist-sell-row">
+          <input type="hidden" name="side" value="sell"/>
+          <input type="hidden" name="listing" value="{{ lot.listing }}"/>
+          <input type="hidden" name="as_of" value="{{ view_date }}"/>
+          <label>Qty
+            <input name="quantity" type="number" step="any" min="0" max="{{ lot.qty }}" value="{{ lot.qty }}" required/>
+          </label>
+          <button type="submit">Sell</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted">No stock lots on this date.</p>
+{% endif %}
+</div>

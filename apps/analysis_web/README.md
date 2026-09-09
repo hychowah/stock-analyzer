@@ -36,7 +36,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs. Header is Live NAV + day P/L (not statement period or ending NAV). One poll (`/api/portfolio/live-nav`) paints Live NAV, Live cells, live value, and Downside. Does not call `/api/quotes`. Change-in-NAV waterfall + MTM bars. Sub-nav Book · What-if. |
 | `/portfolio/histories` | Alternative histories (what-if). Frozen paper copies of the IB stock ledger (seed + fills); overlay chart when two or more exist. Does not call `/api/portfolio/live-nav`. Does not open the live IB book. |
 | `/portfolio/histories/new` | The only IB read: copy stock trades and freeze seed lots, cash, and statement FX. A later IB re-ingest does not change the copy. |
-| `/portfolio/histories/{id}` | Paper book first (lots that day, including names later sold on this copy). Marks and the NAV path load separately. Sell takes a visible quantity. Header Δ is the chart end. Actual is this copy. Works if the IB file is later missing. |
+| `/portfolio/histories/{id}` | Paper book first (lots that day, including names later sold on this copy). Close/value are empty until the held-table fragment. Marks and the NAV path load separately. Sell takes a visible quantity. Header Δ is the chart end. Actual is this copy. Works if the IB file is later missing. |
 | `/analyze` | Mode A jobs (`archive/research_jobs/`). List does not SSE-reload. |
 | `/analyze/new` | Start analysis (ticker + as-of + harness first; advanced in details). Busy stays on the form. |
 | `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
@@ -54,7 +54,8 @@ Or: `bash apps/analysis_web/init.sh`
 | `/api/portfolio/live-nav` | Statement NAV adjusted by holdings × Yahoo last print. Aggregates + `quotes` (QuotePrint JSON) + per-lot `rows`. Display math; FX is the statement Forex close |
 | `/api/portfolio/histories` | List alternative histories + today Δ from the cash-book mark (daily close), not Live NAV |
 | `/api/portfolio/histories/{id}` | History document (name, fork, fills). No holdings, no path, no Yahoo. |
-| `/api/portfolio/histories/{id}/holdings` | Lots + closes + cash as of `date`. Date change uses this, not a path rebuild. |
+| `/api/portfolio/histories/{id}/holdings` | Lots + closes + cash as of `date`. Date change uses this JSON for API clients; the editor table uses the fragment below. |
+| `/fragments/portfolio/histories/{id}/held` | HTML holdings table as of `date` (same partial as first paint). Marks, not cash-today. Not a shareable page. |
 | `/api/portfolio/histories/{id}/path` | NAV walk + SVG. Last point is header Δ. No holdings. |
 | `/api/portfolio/histories/{id}/path.svg` | Same path as an SVG image (no-JS chart). |
 | `/health` | Catalog health plus the git SHA this UI process booted at |

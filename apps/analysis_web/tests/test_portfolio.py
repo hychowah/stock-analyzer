@@ -90,6 +90,24 @@ class PortfolioServiceTests(unittest.TestCase):
         self.assertEqual(flow["kind"], "flow")
         self.assertGreater(flow["bar_pct"], 0)
 
+    def test_mtm_gains_top_losses_bottom(self):
+        from apps.analysis_web.services.ib_statement import IbStatement, MtmRow
+        from apps.analysis_web.services.portfolio import _performance
+
+        stmt = IbStatement(
+            account_id="U1",
+            period_from="2026-01-01",
+            period_to="2026-03-31",
+            mtm=[
+                MtmRow("Stocks", "SMALL", pl_total=10.0),
+                MtmRow("Stocks", "LOSE", pl_total=-90.0),
+                MtmRow("Stocks", "WIN", pl_total=40.0),
+            ],
+        )
+        names = [r["name"] for r in _performance(stmt)["mtm"]]
+        self.assertEqual(names, ["WIN", "SMALL", "LOSE"])
+        self.assertNotEqual(names, ["LOSE", "WIN", "SMALL"])
+
     def test_weighted_mos_and_coverage(self):
         from packages.catalog_api.client import CatalogApi
         from apps.analysis_web.services.portfolio import (

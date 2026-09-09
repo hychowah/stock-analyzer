@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "delta-breakdown",
+      "description": "Shared signed-bar rank; what-if PathView Δ breakdown table; Book MTM largest loss at bottom",
+      "passes": true,
+      "verify": "pytest histories/alt_history/portfolio/ib_statement + browser MTM and what-if path breakdown"
+    },
+    {
+      "id": "implement",
+      "description": "Implement the primary change for this slug",
+      "passes": true,
+      "verify": "python3 scripts/eng_verify.py"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": true,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

@@ -45,6 +45,45 @@
     }
   }
 
+  function paintBreakdown(rows) {
+    var table = document.getElementById("hist-breakdown");
+    var card = document.getElementById("hist-breakdown-card");
+    var tbody = table ? table.querySelector("tbody") : null;
+    if (!tbody) {
+      return;
+    }
+    tbody.textContent = "";
+    if (!rows || !rows.length) {
+      if (card) {
+        card.hidden = true;
+      }
+      return;
+    }
+    if (card) {
+      card.hidden = false;
+    }
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i] || {};
+      var tr = document.createElement("tr");
+      var name = document.createElement("td");
+      name.className = "mono";
+      name.textContent = row.name || "";
+      var barCell = document.createElement("td");
+      barCell.className = "perf-bar-cell";
+      var bar = document.createElement("span");
+      bar.className = "perf-bar " + (row.sign || "zero");
+      bar.style.width = Number(row.bar_pct || 0).toFixed(1) + "%";
+      barCell.appendChild(bar);
+      var pl = document.createElement("td");
+      pl.className = "num";
+      pl.textContent = fmt(row.pl);
+      tr.appendChild(name);
+      tr.appendChild(barCell);
+      tr.appendChild(pl);
+      tbody.appendChild(tr);
+    }
+  }
+
   var card = document.getElementById("hist-holdings-card");
   var heldUrl = card ? card.getAttribute("data-held-url") : "";
   var pathUrl = card ? card.getAttribute("data-path-url") : "";
@@ -500,6 +539,7 @@
           deltaEl.textContent = fmt(body.delta);
           setDeltaClass(deltaEl, body.delta);
         }
+        paintBreakdown(body.breakdown || []);
         var chart = document.getElementById("hist-chart");
         if (chart && body.svg) {
           chart.innerHTML = body.svg;

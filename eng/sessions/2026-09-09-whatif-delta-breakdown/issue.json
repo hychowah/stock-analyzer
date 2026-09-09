@@ -1,0 +1,36 @@
+{
+  "goal": "Signed what-if Δ breakdown table like Mark-to-market P/L; largest gains at top, largest losses at bottom.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not reorder Change-in-NAV waterfall",
+    "Do not attach breakdown to holdings-as-of-D",
+    "Do not add a fourth what-if view or /breakdown URL",
+    "Do not call Live NAV from what-if"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "What-if editor shows a signed bar table of last-path-point Δ contribution (named + other + cash sums to header Δ)",
+    "Book MTM and what-if Δ both select top 20 by |value| then order signed descending (largest gain top, largest loss bottom)",
+    "Date change still hits holdings only; first HTML paint does not wait on Yahoo",
+    "eng_verify.py passes",
+    "Browser: /portfolio MTM order and /portfolio/histories/{id} breakdown after path load"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_portfolio.py apps/analysis_web/tests/test_ib_statement.py apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_histories.py -q"
+  ]
+}

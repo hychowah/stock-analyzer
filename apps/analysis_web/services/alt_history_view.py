@@ -16,10 +16,10 @@ from typing import Any, Callable
 from apps.analysis_web.services.alt_history import (
     History,
     actual_state,
-    compare_path,
     listings_for_path,
     state_on,
     utc_today,
+    walk_compare,
 )
 from apps.analysis_web.services.book_state import BookState, earliest_stock_date
 from apps.analysis_web.services.mark_book import (
@@ -28,7 +28,9 @@ from apps.analysis_web.services.mark_book import (
     mark_lots,
     mark_on,
     marks_on,
+    nav_delta_rows,
 )
+from apps.analysis_web.services.signed_bars import signed_bar_rows
 from apps.analysis_web.services.paper_account import (
     PaperAccount,
     paper_account,
@@ -222,6 +224,7 @@ class PathView:
     alt_nav: float | None
     delta: float | None
     base_currency: str
+    breakdown: tuple[dict[str, Any], ...] = ()
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -233,6 +236,7 @@ class PathView:
             "delta": self.delta,
             "path": self.path,
             "svg": self.svg,
+            "breakdown": list(self.breakdown),
         }
 
 
@@ -520,8 +524,12 @@ def path_on_bars(
     *,
     until: str,
 ) -> PathView:
-    path = compare_path(hist, bars, until=until)
+    walked = walk_compare(hist, bars, until=until)
+    path = list(walked.points)
     last = path[-1] if path else None
+    pairs: tuple[tuple[str, float], ...] = ()
+    if walked.actual is not None and walked.alt is not None:
+        pairs = nav_delta_rows(walked.actual, walked.alt)
     return PathView(
         fork_date=hist.fork_date,
         until=until,
@@ -531,6 +539,7 @@ def path_on_bars(
         alt_nav=None if last is None else last["alt_nav"],
         delta=None if last is None else last["delta"],
         base_currency=hist.seed.base_currency,
+        breakdown=tuple(signed_bar_rows(pairs)),
     )
 
 

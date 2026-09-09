@@ -139,6 +139,17 @@
   </div>
 </details>
 
+<div class="card" id="hist-breakdown-card" hidden>
+  <h2>Contribution to Δ</h2>
+  <p class="muted">Why header Δ is that number vs this copy’s actual, today. Largest 20 by |Δ| plus other. Gains at top, losses at bottom. Same day as the chart’s right end — not the date picker.</p>
+  <table class="perf-table" id="hist-breakdown">
+    <thead>
+      <tr><th>Name</th><th></th><th>Δ</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
 <div class="card" id="hist-chart-card">
   <h2>Actual vs this history</h2>
   <p class="muted">{{ payload.paper.fork_date }} → {{ payload.max_date }} · daily close · {{ payload.paper.base_currency }} · Actual (this copy) vs this history</p>

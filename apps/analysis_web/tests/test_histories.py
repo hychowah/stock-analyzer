@@ -109,6 +109,8 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertIn(b"META", r.content)
         self.assertIn(b'<label>Qty', r.content)
         self.assertNotIn(b'sr-only', r.content)
+        self.assertIn(b'id="hist-breakdown"', r.content)
+        self.assertIn(b"Contribution to \xce\x94", r.content)
         self.assertEqual(self._backend.calls, [])
 
     def test_unknown_id_404(self):
@@ -162,6 +164,17 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertAlmostEqual(body["alt_nav"], last["alt_nav"], places=5)
         self.assertAlmostEqual(body["actual_nav"], last["actual_nav"], places=5)
         self.assertNotIn("held", body)
+        breakdown = body["breakdown"]
+        self.assertTrue(breakdown)
+        self.assertAlmostEqual(
+            sum(row["pl"] for row in breakdown), body["delta"], places=5
+        )
+        pls = [row["pl"] for row in breakdown]
+        self.assertEqual(pls, sorted(pls, reverse=True))
+        names = {row["name"] for row in breakdown}
+        self.assertIn("META", names)
+        self.assertIn("AAPL", names)
+        self.assertIn("Cash", names)
 
         html = buy.text
         m = re.search(r'id="hist-delta"[^>]*>([^<]+)', html)
@@ -291,8 +304,10 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertEqual(path.status_code, 200)
         pbody = path.json()
         self.assertIn("path", pbody)
+        self.assertIn("breakdown", pbody)
         self.assertNotIn("held", pbody)
         self.assertIsNotNone(pbody["delta"])
+        self.assertNotIn("breakdown", body)
         svg = self.client.get(f"/api/portfolio/histories/{hid}/path.svg")
         self.assertEqual(svg.status_code, 200)
         self.assertIn("image/svg+xml", svg.headers.get("content-type", ""))

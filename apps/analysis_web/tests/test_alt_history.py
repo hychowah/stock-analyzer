@@ -17,6 +17,7 @@ from apps.analysis_web.services.alt_history import (
     compare_at,
     compare_path,
     drop_hyp_fill,
+    walk_compare,
     trial_replay,
     history_from_ib,
     overlay_fills,
@@ -525,6 +526,26 @@ class ComparePathTests(unittest.TestCase):
         path = compare_path(hist, self.bars, until="2026-04-01")
         self.assertEqual(path[0]["t"], hist.fork_date)
         self.assertNotIn("since", inspect.signature(compare_path).parameters)
+
+    def test_walk_last_marks_match_compare_at(self):
+        from apps.analysis_web.services.mark_book import nav_delta_rows
+
+        hist = with_hyp_fill(history_from_ib(self.ib, name="t"), _fill())
+        walked = walk_compare(hist, self.bars, until="2026-04-01")
+        self.assertEqual(list(walked.points), compare_path(hist, self.bars, until="2026-04-01"))
+        self.assertIsNotNone(walked.actual)
+        self.assertIsNotNone(walked.alt)
+        today = compare_at(
+            hist,
+            "2026-04-01",
+            {"META": 55.0, "0700.HK": 10.0, "AAPL": 210.0},
+        )
+        self.assertAlmostEqual(walked.alt.nav, today["alt_nav"], places=5)
+        self.assertAlmostEqual(walked.actual.nav, today["actual_nav"], places=5)
+        rows = nav_delta_rows(walked.actual, walked.alt)
+        self.assertAlmostEqual(
+            sum(pl for _, pl in rows), walked.alt.nav - walked.actual.nav, places=5
+        )
 
     def test_overlay_joins_walks_on_date(self):
         from apps.analysis_web.services.alt_history_view import overlay_svg_from_cards

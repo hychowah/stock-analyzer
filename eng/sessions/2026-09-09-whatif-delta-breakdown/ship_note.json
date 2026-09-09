@@ -1,0 +1,6 @@
+{
+  "session_key": "2026-09-09-whatif-delta-breakdown",
+  "status": "complete",
+  "summary": "What-if path JSON carries a last-point Δ breakdown (named + other + cash). Book MTM and that table select by |value| then order signed descending so largest losses sit at the bottom. Walk is the engine; contribution identity sits next to MarkedNav.",
+  "commit_subject": "Add signed what-if Δ breakdown; rank MTM gains then losses"
+}

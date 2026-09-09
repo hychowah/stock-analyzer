@@ -145,6 +145,41 @@ class MarkedNav:
         }
 
 
+def nav_delta_rows(
+    actual: MarkedNav, alt: MarkedNav
+) -> tuple[tuple[str, float], ...]:
+    """Per-listing and cash contribution to ``alt.nav − actual.nav``.
+
+    Unquoted value is 0. Cash is included when either book has cash
+    (missing cash counts as 0). Does not rank or paint bars.
+    """
+    values: dict[str, float] = {}
+    for row in actual.rows:
+        key = (row.listing or "").strip().upper()
+        if not key:
+            continue
+        values[key] = values.get(key, 0.0) - (
+            0.0 if row.value_base is None else float(row.value_base)
+        )
+    for row in alt.rows:
+        key = (row.listing or "").strip().upper()
+        if not key:
+            continue
+        values[key] = values.get(key, 0.0) + (
+            0.0 if row.value_base is None else float(row.value_base)
+        )
+    out: list[tuple[str, float]] = [
+        (name, pl) for name, pl in values.items() if pl != 0.0
+    ]
+    if actual.cash is not None or alt.cash is not None:
+        cash_pl = (0.0 if alt.cash is None else float(alt.cash)) - (
+            0.0 if actual.cash is None else float(actual.cash)
+        )
+        if cash_pl != 0.0:
+            out.append(("Cash", cash_pl))
+    return tuple(out)
+
+
 def _price_for(lot: Lot, prices: dict[str, float]) -> float | None:
     listing = (lot.listing or "").strip().upper()
     if not listing:

@@ -513,17 +513,26 @@ def path_dates(
     return sorted(days)
 
 
-def compare_path(
+@dataclass(frozen=True)
+class CompareWalk:
+    """One actual-vs-alt walk. ``points`` is the overlay series; last marks explain Δ."""
+
+    points: tuple[dict[str, Any], ...]
+    actual: MarkedNav | None
+    alt: MarkedNav | None
+
+
+def walk_compare(
     hist: History,
     bars_by_listing: dict[str, tuple[PriceBar, ...] | list[PriceBar]],
     *,
     until: str | None = None,
-) -> list[dict[str, Any]]:
+) -> CompareWalk:
     """NAV path as one walk: overlay once, two running books, last close ≤ day.
 
     Always starts at ``hist.fork_date``. Overlay alignment is the overlay's
     problem. ``compare_at`` is the single-day identity check, not this
-    algorithm.
+    algorithm. Last ``actual`` / ``alt`` are the marks of the last point.
     """
     end = _day(until or utc_today())
     days = path_dates(bars_by_listing, hist.fork_date, end)
@@ -536,11 +545,15 @@ def compare_path(
     i_alt = 0
     price_days = _pointer_prices(bars_by_listing, days)
     points: list[dict[str, Any]] = []
+    last_actual: MarkedNav | None = None
+    last_alt: MarkedNav | None = None
     for day, prices in zip(days, price_days):
         actual, i_real = _apply_through(actual, real, i_real, day)
         alt, i_alt = _apply_through(alt, alt_fills, i_alt, day)
         a = mark_book(actual, prices)
         b = mark_book(alt, prices)
+        last_actual = a
+        last_alt = b
         points.append(
             {
                 "t": day,
@@ -549,7 +562,17 @@ def compare_path(
                 "delta": b.nav - a.nav,
             }
         )
-    return points
+    return CompareWalk(points=tuple(points), actual=last_actual, alt=last_alt)
+
+
+def compare_path(
+    hist: History,
+    bars_by_listing: dict[str, tuple[PriceBar, ...] | list[PriceBar]],
+    *,
+    until: str | None = None,
+) -> list[dict[str, Any]]:
+    """Overlay series from ``walk_compare``. Last-day marks stay on the walk."""
+    return list(walk_compare(hist, bars_by_listing, until=until).points)
 
 
 def buy_universe(api: CatalogApi, *, limit: int = 200) -> list[dict[str, Any]]:

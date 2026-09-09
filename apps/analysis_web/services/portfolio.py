@@ -16,6 +16,7 @@ from packages.catalog_api.client import CatalogApi, DbMissing
 
 from apps.analysis_web.config import local_dir
 from apps.analysis_web.services.ib_statement import IbBook, IbStatement
+from apps.analysis_web.services.signed_bars import signed_bar_rows
 
 
 DEFAULT_BOOK_NAME = "portfolio.json"
@@ -230,23 +231,6 @@ def _empty_performance() -> dict[str, Any]:
     return {"waterfall": [], "mtm": []}
 
 
-def _bar_rows(items: list[dict[str, Any]], value_key: str) -> list[dict[str, Any]]:
-    peak = max((abs(float(r[value_key] or 0)) for r in items), default=0.0)
-    out: list[dict[str, Any]] = []
-    for r in items:
-        val = r[value_key]
-        try:
-            n = float(val) if val is not None else 0.0
-        except (TypeError, ValueError):
-            n = 0.0
-        sign = "pos" if n > 0 else ("neg" if n < 0 else "zero")
-        row = dict(r)
-        row["bar_pct"] = (100.0 * abs(n) / peak) if peak > 0 else 0.0
-        row["sign"] = sign
-        out.append(row)
-    return out
-
-
 _WATERFALL_TOTALS = frozenset(
     {"Starting Value", "Ending Value", "Starting NAV", "Ending NAV"}
 )
@@ -280,16 +264,8 @@ def _waterfall_rows(stmt: IbStatement) -> list[dict[str, Any]]:
 def _performance(stmt: IbStatement) -> dict[str, Any]:
     waterfall = _waterfall_rows(stmt)
     stocks = [m for m in stmt.mtm if (m.asset_category or "").lower() == "stocks"]
-    ranked = sorted(stocks, key=lambda m: abs(m.pl_total or 0.0), reverse=True)
-    top, rest = ranked[:20], ranked[20:]
-    mtm_items: list[dict[str, Any]] = [
-        {"ib_symbol": m.ib_symbol, "pl": m.pl_total} for m in top
-    ]
-    if rest:
-        mtm_items.append(
-            {"ib_symbol": "other", "pl": sum(m.pl_total or 0.0 for m in rest)}
-        )
-    return {"waterfall": waterfall, "mtm": _bar_rows(mtm_items, "pl")}
+    pairs = [(m.ib_symbol, float(m.pl_total or 0.0)) for m in stocks]
+    return {"waterfall": waterfall, "mtm": signed_bar_rows(pairs)}
 
 
 def _catalog_fields(run: dict[str, Any] | None) -> dict[str, Any]:

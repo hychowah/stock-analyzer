@@ -343,7 +343,7 @@ class IbPortfolioViewTests(unittest.TestCase):
             self.assertIn("Change in Dividend Accruals", names)
             self.assertEqual(view["ib"]["trade_count"], 4)
             self.assertEqual(view["ib"]["account_masked"], "U0000…001")
-            mtm_syms = {r["ib_symbol"] for r in view["performance"]["mtm"]}
+            mtm_syms = {r["name"] for r in view["performance"]["mtm"]}
             self.assertIn("CLOSED", mtm_syms)
             del api
         finally:
@@ -410,6 +410,14 @@ class IbPortfolioHttpTests(unittest.TestCase):
         names = [row["name"] for row in data["performance"]["waterfall"]]
         self.assertIn("Change in Dividend Accruals", names)
         self.assertIn("Ending Value", names)
+        mtm = data["performance"]["mtm"]
+        self.assertTrue(mtm)
+        self.assertIn("name", mtm[0])
+        self.assertNotIn("ib_symbol", mtm[0])
+        self.assertEqual(
+            [row["pl"] for row in mtm],
+            sorted((row["pl"] for row in mtm), reverse=True),
+        )
         tickers = {p["ib_symbol"] for p in data["positions"]}
         self.assertEqual(tickers, {"700", "META"})
         self.assertNotIn("AAPL", tickers)
@@ -425,6 +433,7 @@ class IbPortfolioHttpTests(unittest.TestCase):
         self.assertIn(b"left:50%", r.content)
         self.assertIn(b"right:50%", r.content)
         self.assertIn(b"Mark-to-market P/L", r.content)
+        self.assertIn(b"Gains at top, losses at bottom", r.content)
         self.assertIn(b">700<", r.content)
         self.assertIn(b'id="live-nav"', r.content)
         self.assertNotIn(b">Ending NAV<", r.content)

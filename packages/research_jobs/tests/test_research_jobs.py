@@ -11,7 +11,10 @@ from pathlib import Path
 
 from packages.kd_research.paths import PROJECT_ROOT as ROOT
 
+from unittest.mock import patch
+
 from packages.agent_jobs.spawn import GrokSpawnBackend
+from packages.harness_pin.pin import Pin, PinError
 from packages.research_jobs.jobs import (
     AnalyzeBusy,
     AnalyzeDiscardRefused,
@@ -238,14 +241,44 @@ class ResearchJobsTests(unittest.TestCase):
             self._start("ENG")
         self.assertEqual(ctx.exception.status, "abort_reserved")
 
-    def test_same_day_second_run_allocates_r2(self) -> None:
+    def test_cancel_then_start_returns_same_job(self) -> None:
         a = self._start()
         cancel_analyze(self.archive, a["analyze_id"])
+        b = self._start()
+        self.assertEqual(a["analyze_id"], b["analyze_id"])
+        self.assertEqual(b["status"], "cancelled")
+
+    def test_complete_then_start_allocates_r2(self) -> None:
+        a = self._start()
+        write_stub_snapshot(Path(a["session_root"]))
+        get_analyze(self.archive, a["analyze_id"])
         b = self._start()
         self.assertNotEqual(a["session_key"], b["session_key"])
         self.assertTrue(
             b["session_key"].endswith("__r2") or a["session_key"].endswith("__r2")
         )
+
+    def test_double_start_returns_same_running_job(self) -> None:
+        a = self._start()
+        b = self._start()
+        self.assertEqual(a["analyze_id"], b["analyze_id"])
+        self.assertEqual(b["status"], "running")
+
+    def test_job_json_is_starting_before_scaffold(self) -> None:
+        seen: dict[str, str] = {}
+        archive = self.archive
+
+        def boom(_pin: object, *_a: object, **_k: object) -> Path:
+            rows = list((archive / "research_jobs").rglob("job.json"))
+            self.assertTrue(rows)
+            data = json.loads(rows[0].read_text(encoding="utf-8"))
+            seen["status"] = str(data.get("status"))
+            raise PinError("boom")
+
+        with patch.object(Pin, "scaffold_research", boom):
+            with self.assertRaises(AnalyzeValidationError):
+                self._start()
+        self.assertEqual(seen.get("status"), "starting")
 
     def test_cancel_does_not_abandon(self) -> None:
         job = self._start()
@@ -287,6 +320,7 @@ class ResearchJobsTests(unittest.TestCase):
         data = json.loads(job_path.read_text(encoding="utf-8"))
         data["pid"] = 999_999_999
         data["status"] = "running"
+        data["grok_session_id"] = "not-fake"
         data["spawned_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         job_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         refreshed = get_analyze(self.archive, job["analyze_id"])
@@ -298,23 +332,20 @@ class ResearchJobsTests(unittest.TestCase):
         self.assertEqual(resumed["mode"], "resume")
         self.assertEqual(resumed["session_key"], job["session_key"])
 
-    def test_queued_stale_failed_resume_no_new_scaffold(self) -> None:
+    def test_queued_is_not_a_death_timer(self) -> None:
         job = self._start()
-        key = job["session_key"]
         job_path = Path(job["job_dir"]) / "job.json"
         data = json.loads(job_path.read_text(encoding="utf-8"))
         data["status"] = "queued"
         data["pid"] = None
+        data["grok_session_id"] = "fake"
+        data["command"] = ["fake-analyze"]
         data["updated_at"] = (datetime.now(timezone.utc) - timedelta(minutes=5)).strftime(
             "%Y-%m-%dT%H:%M:%SZ"
         )
         job_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         refreshed = get_analyze(self.archive, job["analyze_id"])
-        self.assertEqual(refreshed["status"], "failed")
-        resume_analyze(self.archive, job["analyze_id"], spawn=self.fake)
-        sessions = list((self.archive / "research" / "COHR").iterdir())
-        self.assertEqual(len([p for p in sessions if p.is_dir()]), 1)
-        self.assertEqual(sessions[0].name, key)
+        self.assertEqual(refreshed["status"], "queued")
 
     def test_missing_session_root_not_resumable(self) -> None:
         job = self._start()
@@ -353,12 +384,16 @@ class ResearchJobsTests(unittest.TestCase):
         data = json.loads(job_path.read_text(encoding="utf-8"))
         data["pid"] = 999_999_998
         data["status"] = "running"
+        data["grok_session_id"] = "not-fake"
         data["spawned_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         job_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
         reconcile_analyze_jobs(self.archive)
-        second = self._start()
-        self.assertEqual(second["status"], "running")
-        self.assertNotEqual(second["analyze_id"], job["analyze_id"])
+        same = self._start()
+        self.assertEqual(same["analyze_id"], job["analyze_id"])
+        self.assertEqual(same["status"], "failed")
+        other = self._start(session_date="2026-08-29", slug="other")
+        self.assertEqual(other["status"], "running")
+        self.assertNotEqual(other["analyze_id"], job["analyze_id"])
 
     def test_real_grok_without_heading_refuses(self) -> None:
         with self.assertRaises(AnalyzeRunbookMissing):

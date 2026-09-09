@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ job.ticker }} {{ job.session_key }}{% endblock %}
 {% block extra_css %}
-{% if job.status in ['running', 'queued'] %}
+{% if job.status in ['running', 'queued', 'starting'] %}
 <meta http-equiv="refresh" content="15"/>
 {% endif %}
 {% endblock %}
@@ -60,7 +60,7 @@
   {% endif %}
   <p class="muted">mode={{ job.mode }} · harness={% if job.pin %}{{ job.pin.label or job.pin.version }}{% else %}live{% endif %} · pid={{ job.pid or '—' }} · spawned {{ job.spawned_at or '—' }}</p>
   <div>
-    {% if job.status in ['running', 'queued'] %}
+    {% if job.status in ['running', 'queued', 'starting'] %}
     <form method="post" action="/analyze-cancel" style="display:inline"
           onsubmit="return confirm('Kill Grok, keep the session.');">
       <input type="hidden" name="analyze_id" value="{{ job.analyze_id }}"/>

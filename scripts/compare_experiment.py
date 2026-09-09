@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Summarize research runs for experiment / model / harness variation analysis.
 
-Reads archive/catalog/research_compare.sqlite (rebuild with export_compare_db.py).
+Reads the comparison warehouse sqlite via catalog_sqlite_path
+(rebuild with export_compare_db.py).
 
 Usage:
     python3 scripts/compare_experiment.py --experiment exp-model-bakeoff

@@ -84,13 +84,13 @@ Mode B may **schedule** a Mode A run (the Analyze page). The website starts the 
 
 ## The data plane
 
-Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness **code** stays outside that tree. Do not store fair values in a second database. Portfolio state lives under `apps/analysis_web/.local/`: sqlite is a **trade ledger plus the latest IB snapshot** (overlapping activity CSVs merge; fills are never deleted). Alternative histories are a second sqlite next to it (`alt_histories.sqlite`): at copy time the IB stock book is frozen (seed lots + cash + statement FX and copied stock fills); what-if fills sit on that copy. Later reads do not open the live IB book. They never write the IB trade ledger. Frozen harness copies live under `pins/` — those are code snapshots, not archive records.
+Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness **code** stays outside that tree. Do not store fair values in a second database. SQLite that the product writes (catalog projection, IB book, alt-history, the Grok start lock) lives in a **local home** off the synced tree: `STOCK_RESEARCH_LOCAL` if set, else `%LOCALAPPDATA%\StockResearch` (Windows) or `~/.local/share/stock-research`. Test and fixture `ARCHIVE_ROOT` trees keep sqlite under that archive (tmp catalogs stay self-contained). If a book already exists at `apps/analysis_web/.local/`, the website still reads it until you point `STOCK_RESEARCH_LOCAL` or a local-home copy appears. JSON catalog indexes stay under `archive/catalog/` (rebuildable files). Frozen harness copies live under `pins/` — those are code snapshots, not archive records. Portfolio sqlite is a **trade ledger plus the latest IB snapshot** (overlapping activity CSVs merge; fills are never deleted). Alternative histories are a second sqlite (`alt_histories.sqlite`): at copy time the IB stock book is frozen (seed lots + cash + statement FX and copied stock fills); what-if fills sit on that copy. Later reads do not open the live IB book. They never write the IB trade ledger.
 
 | Folder | What it is | How it may change |
 |--------|------------|-------------------|
 | `archive/research/` | One complete analysis per ticker and session key | Writable while in progress. **Do not rewrite after it is completed** (a snapshot exists). New view → new folder. |
 | `archive/outcomes/` | Later marks: what the market did after the call | Never edits research. Mark files may be refreshed. |
-| `archive/catalog/` | JSON indexes + SQLite for listing and filtering runs | **Index you can rebuild.** Disk sessions are the source of numbers. |
+| `archive/catalog/` | JSON indexes for rebuild and watch. Production sqlite may live in local home | **Index you can rebuild.** Disk sessions are the source of numbers. |
 | `archive/library/` | Reusable primary documents (filings, transcripts), not judgments | Add documents, not judgments. **Not in git.** |
 | `archive/comparisons/` | Packets from a two-session valuation audit | New folder per job. `job.json` updates in place. Not rebuildable. Not a catalog source. |
 | `archive/research_jobs/` | Analyze job status files (`job.json`, pid, prompt, status) | New folder per job. `job.json` updates in place. Not rebuildable. Not a catalog source. |
@@ -165,7 +165,7 @@ The analysis website’s research path is a **read path plus job scheduler**. An
 ```mermaid
 flowchart LR
   UI[analysis_web] --> Cat[catalog_api]
-  Cat --> SQLite[archive/catalog/research_compare.sqlite]
+  Cat --> SQLite[catalog sqlite: local home, legacy archive/catalog]
   Cat --> Files[session files on disk]
   Cat -.-> JSON[JSON indexes: rebuild and watch only]
 
@@ -194,11 +194,11 @@ python3 scripts/export_compare_db.py --all --rebuild
 
 `rebuild_catalog.py` refreshes JSON indexes. SQLite schema freshness is `export_compare_db.py --all --rebuild`.
 
-**Analyze jobs** (`packages/research_jobs`): check ticker → pin scaffold → write `archive/research_jobs/…/job.json` → spawn a detached Grok process. Resume does not re-scaffold. Killing the website must not kill the worker. Cancel is best-effort on the orchestrator PID and **keeps** the session (you can resume).
+**Analyze jobs** (`packages/research_jobs`): `ensure_analyze` is idempotent for a live intent. It writes `job.json` as `starting` (that occupies a slot) **before** scaffold, then spawns a detached Grok process. A second Start for the same ticker and as-of date returns that job — it does not create `__r2` while the first is live, failed, or cancelled. `__r2` is for a new intent after complete or abandon. Resume does not re-scaffold. Killing the website must not kill the worker. Cancel is best-effort on the orchestrator PID and **keeps** the session (you can resume). Liveness is worker evidence (`orchestrator_alive` / `session_busy`), not “this integer is dead.” The next UI boot runs `reconcile_jobs` and continues an interrupted start.
 
-**Compare jobs** (`packages/compare_jobs`) take two runs of the **same ticker**. Each session must have `valuation_model.json`. Snapshots are optional (the headline table may be degraded without them). Allocate a packet under `archive/comparisons/` and spawn an independent multi-persona audit via `agent_jobs`. “Done” means `99_synthesis.md` is on disk.
+**Compare jobs** (`packages/compare_jobs`) take two runs of the **same ticker**. Each session must have `valuation_model.json`. Snapshots are optional (the headline table may be degraded without them). Allocate a packet under `archive/comparisons/` and spawn an independent multi-persona audit via `agent_jobs`. Same-pair live jobs return the existing packet. “Done” means `99_synthesis.md` is on disk.
 
-**Shared spawn/capacity** lives in `packages/agent_jobs` so Analyze and Compare do not each invent PID handling.
+**Shared spawn/capacity** lives in `packages/agent_jobs` so Analyze and Compare do not each invent PID handling, job.json writes, or liveness. `starting` counts as a running slot. `supervise.py` still does not import this package and still does not tree-kill Grok.
 
 **Pins** (`packages/harness_pin`) **resolve** `live` vs `pins/<semver>/`. The `/harness` page shows the pinned pipeline and can load prompts from that tree.
 

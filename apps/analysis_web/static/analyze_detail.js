@@ -12,7 +12,7 @@
   }
   var cid = body.getAttribute("data-analyze-id");
   var status = body.getAttribute("data-analyze-status");
-  if (!cid || (status !== "running" && status !== "queued")) {
+  if (!cid || (status !== "running" && status !== "queued" && status !== "starting")) {
     return;
   }
 

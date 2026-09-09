@@ -12,6 +12,7 @@ from typing import Any, Iterable
 from packages.kd_research.paths import (
     PROJECT_ROOT,
     archive_root as _archive_root,
+    catalog_sqlite_path,
     parse_compare_id,
     parse_run_id,
 )
@@ -484,7 +485,7 @@ class CatalogApi:
 
     @property
     def db_path(self) -> Path:
-        return self.catalog_dir / "research_compare.sqlite"
+        return catalog_sqlite_path(self.archive_root, create=False)
 
     def _connect(self) -> sqlite3.Connection:
         path = self.db_path

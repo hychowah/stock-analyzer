@@ -558,7 +558,8 @@ td.pick {
   width: 1.5rem;
 }
 .badge.status-running,
-.badge.status-queued {
+.badge.status-queued,
+.badge.status-starting {
   background: #fef3c7;
   color: #92400e;
 }

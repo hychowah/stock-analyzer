@@ -2,8 +2,9 @@
 
 ``ANALYZE_MAX`` / ``COMPARE_MAX`` are default kind slots only. Live values are
 ``limits()``. Unset ``GROK_JOBS_MAX`` is the sum of the effective kind slots;
-set it to tighten (``1`` serializes). Callers hold ``claim_start`` until the
-job row is marked running.
+set it to tighten (``1`` serializes). Callers hold ``claim_start`` until
+``job.json`` is ``starting`` (that occupies a slot); scaffold and spawn run
+after the lock.
 """
 
 from __future__ import annotations
@@ -105,7 +106,7 @@ def check_slots(kind: str, running_by_kind: Mapping[str, int]) -> None:
 
 
 def running_by_kind(archive_root: Path) -> dict[str, int]:
-    """Refresh both job planes and count ``running`` rows."""
+    """Refresh both job planes and count slot statuses (starting/queued/running)."""
     from packages.compare_jobs.jobs import count_running_compare
     from packages.research_jobs.jobs import count_running_analyze
 
@@ -123,7 +124,9 @@ def assert_capacity(archive_root: Path, kind: str) -> None:
 @contextmanager
 def exclusive_start_lock(archive_root: Path) -> Iterator[None]:
     """Process-exclusive lock for every Grok start (Analyze and Compare)."""
-    path = Path(archive_root).resolve() / ".grok_jobs.lock"
+    from packages.kd_research.paths import local_home
+
+    path = local_home(archive_root) / ".grok_jobs.lock"
     path.parent.mkdir(parents=True, exist_ok=True)
     fh = open(path, "a+b")
     try:
@@ -159,7 +162,7 @@ def exclusive_start_lock(archive_root: Path) -> Iterator[None]:
 
 @contextmanager
 def claim_start(archive_root: Path, kind: str) -> Iterator[None]:
-    """Lock, census, slot check. Hold until the job is marked running."""
+    """Lock, census, slot check. Hold until job.json is starting (slot occupied)."""
     with exclusive_start_lock(archive_root):
         assert_capacity(archive_root, kind)
         yield

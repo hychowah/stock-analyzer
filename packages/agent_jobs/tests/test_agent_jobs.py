@@ -199,6 +199,71 @@ class DetachFlagTests(unittest.TestCase):
         self.assertEqual(captured["kwargs"].get("stdin"), subprocess.DEVNULL)
 
 
+class StoreAndWorkerTests(unittest.TestCase):
+    def test_write_job_replace_is_readable(self) -> None:
+        import tempfile
+
+        from packages.agent_jobs.store import write_job
+
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "job.json"
+            write_job(path, {"status": "starting", "n": 1})
+            self.assertTrue(path.is_file())
+            self.assertEqual(path.read_text(encoding="utf-8").strip()[-1], "}")
+
+    def test_fake_without_pid_stays_running(self) -> None:
+        from packages.agent_jobs.worker import apply_liveness
+
+        job = {
+            "status": "running",
+            "pid": None,
+            "grok_session_id": "fake",
+            "command": ["fake-analyze"],
+        }
+        self.assertFalse(apply_liveness(job))
+        self.assertEqual(job["status"], "running")
+
+    def test_dead_pid_without_busy_fails(self) -> None:
+        from packages.agent_jobs.worker import apply_liveness
+
+        job = {
+            "status": "running",
+            "pid": 999_999_999,
+            "grok_session_id": "abc-uuid",
+            "spawned_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "session_root": str(Path("C:/no/such/session")),
+        }
+        self.assertTrue(apply_liveness(job, processes=[]))
+        self.assertEqual(job["status"], "failed")
+
+    def test_dead_pid_with_session_in_cmdline_stays_running(self) -> None:
+        from packages.agent_jobs.worker import ProcInfo, apply_liveness
+
+        root = Path(os.getcwd()) / "archive" / "research" / "COHR" / "2026-09-09"
+        job = {
+            "status": "running",
+            "pid": 999_999_999,
+            "grok_session_id": "abc-uuid",
+            "spawned_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "session_root": str(root),
+        }
+        procs = [ProcInfo(pid=1, cmdline=f"grok --cwd {root}", cwd=str(root))]
+        self.assertTrue(apply_liveness(job, processes=procs))
+        self.assertEqual(job["status"], "running")
+        self.assertTrue(job.get("pid_missing"))
+
+    def test_queued_without_worker_is_not_failed(self) -> None:
+        from packages.agent_jobs.worker import apply_liveness
+
+        job = {
+            "status": "queued",
+            "pid": None,
+            "grok_session_id": None,
+        }
+        self.assertFalse(apply_liveness(job, processes=[]))
+        self.assertEqual(job["status"], "queued")
+
+
 class tempfile_job:
     def __enter__(self) -> dict:
         import tempfile

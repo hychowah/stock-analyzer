@@ -35,7 +35,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 3. **Mode B home is `eng/`** — never use a top-level folder named `build/` (gitignored).  
 4. **Do not produce investment FV/MoS judgments** in Mode B.  
 5. **Fixtures** live at `eng/fixtures/archive/` (same shape as `archive/`).  
-6. **App state** under `apps/<name>/.local/` only. **Archive job planes** (`archive/comparisons/`, `archive/research_jobs/`) are append-only data-plane packets next to `archive/`, not app-local state.  
+6. **App sqlite** (IB book, alt-history, catalog projection, start lock) lives in **local home** (`STOCK_RESEARCH_LOCAL` or `%LOCALAPPDATA%\StockResearch` / `~/.local/share/stock-research`). Legacy `apps/analysis_web/.local/` is still read if that book exists. Test `ARCHIVE_ROOT` trees keep sqlite beside that archive. **Archive job planes** (`archive/comparisons/`, `archive/research_jobs/`) are append-only data-plane packets next to `archive/`, not app-local state.  
 7. **W1 changes** must run research unit tests, not only `eng_verify`.  
 8. Gen ≠ eval: implementer does not mark `passes: true`.  
 9. **Mode A version on W1 ship:** if the change set touches Mode A research-runtime paths (`harness/` except advisory `harness/research/`, `packages/kd_research/`, research scripts), you **must bump** `harness/VERSION` → `harness_version` (semver) in the **same** change set before marking complete. `eng_verify` enforces this vs `main`. UI/catalog-only (W2–W4) work does **not** bump Mode A version.  

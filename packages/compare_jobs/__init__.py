@@ -12,8 +12,10 @@ from packages.compare_jobs.jobs import (
     CompareValidationError,
     GrokMissing,
     cancel_compare,
+    ensure_compare,
     get_compare,
     list_compares,
+    reconcile_compare_jobs,
     refresh_compare,
     start_compare,
 )
@@ -25,8 +27,10 @@ __all__ = [
     "CompareValidationError",
     "GrokMissing",
     "cancel_compare",
+    "ensure_compare",
     "get_compare",
     "list_compares",
+    "reconcile_compare_jobs",
     "refresh_compare",
     "start_compare",
 ]

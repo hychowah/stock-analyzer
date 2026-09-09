@@ -24,10 +24,12 @@ from packages.kd_research.outcomes import (
 from packages.kd_research.paths import (
     PROJECT_ROOT as ROOT,
     allocate_session_key,
+    catalog_sqlite_path,
     ensure_archive_tree,
     is_production_session_key,
     iter_research_sessions,
     library_root,
+    local_home,
     make_session_key,
     parse_session_key,
     resolve_session,
@@ -70,6 +72,58 @@ class PathsTests(unittest.TestCase):
             (p2 / "meta").mkdir()
             key3 = allocate_session_key("META", "2026-08-10", output_dir=root)
             self.assertEqual(key3, "2026-08-10__r3")
+
+    def test_tmp_archive_catalog_sqlite_stays_in_tree(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            ensure_archive_tree(root)
+            ar = root / "archive"
+            db = catalog_sqlite_path(ar, create=True)
+            self.assertEqual(db, ar / "catalog" / "research_compare.sqlite")
+            self.assertEqual(local_home(ar), ar / ".local")
+
+    def test_patched_project_root_is_not_production_archive(self):
+        from packages.kd_research import paths as paths_mod
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            old = paths_mod.PROJECT_ROOT
+            try:
+                paths_mod.PROJECT_ROOT = root
+                ar = root / "archive"
+                ar.mkdir()
+                self.assertFalse(paths_mod.is_production_archive(root))
+                self.assertEqual(
+                    catalog_sqlite_path(root, create=True),
+                    ar / "catalog" / "research_compare.sqlite",
+                )
+            finally:
+                paths_mod.PROJECT_ROOT = old
+
+    def test_stock_research_local_wins(self):
+        import os
+
+        with tempfile.TemporaryDirectory() as td:
+            home = Path(td) / "home"
+            old = os.environ.get("STOCK_RESEARCH_LOCAL")
+            os.environ["STOCK_RESEARCH_LOCAL"] = str(home)
+            try:
+                from packages.kd_research.paths import analysis_web_local_dir
+
+                self.assertEqual(local_home().resolve(), home.resolve())
+                db = catalog_sqlite_path(create=True)
+                self.assertEqual(
+                    db, home.resolve() / "catalog" / "research_compare.sqlite"
+                )
+                self.assertEqual(
+                    analysis_web_local_dir().resolve(),
+                    home.resolve() / "analysis_web",
+                )
+            finally:
+                if old is None:
+                    os.environ.pop("STOCK_RESEARCH_LOCAL", None)
+                else:
+                    os.environ["STOCK_RESEARCH_LOCAL"] = old
 
     def test_ensure_archive_tree_has_library(self):
         with tempfile.TemporaryDirectory() as td:

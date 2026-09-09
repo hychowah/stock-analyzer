@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ job.ticker }} {{ job.session_a }} vs {{ job.session_b }}{% endblock %}
 {% block extra_css %}
-{% if job.status in ['running', 'queued'] %}
+{% if job.status in ['running', 'queued', 'starting'] %}
 <meta http-equiv="refresh" content="15"/>
 {% endif %}
 {% endblock %}
@@ -34,7 +34,7 @@
     <tr id="job-error-row" hidden><th>Error</th><td id="job-error" class="err"></td></tr>
     {% endif %}
   </table>
-  {% if job.status == 'running' or job.status == 'queued' %}
+  {% if job.status == 'running' or job.status == 'queued' or job.status == 'starting' %}
   <p class="muted">Grok audit running. Headline numbers below are the snapshot helper, not the audit.</p>
   <form method="post" action="/compare-cancel"
         onsubmit="return confirm('Kill Grok, keep the session.');">

@@ -9,7 +9,7 @@ from typing import Any
 
 from apps.analysis_web.config import archive_root
 
-_LIVE = frozenset({"running", "queued"})
+_LIVE = frozenset({"running", "queued", "starting"})
 
 
 def running_analyzes(*, cap: int = 3) -> tuple[list[dict[str, str]], int]:

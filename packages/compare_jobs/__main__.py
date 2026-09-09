@@ -17,6 +17,7 @@ from packages.compare_jobs.jobs import (
     cancel_compare,
     get_compare,
     list_compares,
+    reconcile_compare_jobs,
     start_compare,
 )
 
@@ -43,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
     p_cancel = sub.add_parser("cancel")
     p_cancel.add_argument("compare_id")
 
+    sub.add_parser("reconcile")
+
     args = ap.parse_args(argv)
     root = _archive()
     try:
@@ -58,6 +61,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.cmd == "cancel":
             print(json.dumps(cancel_compare(root, args.compare_id), indent=2, default=str))
+            return 0
+        if args.cmd == "reconcile":
+            print(json.dumps(reconcile_compare_jobs(root), indent=2, default=str))
             return 0
     except CompareValidationError as e:
         print(f"invalid: {e}", file=sys.stderr)

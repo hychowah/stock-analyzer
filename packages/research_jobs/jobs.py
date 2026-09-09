@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +14,14 @@ from packages.agent_jobs.spawn import (
     SpawnBackend,
     SpawnResult,
     grok_binary,
-    kill_pid,
-    pid_alive_for_job,
+)
+from packages.agent_jobs.store import write_job
+from packages.agent_jobs.worker import (
+    SLOT_STATUSES,
+    apply_liveness,
+    kill,
+    record_spawn,
+    session_busy,
 )
 from packages.research_jobs.paths import (
     UI_SCHEDULED_HEADING,
@@ -26,13 +32,12 @@ from packages.research_jobs.paths import (
 )
 from packages.research_jobs.prompt import build_prompt
 from packages.harness_pin.pin import PinError, UnknownVersion, resolve
-from packages.kd_research.paths import PROJECT_ROOT
+from packages.kd_research.paths import PROJECT_ROOT, parse_session_key, research_root
 from packages.kd_research.spawn_gate import write_abandon
 from packages.kd_research.ticker_lookup import LookupBackend, check_ticker
 
 TERMINAL = frozenset({"complete", "failed", "cancelled"})
 JOB_NAME = "job.json"
-QUEUED_STALE_S = 60
 NOTES_UI = (
     "UI-scheduled Analyze; session already scaffolded; "
     "do not re-scaffold or list archive/research/{ticker}/ except this session_key."
@@ -103,26 +108,8 @@ def _utc_stamp(dt: datetime | None = None) -> str:
     return (dt or _utc_now()).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _parse_ts(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    raw = str(value).strip()
-    if raw.endswith("Z"):
-        raw = raw[:-1] + "+00:00"
-    try:
-        dt = datetime.fromisoformat(raw)
-    except ValueError:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc)
-
-
 def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, default=str) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    write_job(path, data)
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -180,7 +167,7 @@ def count_running_analyze(archive_root: Path) -> int:
         if job is None:
             continue
         job = refresh_analyze(archive_root, str(job.get("analyze_id") or ""), job=job)
-        if job.get("status") == "running":
+        if job.get("status") in SLOT_STATUSES:
             n += 1
     return n
 
@@ -207,12 +194,17 @@ def refresh_analyze(
     abandon = _session_abandon(session) if session.as_posix() not in {".", ""} else None
 
     if not session.exists():
-        if job.get("status") not in TERMINAL:
+        if str(job.get("status") or "") == "starting":
+            pass
+        elif job.get("status") not in TERMINAL:
             job["status"] = "failed"
             job["error"] = "session_root missing"
             job["abandoned"] = False
             changed = True
         job["snapshot_ready"] = False
+        if str(job.get("status") or "") == "starting":
+            if apply_liveness(job):
+                changed = True
         if changed:
             job["updated_at"] = _utc_stamp()
             if job_dir:
@@ -262,28 +254,8 @@ def refresh_analyze(
             job["error"] = str(payload.get("reason") or payload.get("detail") or "abandoned")
             changed = True
         job["snapshot_ready"] = False
-    elif str(job.get("status") or "") == "running":
-        pid = job.get("pid")
-        spawned = job.get("spawned_at")
-        if pid and not pid_alive_for_job(int(pid), spawned if isinstance(spawned, str) else None):
-            job["status"] = "failed"
-            job["error"] = "Grok process exited before finalize"
-            job["abandoned"] = False
-            changed = True
-        elif not pid:
-            # Fake spawn: stay running until a snapshot appears (tests).
-            pass
-    elif str(job.get("status") or "") == "queued":
-        spawned = _parse_ts(str(job.get("updated_at") or job.get("spawned_at") or ""))
-        pid = job.get("pid")
-        live = pid_alive_for_job(
-            int(pid) if pid else None,
-            str(job.get("spawned_at") or "") or None,
-        )
-        if not live and spawned and _utc_now() - spawned > timedelta(seconds=QUEUED_STALE_S):
-            job["status"] = "failed"
-            job["error"] = "spawn did not start"
-            job["abandoned"] = False
+    elif str(job.get("status") or "") in SLOT_STATUSES:
+        if apply_liveness(job):
             changed = True
 
     phase = _read_json(session / "registry" / "phase_status.json")
@@ -372,8 +344,209 @@ def list_analyzes(
 
 
 def reconcile_analyze_jobs(archive_root: Path) -> list[dict[str, Any]]:
-    """Walk every job.json and refresh (UI startup / CLI after crash)."""
-    return list_analyzes(archive_root, refresh=True)
+    """Walk every job.json, refresh, and continue interrupted starts."""
+    rows = list_analyzes(archive_root, refresh=True)
+    out: list[dict[str, Any]] = []
+    for job in rows:
+        status = str(job.get("status") or "")
+        if status not in {"starting", "queued"}:
+            out.append(job)
+            continue
+        if session_busy(job):
+            out.append(job)
+            continue
+        try:
+            ws = Path(str(job.get("spawn_cwd") or job.get("project_root") or PROJECT_ROOT))
+            pin_ver = "live"
+            raw_pin = job.get("pin")
+            if isinstance(raw_pin, dict) and raw_pin.get("version"):
+                pin_ver = str(raw_pin["version"])
+            pin = resolve(pin_ver, workspace=ws)
+            backend = default_analyze_spawn()
+            job = _continue_analyze(
+                archive_root,
+                job,
+                pin=pin,
+                backend=backend,
+                orch=str(job.get("orchestrator_model") or "grok-4.5"),
+                sub=str(job.get("subagent_model") or job.get("orchestrator_model") or "grok-4.5"),
+                note=str(job.get("notes") or NOTES_UI),
+            )
+        except (AnalyzeError, PinError, UnknownVersion, OSError):
+            # Row already failed or still starting; list again next boot.
+            pass
+        out.append(get_analyze(archive_root, str(job.get("analyze_id") or "")))
+    return out
+
+
+def _session_path(archive_root: Path, ticker: str, session_key: str) -> Path:
+    return research_root(archive_root) / ticker / session_key
+
+
+def _is_date_replicate(session_key: str, asof: str) -> bool:
+    if session_key == asof:
+        return True
+    prefix = asof + "__r"
+    if not session_key.startswith(prefix):
+        return False
+    rest = session_key[len(prefix) :]
+    return rest.isdigit()
+
+
+def allocate_analyze_key(
+    archive_root: Path,
+    ticker: str,
+    asof: str,
+    slug: str | None = None,
+) -> str:
+    """Pick session_key before scaffold. Occupied folders and job rows are skipped."""
+    if slug:
+        return f"{asof}__{slug}"
+    taken: set[str] = set()
+    for base in (research_root(archive_root) / ticker, ticker_jobs_dir(archive_root, ticker)):
+        if not base.is_dir():
+            continue
+        for p in base.iterdir():
+            if _is_date_replicate(p.name, asof):
+                taken.add(p.name)
+    if asof not in taken:
+        return asof
+    n = 2
+    while f"{asof}__r{n}" in taken:
+        n += 1
+    return f"{asof}__r{n}"
+
+
+def ticker_jobs_dir(archive_root: Path, ticker: str) -> Path:
+    return research_jobs_root(archive_root) / ticker
+
+
+def _find_intent(
+    archive_root: Path,
+    ticker: str,
+    asof: str,
+    slug: str | None,
+) -> dict[str, Any] | None:
+    live: list[dict[str, Any]] = []
+    resumable: list[dict[str, Any]] = []
+    want_key = f"{asof}__{slug}" if slug else None
+    for path in iter_job_files(archive_root):
+        job = _load_job_file(path)
+        if job is None:
+            continue
+        if str(job.get("ticker") or "").upper() != ticker:
+            continue
+        key = str(job.get("session_key") or "")
+        if slug:
+            if key != want_key:
+                continue
+        elif not _is_date_replicate(key, asof):
+            continue
+        status = str(job.get("status") or "")
+        if status in SLOT_STATUSES:
+            live.append(job)
+        elif status in {"failed", "cancelled"} and not job.get("abandoned"):
+            resumable.append(job)
+    if live:
+        live.sort(key=lambda j: str(j.get("updated_at") or ""), reverse=True)
+        return live[0]
+    if resumable:
+        resumable.sort(key=lambda j: str(j.get("updated_at") or ""), reverse=True)
+        return resumable[0]
+    return None
+
+
+def _usable_skeleton(session: Path) -> bool:
+    return (session / "meta" / "run_manifest.json").is_file()
+
+
+def _continue_analyze(
+    archive_root: Path,
+    job: dict[str, Any],
+    *,
+    pin: Any,
+    backend: SpawnBackend,
+    orch: str,
+    sub: str,
+    note: str,
+) -> dict[str, Any]:
+    """Scaffold if needed, spawn, mark running. Job row already exists as starting/queued."""
+    session = Path(str(job["session_root"]))
+    job_dir = Path(str(job["job_dir"]))
+    cid = str(job["analyze_id"])
+    if _session_snapshot(session).is_file():
+        job["status"] = "complete"
+        job["snapshot_ready"] = True
+        job["updated_at"] = _utc_stamp()
+        _atomic_write_json(job_dir / JOB_NAME, job)
+        return refresh_analyze(archive_root, cid, job=job)
+    ticker = str(job["ticker"])
+    session_key = str(job["session_key"])
+    asof = str(job.get("session_date") or "")
+    _slug = None
+    parsed_date, parsed_slug = parse_session_key(session_key)
+    if parsed_slug:
+        _slug = parsed_slug
+        asof = parsed_date or asof
+
+    if session.exists() and any(session.iterdir()) and not _usable_skeleton(session):
+        _maybe_abandon(session, reason="interrupted_scaffold", detail="interrupted scaffold; discard")
+        job["status"] = "failed"
+        job["error"] = "interrupted scaffold; discard"
+        job["abandoned"] = _session_abandon(session).is_file()
+        job["updated_at"] = _utc_stamp()
+        _atomic_write_json(job_dir / JOB_NAME, job)
+        raise AnalyzeValidationError("interrupted scaffold; discard")
+
+    if not _usable_skeleton(session):
+        try:
+            session = pin.scaffold_research(
+                ticker,
+                asof,
+                archive_root,
+                slug=_slug,
+                orchestrator_model=orch,
+                default_subagent_model=sub,
+                notes=note,
+                auto_replicate=False,
+            )
+        except (ValueError, RuntimeError, FileExistsError, PinError) as e:
+            if _usable_skeleton(Path(str(job["session_root"]))):
+                session = Path(str(job["session_root"]))
+            else:
+                job["status"] = "failed"
+                job["error"] = f"interrupted scaffold; discard ({e})"
+                job["updated_at"] = _utc_stamp()
+                _atomic_write_json(job_dir / JOB_NAME, job)
+                raise AnalyzeValidationError(str(e)) from e
+        job["session_root"] = str(session.resolve())
+        job["run_manifest_status"] = "scaffolded"
+
+    (job_dir / "prompt.md").write_text(build_prompt(job), encoding="utf-8")
+    job["status"] = "queued"
+    job["updated_at"] = _utc_stamp()
+    _atomic_write_json(job_dir / JOB_NAME, job)
+    try:
+        result = backend.spawn(job)
+    except FileNotFoundError as e:
+        _maybe_abandon(session, reason="spawn_fail", detail=str(e))
+        job["status"] = "failed"
+        job["abandoned"] = _session_abandon(session).is_file()
+        job["error"] = str(e)
+        job["updated_at"] = _utc_stamp()
+        _atomic_write_json(job_dir / JOB_NAME, job)
+        raise AnalyzeGrokMissing(str(e)) from e
+    except Exception as e:  # noqa: BLE001
+        _maybe_abandon(session, reason="spawn_fail", detail=str(e))
+        job["status"] = "failed"
+        job["abandoned"] = _session_abandon(session).is_file()
+        job["error"] = str(e)
+        job["updated_at"] = _utc_stamp()
+        _atomic_write_json(job_dir / JOB_NAME, job)
+        raise AnalyzeError(str(e)) from e
+
+    record_spawn(job, result, job_dir / JOB_NAME)
+    return refresh_analyze(archive_root, cid, job=job)
 
 
 def _bind_pin(job: dict[str, Any], pin: Any, archive_root: Path, workspace: Path) -> None:
@@ -394,7 +567,7 @@ def _bind_pin(job: dict[str, Any], pin: Any, archive_root: Path, workspace: Path
     job["project_root"] = str(workspace)
 
 
-def start_analyze(
+def ensure_analyze(
     archive_root: Path,
     ticker: str,
     *,
@@ -409,7 +582,12 @@ def start_analyze(
     ticker_backend: LookupBackend | None = None,
     project_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Library entry: accepts any archive_root (tmp tests). No env ARCHIVE_ROOT refuse."""
+    """Idempotent start: live intent returns that job; else write starting then scaffold.
+
+    Critical section under claim_start is lookup, allocate key, write job.json
+    status=starting (counts as a slot). Scaffold and spawn happen after the row exists.
+    auto_replicate is not used for retries; the job plane picks the key.
+    """
     checked = check_ticker(ticker, backend=ticker_backend)
     if not checked.ok:
         raise AnalyzeTickerError(
@@ -438,25 +616,34 @@ def start_analyze(
                 "UI-scheduled runbook heading missing; merge W1 PR 3 before real Grok Analyze"
             )
 
+    existing = _find_intent(archive_root, session_ticker, asof, slug)
+    if existing and str(existing.get("status") or "") in SLOT_STATUSES:
+        return refresh_analyze(archive_root, str(existing["analyze_id"]), job=existing)
+    if existing and str(existing.get("status") or "") in {"failed", "cancelled"} and not existing.get(
+        "abandoned"
+    ):
+        return refresh_analyze(archive_root, str(existing["analyze_id"]), job=existing)
+
     try:
         with claim_start(archive_root, "analyze"):
-            try:
-                session = pin.scaffold_research(
-                    session_ticker,
-                    asof,
-                    archive_root,
-                    slug=slug,
-                    orchestrator_model=orch,
-                    default_subagent_model=sub,
-                    notes=note,
-                    auto_replicate=True,
+            existing = _find_intent(archive_root, session_ticker, asof, slug)
+            if existing and str(existing.get("status") or "") in SLOT_STATUSES:
+                return refresh_analyze(
+                    archive_root, str(existing["analyze_id"]), job=existing
                 )
-            except (ValueError, RuntimeError, FileExistsError, PinError) as e:
-                raise AnalyzeValidationError(str(e)) from e
-
-            session_key = session.name
+            if existing and str(existing.get("status") or "") in {
+                "failed",
+                "cancelled",
+            } and not existing.get("abandoned"):
+                return refresh_analyze(
+                    archive_root, str(existing["analyze_id"]), job=existing
+                )
+            session_key = allocate_analyze_key(
+                archive_root, session_ticker, asof, slug
+            )
             job_dir = analyze_job_dir(session_ticker, session_key, archive_root)
             job_dir.mkdir(parents=True, exist_ok=True)
+            session = _session_path(archive_root, session_ticker, session_key)
             cid = analyze_id(session_ticker, session_key)
             job: dict[str, Any] = {
                 "schema_version": 1,
@@ -470,7 +657,7 @@ def start_analyze(
                 "session_root": str(session.resolve()),
                 "job_dir": str(job_dir.resolve()),
                 "out_dir": str(job_dir.resolve()),
-                "status": "queued",
+                "status": "starting",
                 "mode": "new",
                 "orchestrator_model": orch,
                 "subagent_model": sub,
@@ -490,52 +677,66 @@ def start_analyze(
                 "catalog_run_ready": False,
                 "abandoned": False,
                 "audit_verdict": None,
-                "run_manifest_status": "scaffolded",
+                "run_manifest_status": None,
                 "library_ingest": bool(ingest_library),
             }
             _bind_pin(job, pin, Path(archive_root), ws)
-            (job_dir / "prompt.md").write_text(build_prompt(job), encoding="utf-8")
             _atomic_write_json(job_dir / JOB_NAME, job)
-
-            try:
-                result = backend.spawn(job)
-            except FileNotFoundError as e:
-                _maybe_abandon(session, reason="spawn_fail", detail=str(e))
-                job["status"] = "failed"
-                job["abandoned"] = _session_abandon(session).is_file()
-                job["error"] = str(e)
-                job["updated_at"] = _utc_stamp()
-                _atomic_write_json(job_dir / JOB_NAME, job)
-                raise AnalyzeGrokMissing(str(e)) from e
-            except Exception as e:  # noqa: BLE001
-                _maybe_abandon(session, reason="spawn_fail", detail=str(e))
-                job["status"] = "failed"
-                job["abandoned"] = _session_abandon(session).is_file()
-                job["error"] = str(e)
-                job["updated_at"] = _utc_stamp()
-                _atomic_write_json(job_dir / JOB_NAME, job)
-                raise AnalyzeError(str(e)) from e
-
-            job["pid"] = result.pid
-            job["grok_session_id"] = result.grok_session_id
-            job["command"] = result.command
-            job["status"] = "running"
-            job["spawned_at"] = _utc_stamp()
-            job["updated_at"] = job["spawned_at"]
-            _atomic_write_json(job_dir / JOB_NAME, job)
-            return refresh_analyze(archive_root, cid, job=job)
     except JobsBusy as e:
         raise AnalyzeBusy(str(e)) from e
+
+    return _continue_analyze(
+        archive_root,
+        job,
+        pin=pin,
+        backend=backend,
+        orch=orch,
+        sub=sub,
+        note=note,
+    )
+
+
+def start_analyze(
+    archive_root: Path,
+    ticker: str,
+    *,
+    session_date: str | None = None,
+    slug: str | None = None,
+    orchestrator_model: str = "grok-4.5",
+    subagent_model: str | None = None,
+    notes: str | None = None,
+    ingest_library: bool = False,
+    harness_version: str | None = None,
+    spawn: SpawnBackend | None = None,
+    ticker_backend: LookupBackend | None = None,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """Thin alias of ensure_analyze so CLI and HTTP stay one path."""
+    return ensure_analyze(
+        archive_root,
+        ticker,
+        session_date=session_date,
+        slug=slug,
+        orchestrator_model=orchestrator_model,
+        subagent_model=subagent_model,
+        notes=notes,
+        ingest_library=ingest_library,
+        harness_version=harness_version,
+        spawn=spawn,
+        ticker_backend=ticker_backend,
+        project_root=project_root,
+    )
 
 
 def cancel_analyze(archive_root: Path, analyze_id_value: str) -> dict[str, Any]:
     job = get_analyze(archive_root, analyze_id_value)
     if job.get("status") in TERMINAL:
         return job
-    kill_pid(job.get("pid"))
+    kill(job)
     job["status"] = "cancelled"
     job["updated_at"] = _utc_stamp()
     job["error"] = "cancelled"
+    job["pid_missing"] = False
     _atomic_write_json(Path(str(job["job_dir"])) / JOB_NAME, job)
     return job
 
@@ -545,7 +746,7 @@ def discard_analyze(archive_root: Path, analyze_id_value: str) -> dict[str, Any]
     session = Path(str(job["session_root"]))
     if _session_snapshot(session).is_file():
         raise AnalyzeDiscardRefused("session already finalized")
-    kill_pid(job.get("pid"))
+    kill(job)
     _maybe_abandon(session, reason="ui_discard", detail="UI discard")
     if not _session_abandon(session).is_file():
         raise AnalyzeError("write_abandon did not create abandon.json")
@@ -572,17 +773,13 @@ def resume_analyze(
         raise AnalyzeValidationError("session already finalized")
     if not session.is_dir():
         raise AnalyzeValidationError("session_root missing")
-    pid = job.get("pid")
-    spawned = job.get("spawned_at")
-    if pid_alive_for_job(int(pid) if pid else None, spawned if isinstance(spawned, str) else None):
+    if session_busy(job):
         raise AnalyzeResumeConflict("orchestrator still running; cancel first or wait")
     status = str(job.get("status") or "")
-    if status not in {"failed", "cancelled"} and not (
-        status == "running" and not pid_alive_for_job(int(pid) if pid else None, spawned if isinstance(spawned, str) else None)
-    ):
+    if status not in {"failed", "cancelled"}:
         if status == "complete":
             raise AnalyzeValidationError("job already complete")
-        if status == "running":
+        if status in SLOT_STATUSES:
             raise AnalyzeResumeConflict("orchestrator still running; cancel first or wait")
 
     backend = spawn or default_analyze_spawn()
@@ -608,18 +805,20 @@ def resume_analyze(
 
     try:
         with claim_start(archive_root, "analyze"):
+            job = _require_job(archive_root, analyze_id_value)
+            job = refresh_analyze(archive_root, analyze_id_value, job=job)
+            if session_busy(job):
+                raise AnalyzeResumeConflict("orchestrator still running; cancel first or wait")
+            status = str(job.get("status") or "")
+            if status not in {"failed", "cancelled"}:
+                if status == "complete":
+                    raise AnalyzeValidationError("job already complete")
+                raise AnalyzeResumeConflict("orchestrator still running; cancel first or wait")
             job["mode"] = "resume"
             job_dir = Path(str(job["job_dir"]))
             (job_dir / "prompt.md").write_text(build_prompt(job, resume=True), encoding="utf-8")
             result = backend.spawn(job)
-            job["pid"] = result.pid
-            job["grok_session_id"] = result.grok_session_id
-            job["command"] = result.command
-            job["status"] = "running"
-            job["error"] = None
-            job["spawned_at"] = _utc_stamp()
-            job["updated_at"] = job["spawned_at"]
-            _atomic_write_json(job_dir / JOB_NAME, job)
+            record_spawn(job, result, job_dir / JOB_NAME)
             return refresh_analyze(archive_root, analyze_id_value, job=job)
     except JobsBusy as e:
         raise AnalyzeBusy(str(e)) from e

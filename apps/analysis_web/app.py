@@ -80,12 +80,14 @@ class StaticFilesNoCache(StaticFiles):
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
-    try:
-        from packages.research_jobs.jobs import reconcile_analyze_jobs
+    import logging
 
-        reconcile_analyze_jobs(archive_root())
+    try:
+        from packages.agent_jobs.reconcile import reconcile_jobs
+
+        reconcile_jobs(archive_root())
     except Exception:
-        pass
+        logging.getLogger(__name__).exception("reconcile_jobs failed")
     yield
 
 

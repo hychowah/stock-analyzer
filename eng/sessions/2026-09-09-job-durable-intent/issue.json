@@ -1,0 +1,35 @@
+{
+  "goal": "Durable Grok job intent: ensure+worker liveness, reconcile both planes, sqlite local home",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not tree-kill Grok when the UI dies"
+  ],
+  "work_type": "W2",
+  "success_criteria": [
+    "ensure_analyze is idempotent for a live/failed/cancelled intent; __r2 only after complete/abandon",
+    "job.json starting exists before scaffold; liveness is worker evidence not PID death alone",
+    "reconcile_jobs walks Analyze and Compare; lifespan logs failures",
+    "catalog sqlite production path is local_home; tests keep archive/catalog",
+    "python scripts/eng_verify.py passes",
+    "ARCHITECTURE.md describes ensure+reconcile and local home"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "pins/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -11,12 +10,18 @@ from typing import Any
 from packages.catalog_api.client import parse_run_id
 from packages.compare_jobs.headline import headline_for_sessions
 from packages.agent_jobs.capacity import JobsBusy, claim_start
+from packages.agent_jobs.store import write_job
+from packages.agent_jobs.worker import (
+    SLOT_STATUSES,
+    apply_liveness,
+    kill,
+    record_spawn,
+    session_busy,
+)
 from packages.compare_jobs.spawn import (
     SpawnBackend,
     default_spawn_backend,
     grok_binary,
-    kill_pid,
-    pid_alive,
 )
 from packages.compare_jobs.paths import (
     allocate_compare_key,
@@ -61,10 +66,7 @@ def _today() -> str:
 
 
 def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2, default=str) + "\n", encoding="utf-8")
-    os.replace(tmp, path)
+    write_job(path, data)
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -148,7 +150,7 @@ def _running_jobs(archive_root: Path) -> list[dict[str, Any]]:
         if job is None:
             continue
         job = refresh_compare(archive_root, str(job.get("compare_id") or ""), job=job)
-        if job.get("status") == "running":
+        if job.get("status") in SLOT_STATUSES:
             running.append(job)
     return running
 
@@ -215,16 +217,11 @@ def refresh_compare(
             job["error"] = None
             job["synthesis_ready"] = True
             changed = True
-    elif status == "running":
-        pid = job.get("pid")
-        if pid and not pid_alive(int(pid)):
-            job["status"] = "failed"
-            job["error"] = "Grok process exited before 99_synthesis.md"
+    elif status in SLOT_STATUSES:
+        if apply_liveness(job):
             changed = True
-        elif not pid:
-            # Fake/incomplete spawn without a process: stay running only if we
-            # expect a later write. Treat as failed if synthesis never coming.
-            pass
+        if job.get("status") == "failed":
+            job["error"] = "Grok process exited before 99_synthesis.md"
     job["synthesis_ready"] = synthesis.is_file()
     job["readme_ready"] = (out_dir / "README.md").is_file()
     job["headline_ready"] = (out_dir / "headline.json").is_file()
@@ -251,6 +248,52 @@ def _require_job(archive_root: Path, compare_id_value: str) -> dict[str, Any]:
 def get_compare(archive_root: Path, compare_id_value: str) -> dict[str, Any]:
     job = _require_job(archive_root, compare_id_value)
     return refresh_compare(archive_root, compare_id_value, job=job)
+
+
+def reconcile_compare_jobs(archive_root: Path) -> list[dict[str, Any]]:
+    """Walk every compare job.json, refresh, and continue interrupted starts."""
+    rows = list_compares(archive_root, refresh=True)
+    out: list[dict[str, Any]] = []
+    for job in rows:
+        status = str(job.get("status") or "")
+        if status not in {"starting", "queued"}:
+            out.append(job)
+            continue
+        if session_busy(job):
+            out.append(job)
+            continue
+        try:
+            job = _continue_compare_spawn(
+                archive_root, job, default_spawn_backend()
+            )
+        except (CompareError, GrokMissing, OSError):
+            pass
+        cid = str(job.get("compare_id") or "")
+        if cid:
+            out.append(get_compare(archive_root, cid))
+        else:
+            out.append(job)
+    return out
+
+
+def ensure_compare(
+    archive_root: Path,
+    run_id_a: str,
+    run_id_b: str,
+    *,
+    force: bool = False,
+    spawn: SpawnBackend | None = None,
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """Idempotent start_compare for a live pair intent."""
+    return start_compare(
+        archive_root,
+        run_id_a,
+        run_id_b,
+        force=force,
+        spawn=spawn,
+        project_root=project_root,
+    )
 
 
 def start_compare(
@@ -300,7 +343,7 @@ def start_compare(
     ).is_file()
 
     existing = _find_pair(archive_root, ticker, session_a, session_b)
-    if existing and existing.get("status") == "running" and not force:
+    if existing and existing.get("status") in SLOT_STATUSES and not force:
         return existing
     if existing and existing.get("status") == "complete" and not force:
         return existing
@@ -316,7 +359,7 @@ def start_compare(
     try:
         with claim_start(archive_root, "compare"):
             existing = _find_pair(archive_root, ticker, session_a, session_b)
-            if existing and existing.get("status") == "running" and not force:
+            if existing and existing.get("status") in SLOT_STATUSES and not force:
                 return existing
             if existing and existing.get("status") == "complete" and not force:
                 return existing
@@ -370,7 +413,7 @@ def _spawn_compare(
         "path_a": str(path_a.resolve()),
         "path_b": str(path_b.resolve()),
         "out_dir": str(out_dir.resolve()),
-        "status": "queued",
+        "status": "starting",
         "degraded": degraded,
         "pid": None,
         "grok_session_id": None,
@@ -395,7 +438,23 @@ def _spawn_compare(
         job["error"] = f"headline failed: {e}"
 
     _atomic_write_json(out_dir / JOB_NAME, job)
+    return _continue_compare_spawn(archive_root, job, backend)
 
+
+def _continue_compare_spawn(
+    archive_root: Path,
+    job: dict[str, Any],
+    backend: SpawnBackend,
+) -> dict[str, Any]:
+    """Spawn onto an existing starting/queued packet. job.json already exists."""
+    out_dir = Path(str(job["out_dir"]))
+    cid = str(job["compare_id"])
+    prompt = out_dir / "prompt.md"
+    if not prompt.is_file():
+        prompt.write_text(_build_prompt(job), encoding="utf-8")
+    job["status"] = "queued"
+    job["updated_at"] = _utc_now()
+    _atomic_write_json(out_dir / JOB_NAME, job)
     try:
         result = backend.spawn(job)
     except FileNotFoundError as e:
@@ -411,13 +470,7 @@ def _spawn_compare(
         _atomic_write_json(out_dir / JOB_NAME, job)
         raise CompareError(str(e)) from e
 
-    job["pid"] = result.pid
-    job["grok_session_id"] = result.grok_session_id
-    job["command"] = result.command
-    job["status"] = "running"
-    job["spawned_at"] = _utc_now()
-    job["updated_at"] = job["spawned_at"]
-    _atomic_write_json(out_dir / JOB_NAME, job)
+    record_spawn(job, result, out_dir / JOB_NAME)
     return refresh_compare(archive_root, cid, job=job)
 
 
@@ -425,7 +478,7 @@ def cancel_compare(archive_root: Path, compare_id_value: str) -> dict[str, Any]:
     job = get_compare(archive_root, compare_id_value)
     if job.get("status") in TERMINAL:
         return job
-    kill_pid(job.get("pid"))
+    kill(job)
     job["status"] = "cancelled"
     job["updated_at"] = _utc_now()
     job["error"] = "cancelled"

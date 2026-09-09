@@ -50,7 +50,7 @@ def find_default_csv(*, now: datetime | None = None) -> Path:
         if local_csvs:
             return max(local_csvs, key=lambda p: p.stat().st_mtime)
     raise FileNotFoundError(
-        "No U*.csv in Downloads (last 24h) or apps/analysis_web/.local/ib/statements/"
+        f"No U*.csv in Downloads (last 24h) or {statements_dir()}/"
     )
 
 
@@ -127,7 +127,7 @@ def rebuild_book(*, db: Path | None = None) -> list[dict]:
     csvs = sorted(statements_dir().glob("U*.csv"))
     if not csvs:
         raise FileNotFoundError(
-            "No U*.csv in apps/analysis_web/.local/ib/statements/ to rebuild from"
+            f"No U*.csv in {statements_dir()}/ to rebuild from"
         )
     target = db or db_path()
     if target.is_file():

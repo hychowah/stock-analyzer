@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from apps.analysis_web.config import archive_root, local_dir
+from packages.kd_research.paths import catalog_sqlite_path
 
 
 def _stat_tuple(path: Path) -> tuple[int, int] | None:
@@ -22,9 +23,10 @@ def _stat_tuple(path: Path) -> tuple[int, int] | None:
 def catalog_paths(root: Path | None = None) -> dict[str, Path]:
     ar = root or archive_root()
     catalog = ar / "catalog"
+    sqlite = catalog_sqlite_path(ar, create=False)
     return {
-        "sqlite": catalog / "research_compare.sqlite",
-        "sqlite_wal": catalog / "research_compare.sqlite-wal",
+        "sqlite": sqlite,
+        "sqlite_wal": Path(str(sqlite) + "-wal"),
         "runs_index": catalog / "runs_index.json",
         "tickers_index": catalog / "tickers_index.json",
         "schema_version": catalog / "schema_version",
@@ -122,7 +124,7 @@ def fingerprint(*, root: Path | None = None) -> dict[str, Any]:
     return {
         "token": digest,
         "archive_root": str(ar),
-        "catalog_db_exists": (ar / "catalog" / "research_compare.sqlite").is_file(),
+        "catalog_db_exists": catalog_paths(ar)["sqlite"].is_file(),
         "portfolio_exists": portfolio_sqlite_path().is_file() or book.is_file(),
         "parts": parts,
     }

@@ -12,6 +12,7 @@ from packages.compare_jobs.jobs import (
     CompareValidationError,
     cancel_compare,
     get_compare,
+    reconcile_compare_jobs,
     start_compare,
 )
 from packages.compare_jobs.spawn import FakeSpawnBackend
@@ -129,6 +130,36 @@ class CompareJobsTests(unittest.TestCase):
             spawn=running,
         )
         self.assertEqual(a["compare_id"], b["compare_id"])
+
+    def test_reconcile_starting_compare_completes_fake(self):
+        import os
+
+        running = FakeSpawnBackend(write_synthesis=False)
+        job = start_compare(
+            self.archive,
+            "research:META:2026-08-03",
+            "research:META:2026-08-10",
+            spawn=running,
+        )
+        path = Path(job["out_dir"]) / "job.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["status"] = "starting"
+        data["pid"] = None
+        data["grok_session_id"] = None
+        data["command"] = None
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        old = os.environ.get("COMPARE_SPAWN")
+        os.environ["COMPARE_SPAWN"] = "fake"
+        try:
+            rows = reconcile_compare_jobs(self.archive)
+        finally:
+            if old is None:
+                os.environ.pop("COMPARE_SPAWN", None)
+            else:
+                os.environ["COMPARE_SPAWN"] = old
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["status"], "complete")
+        self.assertTrue((Path(job["out_dir"]) / "99_synthesis.md").is_file())
 
     def test_busy_blocks_other_pair(self):
         running = FakeSpawnBackend(write_synthesis=False)

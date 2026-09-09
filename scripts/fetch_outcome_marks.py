@@ -2,7 +2,7 @@
 """Fetch realized price marks for finished research runs (outcomes layer).
 
 Writes archive/outcomes/<TICKER>/<SESSION_KEY>/price_path.json (+ mechanical scorecard)
-and upserts into archive/catalog/research_compare.sqlite outcomes table.
+and upserts into the comparison warehouse sqlite (catalog_sqlite_path) outcomes table.
 
 Does NOT edit archive/research/ sessions.
 

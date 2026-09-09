@@ -17,7 +17,9 @@ def app_dir() -> Path:
 
 def local_dir() -> Path:
     """App-local state (IB book and alternative-history overlay). Never under archive/research."""
-    return app_dir() / ".local"
+    from packages.kd_research.paths import analysis_web_local_dir
+
+    return analysis_web_local_dir()
 
 
 def templates_dir() -> Path:

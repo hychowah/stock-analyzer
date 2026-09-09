@@ -693,7 +693,9 @@ class LiveArchiveSmokeTests(unittest.TestCase):
 
     def test_live_health_if_present(self):
         live = ROOT / "archive"
-        db = live / "catalog" / "research_compare.sqlite"
+        from packages.kd_research.paths import catalog_sqlite_path
+
+        db = catalog_sqlite_path(live, create=False)
         if not db.is_file():
             self.skipTest("live archive sqlite not present")
         api = CatalogApi(archive_root=live, readonly=True)

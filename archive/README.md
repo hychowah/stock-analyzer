@@ -12,7 +12,7 @@ archive/
 ├── catalog/
 │   ├── runs_index.json           # thin path index (rebuildable; not in git)
 │   ├── tickers_index.json        # per-ticker latest + history (rebuildable; not in git)
-│   ├── research_compare.sqlite   # comparison warehouse (rebuildable; not in git)
+│   ├── research_compare.sqlite   # optional legacy copy; production warehouse is local home
 │   └── migration_log.jsonl       # session moves from legacy root paths (not in git)
 ├── research/
 │   └── <TICKER>/<SESSION_KEY>/  # YYYY-MM-DD or YYYY-MM-DD__rN / __slug
@@ -33,7 +33,7 @@ archive/
 2. **Canonical path:** `archive/research/<TICKER>/<SESSION_KEY>/` (`SESSION_KEY` = as-of date or `date__rN` / named slug). Same-day re-runs auto-allocate `__r2`, `__r3`, ….
 3. **Disk is system of record.** JSON indexes + SQLite are rebuildable projections — never the only copy of numbers.
 4. **Indexes are caches** — rebuild with `python3 scripts/rebuild_catalog.py`.
-5. **Comparison DB** — after Phase 5, export with `python3 scripts/export_compare_db.py` (see below). Plan: `harness/plan_research_compare_db.md`.
+5. **Comparison DB** — after Phase 5, export with `python3 scripts/export_compare_db.py` (see below). Production sqlite is `catalog_sqlite_path` (`STOCK_RESEARCH_LOCAL` or `%LOCALAPPDATA%\StockResearch\catalog\` / `~/.local/share/stock-research/catalog/`). `archive/catalog/research_compare.sqlite` is the test/fixture path and a read fallback if the local-home file is missing. Plan: `harness/plan_research_compare_db.md`.
 6. **Outcomes** record whether past calls were right; they never rewrite valuation JSON.
 7. Design plan (layout): `harness/plan_research_archive_layout.md`.
 8. **Not in git:** `archive/research/`, `archive/outcomes/`, `archive/comparisons/`, `archive/research_jobs/`, and `archive/catalog/` (JSON indexes, jsonl, schema_version, SQLite). Session trees are large. Indexes are caches — rebuild with `rebuild_catalog.py` / `export_compare_db.py`. Commit harness code, not sessions, compare packets, Analyze job control, or catalog caches.
@@ -75,7 +75,8 @@ python3 scripts/check_session.py --ticker META --date 2026-08-03 --full
 # Compare two runs (file-based helper)
 python3 scripts/compare_runs.py --ticker META --dates 2026-07-30,2026-08-03
 
-# Query comparison DB (example)
+# Query comparison DB (example). Production: local home path from catalog_sqlite_path.
+# Tests/legacy:
 sqlite3 archive/catalog/research_compare.sqlite \
   "SELECT ticker, session_date, asof_price, fv_base, fv_weighted, p_bear, p_base, p_bull, tech_signal, region FROM runs ORDER BY ticker, session_date;"
 ```

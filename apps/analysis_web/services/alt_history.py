@@ -142,6 +142,14 @@ def _fill_order(fill: PricedFill) -> tuple[str, int]:
     return (fill.as_of, fill.id if fill.id is not None else 0)
 
 
+def _stamp_as_of(state: BookState, day: str) -> BookState:
+    """Set the snapshot date. Lots and cash are unchanged."""
+    want = _day(day)
+    if state.as_of == want:
+        return state
+    return replace(state, as_of=want)
+
+
 def overlay_fills(seed: BookState, fills: Iterable[PricedFill]) -> tuple[PricedFill, ...]:
     """Clip later real sells that a what-if sell already consumed.
 
@@ -186,6 +194,10 @@ def replay(state: BookState, fills: Iterable[PricedFill]) -> BookState:
     ``overlay_fills`` first. Cash shortfall fails for what-if buys.
     Copied IB buys still apply if statement cash goes negative: that
     cash is approximate, and those fills are the frozen ledger.
+
+    Fill floor is ``state.as_of`` (seed vintage on the first call).
+    This function copies that field through; ``state_on`` / ``_apply_through``
+    stamp the through-date on the snapshot.
     """
     lots: dict[str, Lot] = {lot.listing: lot for lot in state.lots}
     cash = 0.0 if state.cash_base is None else float(state.cash_base)
@@ -367,14 +379,20 @@ def actual_state(hist: History, as_of: str | None = None) -> BookState:
     fills: Iterable[PricedFill] = hist.real_fills()
     if as_of is not None:
         fills = fills_through(fills, as_of)
-    return replay(hist.seed, fills)
+    book = replay(hist.seed, fills)
+    if as_of is not None:
+        return _stamp_as_of(book, as_of)
+    return book
 
 
 def alt_state(hist: History, as_of: str | None = None) -> BookState:
     fills: Iterable[PricedFill] = hist.fills
     if as_of is not None:
         fills = fills_through(fills, as_of)
-    return replay(hist.seed, overlay_fills(hist.seed, fills))
+    book = replay(hist.seed, overlay_fills(hist.seed, fills))
+    if as_of is not None:
+        return _stamp_as_of(book, as_of)
+    return book
 
 
 def state_on(hist: History, as_of: str) -> BookState:
@@ -434,7 +452,7 @@ def _apply_through(
         index += 1
     if batch:
         state = replay(state, batch)
-    return state, index
+    return _stamp_as_of(state, day), index
 
 
 def _pointer_prices(

@@ -39,6 +39,7 @@ from apps.analysis_web.services.alt_history_view import (
     holdings_on,
     list_payload,
     path_on,
+    sold_later_listings,
 )
 from apps.analysis_web.services.portfolio import load_ib_book
 from apps.analysis_web.services.price_history import HistoryService
@@ -404,6 +405,9 @@ def fragment_held_table(
         history_id=hist.id,
         view_date=view.view_date,
         held=view.held,
+        cash=view.cash,
+        base_currency=view.base_currency,
+        sold_later=sold_later_listings(hist, view.view_date),
     )
 
 

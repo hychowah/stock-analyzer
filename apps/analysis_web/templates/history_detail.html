@@ -16,7 +16,7 @@
     </label>
     <p><button type="submit" class="secondary">Save</button></p>
   </form>
-  <p class="muted">Paper copy of your IB stock trades from {{ payload.fork_date }}. What-if fills sit on that copy. Later real sells of a name you already sold here are skipped.</p>
+  <p class="muted">Paper copy of your IB stock trades from {{ payload.paper.fork_date }}. What-if fills sit on that copy. Later real sells of a name you already sold here are skipped.</p>
   <div class="grid2">
     <table>
       <tr><th>Alt NAV (today)</th><td class="num" id="hist-alt-nav">—</td></tr>
@@ -25,11 +25,11 @@
     <table>
       <tr><th>Δ vs actual (today)</th>
           <td class="num" id="hist-delta">—</td></tr>
-      <tr><th>Cash (today)</th><td class="num">{{ payload.cash_today | fmt_num }} {{ payload.base_currency }}</td></tr>
+      <tr><th>Cash (today)</th><td class="num">{{ payload.cash_today | fmt_num }} {{ payload.paper.base_currency }}</td></tr>
     </table>
   </div>
   <p class="muted">Lots load first. Header Δ and the chart fill from the daily-close path (right end of the chart), not live last print. FX is the statement Forex close frozen at copy. The date picker is the paper book on that day, not a second NAV.</p>
-  {% for c in payload.caveats %}
+  {% for c in payload.paper.caveats %}
   <p class="muted">{{ c }}</p>
   {% endfor %}
   {% if payload.error %}<p class="err" role="alert">{{ payload.error }}</p>{% endif %}
@@ -43,22 +43,22 @@
 </div>
 
 <div class="card" id="hist-holdings-card"
-     data-view-date="{{ payload.view_date }}"
+     data-view-date="{{ payload.paper.view_date }}"
      data-held-url="/fragments/portfolio/histories/{{ h.id }}/held"
      data-path-url="/api/portfolio/histories/{{ h.id }}/path">
   <h2>Holdings on this day</h2>
   <form class="filters" id="hist-date-form" method="get" action="/portfolio/histories/{{ h.id }}">
     <div class="filters-row">
       <label>Date
-        <input id="hist-view-date" type="date" name="date" value="{{ payload.view_date }}"
-               min="{{ payload.fork_date }}" max="{{ payload.max_date }}" required/>
+        <input id="hist-view-date" type="date" name="date" value="{{ payload.paper.view_date }}"
+               min="{{ payload.paper.fork_date }}" max="{{ payload.max_date }}" required/>
       </label>
       <button type="submit">Show holdings</button>
     </div>
   </form>
-  <p class="muted" id="hist-held-caption">What the paper book held on {{ payload.view_date }}. Names marked “sold later” are gone from today’s copied actual — not from a live IB walk.</p>
+  <p class="muted" id="hist-held-caption">What the paper book held on {{ payload.paper.view_date }}. Names marked “sold later” are gone from today’s copied actual — not from a live IB walk.</p>
   <div id="hist-held-table">
-  {% with history_id=h.id, view_date=payload.view_date, held=payload.held %}
+  {% with history_id=h.id, view_date=payload.paper.view_date, held=payload.paper.held, cash=payload.paper.cash, base_currency=payload.paper.base_currency, sold_later=payload.sold_later %}
     {% include "partials/held_table.html" %}
   {% endwith %}
   </div>
@@ -79,7 +79,7 @@
 {% endif %}
 
 <details class="card">
-  <summary id="hist-buy-summary">Buy a researched name on {{ payload.view_date }}</summary>
+  <summary id="hist-buy-summary">Buy a researched name on {{ payload.paper.view_date }}</summary>
   <p class="muted">Today’s catalog. Search filters this table. Quantity is required.</p>
   <p><label>Filter <input id="hist-universe-filter" type="search" placeholder="MELI"/></label></p>
   <div class="table-freeze">
@@ -96,7 +96,7 @@
           <form method="post" action="/portfolio/histories/{{ h.id }}/decisions">
             <input type="hidden" name="side" value="buy"/>
             <input type="hidden" name="ticker" value="{{ row.ticker }}"/>
-            <input type="hidden" name="as_of" value="{{ payload.view_date }}"/>
+            <input type="hidden" name="as_of" value="{{ payload.paper.view_date }}"/>
             <label>Qty <input name="quantity" type="number" step="any" min="0" placeholder="qty" required style="width:5rem"/></label>
             <button type="submit">Buy</button>
           </form>
@@ -110,7 +110,7 @@
 
 <div class="card" id="hist-chart-card">
   <h2>Actual vs this history</h2>
-  <p class="muted">{{ payload.fork_date }} → {{ payload.until }} · daily close · {{ payload.base_currency }}</p>
+  <p class="muted">{{ payload.paper.fork_date }} → {{ payload.max_date }} · daily close · {{ payload.paper.base_currency }}</p>
   <div class="nav-chart" id="hist-chart">
     <noscript>
       <img src="/api/portfolio/histories/{{ h.id }}/path.svg" alt="Actual versus this history, daily close" width="640" height="160"/>

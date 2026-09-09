@@ -74,6 +74,7 @@
     }
   }
 
+  /* Holdings cash is as of D in the table fragment. Do not copy it into header cash. */
   function loadHoldings(day) {
     if (!heldUrl) {
       return;

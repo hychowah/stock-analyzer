@@ -37,7 +37,10 @@ class Lot:
 
 @dataclass(frozen=True)
 class BookState:
-    """Cash book: lots + base cash + caveats. Actual and alt are both this."""
+    """Cash book: lots + base cash + caveats. Actual and alt are both this.
+
+    ``as_of`` is the date the lots and cash represent.
+    """
 
     lots: tuple[Lot, ...]
     cash_base: float | None

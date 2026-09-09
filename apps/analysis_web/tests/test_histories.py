@@ -353,7 +353,11 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertNotAlmostEqual(fork_held["cash"], late_held["cash"], places=5)
         html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
         self.assertIn(b"Cash (today)", html.content)
+        self.assertIn(b"Cash on 2026-03-31", html.content)
         self.assertNotIn(b'"path"', html.content)
+        self.assertNotIn(b"live_nav.js", html.content)
+        late_row = late_held["held"][0]
+        self.assertNotIn("deceased", late_row)
 
     def test_paper_view_has_no_path_fields(self):
         created = self.client.post(
@@ -384,15 +388,21 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertFalse(hasattr(paper, "decisions"))
         self.assertFalse(hasattr(paper, "error"))
         self.assertFalse(hasattr(paper, "until"))
+        self.assertFalse(hasattr(paper, "history"))
         self.assertTrue(paper.held)
         self.assertIsInstance(paper.held[0], PaperLot)
         self.assertFalse(hasattr(paper.held[0], "close"))
         self.assertFalse(hasattr(paper.held[0], "value_base"))
+        self.assertFalse(hasattr(paper.held[0], "deceased"))
 
         page = editor_page(hist, view_date="2026-03-31")
         self.assertIsInstance(page, EditorPage)
         self.assertNotIsInstance(page, dict)
         self.assertIsInstance(page.paper, PaperView)
+        self.assertEqual(page.history.id, hist.id)
+        self.assertFalse(hasattr(page, "held"))
+        self.assertFalse(hasattr(page, "until"))
+        self.assertIsInstance(page.sold_later, frozenset)
 
         captured: list[tuple[str, str]] = []
 
@@ -412,6 +422,8 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertTrue(held.held)
         self.assertIsInstance(held.held[0], HoldingsLot)
         self.assertTrue(hasattr(held.held[0], "close"))
+        self.assertNotIn("deceased", held.held[0].as_json())
+        self.assertEqual(held.view_date, "2026-03-31")
 
         frag = self.client.get(
             f"/fragments/portfolio/histories/{hid}/held?date=2026-03-31"
@@ -420,6 +432,8 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertIn(b'name="quantity"', frag.content)
         self.assertIn(b"data-view-date", frag.content)
         self.assertIn(b"META", frag.content)
+        self.assertIn(b"Cash on 2026-03-31", frag.content)
+        self.assertNotIn(b"Cash (today)", frag.content)
         html = self.client.get(f"/portfolio/histories/{hid}")
         self.assertIn(b"data-held-url", html.content)
         self.assertNotIn(b"data-holdings-url", html.content)
@@ -428,3 +442,50 @@ class HistoryHttpTests(unittest.TestCase):
         )
         self.assertNotIn("renderHeld", js)
         self.assertNotIn("<table>", js)
+
+    def test_sold_later_is_page_badge_not_holdings_json(self):
+        from dataclasses import replace
+
+        from apps.analysis_web.services.alt_history import PricedFill
+        from apps.analysis_web.services.alt_history_store import get_history, save
+
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Sold later"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        hist = get_history(int(hid))
+        save(
+            replace(
+                hist,
+                fills=hist.fills
+                + (
+                    PricedFill(
+                        as_of="2026-04-10",
+                        side="sell",
+                        listing="META",
+                        quantity=10,
+                        fill_price=50,
+                        currency="USD",
+                        stmt_fx=8.0,
+                        ib_symbol="META",
+                        source="real",
+                    ),
+                ),
+            )
+        )
+        html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
+        self.assertEqual(html.status_code, 200)
+        self.assertIn(b"sold later", html.content)
+        self.assertIn(b"META", html.content)
+        frag = self.client.get(
+            f"/fragments/portfolio/histories/{hid}/held?date=2026-03-31"
+        )
+        self.assertEqual(frag.status_code, 200)
+        self.assertIn(b"sold later", frag.content)
+        held = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        ).json()
+        meta = next(row for row in held["held"] if row["listing"] == "META")
+        self.assertNotIn("deceased", meta)

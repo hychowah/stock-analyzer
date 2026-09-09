@@ -63,6 +63,7 @@ def _fill(
     ib_symbol: str | None = "META",
     price_mode: str = "close",
     id: int | None = 1,
+    source: str = "hyp",
 ) -> PricedFill:
     return PricedFill(
         as_of=as_of,
@@ -76,6 +77,7 @@ def _fill(
         ib_symbol=ib_symbol,
         price_mode=price_mode,
         id=id,
+        source=source,
     )
 
 
@@ -584,6 +586,36 @@ class StoreTests(unittest.TestCase):
         self.assertTrue(hist.fork_date)
         self.assertGreater(len(hist.real_fills()), 0)
         self.assertEqual(hist.seed.as_of, "2025-12-31")
+        snapped = state_on(hist, "2026-03-31")
+        self.assertEqual(snapped.as_of, "2026-03-31")
+        self.assertNotEqual(snapped.as_of, hist.seed.as_of)
+        from dataclasses import replace as _replace
+
+        from apps.analysis_web.services.alt_history_view import (
+            editor_page,
+            sold_later_listings,
+        )
+
+        later = save(
+            _replace(
+                hist,
+                fills=hist.fills
+                + (
+                    _fill(
+                        as_of="2026-04-10",
+                        side="sell",
+                        listing="META",
+                        quantity=10,
+                        source="real",
+                        id=9001,
+                    ),
+                ),
+            )
+        )
+        self.assertIn("META", sold_later_listings(later, "2026-03-31"))
+        page = editor_page(later, view_date="2026-03-31")
+        self.assertIn("META", page.sold_later)
+        self.assertFalse(hasattr(page.paper.held[0], "deceased"))
         self.assertAlmostEqual(hist.seed.cash_base or 0, 4427.0, places=5)
         self.assertAlmostEqual(hist.seed.fx_for("USD") or 0, 8.0, places=5)
         added = save(with_hyp_fill(hist, _fill()))

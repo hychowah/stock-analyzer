@@ -5,8 +5,13 @@ from __future__ import annotations
 import unittest
 
 from apps.analysis_web.services.book_state import BookState, Lot
-from apps.analysis_web.services.mark_book import mark_book
-from apps.analysis_web.services.price_history import PriceBar, close_on
+from apps.analysis_web.services.mark_book import mark_book, mark_lots, mark_on
+from apps.analysis_web.services.price_history import (
+    FakeHistoryBackend,
+    PriceBar,
+    PriceHistory,
+    close_on,
+)
 
 
 def _state(*lots: Lot, cash: float = 500) -> BookState:
@@ -78,3 +83,58 @@ class CloseOnTests(unittest.TestCase):
         self.assertIsNone(close_on(bars, "2026-03-01"))
         self.assertAlmostEqual(close_on(bars, "2026-04-02").close, 52.0, places=5)  # type: ignore[union-attr]
         self.assertIsNone(close_on((), "2026-03-31"))
+
+
+class AsOfMarkTests(unittest.TestCase):
+    def test_error_is_unavailable_empty_bars_after_d_is_unquoted(self):
+        missing = FakeHistoryBackend({}).history("ZZZZ", "1y")
+        self.assertEqual(missing.error, "unavailable")
+        self.assertEqual(mark_on(missing, "2026-03-31").status, "unavailable")
+
+        later = PriceHistory(
+            symbol="META",
+            range="1y",
+            bars=(PriceBar("2026-04-10", 60.0),),
+        )
+        unquoted = mark_on(later, "2026-03-31")
+        self.assertEqual(unquoted.status, "unquoted")
+        self.assertIsNone(unquoted.close)
+
+        friday = PriceHistory(
+            symbol="META",
+            range="1y",
+            bars=(PriceBar("2026-03-27", 49.0),),
+        )
+        sat = mark_on(friday, "2026-03-28")
+        self.assertEqual(sat.status, "quoted")
+        self.assertAlmostEqual(sat.close or 0, 49.0, places=5)
+        self.assertEqual(sat.bar_date, "2026-03-27")
+
+    def test_mark_lots_splits_unavailable(self):
+        state = _state(
+            Lot("META", "USD", 10, 8.0, ib_symbol="META"),
+            Lot("0700.HK", "HKD", 100, 1.0, ib_symbol="700"),
+        )
+        from apps.analysis_web.services.mark_book import AsOfMark
+
+        marks = {
+            "META": AsOfMark(
+                listing="META",
+                as_of="2026-03-31",
+                status="quoted",
+                close=55.0,
+                bar_date="2026-03-31",
+            ),
+            "0700.HK": AsOfMark(
+                listing="0700.HK",
+                as_of="2026-03-31",
+                status="unavailable",
+                error="unavailable",
+            ),
+        }
+        out = mark_lots(state, marks)
+        self.assertEqual(out.n_unavailable, 1)
+        self.assertEqual(out.n_repriced, 1)
+        by = {r.listing: r for r in out.rows}
+        self.assertEqual(by["0700.HK"].error, "unavailable")
+        self.assertEqual(by["META"].bar_date, "2026-03-31")

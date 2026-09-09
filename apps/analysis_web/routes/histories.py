@@ -16,6 +16,7 @@ from apps.analysis_web.services.alt_history import (
     ReplayError,
     buy_universe,
     drop_hyp_fill,
+    fill_notional_base,
     resolve_buy,
     resolve_sell,
     state_on,
@@ -32,15 +33,18 @@ from apps.analysis_web.services.alt_history_store import (
     update_history,
 )
 from apps.analysis_web.services.alt_history_view import (
+    account_on,
     close_getter,
     earliest_stock_date,
     editor_page,
     history_document,
-    holdings_on,
     list_payload,
     path_on,
     sold_later_listings,
+    ticket_on,
+    universe_on,
 )
+from apps.analysis_web.services.paper_account import FundingError, assert_buyable
 from apps.analysis_web.services.portfolio import load_ib_book
 from apps.analysis_web.services.price_history import HistoryService
 from apps.analysis_web.templating import render_fragment, render_page
@@ -236,6 +240,17 @@ def post_decision(
                 override_price=override,
                 get_close=get_close,
             )
+            asof = account_on(hist, svc, view_date=day)
+            try:
+                assert_buyable(asof.account, fill_notional_base(fill))
+            except FundingError as e:
+                raise ReplayError(
+                    e.code,
+                    e.message,
+                    need=e.need,
+                    buying_power=e.buying_power,
+                    excess_after=e.excess_after,
+                )
         elif kind == "sell":
             if not (listing or "").strip():
                 raise ReplayError(
@@ -372,7 +387,7 @@ def api_history_holdings(
         return JSONResponse({"error": "not_found"}, status_code=404)
     except ReplayError as e:
         return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
-    body = holdings_on(hist, svc, view_date=date or None).as_json()
+    body = account_on(hist, svc, view_date=date or None).as_json()
     body["id"] = hist.id
     return body
 
@@ -398,16 +413,80 @@ def fragment_held_table(
             f'<p class="err" role="alert">{html_escape(e.message)}</p>',
             status_code=400,
         )
-    view = holdings_on(hist, svc, view_date=date or None)
+    view = account_on(hist, svc, view_date=date or None)
+    pane = "failed" if view.held and view.account.n_unavailable == len(view.held) else "ready"
     return render_fragment(
         request,
         "partials/held_table.html",
         history_id=hist.id,
         view_date=view.view_date,
         held=view.held,
-        cash=view.cash,
+        cash=view.account.cash,
         base_currency=view.base_currency,
         sold_later=sold_later_listings(hist, view.view_date),
+        pane=pane,
+        account=view.account,
+    )
+
+
+@router.get("/api/portfolio/histories/{history_id}/universe")
+def api_history_universe(
+    history_id: int,
+    date: str = Query(""),
+    api: CatalogApi = Depends(get_api),
+    svc: HistoryService = Depends(get_history_service),
+):
+    try:
+        hist = get_history(history_id)
+    except NotFoundError:
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    except ReplayError as e:
+        return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
+    rows = universe_on(hist, svc, buy_universe(api), view_date=date or None)
+    return {
+        "id": hist.id,
+        "view_date": rows[0].mark.as_of if rows else (date or None),
+        "universe": [row.as_json() for row in rows],
+    }
+
+
+@router.get("/api/portfolio/histories/{history_id}/ticket")
+def api_history_ticket(
+    history_id: int,
+    date: str = Query(""),
+    side: str = Query("buy"),
+    listing: str = Query(""),
+    ticker: str = Query(""),
+    quantity: str = Query(""),
+    currency: str = Query(""),
+    api: CatalogApi = Depends(get_api),
+    svc: HistoryService = Depends(get_history_service),
+):
+    try:
+        hist = get_history(history_id)
+    except NotFoundError:
+        return JSONResponse({"error": "not_found"}, status_code=404)
+    except ReplayError as e:
+        return JSONResponse({"error": e.code, "message": e.message}, status_code=400)
+    qty = _opt_float(quantity)
+    ccy = currency.strip().upper()
+    if not ccy:
+        want = (ticker or listing or "").strip().upper()
+        for row in buy_universe(api):
+            if str(row.get("ticker") or "").upper() == want or str(
+                row.get("quote_listing") or ""
+            ).upper() == want:
+                ccy = str(row.get("currency") or "").strip().upper()
+                break
+    return ticket_on(
+        hist,
+        svc,
+        view_date=date or None,
+        side=side,
+        listing=listing,
+        ticker=ticker or None,
+        quantity=qty,
+        currency=ccy or None,
     )
 
 

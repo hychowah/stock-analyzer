@@ -7,15 +7,25 @@
 <div class="card hist-summary">
   <p><a href="/portfolio/histories">← What-if</a></p>
   {% include "partials/portfolio_subnav.html" %}
-  <form class="stack-form" method="post" action="/portfolio/histories/{{ h.id }}">
-    <label>Name
-      <input name="name" value="{{ h.name }}" required/>
-    </label>
-    <label>Notes
-      <input name="notes" value="{{ h.notes or '' }}"/>
-    </label>
-    <p><button type="submit" class="secondary">Save</button></p>
-  </form>
+  <details class="hist-meta">
+    <summary>History</summary>
+    <form class="stack-form" method="post" action="/portfolio/histories/{{ h.id }}">
+      <label>Name
+        <input name="name" value="{{ h.name }}" required/>
+      </label>
+      <label>Notes
+        <input name="notes" value="{{ h.notes or '' }}"/>
+      </label>
+      <p><button type="submit" class="secondary">Save</button></p>
+    </form>
+    <form method="post" action="/portfolio/histories/{{ h.id }}/copy" style="display:inline">
+      <button type="submit" class="secondary">Duplicate</button>
+    </form>
+    <form method="post" action="/portfolio/histories/{{ h.id }}/delete" style="display:inline"
+          onsubmit="return confirm('Delete this history?');">
+      <button type="submit" class="secondary">Delete</button>
+    </form>
+  </details>
   <p class="muted">Paper copy of your IB stock trades from {{ payload.paper.fork_date }}. What-if fills sit on that copy. Later real sells of a name you already sold here are skipped.</p>
   <div class="grid2">
     <table>
@@ -33,19 +43,15 @@
   <p class="muted">{{ c }}</p>
   {% endfor %}
   {% if payload.error %}<p class="err" role="alert">{{ payload.error }}</p>{% endif %}
-  <form method="post" action="/portfolio/histories/{{ h.id }}/copy" style="display:inline">
-    <button type="submit" class="secondary">Duplicate</button>
-  </form>
-  <form method="post" action="/portfolio/histories/{{ h.id }}/delete" style="display:inline"
-        onsubmit="return confirm('Delete this history?');">
-    <button type="submit" class="secondary">Delete</button>
-  </form>
 </div>
 
 <div class="card" id="hist-holdings-card"
      data-view-date="{{ payload.paper.view_date }}"
      data-held-url="/fragments/portfolio/histories/{{ h.id }}/held"
-     data-path-url="/api/portfolio/histories/{{ h.id }}/path">
+     data-path-url="/api/portfolio/histories/{{ h.id }}/path"
+     data-universe-url="/api/portfolio/histories/{{ h.id }}/universe"
+     data-ticket-url="/api/portfolio/histories/{{ h.id }}/ticket"
+     data-base-currency="{{ payload.paper.base_currency }}">
   <h2>Holdings on this day</h2>
   <form class="filters" id="hist-date-form" method="get" action="/portfolio/histories/{{ h.id }}">
     <div class="filters-row">
@@ -53,14 +59,34 @@
         <input id="hist-view-date" type="date" name="date" value="{{ payload.paper.view_date }}"
                min="{{ payload.paper.fork_date }}" max="{{ payload.max_date }}" required/>
       </label>
-      <button type="submit">Show holdings</button>
+      <button type="submit" id="hist-show-holdings">Show holdings</button>
     </div>
   </form>
   <p class="muted" id="hist-held-caption">What the paper book held on {{ payload.paper.view_date }}. Names marked “sold later” are gone from today’s copied actual — not from a live IB walk.</p>
-  <div id="hist-held-table">
-  {% with history_id=h.id, view_date=payload.paper.view_date, held=payload.paper.held, cash=payload.paper.cash, base_currency=payload.paper.base_currency, sold_later=payload.sold_later %}
-    {% include "partials/held_table.html" %}
-  {% endwith %}
+  <div class="hist-holdings-layout">
+    <div id="hist-held-table">
+    {% with history_id=h.id, view_date=payload.paper.view_date, held=payload.paper.held, cash=payload.paper.cash, base_currency=payload.paper.base_currency, sold_later=payload.sold_later, pane='pending' %}
+      {% include "partials/held_table.html" %}
+    {% endwith %}
+    </div>
+    <form class="hist-ticket" id="hist-ticket-form" method="post" action="/portfolio/histories/{{ h.id }}/decisions">
+      <h2>Ticket</h2>
+      <p class="muted" id="hist-ticket-empty">Select a researched name to buy. Sell stays on the holdings row.</p>
+      <input type="hidden" name="side" id="hist-ticket-side" value="buy"/>
+      <input type="hidden" name="listing" id="hist-ticket-listing" value=""/>
+      <input type="hidden" name="as_of" id="hist-ticket-asof" value="{{ payload.paper.view_date }}"/>
+      <label>Ticker
+        <input name="ticker" id="hist-ticket-ticker" autocomplete="off"/>
+      </label>
+      <p id="hist-ticket-fill" class="muted"></p>
+      <label>Qty
+        <input name="quantity" id="hist-ticket-qty" type="number" step="any" min="0"/>
+      </label>
+      <p id="hist-ticket-estimate" class="muted"></p>
+      <p id="hist-ticket-after" class="muted"></p>
+      <p id="hist-ticket-error" class="err" hidden></p>
+      <p><button type="submit" id="hist-ticket-confirm" disabled>Confirm buy</button></p>
+    </form>
   </div>
 </div>
 
@@ -78,28 +104,33 @@
 </div>
 {% endif %}
 
-<details class="card">
+<details class="card" open>
   <summary id="hist-buy-summary">Buy a researched name on {{ payload.paper.view_date }}</summary>
-  <p class="muted">Today’s catalog. Search filters this table. Quantity is required.</p>
+  <p class="muted">Today’s catalog. Search filters this table. Close is that day’s Yahoo close. A name with no close on or before this date is not a buy.</p>
   <p><label>Filter <input id="hist-universe-filter" type="search" placeholder="MELI"/></label></p>
   <div class="table-freeze">
   <table id="hist-universe">
-    <thead><tr><th>Ticker</th><th>Verdict</th><th>MoS %</th><th>Session</th><th></th></tr></thead>
+    <thead><tr><th>Ticker</th><th>Close</th><th>Verdict</th><th>MoS %</th><th>Session</th><th></th></tr></thead>
     <tbody>
       {% for row in payload.universe %}
-      <tr data-ticker="{{ row.ticker }}">
+      <tr data-ticker="{{ row.ticker }}" data-listing="{{ row.quote_listing or row.ticker }}">
         <td class="mono">{{ row.ticker }}</td>
+        <td class="num hist-buy-close" data-ticker="{{ row.ticker }}"><span class="hist-skel-bar"></span></td>
         <td>{{ row.audit_verdict or '—' }}</td>
         <td class="num">{{ row.margin_of_safety_pct | fmt_num(1) }}</td>
         <td class="mono">{{ row.session_date or '' }}</td>
         <td>
-          <form method="post" action="/portfolio/histories/{{ h.id }}/decisions">
-            <input type="hidden" name="side" value="buy"/>
-            <input type="hidden" name="ticker" value="{{ row.ticker }}"/>
-            <input type="hidden" name="as_of" value="{{ payload.paper.view_date }}"/>
-            <label>Qty <input name="quantity" type="number" step="any" min="0" placeholder="qty" required style="width:5rem"/></label>
-            <button type="submit">Buy</button>
-          </form>
+          <button type="button" class="hist-buy-pick secondary" data-ticker="{{ row.ticker }}"
+                  data-listing="{{ row.quote_listing or row.ticker }}" disabled>Buy…</button>
+          <noscript>
+            <form method="post" action="/portfolio/histories/{{ h.id }}/decisions">
+              <input type="hidden" name="side" value="buy"/>
+              <input type="hidden" name="ticker" value="{{ row.ticker }}"/>
+              <input type="hidden" name="as_of" value="{{ payload.paper.view_date }}"/>
+              <label>Qty <input name="quantity" type="number" step="any" min="0" placeholder="qty" required style="width:5rem"/></label>
+              <button type="submit">Buy</button>
+            </form>
+          </noscript>
         </td>
       </tr>
       {% endfor %}
@@ -110,7 +141,7 @@
 
 <div class="card" id="hist-chart-card">
   <h2>Actual vs this history</h2>
-  <p class="muted">{{ payload.paper.fork_date }} → {{ payload.max_date }} · daily close · {{ payload.paper.base_currency }}</p>
+  <p class="muted">{{ payload.paper.fork_date }} → {{ payload.max_date }} · daily close · {{ payload.paper.base_currency }} · Actual (this copy) vs this history</p>
   <div class="nav-chart" id="hist-chart">
     <noscript>
       <img src="/api/portfolio/histories/{{ h.id }}/path.svg" alt="Actual versus this history, daily close" width="640" height="160"/>

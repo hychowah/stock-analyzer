@@ -1,9 +1,13 @@
 /**
  * What-if page helpers. Page works without this file.
- * Loads the NAV path after first paint; date change fetches holdings only.
+ * Loads the NAV path after first paint. A date change fetches the held
+ * fragment, universe closes, and (if a ticker is selected) the ticket
+ * preview — not the path.
  */
 (function () {
   "use strict";
+
+  document.documentElement.classList.add("is-js");
 
   var filter = document.getElementById("hist-universe-filter");
   var table = document.getElementById("hist-universe");
@@ -44,9 +48,24 @@
   var card = document.getElementById("hist-holdings-card");
   var heldUrl = card ? card.getAttribute("data-held-url") : "";
   var pathUrl = card ? card.getAttribute("data-path-url") : "";
+  var universeUrl = card ? card.getAttribute("data-universe-url") : "";
+  var ticketUrl = card ? card.getAttribute("data-ticket-url") : "";
+  var baseCcy = card ? card.getAttribute("data-base-currency") || "" : "";
+
+  var showBtn = document.getElementById("hist-show-holdings");
+  if (showBtn) {
+    showBtn.hidden = true;
+  }
+
+  function currentDate() {
+    var dateInput = document.getElementById("hist-view-date");
+    return dateInput ? String(dateInput.value || "").trim() : "";
+  }
 
   function setAsOf(day) {
-    var inputs = document.querySelectorAll('#hist-holdings-card input[name="as_of"], #hist-universe input[name="as_of"]');
+    var inputs = document.querySelectorAll(
+      '#hist-holdings-card input[name="as_of"], #hist-universe input[name="as_of"], #hist-ticket-asof'
+    );
     for (var i = 0; i < inputs.length; i++) {
       inputs[i].value = day;
     }
@@ -74,11 +93,25 @@
     }
   }
 
+  function markHeldBusy(busy) {
+    var wrap = document.getElementById("hist-held-table");
+    if (!wrap) {
+      return;
+    }
+    wrap.classList.toggle("is-loading", !!busy);
+    if (busy) {
+      wrap.setAttribute("aria-busy", "true");
+    } else {
+      wrap.removeAttribute("aria-busy");
+    }
+  }
+
   /* Holdings cash is as of D in the table fragment. Do not copy it into header cash. */
   function loadHoldings(day) {
     if (!heldUrl) {
       return;
     }
+    markHeldBusy(true);
     var url = heldUrl + (day ? "?date=" + encodeURIComponent(day) : "");
     fetch(url, { headers: { Accept: "text/html" } })
       .then(function (r) {
@@ -96,29 +129,309 @@
         var root = wrap.querySelector("[data-view-date]");
         var view = (root && root.getAttribute("data-view-date")) || day;
         applyViewDate(view);
+        markHeldBusy(false);
+        refreshTicket();
       })
       .catch(function () {
-        /* keep the server-rendered table */
+        markHeldBusy(false);
+        var wrap = document.getElementById("hist-held-table");
+        if (!wrap) {
+          return;
+        }
+        var note = wrap.querySelector(".hist-held-fetch-error");
+        if (!note) {
+          note = document.createElement("p");
+          note.className = "err hist-held-fetch-error";
+          note.setAttribute("role", "alert");
+          wrap.insertBefore(note, wrap.firstChild);
+        }
+        note.innerHTML =
+          'Could not load closes for this date. <button type="button" class="secondary hist-retry-marks">Retry prices</button>';
       });
   }
 
+  function closeLabel(mark, view) {
+    if (!mark) {
+      return "Loading closes for " + view + "…";
+    }
+    if (mark.status === "unavailable") {
+      return "Yahoo failed";
+    }
+    if (mark.status !== "quoted" || mark.close == null) {
+      return "No close on or before " + view;
+    }
+    var text = fmt(mark.close);
+    if (mark.bar_date && mark.bar_date !== view) {
+      text += " · " + mark.bar_date;
+    }
+    return text;
+  }
+
+  function loadUniverse(day) {
+    if (!universeUrl || !table) {
+      return;
+    }
+    var url = universeUrl + (day ? "?date=" + encodeURIComponent(day) : "");
+    fetch(url, { headers: { Accept: "application/json" } })
+      .then(function (r) {
+        if (!r.ok) {
+          throw new Error("universe " + r.status);
+        }
+        return r.json();
+      })
+      .then(function (body) {
+        var rows = body.universe || [];
+        var byTicker = {};
+        for (var i = 0; i < rows.length; i++) {
+          byTicker[String(rows[i].ticker || "").toUpperCase()] = rows[i];
+        }
+        var trs = table.querySelectorAll("tbody tr");
+        var view = body.view_date || day;
+        for (var j = 0; j < trs.length; j++) {
+          var ticker = String(trs[j].getAttribute("data-ticker") || "").toUpperCase();
+          var row = byTicker[ticker];
+          var closeCell = trs[j].querySelector(".hist-buy-close");
+          var pick = trs[j].querySelector(".hist-buy-pick");
+          if (closeCell) {
+            closeCell.textContent = closeLabel(row && row.mark, view);
+          }
+          if (pick) {
+            pick.disabled = !(row && row.pickable);
+            if (row && row.listing) {
+              pick.setAttribute("data-listing", row.listing);
+            }
+            if (row && row.currency) {
+              pick.setAttribute("data-currency", row.currency);
+            }
+          }
+        }
+      })
+      .catch(function () {
+        var cells = table.querySelectorAll(".hist-buy-close");
+        for (var i = 0; i < cells.length; i++) {
+          cells[i].textContent = "Yahoo failed";
+        }
+      });
+  }
+
+  function onDateChanged(day) {
+    loadHoldings(day);
+    loadUniverse(day);
+    try {
+      var next = new URL(window.location.href);
+      if (day) {
+        next.searchParams.set("date", day);
+      }
+      window.history.replaceState({}, "", next.toString());
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
   var dateForm = document.getElementById("hist-date-form");
+  var dateInput = document.getElementById("hist-view-date");
   if (dateForm) {
     dateForm.addEventListener("submit", function (ev) {
       ev.preventDefault();
-      var dateInput = document.getElementById("hist-view-date");
-      var day = dateInput ? String(dateInput.value || "").trim() : "";
-      loadHoldings(day);
-      try {
-        var next = new URL(window.location.href);
-        if (day) {
-          next.searchParams.set("date", day);
+      onDateChanged(currentDate());
+    });
+  }
+  if (dateInput) {
+    dateInput.addEventListener("change", function () {
+      onDateChanged(currentDate());
+    });
+  }
+
+  var heldWrap = document.getElementById("hist-held-table");
+  if (heldWrap) {
+    heldWrap.addEventListener("click", function (ev) {
+      var btn = ev.target.closest ? ev.target.closest(".hist-retry-marks") : null;
+      if (!btn) {
+        return;
+      }
+      ev.preventDefault();
+      loadHoldings(currentDate());
+      loadUniverse(currentDate());
+    });
+  }
+
+  var ticketForm = document.getElementById("hist-ticket-form");
+  var ticketTicker = document.getElementById("hist-ticket-ticker");
+  var ticketListing = document.getElementById("hist-ticket-listing");
+  var ticketSide = document.getElementById("hist-ticket-side");
+  var ticketQty = document.getElementById("hist-ticket-qty");
+  var ticketFill = document.getElementById("hist-ticket-fill");
+  var ticketEstimate = document.getElementById("hist-ticket-estimate");
+  var ticketAfter = document.getElementById("hist-ticket-after");
+  var ticketError = document.getElementById("hist-ticket-error");
+  var ticketConfirm = document.getElementById("hist-ticket-confirm");
+  var ticketEmpty = document.getElementById("hist-ticket-empty");
+  var ticketCurrency = "";
+
+  function setTicketError(msg) {
+    if (!ticketError) {
+      return;
+    }
+    if (msg) {
+      ticketError.hidden = false;
+      ticketError.textContent = msg;
+    } else {
+      ticketError.hidden = true;
+      ticketError.textContent = "";
+    }
+  }
+
+  function refreshTicket() {
+    if (!ticketUrl || !ticketForm || !ticketTicker) {
+      return;
+    }
+    var ticker = String(ticketTicker.value || "").trim().toUpperCase();
+    var listing = ticketListing ? String(ticketListing.value || "").trim().toUpperCase() : "";
+    var qty = ticketQty ? String(ticketQty.value || "").trim() : "";
+    if (!ticker && !listing) {
+      if (ticketFill) {
+        ticketFill.textContent = "";
+      }
+      if (ticketEstimate) {
+        ticketEstimate.textContent = "";
+      }
+      if (ticketAfter) {
+        ticketAfter.textContent = "";
+      }
+      if (ticketConfirm) {
+        ticketConfirm.disabled = true;
+      }
+      setTicketError("");
+      return;
+    }
+    var day = currentDate();
+    var url =
+      ticketUrl +
+      "?date=" +
+      encodeURIComponent(day) +
+      "&side=" +
+      encodeURIComponent((ticketSide && ticketSide.value) || "buy") +
+      "&listing=" +
+      encodeURIComponent(listing || ticker) +
+      "&ticker=" +
+      encodeURIComponent(ticker) +
+      "&quantity=" +
+      encodeURIComponent(qty) +
+      "&currency=" +
+      encodeURIComponent(ticketCurrency);
+    fetch(url, { headers: { Accept: "application/json" } })
+      .then(function (r) {
+        if (!r.ok) {
+          throw new Error("ticket " + r.status);
         }
-        window.history.replaceState({}, "", next.toString());
-      } catch (e) {
-        /* ignore */
+        return r.json();
+      })
+      .then(function (body) {
+        var mark = body.mark || {};
+        var view = body.view_date || day;
+        if (ticketFill) {
+          if (mark.status === "quoted" && mark.close != null) {
+            ticketFill.textContent =
+              "Yahoo daily close on " +
+              (mark.bar_date || view) +
+              ": " +
+              fmt(mark.close);
+          } else {
+            ticketFill.textContent = closeLabel(mark, view);
+          }
+        }
+        if (ticketEstimate) {
+          if (body.cost_base != null) {
+            ticketEstimate.textContent =
+              "Estimated cost " + fmt(body.cost_base) + (baseCcy ? " " + baseCcy : "");
+          } else {
+            ticketEstimate.textContent = "";
+          }
+        }
+        if (ticketAfter && body.after) {
+          var a = body.after;
+          ticketAfter.textContent =
+            "After: cash " +
+            fmt(a.cash) +
+            " · loan " +
+            fmt(a.loan) +
+            " · excess " +
+            fmt(a.excess) +
+            " · buying power " +
+            fmt(a.buying_power);
+        } else if (ticketAfter) {
+          ticketAfter.textContent = "";
+        }
+        var quoted = mark.status === "quoted" && mark.close != null;
+        var hasQty = qty !== "" && Number(qty) > 0;
+        if (ticketConfirm) {
+          ticketConfirm.disabled = !(quoted && hasQty);
+        }
+        if (!quoted) {
+          setTicketError(
+            mark.status === "unavailable"
+              ? "Yahoo failed for this listing on " + view + "."
+              : "No close on or before " + view + "."
+          );
+        } else {
+          setTicketError("");
+        }
+      })
+      .catch(function () {
+        setTicketError("Could not preview this ticket.");
+        if (ticketConfirm) {
+          ticketConfirm.disabled = true;
+        }
+      });
+  }
+
+  function pickBuy(ticker, listing, currency) {
+    ticketCurrency = currency || "";
+    if (ticketEmpty) {
+      ticketEmpty.textContent = "Buy " + ticker + " on " + currentDate() + ".";
+    }
+    if (ticketSide) {
+      ticketSide.value = "buy";
+    }
+    if (ticketTicker) {
+      ticketTicker.value = ticker;
+    }
+    if (ticketListing) {
+      ticketListing.value = listing || ticker;
+    }
+    if (ticketConfirm) {
+      ticketConfirm.textContent = "Confirm buy";
+    }
+    if (ticketQty && !ticketQty.value) {
+      ticketQty.focus();
+    }
+    refreshTicket();
+  }
+
+  if (table) {
+    table.addEventListener("click", function (ev) {
+      var btn = ev.target.closest ? ev.target.closest(".hist-buy-pick") : null;
+      if (!btn || btn.disabled) {
+        return;
+      }
+      ev.preventDefault();
+      pickBuy(
+        String(btn.getAttribute("data-ticker") || ""),
+        String(btn.getAttribute("data-listing") || ""),
+        String(btn.getAttribute("data-currency") || "")
+      );
+    });
+  }
+  if (ticketTicker) {
+    ticketTicker.addEventListener("change", refreshTicket);
+    ticketTicker.addEventListener("input", function () {
+      if (ticketListing) {
+        ticketListing.value = String(ticketTicker.value || "").trim().toUpperCase();
       }
     });
+  }
+  if (ticketQty) {
+    ticketQty.addEventListener("input", refreshTicket);
   }
 
   function bindChart(points) {
@@ -200,5 +513,8 @@
 
   if (heldUrl) {
     loadHoldings(card ? card.getAttribute("data-view-date") : "");
+  }
+  if (universeUrl) {
+    loadUniverse(card ? card.getAttribute("data-view-date") : "");
   }
 })();

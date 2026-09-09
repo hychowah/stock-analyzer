@@ -191,9 +191,9 @@ def replay(state: BookState, fills: Iterable[PricedFill]) -> BookState:
     """Apply priced fills in as-of then id order. No catalog, no Yahoo.
 
     Oversell fails for every fill — clip later real sells with
-    ``overlay_fills`` first. Cash shortfall fails for what-if buys.
-    Copied IB buys still apply if statement cash goes negative: that
-    cash is approximate, and those fills are the frozen ledger.
+    ``overlay_fills`` first. What-if buys may drive cash negative —
+    that cash is the loan. Copied IB buys already do. Buying-power
+    math is ``assert_buyable`` at POST, not this function.
 
     Fill floor is ``state.as_of`` (seed vintage on the first call).
     This function copies that field through; ``state_on`` / ``_apply_through``
@@ -236,15 +236,6 @@ def replay(state: BookState, fills: Iterable[PricedFill]) -> BookState:
             return signed if side == "sell" else -signed
 
         if side == "buy":
-            base = -_cash_delta(qty)
-            if cash + _QTY_EPS < base and fill.source != "real":
-                raise ReplayError(
-                    "insufficient_cash",
-                    "Not enough cash for this buy.",
-                    need=base,
-                    cash=cash,
-                    short=base - cash,
-                )
             cash += _cash_delta(qty)
             new_qty = (existing.qty if existing else 0.0) + qty
             lots[listing] = Lot(
@@ -689,6 +680,14 @@ def resolve_sell(
         ib_symbol=lot.ib_symbol,
         price_mode=mode,
     )
+
+
+def fill_notional_base(fill: PricedFill) -> float:
+    """Absolute cash effect in base currency. Uses stored cash_effect when set."""
+    if fill.cash_effect is not None:
+        return abs(float(fill.cash_effect))
+    fx = 1.0 if fill.stmt_fx is None else float(fill.stmt_fx)
+    return float(fill.quantity) * float(fill.fill_price) * fx
 
 
 def _qty_or_notional(

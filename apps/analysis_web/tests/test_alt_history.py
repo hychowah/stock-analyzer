@@ -17,6 +17,7 @@ from apps.analysis_web.services.alt_history import (
     compare_at,
     compare_path,
     drop_hyp_fill,
+    trial_replay,
     history_from_ib,
     overlay_fills,
     path_dates,
@@ -114,7 +115,7 @@ class ReplayTests(unittest.TestCase):
             replay(self.fork, [_fill(quantity=11)])
         self.assertEqual(ctx.exception.code, "oversell")
 
-    def test_buy_merge_and_cash(self):
+    def test_buy_may_run_cash_negative(self):
         buy = _fill(
             side="buy",
             listing="AAPL",
@@ -125,14 +126,14 @@ class ReplayTests(unittest.TestCase):
             ib_symbol=None,
             id=2,
         )
-        # 1 * 200 * 8 = 1600; cash 500 is not enough
-        with self.assertRaises(ReplayError) as ctx:
-            replay(self.fork, [buy])
-        self.assertEqual(ctx.exception.code, "insufficient_cash")
-        sold = replay(self.fork, [_fill()])
-        out = replay(sold, [buy])
+        # 1 * 200 * 8 = 1600; cash 500 → loan 1100
+        out = replay(self.fork, [buy])
+        self.assertAlmostEqual(out.cash_base or 0, 500.0 - 1600.0, places=5)
         self.assertAlmostEqual(out.lot_by_listing("AAPL").qty, 1.0, places=5)  # type: ignore[union-attr]
         self.assertEqual(out.lot_by_listing("AAPL").catalog_ticker, "AAPL")
+        sold = replay(self.fork, [_fill()])
+        funded = replay(sold, [buy])
+        self.assertAlmostEqual(funded.lot_by_listing("AAPL").qty, 1.0, places=5)  # type: ignore[union-attr]
 
     def test_unwind_hypothetical_buy(self):
         sold = replay(self.fork, [_fill()])
@@ -411,7 +412,7 @@ class CopyLedgerTests(unittest.TestCase):
         live = as_of_book(self.ib, "2026-03-31")
         self.assertGreater(len(live.lots), 0)
 
-    def test_drop_hyp_that_funded_buy_rejected(self):
+    def test_drop_hyp_sell_leaves_buy_on_loan(self):
         hist = history_from_ib(self.ib, name="copy")
         sold = with_hyp_fill(hist, _fill())
         bought = with_hyp_fill(
@@ -437,8 +438,13 @@ class CopyLedgerTests(unittest.TestCase):
             )
             hyp = persist.hyp_fills()
             sell_id = next(f.id for f in hyp if f.side == "sell")
-            with self.assertRaises(ReplayError):
-                drop_hyp_fill(persist, int(sell_id))
+            out = drop_hyp_fill(persist, int(sell_id))
+            self.assertTrue(any(f.side == "buy" for f in out.hyp_fills()))
+            self.assertFalse(
+                any(f.side == "sell" and f.listing == "META" for f in out.hyp_fills())
+            )
+            book = trial_replay(out)
+            self.assertLess(book.cash_base or 0, 0.0)
         finally:
             td.cleanup()
 

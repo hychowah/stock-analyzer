@@ -345,15 +345,23 @@ class HistoryHttpTests(unittest.TestCase):
             f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
         ).json()
         self.assertAlmostEqual(
-            fork_held["cash"], state_on(hist, hist.fork_date).cash_base or 0, places=5
+            fork_held["account"]["cash"],
+            state_on(hist, hist.fork_date).cash_base or 0,
+            places=5,
         )
         self.assertAlmostEqual(
-            late_held["cash"], state_on(hist, "2026-03-31").cash_base or 0, places=5
+            late_held["account"]["cash"],
+            state_on(hist, "2026-03-31").cash_base or 0,
+            places=5,
         )
-        self.assertNotAlmostEqual(fork_held["cash"], late_held["cash"], places=5)
+        self.assertNotAlmostEqual(
+            fork_held["account"]["cash"], late_held["account"]["cash"], places=5
+        )
+        self.assertIn("buying_power", late_held["account"])
+        self.assertNotIn("cash", late_held)
         html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
         self.assertIn(b"Cash (today)", html.content)
-        self.assertIn(b"Cash on 2026-03-31", html.content)
+        self.assertIn(b"Loading closes for 2026-03-31", html.content)
         self.assertNotIn(b'"path"', html.content)
         self.assertNotIn(b"live_nav.js", html.content)
         late_row = late_held["held"][0]
@@ -368,14 +376,15 @@ class HistoryHttpTests(unittest.TestCase):
         hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
         from apps.analysis_web.services.alt_history_store import get_history
         from apps.analysis_web.services.alt_history_view import (
+            AsOfAccount,
             EditorPage,
-            HoldingsLot,
             PaperLot,
             PaperView,
+            account_on,
             editor_page,
-            holdings_on,
             paper_on,
         )
+        from apps.analysis_web.services.mark_book import MarkedLot
 
         hist = get_history(int(hid))
         paper = paper_on(hist, view_date="2026-03-31")
@@ -413,17 +422,19 @@ class HistoryHttpTests(unittest.TestCase):
         from unittest.mock import patch
 
         with patch(
-            "apps.analysis_web.services.alt_history_view.load_bars", fake_load
+            "apps.analysis_web.services.alt_history_view.load_histories", fake_load
         ):
-            held = holdings_on(
+            held = account_on(
                 hist, self._app.state.history_service, view_date="2026-03-31"
             )
         self.assertEqual(captured[0][1], "2026-03-31")
         self.assertTrue(held.held)
-        self.assertIsInstance(held.held[0], HoldingsLot)
+        self.assertIsInstance(held, AsOfAccount)
+        self.assertIsInstance(held.held[0], MarkedLot)
         self.assertTrue(hasattr(held.held[0], "close"))
         self.assertNotIn("deceased", held.held[0].as_json())
         self.assertEqual(held.view_date, "2026-03-31")
+        self.assertTrue(hasattr(held.account, "buying_power"))
 
         frag = self.client.get(
             f"/fragments/portfolio/histories/{hid}/held?date=2026-03-31"
@@ -432,16 +443,23 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertIn(b'name="quantity"', frag.content)
         self.assertIn(b"data-view-date", frag.content)
         self.assertIn(b"META", frag.content)
-        self.assertIn(b"Cash on 2026-03-31", frag.content)
+        self.assertIn(b"Buying power", frag.content)
+        self.assertIn(b"Paper account on 2026-03-31", frag.content)
         self.assertNotIn(b"Cash (today)", frag.content)
+        self.assertIn(b"50.00", frag.content)
         html = self.client.get(f"/portfolio/histories/{hid}")
         self.assertIn(b"data-held-url", html.content)
         self.assertNotIn(b"data-holdings-url", html.content)
+        self.assertIn(b"Loading closes for", html.content)
+        self.assertIn(b"hist-skel", html.content)
+        self.assertIn(b"data-universe-url", html.content)
+        self.assertIn(b"hist-ticket", html.content)
         js = Path("apps/analysis_web/static/alt_history.js").read_text(
             encoding="utf-8"
         )
         self.assertNotIn("renderHeld", js)
         self.assertNotIn("<table>", js)
+        self.assertIn('dateInput.addEventListener("change"', js)
 
     def test_sold_later_is_page_badge_not_holdings_json(self):
         from dataclasses import replace
@@ -489,3 +507,89 @@ class HistoryHttpTests(unittest.TestCase):
         ).json()
         meta = next(row for row in held["held"] if row["listing"] == "META")
         self.assertNotIn("deceased", meta)
+
+    def test_asof_close_and_weekend_bar_date(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Prices"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
+        self.assertEqual(html.status_code, 200)
+        self.assertIn(b'data-pane="pending"', html.content)
+        self.assertIn(b"hist-skel", html.content)
+        held = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-04-04"
+        ).json()
+        meta = next(row for row in held["held"] if row["listing"] == "META")
+        self.assertAlmostEqual(meta["close"], 55.0, places=5)
+        self.assertEqual(meta["bar_date"], "2026-04-01")
+        self.assertIsNone(meta["error"])
+        frag = self.client.get(
+            f"/fragments/portfolio/histories/{hid}/held?date=2026-04-04"
+        )
+        self.assertIn(b"55.00", frag.content)
+        self.assertIn(b"2026-04-01", frag.content)
+
+    def test_universe_and_ticket_use_close_on_d(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Ticket"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        uni = self.client.get(
+            f"/api/portfolio/histories/{hid}/universe?date=2026-03-31"
+        )
+        self.assertEqual(uni.status_code, 200)
+        rows = {r["ticker"]: r for r in uni.json()["universe"]}
+        self.assertTrue(rows["AAPL"]["pickable"])
+        self.assertAlmostEqual(rows["AAPL"]["mark"]["close"], 200.0, places=5)
+        self.assertEqual(rows["AAPL"]["mark"]["status"], "quoted")
+        ticket = self.client.get(
+            f"/api/portfolio/histories/{hid}/ticket",
+            params={
+                "date": "2026-03-31",
+                "side": "buy",
+                "listing": "AAPL",
+                "ticker": "AAPL",
+                "quantity": "1",
+            },
+        )
+        self.assertEqual(ticket.status_code, 200)
+        body = ticket.json()
+        self.assertAlmostEqual(body["cost_base"], 200.0, places=5)
+        self.assertIsNotNone(body["after"])
+        self.assertIn("buying_power", body["after"])
+
+    def test_margin_buy_allowed_until_buying_power(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Margin"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        ok = self.client.post(
+            f"/portfolio/histories/{hid}/decisions",
+            data={
+                "side": "buy",
+                "ticker": "AAPL",
+                "as_of": "2026-03-31",
+                "quantity": "1",
+            },
+            follow_redirects=True,
+        )
+        self.assertEqual(ok.status_code, 200)
+        self.assertIn(b"buy AAPL", ok.content)
+        huge = self.client.post(
+            f"/portfolio/histories/{hid}/decisions",
+            data={
+                "side": "buy",
+                "ticker": "AAPL",
+                "as_of": "2026-03-31",
+                "quantity": "100",
+            },
+        )
+        self.assertEqual(huge.status_code, 400)
+        self.assertIn(b"buying power", huge.content.lower())

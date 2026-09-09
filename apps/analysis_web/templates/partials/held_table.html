@@ -1,20 +1,56 @@
-{# One holdings table. Paper lots have no close/value (prints —). #}
+{# As-of pane. pane is pending | ready | failed. Pending never prints — as a price. #}
 {% set sold_later = sold_later|default([]) %}
-<div class="held-table-root" data-view-date="{{ view_date }}">
-{% if cash is defined %}
-<p>Cash on {{ view_date }}: <span class="num">{{ cash | fmt_num }}</span>{% if base_currency %} {{ base_currency }}{% endif %}</p>
-{% endif %}
+{% set pane = pane|default('pending') %}
+{% set account = account|default(none) %}
+<div class="held-table-root" data-view-date="{{ view_date }}" data-pane="{{ pane }}"
+     {% if pane == 'pending' %}aria-busy="true"{% endif %}>
+<div class="hist-asof">
+  {% if account %}
+  <table class="hist-asof-strip">
+    <tr>
+      <th>Cash</th><td class="num">{{ account.cash | fmt_num }}</td>
+      <th>Stock</th><td class="num">{{ account.stock | fmt_num }}</td>
+      <th>NAV</th><td class="num">{{ account.nav | fmt_num }}</td>
+    </tr>
+    <tr>
+      <th>Margin loan</th><td class="num">{{ account.loan | fmt_num }}</td>
+      <th>Excess</th><td class="num{% if account.excess is not none and account.excess <= 0 %} err{% endif %}">{{ account.excess | fmt_num }}</td>
+      <th>Buying power</th><td class="num">{{ account.buying_power | fmt_num }}</td>
+    </tr>
+  </table>
+  <p class="muted">Paper account on {{ view_date }} · Yahoo daily close on or before this date, not live last print.{% if account.base_currency %} {{ account.base_currency }}.{% endif %} Paper Reg-T 25%, not IB house margin. Header Δ is still today.</p>
+  {% if account.n_unavailable %}
+  <p class="err" role="status">Yahoo failed for {{ account.n_unavailable }} listing{% if account.n_unavailable != 1 %}s{% endif %}.
+    <button type="button" class="secondary hist-retry-marks">Retry prices</button>
+  </p>
+  {% endif %}
+  {% else %}
+  <p>Cash on {{ view_date }}: <span class="num">{{ cash | fmt_num }}</span>{% if base_currency %} {{ base_currency }}{% endif %}</p>
+  <p class="muted" id="hist-held-loading">Loading closes for {{ view_date }}… Prices are Yahoo daily close on this date, not live last print. Header Δ is still today.</p>
+  {% endif %}
+</div>
 {% if held %}
 <div class="table-freeze">
 <table>
-  <thead><tr><th>Listing</th><th>Qty</th><th>Close</th><th>Value</th><th>Sell</th></tr></thead>
+  <thead><tr><th>Listing</th><th>Qty</th><th>Close on {{ view_date }}</th><th>Value</th><th>Sell</th></tr></thead>
   <tbody>
     {% for lot in held %}
     <tr>
       <td class="mono">{{ lot.listing }}{% if lot.ib_symbol and lot.ib_symbol != lot.listing %} <span class="muted">{{ lot.ib_symbol }}</span>{% endif %}{% if lot.listing in sold_later %} <span class="badge">sold later</span>{% endif %}</td>
       <td class="num">{{ lot.qty | fmt_num(2) }}</td>
-      <td class="num">{{ lot.close | default(none) | fmt_num }}</td>
-      <td class="num">{{ lot.value_base | default(none) | fmt_num }}</td>
+      {% if pane == 'pending' %}
+      <td class="num hist-skel" aria-label="Loading close on {{ view_date }}"><span class="hist-skel-bar"></span></td>
+      <td class="num hist-skel" aria-label="Loading value on {{ view_date }}"><span class="hist-skel-bar"></span></td>
+      {% elif lot.error == 'unavailable' %}
+      <td class="muted">Yahoo failed</td>
+      <td class="muted">—</td>
+      {% elif lot.close is none %}
+      <td class="muted">No close on or before {{ view_date }}</td>
+      <td class="muted">—</td>
+      {% else %}
+      <td class="num" aria-label="Close on {{ lot.bar_date or view_date }}">{{ lot.close | fmt_num }}{% if lot.bar_date and lot.bar_date != view_date %} <span class="muted">{{ lot.bar_date }}</span>{% endif %}</td>
+      <td class="num">{{ lot.value_base | fmt_num }}</td>
+      {% endif %}
       <td>
         <form method="post" action="/portfolio/histories/{{ history_id }}/decisions" class="hist-sell-row">
           <input type="hidden" name="side" value="sell"/>

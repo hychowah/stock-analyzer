@@ -348,6 +348,7 @@ Mechanical backstop (not a substitute for judgment): `scripts/tests/test_archite
 | Dual-mode router (short) | `AGENTS.md` |
 | Full research pipeline and quality gates | `harness/RESEARCH_AGENTS.md`, `harness/HARNESS_MAP.md` |
 | Product engineering rules | `eng/AGENTS.md`, `eng/HARNESS_MAP.md` |
+| Commit how on this checkout | `COMMIT.md` |
 | Archive layout and commands | `archive/README.md` |
 | Website pages and query params | `apps/analysis_web/README.md` |
 | Document library | `harness/library.md` |

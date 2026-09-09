@@ -16,7 +16,7 @@ Auto-loaded entrypoint. **Keep this file short.** Deep law lives in nested files
 3. Mode B does **not** run research Phases 0–5 unless the user explicitly schedules a black-box research experiment.  
 4. Mode A agents **must open `harness/RESEARCH_AGENTS.md`** for the full pipeline, justification contract, and quality gates before Phase 0. Do not invent methodology from this router alone.  
 5. English only for normative keys, schemas, registry fields, and reports.  
-6. **No git commit without user agreement** — agents must not `git commit` / push / amend until the user explicitly asks or approves in-chat. Details: `eng/AGENTS.md` Git discipline (Mode B); Mode A same bar for any harness commits.  
+6. **No git commit without user agreement** — agents must not `git commit` / push / amend until the user explicitly asks or approves in-chat. Details: `eng/AGENTS.md` Git discipline (Mode B); Mode A same bar for any harness commits. **This checkout:** `COMMIT.md`.  
 7. **Keep `ARCHITECTURE.md` current** — human map of the system. Before every commit, if the change set made that map stale, update it in the same change set (`ARCHITECTURE.md` § Keeping this document current).
 
 ## Quick commands

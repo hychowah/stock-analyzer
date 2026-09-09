@@ -52,6 +52,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 | Map | `eng/HARNESS_MAP.md` |
 | Prompts | `eng/agent_prompts.md` |
 | Runbook | `eng/runbook.md` |
+| Commit how (this checkout) | `COMMIT.md` (WSL vs Windows Git; policy stays this file) |
 | Scaffold | `python3 scripts/scaffold_eng_session.py --slug <s>` |
 | Verify | `python3 scripts/eng_verify.py` |
 | Catalog API | `packages/catalog_api/` |
@@ -64,6 +65,7 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 - `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `harness/` (when W1)  
 - **Allow:** `ARCHITECTURE.md` (human map — update in the same change set when architecture changes)  
 - **Allow:** root `AGENTS.md` only when the router must point at a new surface (keep ≤150 lines)  
+- **Allow:** root `COMMIT.md` (checkout git/python how-to; policy stays Git discipline)  
 - **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
 - **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
 - **Allow append:** `archive/research_jobs/**` (Analyze control plane; never a catalog source)  
@@ -86,6 +88,8 @@ Mode A identity source of truth: **`harness/VERSION`** (stamped into every resea
 ## Git discipline (Mode B)
 
 Aligned with `harness/research/` **H9** (git as memory & recovery) — kept light; not Conventional Commits.
+
+**How to invoke git on this checkout** (WSL + Windows/OneDrive, which `git`/`python` to use, never `git add -A` on a 2600-file dirty list): **`COMMIT.md`**. The rules below are unchanged.
 
 ### Hard rule: user agreement before commit
 

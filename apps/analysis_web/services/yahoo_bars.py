@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import logging
 import re
+import sqlite3
+import threading
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Callable, Iterator
 
 CloseRow = tuple[float, str | None]
@@ -21,6 +24,9 @@ SearchFn = Callable[..., list[dict[str, Any]]]
 # HKEX 5-digit padded form (01378.HK). Strip one leading zero — not a ticker map.
 _HK_PADDED = re.compile(r"^0(\d{4}\.HK)$")
 _SEARCH_QUOTE_TYPES = frozenset({"EQUITY", "ETF", "INDEX"})
+# One thread at a time for yfinance sqlite/peewee (download, search, reset).
+# RLock: resolve_close_series may search while this thread already holds download.
+_yf_io_lock = threading.RLock()
 
 
 def as_float(v: Any) -> float | None:
@@ -111,12 +117,14 @@ def pick_search_listing(query: str, hits: list[dict[str, Any]]) -> str | None:
 
 
 def search_yahoo_quotes(yf: Any, query: str, *, limit: int = 8) -> list[dict[str, Any]]:
-    try:
-        found = yf.Search(query, max_results=limit)
-        rows = getattr(found, "quotes", None) or []
-    except Exception:  # noqa: BLE001
-        return []
-    return [row for row in rows if isinstance(row, dict)]
+    """Yahoo symbol search. Shares the module I/O lock with download and reset."""
+    with _yf_io_lock:
+        try:
+            found = yf.Search(query, max_results=limit)
+            rows = getattr(found, "quotes", None) or []
+        except Exception:  # noqa: BLE001
+            return []
+        return [row for row in rows if isinstance(row, dict)]
 
 
 @contextmanager
@@ -166,6 +174,99 @@ def split_download(data: Any, symbols: list[str]) -> dict[str, Any]:
     return out
 
 
+_YF_CACHE_DBS = ("cookies.db", "tkr-tz.db")
+_log = logging.getLogger(__name__)
+
+
+def yfinance_cache_dir() -> Path | None:
+    try:
+        from yfinance.cache import _TzDBManager  # type: ignore
+    except Exception:  # noqa: BLE001
+        return None
+    try:
+        return Path(_TzDBManager.get_location())
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def sqlite_file_ok(path: Path) -> bool:
+    """False only when the file exists and SQLite reports it corrupt."""
+    if not path.exists():
+        return True
+    try:
+        conn = sqlite3.connect(str(path))
+        try:
+            row = conn.execute("PRAGMA integrity_check").fetchone()
+        finally:
+            conn.close()
+    except sqlite3.DatabaseError:
+        return False
+    except Exception:  # noqa: BLE001
+        return True
+    return bool(row) and str(row[0]).lower() == "ok"
+
+
+def yfinance_cache_malformed(cache_dir: Path | None = None) -> bool:
+    d = cache_dir if cache_dir is not None else yfinance_cache_dir()
+    if d is None:
+        return False
+    return any(
+        (d / name).exists() and not sqlite_file_ok(d / name) for name in _YF_CACHE_DBS
+    )
+
+
+def reset_yfinance_cache(cache_dir: Path | None = None) -> None:
+    """Close yfinance's peewee handles and delete corrupt cache files.
+
+    Takes the module I/O lock. Nested calls from download_close_series re-enter.
+    """
+    with _yf_io_lock:
+        _reset_yfinance_cache_locked(cache_dir)
+
+
+def _reset_yfinance_cache_locked(cache_dir: Path | None = None) -> None:
+    d = cache_dir
+    try:
+        from yfinance import cache as yf_cache  # type: ignore
+
+        for manager in (
+            getattr(yf_cache, "_TzDBManager", None),
+            getattr(yf_cache, "_CookieDBManager", None),
+        ):
+            if manager is None:
+                continue
+            try:
+                manager.close_db()
+            except Exception:  # noqa: BLE001
+                pass
+            manager._db = None
+        tz_mgr = getattr(yf_cache, "_TzCacheManager", None)
+        if tz_mgr is not None:
+            tz_mgr._tz_cache = None
+        cookie_mgr = getattr(yf_cache, "_CookieCacheManager", None)
+        if cookie_mgr is not None:
+            cookie_mgr._Cookie_cache = None
+        if d is None:
+            d = Path(yf_cache._TzDBManager.get_location())
+    except Exception:  # noqa: BLE001
+        if d is None:
+            d = yfinance_cache_dir()
+    if d is None or not d.is_dir():
+        return
+    _log.warning("Resetting malformed yfinance cache at %s", d)
+    names: list[str] = []
+    for name in _YF_CACHE_DBS:
+        names.extend((name, name + "-wal", name + "-shm"))
+    for name in names:
+        path = d / name
+        if not path.exists():
+            continue
+        try:
+            path.unlink()
+        except OSError as e:
+            _log.warning("Could not remove %s: %s", path, e)
+
+
 def close_series(df: Any) -> list[tuple[float, str | None]]:
     if df is None:
         return []
@@ -189,29 +290,60 @@ def close_series(df: Any) -> list[tuple[float, str | None]]:
 def download_close_series(
     yf: Any, symbols: list[str], *, period: str, interval: str
 ) -> dict[str, CloseSeries]:
-    """symbol -> [(close, as_of), ...] from yf.download. Missing symbols are []."""
+    """symbol -> [(close, as_of), ...] from yf.download. Missing symbols are [].
+
+    Module I/O lock covers download, search, and cache reset. yfinance
+    threads stay off: tkr-tz.db is not safe for concurrent writers.
+    """
     empty: dict[str, CloseSeries] = {s: [] for s in symbols}
     if not symbols:
         return empty
-    try:
-        with _quiet_yfinance():
-            data = yf.download(
-                tickers=symbols,
-                period=period,
-                interval=interval,
-                group_by="ticker",
-                auto_adjust=True,
-                progress=False,
-                threads=True,
-                timeout=20,
-            )
-    except Exception:  # noqa: BLE001
-        return empty
-    frames = split_download(data, symbols)
-    out: dict[str, CloseSeries] = {}
-    for sym in symbols:
-        out[sym] = close_series(frames.get(sym))
-    return out
+    with _yf_io_lock:
+        return _download_close_series_locked(yf, symbols, period=period, interval=interval)
+
+
+def _download_close_series_locked(
+    yf: Any, symbols: list[str], *, period: str, interval: str
+) -> dict[str, CloseSeries]:
+    empty: dict[str, CloseSeries] = {s: [] for s in symbols}
+    repaired = False
+    for _attempt in (1, 2):
+        if yfinance_cache_malformed():
+            reset_yfinance_cache()
+            repaired = True
+        try:
+            with _quiet_yfinance():
+                data = yf.download(
+                    tickers=symbols,
+                    period=period,
+                    interval=interval,
+                    group_by="ticker",
+                    auto_adjust=True,
+                    progress=False,
+                    threads=False,
+                    timeout=20,
+                )
+        except Exception:  # noqa: BLE001
+            if not repaired:
+                reset_yfinance_cache()
+                repaired = True
+                continue
+            return empty
+        frames = split_download(data, symbols)
+        out: dict[str, CloseSeries] = {}
+        for sym in symbols:
+            out[sym] = close_series(frames.get(sym))
+        if (
+            not repaired
+            and symbols
+            and all(not out[s] for s in symbols)
+            and yfinance_cache_malformed()
+        ):
+            reset_yfinance_cache()
+            repaired = True
+            continue
+        return out
+    return empty
 
 
 def resolve_close_series(

@@ -9,7 +9,6 @@ HistoryDocument — GET /{id}: identity + hyp fills. No lots, no path.
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from html import escape
 from typing import Any, Callable
@@ -79,18 +78,9 @@ def load_histories(
             continue
         seen.add(listing)
         keys.append(listing)
-    out: dict[str, PriceHistory] = {}
     if not keys:
-        return out
-
-    def _one(listing: str) -> tuple[str, PriceHistory]:
-        return listing, svc.get(listing, range_key)
-
-    workers = min(8, len(keys))
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        for listing, hist in pool.map(_one, keys):
-            out[listing] = hist
-    return out
+        return {}
+    return svc.get_many(keys, range_key)
 
 
 def load_bars(

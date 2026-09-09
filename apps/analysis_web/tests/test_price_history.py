@@ -134,10 +134,10 @@ class FakeBackendAndCacheTests(unittest.TestCase):
         release = threading.Event()
 
         class Slow(FakeHistoryBackend):
-            def history(self, symbol, range_key):  # type: ignore[override]
+            def history_many(self, symbols, range_key):  # type: ignore[override]
                 started.set()
                 release.wait(timeout=2)
-                return super().history(symbol, range_key)
+                return super().history_many(symbols, range_key)
 
         be = Slow({"META": _bars()})
         svc = HistoryService(be, ttl_sec=60)
@@ -158,6 +158,26 @@ class FakeBackendAndCacheTests(unittest.TestCase):
         self.assertEqual(len(be.calls), 1)
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0].bars[-1].close, 400.0)
+
+    def test_get_many_one_backend_round(self):
+        be = FakeHistoryBackend({"META": _bars(), "AAPL": [PriceBar("2026-01-02", 50.0)]})
+        svc = HistoryService(be, ttl_sec=60)
+        got = svc.get_many(["meta", "AAPL", "NOPE"], "1y")
+        self.assertEqual(len(be.many_calls), 1)
+        self.assertEqual(be.many_calls[0][0], ("META", "AAPL", "NOPE"))
+        self.assertEqual(got["META"].bars[-1].close, 400.0)
+        self.assertEqual(got["AAPL"].bars[0].close, 50.0)
+        self.assertEqual(got["NOPE"].error, "unavailable")
+        svc.get_many(["META", "AAPL"], "1y")
+        self.assertEqual(len(be.many_calls), 1)
+
+    def test_get_blank_symbol_is_unavailable(self):
+        be = FakeHistoryBackend({"META": _bars()})
+        svc = HistoryService(be, ttl_sec=60)
+        miss = svc.get("  ", "1y")
+        self.assertEqual(miss.error, "unavailable")
+        self.assertEqual(miss.bars, ())
+        self.assertEqual(len(be.many_calls), 0)
 
 
 class PriceHistoryApiTests(unittest.TestCase):

@@ -2,17 +2,28 @@
 
 from __future__ import annotations
 
+import sqlite3
+import tempfile
+import threading
+import time
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 
 from apps.analysis_web.services.price_history import YahooHistoryBackend
 from apps.analysis_web.services.quotes import YahooPrintBackend
 from apps.analysis_web.services.yahoo_bars import (
+    download_close_series,
     listing_candidates,
     pick_search_listing,
+    reset_yfinance_cache,
     resolve_close_series,
+    search_yahoo_quotes,
     split_download,
+    sqlite_file_ok,
+    yfinance_cache_malformed,
 )
 
 
@@ -240,3 +251,217 @@ class YahooHistoryBackendResolveTests(unittest.TestCase):
         self.assertIsNone(hist.error)
         self.assertEqual(hist.symbol, "01378.HK")
         self.assertEqual(hist.bars[-1].close, 21.0)
+
+    def test_history_many_one_download(self):
+        dl = _TableDownload(
+            {
+                ("META", "1y", "1d"): _rows(100.0),
+                ("AAPL", "1y", "1d"): _rows(200.0),
+            }
+        )
+        be = YahooHistoryBackend(
+            yf=object(), download=dl, search=lambda yf, q: []
+        )
+        got = be.history_many(["META", "AAPL", "NOPE"], "1y")
+        self.assertEqual(len(dl.calls), 1)
+        self.assertEqual(dl.calls[0][0], ("META", "AAPL", "NOPE"))
+        self.assertEqual(got["META"].bars[-1].close, 100.0)
+        self.assertEqual(got["AAPL"].bars[-1].close, 200.0)
+        self.assertEqual(got["NOPE"].error, "unavailable")
+
+    def test_history_blank_symbol_is_unavailable(self):
+        be = YahooHistoryBackend(
+            yf=object(),
+            download=lambda *a, **k: (_ for _ in ()).throw(AssertionError("download")),
+            search=lambda yf, q: [],
+        )
+        hist = be.history("  ", "1y")
+        self.assertEqual(hist.error, "unavailable")
+        self.assertEqual(hist.bars, ())
+
+
+class YfIoLockTests(unittest.TestCase):
+    def setUp(self) -> None:
+        p_mal = patch(
+            "apps.analysis_web.services.yahoo_bars.yfinance_cache_malformed",
+            return_value=False,
+        )
+        p_reset = patch("apps.analysis_web.services.yahoo_bars.reset_yfinance_cache")
+        p_mal.start()
+        p_reset.start()
+        self.addCleanup(p_mal.stop)
+        self.addCleanup(p_reset.stop)
+
+    def _overlap_probe(self):
+        active = 0
+        overlapped: list[int] = []
+        gate = threading.Lock()
+        entered = threading.Event()
+        release = threading.Event()
+
+        def enter() -> None:
+            nonlocal active
+            with gate:
+                active += 1
+                if active > 1:
+                    overlapped.append(active)
+                entered.set()
+            release.wait(timeout=2)
+            with gate:
+                active -= 1
+
+        return overlapped, entered, release, enter
+
+    def test_download_serializes_across_threads(self):
+        overlapped, entered, release, enter = self._overlap_probe()
+
+        class Yf:
+            def download(self, **kwargs):  # noqa: ANN003
+                enter()
+                return pd.DataFrame()
+
+        def worker() -> None:
+            download_close_series(Yf(), ["META"], period="1y", interval="1d")
+
+        t1 = threading.Thread(target=worker)
+        t2 = threading.Thread(target=worker)
+        t1.start()
+        self.assertTrue(entered.wait(timeout=2))
+        t2.start()
+        time.sleep(0.05)
+        release.set()
+        t1.join(timeout=2)
+        t2.join(timeout=2)
+        self.assertEqual(overlapped, [])
+
+    def test_search_and_download_do_not_overlap(self):
+        overlapped, entered, release, enter = self._overlap_probe()
+
+        class DownYf:
+            def download(self, **kwargs):  # noqa: ANN003
+                enter()
+                return pd.DataFrame()
+
+        class SearchYf:
+            def Search(self, query, max_results=8):  # noqa: ANN001
+                enter()
+                return type("Found", (), {"quotes": []})()
+
+        t1 = threading.Thread(
+            target=lambda: download_close_series(
+                DownYf(), ["META"], period="1y", interval="1d"
+            )
+        )
+        t2 = threading.Thread(
+            target=lambda: search_yahoo_quotes(SearchYf(), "META")
+        )
+        t1.start()
+        self.assertTrue(entered.wait(timeout=2))
+        t2.start()
+        time.sleep(0.05)
+        release.set()
+        t1.join(timeout=2)
+        t2.join(timeout=2)
+        self.assertEqual(overlapped, [])
+
+    def test_nested_search_under_download_does_not_deadlock(self):
+        calls: list[str] = []
+
+        class Yf:
+            def download(self, **kwargs):  # noqa: ANN003
+                calls.append("download")
+                search_yahoo_quotes(self, "META")
+                return pd.DataFrame()
+
+            def Search(self, query, max_results=8):  # noqa: ANN001
+                calls.append("search")
+                return type("Found", (), {"quotes": []})()
+
+        download_close_series(Yf(), ["META"], period="1y", interval="1d")
+        self.assertEqual(calls, ["download", "search"])
+
+
+class DownloadRetryTests(unittest.TestCase):
+    def test_retries_after_download_exception(self):
+        n = {"dl": 0, "reset": 0}
+
+        class Yf:
+            def download(self, **kwargs):  # noqa: ANN003
+                n["dl"] += 1
+                if n["dl"] == 1:
+                    raise RuntimeError("cache")
+                idx = pd.date_range("2026-09-01", periods=1)
+                return pd.DataFrame({"Close": [123.0]}, index=idx)
+
+        with (
+            patch(
+                "apps.analysis_web.services.yahoo_bars.yfinance_cache_malformed",
+                return_value=False,
+            ),
+            patch(
+                "apps.analysis_web.services.yahoo_bars.reset_yfinance_cache",
+                side_effect=lambda *a, **k: n.__setitem__("reset", n["reset"] + 1),
+            ),
+        ):
+            out = download_close_series(Yf(), ["META"], period="1y", interval="1d")
+        self.assertEqual(n["dl"], 2)
+        self.assertEqual(n["reset"], 1)
+        self.assertEqual(out["META"][-1][0], 123.0)
+
+    def test_retries_when_empty_and_cache_malformed(self):
+        n = {"dl": 0, "reset": 0}
+        malformed = {"v": False}
+
+        class Yf:
+            def download(self, **kwargs):  # noqa: ANN003
+                n["dl"] += 1
+                if n["dl"] == 1:
+                    malformed["v"] = True
+                    return pd.DataFrame()
+                idx = pd.date_range("2026-09-01", periods=1)
+                return pd.DataFrame({"Close": [99.0]}, index=idx)
+
+        def is_malformed(cache_dir=None):  # noqa: ANN001
+            return malformed["v"]
+
+        def reset(cache_dir=None):  # noqa: ANN001
+            n["reset"] += 1
+            malformed["v"] = False
+
+        with (
+            patch(
+                "apps.analysis_web.services.yahoo_bars.yfinance_cache_malformed",
+                is_malformed,
+            ),
+            patch(
+                "apps.analysis_web.services.yahoo_bars.reset_yfinance_cache",
+                reset,
+            ),
+        ):
+            out = download_close_series(Yf(), ["META"], period="1y", interval="1d")
+        self.assertEqual(n["dl"], 2)
+        self.assertEqual(n["reset"], 1)
+        self.assertEqual(out["META"][-1][0], 99.0)
+
+
+class YfinanceCacheTests(unittest.TestCase):
+    def test_malformed_tz_db_is_detected_and_reset(self):
+        with tempfile.TemporaryDirectory() as raw:
+            d = Path(raw)
+            good = sqlite3.connect(d / "cookies.db")
+            good.execute("CREATE TABLE t (x INTEGER)")
+            good.commit()
+            good.close()
+            (d / "tkr-tz.db").write_bytes(b"not a sqlite database")
+            self.assertTrue(sqlite_file_ok(d / "cookies.db"))
+            self.assertFalse(sqlite_file_ok(d / "tkr-tz.db"))
+            self.assertTrue(yfinance_cache_malformed(d))
+            reset_yfinance_cache(d)
+            self.assertFalse((d / "tkr-tz.db").exists())
+            self.assertFalse(yfinance_cache_malformed(d))
+
+    def test_missing_cache_is_not_malformed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            d = Path(raw)
+            self.assertTrue(sqlite_file_ok(d / "tkr-tz.db"))
+            self.assertFalse(yfinance_cache_malformed(d))

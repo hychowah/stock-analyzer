@@ -102,9 +102,36 @@ class PriceHistory:
         }
 
 
+def _unique_listings(symbols: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in symbols:
+        s = (raw or "").strip().upper()
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out
+
+
+def _one_or_unavailable(
+    got: dict[str, PriceHistory],
+    symbol: str,
+    range_key: str,
+    *,
+    source: str = "yahoo",
+) -> PriceHistory:
+    key = (symbol or "").strip().upper()
+    return got.get(key) or PriceHistory(
+        symbol=key, range=range_key, source=source, error="unavailable"
+    )
+
+
 class HistoryBackend(Protocol):
-    def history(self, symbol: str, range_key: str) -> PriceHistory:
-        """Daily closes for one requested listing and an allowlisted range key."""
+    def history_many(
+        self, symbols: list[str], range_key: str
+    ) -> dict[str, PriceHistory]:
+        """Daily closes for many listings. One backend round."""
         ...
 
 
@@ -114,19 +141,35 @@ class FakeHistoryBackend:
     def __init__(self, series: dict[str, list[PriceBar]] | None = None):
         self._series = {k.upper(): list(v) for k, v in (series or {}).items()}
         self.calls: list[tuple[str, str]] = []
+        self.many_calls: list[tuple[tuple[str, ...], str]] = []
 
     def history(self, symbol: str, range_key: str) -> PriceHistory:
-        sym = symbol.strip().upper()
-        self.calls.append((sym, range_key))
-        bars = self._series.get(sym)
-        if bars is None:
-            return PriceHistory(
-                symbol=sym, range=range_key, source="fake", error="unavailable"
-            )
-        ordered = tuple(sorted(bars, key=lambda bar: (bar.t or "")[:10]))
-        return PriceHistory(
-            symbol=sym, range=range_key, source="fake", bars=ordered
+        return _one_or_unavailable(
+            self.history_many([symbol], range_key),
+            symbol,
+            range_key,
+            source="fake",
         )
+
+    def history_many(
+        self, symbols: list[str], range_key: str
+    ) -> dict[str, PriceHistory]:
+        unique = _unique_listings(symbols)
+        self.many_calls.append((tuple(unique), range_key))
+        out: dict[str, PriceHistory] = {}
+        for s in unique:
+            self.calls.append((s, range_key))
+            bars = self._series.get(s)
+            if bars is None:
+                out[s] = PriceHistory(
+                    symbol=s, range=range_key, source="fake", error="unavailable"
+                )
+            else:
+                ordered = tuple(sorted(bars, key=lambda bar: (bar.t or "")[:10]))
+                out[s] = PriceHistory(
+                    symbol=s, range=range_key, source="fake", bars=ordered
+                )
+        return out
 
 
 def parse_history_symbol(raw: str | None) -> str:
@@ -203,31 +246,53 @@ class YahooHistoryBackend:
         self._search = search
 
     def history(self, symbol: str, range_key: str) -> PriceHistory:
-        sym = symbol.strip().upper()
+        return _one_or_unavailable(
+            self.history_many([symbol], range_key),
+            symbol,
+            range_key,
+            source=self.source,
+        )
+
+    def history_many(
+        self, symbols: list[str], range_key: str
+    ) -> dict[str, PriceHistory]:
+        unique = _unique_listings(symbols)
         period = RANGES[range_key]
+        if not unique:
+            return {}
         try:
             yf = self._yf if self._yf is not None else import_yfinance()
         except RuntimeError as e:
-            return PriceHistory(
-                symbol=sym, range=range_key, source=self.source, error=str(e)
-            )
+            return {
+                s: PriceHistory(
+                    symbol=s, range=range_key, source=self.source, error=str(e)
+                )
+                for s in unique
+            }
         resolved = resolve_close_series(
             yf,
-            [sym],
+            unique,
             period=period,
             interval="1d",
             download=self._download,
             search=self._search,
         )
-        _yahoo, rows = resolved.get(sym, (sym, []))
-        bars = bars_from_closes(rows)
-        if not bars:
-            return PriceHistory(
-                symbol=sym, range=range_key, source=self.source, error="unavailable"
-            )
-        return PriceHistory(
-            symbol=sym, range=range_key, source=self.source, bars=bars
-        )
+        out: dict[str, PriceHistory] = {}
+        for sym in unique:
+            _yahoo, rows = resolved.get(sym, (sym, []))
+            bars = bars_from_closes(rows)
+            if not bars:
+                out[sym] = PriceHistory(
+                    symbol=sym,
+                    range=range_key,
+                    source=self.source,
+                    error="unavailable",
+                )
+            else:
+                out[sym] = PriceHistory(
+                    symbol=sym, range=range_key, source=self.source, bars=bars
+                )
+        return out
 
 
 class HistoryService:
@@ -235,6 +300,8 @@ class HistoryService:
 
     Cache only successful series (error is None) for ttl_sec. Failures are
     not stored: a Yahoo blip must not freeze as unavailable.
+    ``_batch_fetching`` coalesces in-flight get_many calls; it is not a
+    download lock.
     """
 
     def __init__(self, backend: HistoryBackend, *, ttl_sec: int = DEFAULT_TTL_SEC):
@@ -243,31 +310,49 @@ class HistoryService:
         self._lock = threading.Lock()
         self._cv = threading.Condition(self._lock)
         self._store: dict[tuple[str, str], tuple[float, PriceHistory]] = {}
-        self._fetching: set[tuple[str, str]] = set()
+        self._batch_fetching = False
 
     @property
     def ttl_sec(self) -> int:
         return self._ttl
 
     def get(self, symbol: str, range_key: str) -> PriceHistory:
-        key = (symbol.strip().upper(), range_key)
+        return _one_or_unavailable(self.get_many([symbol], range_key), symbol, range_key)
+
+    def get_many(
+        self, symbols: list[str], range_key: str
+    ) -> dict[str, PriceHistory]:
+        unique = _unique_listings(symbols)
+        out: dict[str, PriceHistory] = {}
+        if not unique:
+            return out
         now = time.monotonic()
         with self._cv:
-            while key in self._fetching:
+            while self._batch_fetching:
                 self._cv.wait(timeout=30)
-            hit = self._store.get(key)
-            if hit is not None and hit[0] > now:
-                return hit[1]
-            self._fetching.add(key)
+            missing: list[str] = []
+            for s in unique:
+                hit = self._store.get((s, range_key))
+                if hit is not None and hit[0] > now:
+                    out[s] = hit[1]
+                else:
+                    missing.append(s)
+            if not missing:
+                return out
+            self._batch_fetching = True
         try:
-            hist = self._backend.history(key[0], key[1])
-            # Successful series only. Do not cache error rows.
-            if hist.error is None:
-                expires = time.monotonic() + self._ttl
-                with self._cv:
-                    self._store[key] = (expires, hist)
-            return hist
+            fetched = dict(self._backend.history_many(missing, range_key))
+            expires = time.monotonic() + self._ttl
+            with self._cv:
+                for s in missing:
+                    hist = fetched.get(s) or PriceHistory(
+                        symbol=s, range=range_key, error="unavailable"
+                    )
+                    if hist.error is None:
+                        self._store[(s, range_key)] = (expires, hist)
+                    out[s] = hist
+            return out
         finally:
             with self._cv:
-                self._fetching.discard(key)
+                self._batch_fetching = False
                 self._cv.notify_all()

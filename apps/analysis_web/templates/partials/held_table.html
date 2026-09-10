@@ -2,6 +2,7 @@
 {% set sold_later = sold_later|default([]) %}
 {% set pane = pane|default('pending') %}
 {% set account = account|default(none) %}
+{% set rows = rows|default([]) %}
 <div class="held-table-root" data-view-date="{{ view_date }}" data-pane="{{ pane }}"
      {% if pane == 'pending' %}aria-busy="true"{% endif %}>
 <div class="hist-asof">
@@ -18,7 +19,7 @@
       <th>Buying power</th><td class="num">{{ account.buying_power | fmt_num }}</td>
     </tr>
   </table>
-  <p class="muted">Paper account on {{ view_date }} · Yahoo daily close on or before this date, not live last print.{% if account.base_currency %} {{ account.base_currency }}.{% endif %} Paper Reg-T 25%, not IB house margin. Header Δ is still today.</p>
+  <p class="muted">Paper account on {{ view_date }} · Yahoo daily close on or before this date, not live last print.{% if account.base_currency %} {{ account.base_currency }}.{% endif %} Paper Reg-T 25%, not IB house margin. Header Δ is still today. Weight is of quoted stock, not NAV. Downside is this row’s close versus stored bear FV. MoS is the stored snapshot.</p>
   {% if account.n_unavailable %}
   <p class="err" role="status">Yahoo failed for {{ account.n_unavailable }} listing{% if account.n_unavailable != 1 %}s{% endif %}.
     <button type="button" class="secondary hist-retry-marks">Retry prices</button>
@@ -29,38 +30,68 @@
   <p class="muted" id="hist-held-loading">Loading closes for {{ view_date }}… Prices are Yahoo daily close on this date, not live last print. Header Δ is still today.</p>
   {% endif %}
 </div>
-{% if held %}
+{% if rows %}
 <div class="table-freeze">
-<table>
-  <thead><tr><th>Listing</th><th>Qty</th><th>Close on {{ view_date }}</th><th>Value</th><th>Sell</th></tr></thead>
-  <tbody>
-    {% for lot in held %}
+<table class="hist-held-table" data-sort-table="held">
+  <thead>
     <tr>
-      <td class="mono">{{ lot.listing }}{% if lot.ib_symbol and lot.ib_symbol != lot.listing %} <span class="muted">{{ lot.ib_symbol }}</span>{% endif %}{% if lot.listing in sold_later %} <span class="badge">sold later</span>{% endif %}</td>
-      <td class="num">{{ lot.qty | fmt_num(2) }}</td>
+      <th><button type="button" class="hist-sort" data-sort="listing" data-type="text">Listing</button></th>
+      <th><button type="button" class="hist-sort" data-sort="qty" data-type="num">Qty</button></th>
+      <th><button type="button" class="hist-sort" data-sort="close" data-type="num">Close on {{ view_date }}</button></th>
+      <th><button type="button" class="hist-sort" data-sort="value" data-type="num">Value</button></th>
+      <th><button type="button" class="hist-sort" data-sort="weight_pct" data-type="num">Weight %</button></th>
+      <th><button type="button" class="hist-sort" data-sort="downside_pct" data-type="num">Downside %</button></th>
+      <th><button type="button" class="hist-sort" data-sort="mos" data-type="num">MoS %</button></th>
+      <th>Sell</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    {% set lot = row.lot %}
+    <tr data-listing="{{ lot.listing }}"
+        data-ticker="{{ lot.catalog_ticker or lot.listing }}"
+        data-currency="{{ lot.currency or '' }}"
+        data-qty="{{ lot.qty }}">
+      <td class="mono" data-col="listing" data-value="{{ lot.listing }}">{{ lot.listing }}{% if lot.ib_symbol and lot.ib_symbol != lot.listing %} <span class="muted">{{ lot.ib_symbol }}</span>{% endif %}{% if lot.listing in sold_later %} <span class="badge">sold later</span>{% endif %}</td>
+      <td class="num" data-col="qty" data-value="{{ lot.qty }}">{{ lot.qty | fmt_num(2) }}</td>
       {% if pane == 'pending' %}
-      <td class="num hist-skel" aria-label="Loading close on {{ view_date }}"><span class="hist-skel-bar"></span></td>
-      <td class="num hist-skel" aria-label="Loading value on {{ view_date }}"><span class="hist-skel-bar"></span></td>
-      {% elif lot.error == 'unavailable' %}
-      <td class="muted">Yahoo failed</td>
-      <td class="muted">—</td>
-      {% elif lot.close is none %}
-      <td class="muted">No close on or before {{ view_date }}</td>
-      <td class="muted">—</td>
+      <td class="num hist-skel" data-col="close" aria-label="Loading close on {{ view_date }}"><span class="hist-skel-bar"></span></td>
+      <td class="num hist-skel" data-col="value" aria-label="Loading value on {{ view_date }}"><span class="hist-skel-bar"></span></td>
+      <td class="num hist-skel" data-col="weight_pct" aria-label="Loading weight"><span class="hist-skel-bar"></span></td>
+      <td class="num hist-skel" data-col="downside_pct" aria-label="Loading Downside"><span class="hist-skel-bar"></span></td>
+      <td class="num hist-skel" data-col="mos" aria-label="Loading MoS"><span class="hist-skel-bar"></span></td>
       {% else %}
-      <td class="num" aria-label="Close on {{ lot.bar_date or view_date }}">{{ lot.close | fmt_num }}{% if lot.bar_date and lot.bar_date != view_date %} <span class="muted">{{ lot.bar_date }}</span>{% endif %}</td>
-      <td class="num">{{ lot.value_base | fmt_num }}</td>
+      {% if lot.error == 'unavailable' %}
+      <td class="muted" data-col="close">Yahoo failed</td>
+      <td class="muted" data-col="value">—</td>
+      {% elif lot.close is none %}
+      <td class="muted" data-col="close">No close on or before {{ view_date }}</td>
+      <td class="muted" data-col="value">—</td>
+      {% else %}
+      <td class="num" data-col="close" data-value="{{ lot.close }}" aria-label="Close on {{ lot.bar_date or view_date }}">{{ lot.close | fmt_num }}{% if lot.bar_date and lot.bar_date != view_date %} <span class="muted">{{ lot.bar_date }}</span>{% endif %}</td>
+      <td class="num" data-col="value" data-value="{{ lot.value_base }}">{{ lot.value_base | fmt_num }}</td>
+      {% endif %}
+      <td class="num" data-col="weight_pct"{% if row.weight_pct is not none %} data-value="{{ row.weight_pct }}"{% endif %}>{{ row.weight_pct | fmt_num(1) }}</td>
+      <td class="num" data-col="downside_pct"{% if row.downside_pct is not none %} data-value="{{ row.downside_pct }}" title="close · {{ lot.close | fmt_num }} → bear {{ row.snap.fv_bear | fmt_num }}"{% endif %}>{{ row.downside_pct | fmt_num(1) }}</td>
+      <td class="num" data-col="mos"{% if row.snap and row.snap.margin_of_safety_pct is not none %} data-value="{{ row.snap.margin_of_safety_pct }}"{% endif %}>{% if row.snap %}{{ row.snap.margin_of_safety_pct | fmt_num(1) }}{% else %}—{% endif %}</td>
       {% endif %}
       <td>
-        <form method="post" action="/portfolio/histories/{{ history_id }}/decisions" class="hist-sell-row">
-          <input type="hidden" name="side" value="sell"/>
-          <input type="hidden" name="listing" value="{{ lot.listing }}"/>
-          <input type="hidden" name="as_of" value="{{ view_date }}"/>
-          <label>Qty
-            <input name="quantity" type="number" step="any" min="0" max="{{ lot.qty }}" value="{{ lot.qty }}" required/>
-          </label>
-          <button type="submit">Sell</button>
-        </form>
+        <button type="button" class="hist-sell-pick secondary hist-js-only"
+                data-listing="{{ lot.listing }}"
+                data-ticker="{{ lot.catalog_ticker or lot.listing }}"
+                data-currency="{{ lot.currency or '' }}"
+                data-qty="{{ lot.qty }}">Sell…</button>
+        <noscript>
+          <form method="post" action="/portfolio/histories/{{ history_id }}/decisions" class="hist-sell-row">
+            <input type="hidden" name="side" value="sell"/>
+            <input type="hidden" name="listing" value="{{ lot.listing }}"/>
+            <input type="hidden" name="as_of" value="{{ view_date }}"/>
+            <label>Qty
+              <input name="quantity" type="number" step="any" min="0" max="{{ lot.qty }}" value="{{ lot.qty }}" required/>
+            </label>
+            <button type="submit">Sell</button>
+          </form>
+        </noscript>
       </td>
     </tr>
     {% endfor %}

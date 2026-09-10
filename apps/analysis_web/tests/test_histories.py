@@ -560,8 +560,11 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertEqual(uni.status_code, 200)
         rows = {r["ticker"]: r for r in uni.json()["universe"]}
         self.assertTrue(rows["AAPL"]["pickable"])
+        self.assertEqual(rows["AAPL"]["listing"], "AAPL")
+        self.assertNotIn("quote_listing", rows["AAPL"])
         self.assertAlmostEqual(rows["AAPL"]["mark"]["close"], 200.0, places=5)
         self.assertEqual(rows["AAPL"]["mark"]["status"], "quoted")
+        self.assertIsNone(rows["AAPL"]["block"])
         ticket = self.client.get(
             f"/api/portfolio/histories/{hid}/ticket",
             params={
@@ -574,9 +577,10 @@ class HistoryHttpTests(unittest.TestCase):
         )
         self.assertEqual(ticket.status_code, 200)
         body = ticket.json()
-        self.assertAlmostEqual(body["cost_base"], 200.0, places=5)
+        self.assertAlmostEqual(body["cost_base"], 1600.0, places=5)
         self.assertIsNotNone(body["after"])
         self.assertIn("buying_power", body["after"])
+        self.assertIsNone(body["block"])
 
     def test_margin_buy_allowed_until_buying_power(self):
         created = self.client.post(
@@ -608,3 +612,237 @@ class HistoryHttpTests(unittest.TestCase):
         )
         self.assertEqual(huge.status_code, 400)
         self.assertIn(b"buying power", huge.content.lower())
+
+    def test_holdings_display_math_and_json_sell(self):
+        created = self.client.post(
+            "/portfolio/histories/new",
+            data={"name": "Desk"},
+            follow_redirects=False,
+        )
+        hid = created.headers["location"].rsplit("/", 1)[-1].split("?")[0]
+        html = self.client.get(f"/portfolio/histories/{hid}?date=2026-03-31")
+        self.assertEqual(html.status_code, 200)
+        self.assertIn(b"Weight %", html.content)
+        self.assertIn(b"Downside %", html.content)
+        self.assertIn(b"MoS %", html.content)
+        self.assertIn(b"hist-universe-filter", html.content)
+        self.assertIn(b"Search a researched name to buy", html.content)
+        self.assertNotIn(b"Sell stays on the holdings row", html.content)
+        self.assertNotIn(b"live_nav.js", html.content)
+        self.assertNotIn(b"data-downside-pct", html.content)
+        self.assertIn(b"data-fills-url", html.content)
+        self.assertIn(b'id="hist-ticket-side"', html.content)
+        self.assertIn(b"hist-sort", html.content)
+        self.assertIn(b'data-sort-table="universe"', html.content)
+        js = self.client.get("/static/alt_history.js")
+        self.assertEqual(js.status_code, 200)
+        self.assertIn(b"function sortTable", js.content)
+
+        frag = self.client.get(
+            f"/fragments/portfolio/histories/{hid}/held?date=2026-03-31"
+        )
+        self.assertEqual(frag.status_code, 200)
+        self.assertIn(b"Weight %", frag.content)
+        self.assertIn(b"Downside %", frag.content)
+        self.assertIn(b"MoS %", frag.content)
+        self.assertIn(b"hist-sell-pick", frag.content)
+        self.assertIn(b"20.0", frag.content)
+        self.assertIn(b'name="quantity"', frag.content)
+        self.assertIn(b"hist-sort", frag.content)
+        self.assertIn(b'data-sort-table="held"', frag.content)
+
+        from apps.analysis_web.services.alt_history import catalog_snaps
+        from apps.analysis_web.services.alt_history_view import account_on, holding_rows
+        from apps.analysis_web.services.alt_history_store import get_history
+        from packages.catalog_api.client import CatalogApi
+
+        hist = get_history(int(hid))
+        asof = account_on(
+            hist, self._app.state.history_service, view_date="2026-03-31"
+        )
+        rows = holding_rows(asof, catalog_snaps(CatalogApi(self.archive, readonly=True)))
+        meta = next(r for r in rows if r.lot.listing == "META")
+        self.assertAlmostEqual(asof.account.stock, sum(
+            (r.lot.value_base or 0) for r in rows if r.lot.value_base is not None
+        ), places=5)
+        self.assertAlmostEqual(
+            meta.weight_pct or 0,
+            100.0 * (meta.lot.value_base or 0) / asof.account.stock,
+            places=5,
+        )
+        self.assertAlmostEqual(meta.lot.close or 0, 50.0, places=5)
+        self.assertAlmostEqual(meta.snap.fv_bear or 0, 350.0, places=5)
+        self.assertAlmostEqual(meta.downside_pct or 0, (50.0 - 350.0) / 50.0 * 100.0, places=5)
+        self.assertAlmostEqual(meta.snap.margin_of_safety_pct or 0, 20.0, places=5)
+        hk = next(r for r in rows if r.lot.listing == "0700.HK")
+        self.assertIsNone(hk.snap)
+        self.assertIsNone(hk.downside_pct)
+
+        ticket = self.client.get(
+            f"/api/portfolio/histories/{hid}/ticket",
+            params={
+                "date": "2026-03-31",
+                "side": "sell",
+                "listing": "META",
+                "quantity": "1",
+            },
+        )
+        self.assertEqual(ticket.status_code, 200)
+        self.assertEqual(ticket.json()["side"], "sell")
+        self.assertGreater(ticket.json()["held_qty"], 0)
+
+        before = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        ).json()
+        meta_qty = next(r for r in before["held"] if r["listing"] == "META")["qty"]
+        sell = self.client.post(
+            f"/portfolio/histories/{hid}/decisions",
+            data={
+                "side": "sell",
+                "listing": "META",
+                "as_of": "2026-03-31",
+                "quantity": "1",
+            },
+            headers={"Accept": "application/json"},
+            follow_redirects=False,
+        )
+        self.assertEqual(sell.status_code, 200)
+        body = sell.json()
+        self.assertTrue(body["ok"])
+        self.assertEqual(body["view_date"], "2026-03-31")
+        self.assertNotIn("location", sell.headers)
+        after = self.client.get(
+            f"/api/portfolio/histories/{hid}/holdings?date=2026-03-31"
+        ).json()
+        meta_after = next(r for r in after["held"] if r["listing"] == "META")
+        self.assertAlmostEqual(meta_after["qty"], meta_qty - 1, places=5)
+        fills = self.client.get(f"/fragments/portfolio/histories/{hid}/fills")
+        self.assertEqual(fills.status_code, 200)
+        self.assertIn(b"sell META", fills.content)
+
+        bad = self.client.post(
+            f"/portfolio/histories/{hid}/decisions",
+            data={
+                "side": "buy",
+                "ticker": "ZZZZ",
+                "as_of": "2026-03-31",
+                "quantity": "1",
+            },
+            headers={"Accept": "application/json"},
+            follow_redirects=False,
+        )
+        self.assertEqual(bad.status_code, 400)
+        self.assertNotIn("location", bad.headers)
+        err = bad.json()
+        self.assertEqual(err.get("error"), "not_in_catalog")
+        self.assertIn("message", err)
+
+    def test_holding_rows_catalog_overlay_join(self):
+        from apps.analysis_web.services.alt_history import CatalogSnap
+        from apps.analysis_web.services.alt_history_view import (
+            AsOfAccount,
+            holding_rows,
+        )
+        from apps.analysis_web.services.mark_book import MarkedLot
+        from apps.analysis_web.services.paper_account import PaperAccount
+
+        snaps = (
+            CatalogSnap(
+                ticker="000660.KS",
+                listing="000660.KS",
+                currency="KRW",
+                fv_bear=100.0,
+                margin_of_safety_pct=10.0,
+            ),
+            CatalogSnap(
+                ticker="0700.HK",
+                listing="0700.HK",
+                currency="HKD",
+                fv_bear=300.0,
+                margin_of_safety_pct=31.0,
+            ),
+            CatalogSnap(
+                ticker="META",
+                listing="META",
+                currency="USD",
+                fv_bear=350.0,
+                margin_of_safety_pct=20.0,
+            ),
+        )
+        lots = (
+            MarkedLot(
+                listing="HY9H",
+                qty=1,
+                close=10.0,
+                value_base=100.0,
+                error=None,
+                ib_symbol="HY9H",
+                currency="EUR",
+            ),
+            MarkedLot(
+                listing="0700.HK",
+                qty=100,
+                close=10.0,
+                value_base=1000.0,
+                error=None,
+                ib_symbol="700",
+                currency="HKD",
+            ),
+            MarkedLot(
+                listing="VSNT",
+                qty=1,
+                close=5.0,
+                value_base=40.0,
+                error=None,
+                ib_symbol="VSNT",
+                currency="USD",
+            ),
+        )
+        acct = PaperAccount(
+            as_of="2026-03-31",
+            cash=500.0,
+            stock=1140.0,
+            nav=1640.0,
+            loan=0.0,
+            maintenance=0.0,
+            excess=0.0,
+            buying_power=0.0,
+            n_unquoted=0,
+            n_unavailable=0,
+            base_currency="HKD",
+        )
+        asof = AsOfAccount(
+            view_date="2026-03-31",
+            fork_date="2025-10-21",
+            held=lots,
+            account=acct,
+            base_currency="HKD",
+        )
+        rows = {r.lot.listing: r for r in holding_rows(asof, snaps)}
+        self.assertEqual(rows["HY9H"].snap.ticker, "000660.KS")
+        self.assertEqual(rows["0700.HK"].snap.ticker, "0700.HK")
+        self.assertIsNone(rows["VSNT"].snap)
+        self.assertIsNone(rows["VSNT"].downside_pct)
+        self.assertAlmostEqual(rows["0700.HK"].weight_pct or 0, 1000.0 / 1140.0 * 100.0, places=5)
+        one = PaperAccount(
+            as_of="2026-03-31",
+            cash=999.0,
+            stock=1000.0,
+            nav=1999.0,
+            loan=0.0,
+            maintenance=0.0,
+            excess=0.0,
+            buying_power=0.0,
+            n_unquoted=0,
+            n_unavailable=0,
+            base_currency="HKD",
+        )
+        one_asof = AsOfAccount(
+            view_date="2026-03-31",
+            fork_date="2025-10-21",
+            held=(lots[1],),
+            account=one,
+            base_currency="HKD",
+        )
+        one_row = holding_rows(one_asof, snaps)[0]
+        self.assertAlmostEqual(one_row.weight_pct or 0, 100.0, places=5)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 from packages.catalog_api.client import CatalogApi, DbMissing
 
@@ -21,8 +21,8 @@ from apps.analysis_web.services.book_state import (
     trade_date,
 )
 from apps.analysis_web.services.ib_statement import IbBook, Trade
-from apps.analysis_web.services.mark_book import MarkedNav, mark_book
-from apps.analysis_web.services.portfolio import latest_run
+from apps.analysis_web.services.mark_book import AsOfMark, MarkedLot, MarkedNav, mark_book
+from apps.analysis_web.services.paper_account import PaperAccount
 from apps.analysis_web.services.price_history import PriceBar, close_on
 
 
@@ -43,6 +43,13 @@ class ReplayError(Exception):
         body = {"error": self.code, "message": self.message}
         body.update(self.extra)
         return body
+
+    @classmethod
+    def from_block(cls, block: "TicketBlock", **extra: Any) -> "ReplayError":
+        """POST raises the same block preview already returned."""
+        merged = dict(block.extra)
+        merged.update(extra)
+        return cls(block.code, block.message, **merged)
 
 
 class NotFoundError(Exception):
@@ -106,6 +113,209 @@ class History:
 
     def real_fills(self) -> tuple[PricedFill, ...]:
         return tuple(f for f in self.fills if f.source == "real")
+
+
+@dataclass(frozen=True)
+class CatalogSnap:
+    """One latest catalog run for display and the buy allowlist.
+
+    Stored snapshots only. Not a valuation.
+    """
+
+    ticker: str
+    listing: str
+    currency: str
+    run_id: Any = None
+    margin_of_safety_pct: float | None = None
+    fv_bear: float | None = None
+    fv_base: float | None = None
+    audit_verdict: Any = None
+    session_date: Any = None
+    session_key: Any = None
+    decision_action: Any = None
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "ticker": self.ticker,
+            "listing": self.listing,
+            "currency": self.currency,
+            "run_id": self.run_id,
+            "margin_of_safety_pct": self.margin_of_safety_pct,
+            "fv_bear": self.fv_bear,
+            "fv_base": self.fv_base,
+            "audit_verdict": self.audit_verdict,
+            "session_date": self.session_date,
+            "session_key": self.session_key,
+            "decision_action": self.decision_action,
+        }
+
+
+@dataclass(frozen=True)
+class TicketBlock:
+    """Why confirm is dead. Preview and persist share this value."""
+
+    code: str
+    message: str
+    extra: tuple[tuple[str, Any], ...] = ()
+
+    def as_json(self) -> dict[str, Any]:
+        body = {"error": self.code, "message": self.message}
+        for key, val in self.extra:
+            body[key] = val
+        return body
+
+
+@dataclass(frozen=True)
+class Ticket:
+    """One desk ticket. GET preview and POST persist are this value.
+
+    Buy identity is the catalog snap. Sell identity is the held lot.
+    Mark is Yahoo daily close on D (or unavailable/unquoted). Empty snap
+    currency is a block, not a silent 1.0. Block is why confirm is dead.
+    """
+
+    view_date: str
+    side: str
+    listing: str
+    ticker: str | None
+    snap: CatalogSnap | None
+    lot: MarkedLot | None
+    mark: AsOfMark
+    currency: str
+    fx: float | None
+    quantity: float | None
+    fill_price: float | None
+    price_mode: str
+    cost_base: float | None
+    after: PaperAccount | None
+    block: TicketBlock | None
+    account: PaperAccount
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "view_date": self.view_date,
+            "side": self.side,
+            "listing": self.listing,
+            "ticker": self.ticker,
+            "quantity": 0.0 if self.quantity is None else self.quantity,
+            "mark": self.mark.as_json(),
+            "cost_base": self.cost_base,
+            "currency": self.currency,
+            "account": self.account.as_json(),
+            "after": None if self.after is None else self.after.as_json(),
+            "held_qty": None if self.lot is None else self.lot.qty,
+            "block": None if self.block is None else self.block.as_json(),
+        }
+
+    def as_fill(self) -> PricedFill:
+        """Priced fill when this ticket can post. Call persist_ticket instead."""
+        if self.block is not None:
+            raise ReplayError.from_block(self.block)
+        if (
+            self.quantity is None
+            or self.fill_price is None
+            or self.fill_price <= 0
+            or self.fx is None
+        ):
+            raise ReplayError("zero_qty", "Enter a quantity or a notional amount")
+        lot = self.lot
+        snap = self.snap
+        if self.side == "sell":
+            catalog_ticker = None if lot is None else lot.catalog_ticker
+        else:
+            catalog_ticker = None if snap is None else snap.ticker
+        return PricedFill(
+            as_of=self.view_date,
+            side=self.side,
+            listing=self.listing,
+            quantity=self.quantity,
+            fill_price=self.fill_price,
+            currency=self.currency,
+            stmt_fx=self.fx,
+            catalog_ticker=catalog_ticker,
+            ib_symbol=None if lot is None else lot.ib_symbol,
+            price_mode=self.price_mode,
+        )
+
+
+def persist_ticket(ticket: Ticket) -> PricedFill:
+    """POST: raise the ticket's block or return the fill."""
+    if ticket.block is not None:
+        extra: dict[str, Any] = {}
+        if ticket.block.code == "oversell" and ticket.lot is not None:
+            extra = {
+                "held": ticket.lot.qty,
+                "quantity": ticket.quantity,
+                "listing": ticket.listing,
+            }
+        raise ReplayError.from_block(ticket.block, **extra)
+    return ticket.as_fill()
+
+
+def missing_fx_message(currency: str, base: str) -> str:
+    """English block for a currency with no frozen statement rate."""
+    ccy = (currency or "").strip().upper() or "this currency"
+    base_ccy = (base or "").strip().upper() or "base"
+    return (
+        f"This paper copy has no {ccy} rate in the IB Forex map frozen at copy "
+        f"(base {base_ccy}). A {ccy} name cannot be converted into {base_ccy} NAV. "
+        f"Copy a new history from a statement that lists {ccy}, or pick a {base_ccy} name."
+    )
+
+
+def ticket_block(
+    hist: History,
+    *,
+    side: str,
+    mark_status: str,
+    close: float | None,
+    currency: str,
+    fx: float | None,
+    listing: str = "",
+    view_date: str = "",
+    held_qty: float | None = None,
+    qty: float | None = None,
+) -> TicketBlock | None:
+    """Why this ticket cannot post. Preview, pickable, and POST share this."""
+    kind = (side or "").strip().lower()
+    key = (listing or "").strip().upper()
+    day = (view_date or "").strip()[:10]
+    if kind == "sell" and held_qty is None:
+        if key and day:
+            return TicketBlock(
+                "oversell",
+                f"No holding {key} on {day}. Sell a listing from the holdings table.",
+            )
+        return TicketBlock("oversell", "Sell a listing from the holdings table.")
+    if kind == "buy" and not (currency or "").strip():
+        base = (hist.seed.base_currency or "").strip().upper() or "base"
+        return TicketBlock(
+            "missing_currency",
+            f"This researched name has no currency in the catalog, so it cannot be converted into {base} NAV.",
+        )
+    if fx is None:
+        return TicketBlock(
+            "missing_fx", missing_fx_message(currency, hist.seed.base_currency)
+        )
+    status = (mark_status or "").strip().lower()
+    if status == "unavailable":
+        if key:
+            return TicketBlock("unavailable", f"Yahoo failed for {key}.")
+        return TicketBlock("unavailable", "Yahoo failed for this listing.")
+    if status != "quoted" or close is None:
+        if key and day:
+            return TicketBlock("no_close", f"No close for {key} on or before {day}.")
+        if day:
+            return TicketBlock("no_close", f"No close on or before {day}.")
+        return TicketBlock("no_close", "No close on or before this date.")
+    if (
+        kind == "sell"
+        and qty is not None
+        and held_qty is not None
+        and qty > held_qty + _QTY_EPS
+    ):
+        return TicketBlock("oversell", "Cannot sell more than the alt book holds.")
+    return None
 
 
 def _num(raw: Any) -> float | None:
@@ -226,7 +436,9 @@ def replay(state: BookState, fills: Iterable[PricedFill]) -> BookState:
             if ccy and ccy == (state.base_currency or "").upper():
                 fx = 1.0
             else:
-                raise ReplayError("missing_fx", "No statement FX for this currency")
+                raise ReplayError(
+                    "missing_fx", missing_fx_message(ccy, state.base_currency)
+                )
         existing = lots.get(listing)
 
         def _cash_delta(apply_qty: float) -> float:
@@ -575,145 +787,57 @@ def compare_path(
     return list(walk_compare(hist, bars_by_listing, until=until).points)
 
 
-def buy_universe(api: CatalogApi, *, limit: int = 200) -> list[dict[str, Any]]:
+def snap_for(
+    snaps: tuple[CatalogSnap, ...] | list[CatalogSnap],
+    *,
+    ticker: str = "",
+    listing: str = "",
+) -> CatalogSnap | None:
+    """Allowlist lookup: ticker or listing against the desk projection."""
+    want_t = (ticker or "").strip().upper()
+    want_l = (listing or "").strip().upper()
+    if not want_t and not want_l:
+        return None
+    for snap in snaps:
+        if want_t and (snap.ticker == want_t or snap.listing == want_t):
+            return snap
+        if want_l and (snap.listing == want_l or snap.ticker == want_l):
+            return snap
+    return None
+
+
+def catalog_snaps(api: CatalogApi, *, limit: int = 200) -> tuple[CatalogSnap, ...]:
+    """Latest catalog runs as one projection. Same object for the list and holdings join."""
     try:
         rows = api.list_runs(latest=True, comparable_only=False, limit=limit)
     except (DbMissing, ValueError):
-        return []
-    out: list[dict[str, Any]] = []
+        return ()
+    out: list[CatalogSnap] = []
     for run in rows:
         ticker = str(run.get("ticker") or "").strip().upper()
         if not ticker:
             continue
         listing = str(run.get("quote_listing") or ticker).strip().upper()
         out.append(
-            {
-                "ticker": ticker,
-                "run_id": run.get("run_id"),
-                "session_date": run.get("session_date"),
-                "session_key": run.get("session_key"),
-                "audit_verdict": run.get("audit_verdict"),
-                "margin_of_safety_pct": run.get("margin_of_safety_pct"),
-                "decision_action": run.get("decision_action"),
-                "quote_listing": listing,
-                "currency": run.get("currency"),
-                "fv_base": run.get("fv_base"),
-            }
+            CatalogSnap(
+                ticker=ticker,
+                listing=listing,
+                currency=str(run.get("currency") or "").strip().upper(),
+                run_id=run.get("run_id"),
+                margin_of_safety_pct=_num(run.get("margin_of_safety_pct")),
+                fv_bear=_num(run.get("fv_bear")),
+                fv_base=_num(run.get("fv_base")),
+                audit_verdict=run.get("audit_verdict"),
+                session_date=run.get("session_date"),
+                session_key=run.get("session_key"),
+                decision_action=run.get("decision_action"),
+            )
         )
-    out.sort(key=lambda r: r["ticker"])
-    return out
+    out.sort(key=lambda r: r.ticker)
+    return tuple(out)
 
 
-def resolve_buy(
-    api: CatalogApi,
-    hist: History,
-    *,
-    ticker: str,
-    as_of: str,
-    quantity: float | None,
-    notional: float | None,
-    override_price: float | None,
-    get_close: Callable[[str, str], float | None],
-) -> PricedFill:
-    day = _day(as_of)
-    sym = (ticker or "").strip().upper()
-    if not sym:
-        raise ReplayError("not_in_catalog", "Buy ticker is required")
-    run = latest_run(api, sym, pass_only=False)
-    if run is None:
-        raise ReplayError("not_in_catalog", f"{sym} is not on the researched list")
-    listing = str(run.get("quote_listing") or sym).strip().upper()
-    ccy = str(run.get("currency") or hist.seed.base_currency or "").strip().upper()
-    fx = hist.seed.fx_for(ccy)
-    if fx is None:
-        raise ReplayError("missing_fx", f"No statement FX for {ccy}")
-    mode = "override"
-    px = _num(override_price)
-    if px is None:
-        mode = "close"
-        got = get_close(listing, day)
-        px = _num(got)
-    if px is None or px <= 0:
-        raise ReplayError("no_close", f"No daily close for {listing} on {day}")
-    qty = _qty_or_notional(quantity, notional, px)
-    return PricedFill(
-        as_of=day,
-        side="buy",
-        listing=listing,
-        quantity=qty,
-        fill_price=px,
-        currency=ccy,
-        stmt_fx=fx,
-        catalog_ticker=sym,
-        price_mode=mode,
-    )
-
-
-def resolve_sell(
-    held: BookState,
-    hist: History,
-    *,
-    listing: str,
-    as_of: str,
-    quantity: float | None,
-    notional: float | None,
-    override_price: float | None,
-    get_close: Callable[[str, str], float | None],
-) -> PricedFill:
-    day = _day(as_of)
-    key = _listing(listing)
-    lot = held.lot_by_listing(key)
-    if lot is None:
-        raise ReplayError(
-            "oversell",
-            f"No holding {key} on {day}. Sell a listing from the holdings table.",
-        )
-    ccy = (lot.currency or hist.seed.base_currency or "").strip().upper()
-    fx = lot.stmt_fx
-    if fx is None:
-        fx = hist.seed.fx_for(ccy)
-    if fx is None:
-        raise ReplayError("missing_fx", f"No statement FX for {ccy}")
-    mode = "override"
-    px = _num(override_price)
-    if px is None:
-        mode = "close"
-        got = get_close(key, day)
-        px = _num(got)
-    if px is None or px <= 0:
-        raise ReplayError("no_close", f"No daily close for {key} on {day}")
-    qty = _qty_or_notional(quantity, notional, px)
-    if lot.qty + _QTY_EPS < qty:
-        raise ReplayError(
-            "oversell",
-            "Cannot sell more than the alt book holds.",
-            held=lot.qty,
-            quantity=qty,
-            listing=key,
-        )
-    return PricedFill(
-        as_of=day,
-        side="sell",
-        listing=key,
-        quantity=qty,
-        fill_price=px,
-        currency=ccy,
-        stmt_fx=fx,
-        catalog_ticker=lot.catalog_ticker,
-        ib_symbol=lot.ib_symbol,
-        price_mode=mode,
-    )
-
-
-def fill_notional_base(fill: PricedFill) -> float:
-    """Absolute cash effect in base currency. Uses stored cash_effect when set."""
-    if fill.cash_effect is not None:
-        return abs(float(fill.cash_effect))
-    fx = 1.0 if fill.stmt_fx is None else float(fill.stmt_fx)
-    return float(fill.quantity) * float(fill.fill_price) * fx
-
-
-def _qty_or_notional(
+def qty_or_notional(
     quantity: float | None,
     notional: float | None,
     fill_price: float,

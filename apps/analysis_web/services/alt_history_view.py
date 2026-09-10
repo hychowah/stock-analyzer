@@ -11,13 +11,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html import escape
-from typing import Any, Callable
+from typing import Any
 
 from apps.analysis_web.services.alt_history import (
+    CatalogSnap,
     History,
+    ReplayError,
+    Ticket,
+    TicketBlock,
     actual_state,
     listings_for_path,
+    qty_or_notional,
+    snap_for,
     state_on,
+    ticket_block,
     utc_today,
     walk_compare,
 )
@@ -30,37 +37,23 @@ from apps.analysis_web.services.mark_book import (
     marks_on,
     nav_delta_rows,
 )
+from apps.analysis_web.services.portfolio import catalog_lookup_tickers
 from apps.analysis_web.services.signed_bars import signed_bar_rows
 from apps.analysis_web.services.paper_account import (
+    FundingError,
     PaperAccount,
+    assert_buyable,
     paper_account,
     preview_buy,
     preview_sell,
 )
+from apps.analysis_web.templating import downside_pct
 from apps.analysis_web.services.price_history import (
     HistoryService,
     PriceBar,
     PriceHistory,
-    close_on,
     range_for_span,
 )
-
-
-def close_getter(
-    svc: HistoryService,
-    *,
-    start: str,
-    end: str | None = None,
-) -> Callable[[str, str], float | None]:
-    until = end or utc_today()
-    range_key = range_for_span(start, until)
-
-    def get_close(listing: str, date: str) -> float | None:
-        hist = svc.get(listing, range_key)
-        bar = close_on(hist.bars, date)
-        return None if bar is None else bar.close
-
-    return get_close
 
 
 def load_histories(
@@ -150,29 +143,38 @@ class AsOfAccount:
 
 
 @dataclass(frozen=True)
-class BuyCandidate:
-    """Catalog name plus close on D. Not pickable unless quoted with FX."""
+class HoldingRow:
+    """Display math on a marked lot.
 
-    ticker: str
-    listing: str
+    Weight is of quoted stock, not NAV. Downside is the close on this
+    row versus stored bear FV. MoS is the stored snapshot. Not a
+    valuation. Not Live NAV.
+    """
+
+    lot: MarkedLot
+    weight_pct: float | None
+    snap: CatalogSnap | None
+    downside_pct: float | None
+
+
+@dataclass(frozen=True)
+class BuyCandidate:
+    """Desk row: catalog snap plus close on D. Same composition as HoldingRow."""
+
+    snap: CatalogSnap
     mark: AsOfMark
-    audit_verdict: str | None
-    margin_of_safety_pct: float | None
-    session_date: str | None
-    currency: str
-    pickable: bool
+    block: TicketBlock | None = None
+
+    @property
+    def pickable(self) -> bool:
+        return self.block is None
 
     def as_json(self) -> dict[str, Any]:
-        return {
-            "ticker": self.ticker,
-            "listing": self.listing,
-            "mark": self.mark.as_json(),
-            "audit_verdict": self.audit_verdict,
-            "margin_of_safety_pct": self.margin_of_safety_pct,
-            "session_date": self.session_date,
-            "currency": self.currency,
-            "pickable": self.pickable,
-        }
+        body = self.snap.as_json()
+        body["mark"] = self.mark.as_json()
+        body["pickable"] = self.pickable
+        body["block"] = None if self.block is None else self.block.as_json()
+        return body
 
 
 @dataclass(frozen=True)
@@ -182,12 +184,13 @@ class EditorPage:
     history: History
     paper: PaperView
     cash_today: float | None
-    universe: tuple[dict[str, Any], ...]
+    universe: tuple[CatalogSnap, ...]
     decisions: tuple[dict[str, Any], ...]
     error: str | None
     min_date: str
     max_date: str
     sold_later: frozenset[str]
+    holdings: tuple[HoldingRow, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -343,11 +346,93 @@ def paper_on(
     )
 
 
+def _snap_for_lot(
+    lot: MarkedLot,
+    by_key: dict[str, CatalogSnap],
+) -> CatalogSnap | None:
+    """Join a holding to a catalog snap. Overlay is catalog-only, not the mark listing."""
+    seen: list[str] = []
+
+    def add(raw: str | None) -> None:
+        key = (raw or "").strip().upper()
+        if key and key not in seen:
+            seen.append(key)
+
+    add(lot.catalog_ticker)
+    add(lot.listing)
+    add(lot.ib_symbol)
+    for cand in catalog_lookup_tickers(lot.ib_symbol or ""):
+        add(cand)
+    for cand in catalog_lookup_tickers(lot.listing or ""):
+        add(cand)
+    for key in seen:
+        snap = by_key.get(key)
+        if snap is not None:
+            return snap
+    return None
+
+
+def _snap_index(snaps: tuple[CatalogSnap, ...] | list[CatalogSnap]) -> dict[str, CatalogSnap]:
+    by_key: dict[str, CatalogSnap] = {}
+    for snap in snaps:
+        by_key[snap.ticker] = snap
+        if snap.listing and snap.listing not in by_key:
+            by_key[snap.listing] = snap
+    return by_key
+
+
+def pending_holding_rows(paper: PaperView) -> tuple[HoldingRow, ...]:
+    """First-paint rows: paper lots, extra columns pending until the fragment."""
+    rows: list[HoldingRow] = []
+    for lot in paper.held:
+        marked = MarkedLot(
+            listing=lot.listing,
+            qty=lot.qty,
+            close=None,
+            value_base=None,
+            error=None,
+            ib_symbol=lot.ib_symbol,
+            catalog_ticker=lot.catalog_ticker,
+            currency=lot.currency,
+        )
+        rows.append(
+            HoldingRow(lot=marked, weight_pct=None, snap=None, downside_pct=None)
+        )
+    return tuple(rows)
+
+
+def holding_rows(
+    account: AsOfAccount,
+    snaps: tuple[CatalogSnap, ...] | list[CatalogSnap],
+) -> tuple[HoldingRow, ...]:
+    """Holdings-table rows: marked lots plus weight, stored MoS, Downside vs close."""
+    by_key = _snap_index(snaps)
+    stock = float(account.account.stock or 0)
+    rows: list[HoldingRow] = []
+    for lot in account.held:
+        snap = _snap_for_lot(lot, by_key)
+        weight: float | None = None
+        if lot.value_base is not None and stock > 0:
+            weight = 100.0 * float(lot.value_base) / stock
+        down = None
+        if snap is not None:
+            down = downside_pct(lot.close, snap.fv_bear)
+        rows.append(
+            HoldingRow(
+                lot=lot,
+                weight_pct=weight,
+                snap=snap,
+                downside_pct=down,
+            )
+        )
+    return tuple(rows)
+
+
 def editor_page(
     hist: History,
     *,
     view_date: str | None = None,
-    universe: list[dict[str, Any]] | None = None,
+    universe: tuple[CatalogSnap, ...] | list[CatalogSnap] | None = None,
     error: str | None = None,
 ) -> EditorPage:
     """HTML adapter: History plus the D book and cash today. Header NAV is absent."""
@@ -357,12 +442,13 @@ def editor_page(
         history=hist,
         paper=paper,
         cash_today=state_on(hist, today).cash_base,
-        universe=tuple(universe or []),
+        universe=tuple(universe or ()),
         decisions=tuple(f.as_json() for f in hist.hyp_fills()),
         error=error,
         min_date=paper.fork_date,
         max_date=today,
         sold_later=sold_later_listings(hist, paper.view_date),
+        holdings=pending_holding_rows(paper),
     )
 
 
@@ -383,7 +469,7 @@ def account_on(
 ) -> AsOfAccount:
     """state_on + marks for held listings (fork→D) + mark_lots + paper_account.
 
-    Does not load the buy universe. Does not call paper_on.
+    Does not load catalog snaps. Does not call paper_on.
     """
     view = _clamp_view(hist, view_date, utc_today())
     as_of = state_on(hist, view)
@@ -427,40 +513,170 @@ def mark_listing(
 def universe_on(
     hist: History,
     svc: HistoryService,
-    universe: list[dict[str, Any]],
+    snaps: tuple[CatalogSnap, ...] | list[CatalogSnap],
     *,
     view_date: str | None = None,
 ) -> tuple[BuyCandidate, ...]:
-    """Catalog rows plus AsOfMark on quote_listing. Second fetch vs account_on."""
+    """Catalog snaps plus AsOfMark on listing. Second fetch vs account_on."""
     view = _clamp_view(hist, view_date, utc_today())
-    listings: list[str] = []
-    for row in universe:
-        listing = str(row.get("quote_listing") or row.get("ticker") or "").strip().upper()
-        if listing:
-            listings.append(listing)
+    listings = [snap.listing for snap in snaps if snap.listing]
     histories = load_histories(svc, listings, start=hist.fork_date, end=view)
     out: list[BuyCandidate] = []
-    for row in universe:
-        ticker = str(row.get("ticker") or "").strip().upper()
-        listing = str(row.get("quote_listing") or ticker).strip().upper()
-        ccy = str(row.get("currency") or hist.seed.base_currency or "").strip().upper()
+    for snap in snaps:
+        listing = snap.listing or snap.ticker
+        ccy = (snap.currency or "").strip().upper()
         series = histories.get(listing)
         mark = mark_on(series, view) if series is not None else _missing_mark(listing, view)
-        fx = hist.seed.fx_for(ccy)
-        pickable = mark.status == "quoted" and mark.close is not None and fx is not None
-        out.append(
-            BuyCandidate(
-                ticker=ticker,
-                listing=listing,
-                mark=mark,
-                audit_verdict=row.get("audit_verdict"),
-                margin_of_safety_pct=row.get("margin_of_safety_pct"),
-                session_date=row.get("session_date"),
-                currency=ccy,
-                pickable=pickable,
-            )
+        fx = hist.seed.fx_for(ccy) if ccy else None
+        block = ticket_block(
+            hist,
+            side="buy",
+            mark_status=mark.status,
+            close=mark.close,
+            currency=ccy,
+            fx=fx,
+            listing=listing,
+            view_date=view,
         )
+        out.append(BuyCandidate(snap=snap, mark=mark, block=block))
     return tuple(out)
+
+
+def ticket_listing(
+    *,
+    side: str,
+    listing: str,
+    ticker: str | None,
+    snaps: tuple[CatalogSnap, ...] | list[CatalogSnap],
+) -> tuple[str, CatalogSnap | None]:
+    """Resolve the mark listing and buy snap for a ticket."""
+    kind = (side or "").strip().lower()
+    snap = snap_for(snaps, ticker=ticker or "", listing=listing)
+    if kind == "buy" and snap is not None:
+        return (snap.listing or snap.ticker), snap
+    key = (listing or ticker or (snap.listing if snap else "") or "").strip().upper()
+    return key, snap
+
+
+def build_ticket(
+    hist: History,
+    *,
+    account: PaperAccount,
+    held: tuple[MarkedLot, ...],
+    side: str,
+    view_date: str,
+    mark: AsOfMark,
+    snaps: tuple[CatalogSnap, ...] | list[CatalogSnap] = (),
+    listing: str = "",
+    ticker: str | None = None,
+    quantity: float | None = None,
+    notional: float | None = None,
+    override_price: float | None = None,
+) -> Ticket:
+    """Preview and persist are this value. POST calls persist_ticket on it."""
+    kind = (side or "").strip().lower()
+    key, snap = ticket_listing(side=kind, listing=listing, ticker=ticker, snaps=snaps)
+    if key and mark.listing and mark.listing != key:
+        mark = AsOfMark(
+            listing=key,
+            as_of=mark.as_of,
+            status=mark.status,
+            close=mark.close,
+            bar_date=mark.bar_date,
+            error=mark.error,
+        )
+    lot = next((row for row in held if row.listing == key), None)
+    ticker_out = (ticker or (snap.ticker if snap else "") or "").strip().upper() or None
+    block: TicketBlock | None = None
+    ccy = ""
+    fx: float | None = None
+    if kind == "buy":
+        sym = (ticker_out or key)
+        if not sym:
+            block = TicketBlock("not_in_catalog", "Buy ticker is required")
+        elif snap is None:
+            block = TicketBlock("not_in_catalog", f"{sym} is not on the researched list")
+        else:
+            ccy = (snap.currency or "").strip().upper()
+            fx = hist.seed.fx_for(ccy) if ccy else None
+    else:
+        if lot is not None:
+            ccy = (lot.currency or hist.seed.base_currency or "").strip().upper()
+            fx = lot.stmt_fx
+            if fx is None:
+                fx = hist.seed.fx_for(ccy)
+    override = None if override_price is None else float(override_price)
+    if override is not None and override <= 0:
+        override = None
+    mode = "override" if override is not None else "close"
+    fill_px = override if override is not None else mark.close
+    status = "quoted" if override is not None else mark.status
+    close_for_block = fill_px if override is not None else mark.close
+    qty: float | None = None
+    if fill_px is not None and fill_px > 0 and (quantity is not None or notional is not None):
+        try:
+            qty = qty_or_notional(quantity, notional, fill_px)
+        except ReplayError:
+            qty = None
+    if block is None:
+        block = ticket_block(
+            hist,
+            side=kind,
+            mark_status=status,
+            close=close_for_block,
+            currency=ccy,
+            fx=fx,
+            listing=key,
+            view_date=view_date,
+            held_qty=None if lot is None else lot.qty,
+            qty=qty,
+        )
+    cost: float | None = None
+    if (
+        block is None
+        and fill_px is not None
+        and fx is not None
+        and qty is not None
+        and qty > 0
+    ):
+        cost = qty * float(fill_px) * float(fx)
+    after: PaperAccount | None = None
+    if cost is not None:
+        if kind == "buy":
+            after = preview_buy(account, cost)
+            try:
+                assert_buyable(account, cost)
+            except FundingError as e:
+                block = TicketBlock(
+                    e.code,
+                    e.message,
+                    extra=(
+                        ("need", e.need),
+                        ("buying_power", e.buying_power),
+                        ("excess_after", e.excess_after),
+                    ),
+                )
+                after = None
+        elif kind == "sell":
+            after = preview_sell(account, cost)
+    return Ticket(
+        view_date=view_date,
+        side=kind,
+        listing=key,
+        ticker=ticker_out,
+        snap=snap,
+        lot=lot,
+        mark=mark,
+        currency=ccy,
+        fx=fx,
+        quantity=qty,
+        fill_price=fill_px,
+        price_mode=mode,
+        cost_base=cost,
+        after=after,
+        block=block,
+        account=account,
+    )
 
 
 def ticket_on(
@@ -472,50 +688,26 @@ def ticket_on(
     listing: str,
     ticker: str | None = None,
     quantity: float | None = None,
-    currency: str | None = None,
+    snaps: tuple[CatalogSnap, ...] | list[CatalogSnap] = (),
 ) -> dict[str, Any]:
-    """Preview a buy or sell at the shown close. POST still re-resolves."""
+    """GET /ticket: the same Ticket POST will persist."""
     asof = account_on(hist, svc, view_date=view_date)
-    day = asof.view_date
-    kind = (side or "").strip().lower()
-    key = (listing or ticker or "").strip().upper()
-    mark = mark_listing(hist, svc, key, view_date=day)
-    qty = 0.0 if quantity is None else float(quantity)
-    held = next((lot for lot in asof.held if lot.listing == key), None)
-    ccy = ""
-    fx: float | None = None
-    if held is not None:
-        ccy = (held.currency or "").strip().upper()
-        fx = held.stmt_fx
-        if fx is None:
-            fx = hist.seed.fx_for(ccy)
-    else:
-        ccy = (currency or "").strip().upper()
-        if not ccy:
-            ccy = (hist.seed.base_currency or "").strip().upper()
-        fx = hist.seed.fx_for(ccy)
-    cost: float | None = None
-    if mark.status == "quoted" and mark.close is not None and fx is not None and qty > 0:
-        cost = qty * float(mark.close) * float(fx)
-    after: PaperAccount | None = None
-    if cost is not None:
-        if kind == "buy":
-            after = preview_buy(asof.account, cost)
-        elif kind == "sell":
-            after = preview_sell(asof.account, cost)
-    return {
-        "view_date": day,
-        "side": kind,
-        "listing": key,
-        "ticker": (ticker or "").strip().upper() or None,
-        "quantity": qty,
-        "mark": mark.as_json(),
-        "cost_base": cost,
-        "currency": ccy,
-        "account": asof.account.as_json(),
-        "after": None if after is None else after.as_json(),
-        "held_qty": None if held is None else held.qty,
-    }
+    key, _snap = ticket_listing(
+        side=side, listing=listing, ticker=ticker, snaps=snaps
+    )
+    mark = mark_listing(hist, svc, key, view_date=asof.view_date)
+    return build_ticket(
+        hist,
+        account=asof.account,
+        held=asof.held,
+        side=side,
+        view_date=asof.view_date,
+        mark=mark,
+        snaps=snaps,
+        listing=listing,
+        ticker=ticker,
+        quantity=quantity,
+    ).as_json()
 
 
 def path_on_bars(

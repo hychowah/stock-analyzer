@@ -2,7 +2,7 @@
  * What-if page helpers. Page works without this file.
  * Loads the NAV path after first paint. A date change fetches the held
  * fragment, universe closes, and (if a ticker is selected) the ticket
- * preview — not the path.
+ * preview — not the path. A fill POST reloads holdings, fills, and path.
  */
 (function () {
   "use strict";
@@ -17,7 +17,9 @@
       var rows = table.querySelectorAll("tbody tr");
       for (var i = 0; i < rows.length; i++) {
         var ticker = String(rows[i].getAttribute("data-ticker") || "").toUpperCase();
-        rows[i].hidden = q.length > 0 && ticker.indexOf(q) < 0;
+        var listing = String(rows[i].getAttribute("data-listing") || "").toUpperCase();
+        rows[i].hidden =
+          q.length > 0 && ticker.indexOf(q) < 0 && listing.indexOf(q) < 0;
       }
     });
   }
@@ -45,10 +47,117 @@
     }
   }
 
+  function cellValue(tr, col) {
+    var td = tr.querySelector('[data-col="' + col + '"]');
+    if (!td) {
+      return "";
+    }
+    var raw = td.getAttribute("data-value");
+    if (raw == null || raw === "") {
+      return null;
+    }
+    return raw;
+  }
+
+  function sortTable(tableEl, col, type, dir) {
+    if (!tableEl) {
+      return;
+    }
+    var tbody = tableEl.querySelector("tbody");
+    if (!tbody) {
+      return;
+    }
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    var sign = dir === "desc" ? -1 : 1;
+    rows.sort(function (a, b) {
+      var av = cellValue(a, col);
+      var bv = cellValue(b, col);
+      var aMissing = av == null;
+      var bMissing = bv == null;
+      if (aMissing && bMissing) {
+        return 0;
+      }
+      if (aMissing) {
+        return 1;
+      }
+      if (bMissing) {
+        return -1;
+      }
+      if (type === "num") {
+        var an = Number(av);
+        var bn = Number(bv);
+        if (an < bn) {
+          return -1 * sign;
+        }
+        if (an > bn) {
+          return 1 * sign;
+        }
+        return 0;
+      }
+      var as = String(av).toUpperCase();
+      var bs = String(bv).toUpperCase();
+      if (as < bs) {
+        return -1 * sign;
+      }
+      if (as > bs) {
+        return 1 * sign;
+      }
+      return 0;
+    });
+    for (var i = 0; i < rows.length; i++) {
+      tbody.appendChild(rows[i]);
+    }
+    var buttons = tableEl.querySelectorAll(".hist-sort");
+    for (var j = 0; j < buttons.length; j++) {
+      var btn = buttons[j];
+      if (btn.getAttribute("data-sort") === col) {
+        btn.setAttribute("aria-sort", dir === "desc" ? "descending" : "ascending");
+      } else {
+        btn.removeAttribute("aria-sort");
+      }
+    }
+    tableEl.setAttribute("data-sorted", col + ":" + type + ":" + dir);
+  }
+
+  function resort(tableEl) {
+    if (!tableEl) {
+      return;
+    }
+    var spec = tableEl.getAttribute("data-sorted");
+    if (!spec) {
+      return;
+    }
+    var parts = spec.split(":");
+    if (parts.length < 3) {
+      return;
+    }
+    sortTable(tableEl, parts[0], parts[1], parts[2]);
+  }
+
+  function onSortClick(ev) {
+    var btn = ev.target.closest ? ev.target.closest(".hist-sort") : null;
+    if (!btn) {
+      return;
+    }
+    ev.preventDefault();
+    var tableEl = btn.closest("table");
+    if (!tableEl) {
+      return;
+    }
+    var col = btn.getAttribute("data-sort") || "";
+    var type = btn.getAttribute("data-type") || "text";
+    var dir = btn.getAttribute("aria-sort") === "ascending" ? "desc" : "asc";
+    sortTable(tableEl, col, type, dir);
+  }
+
+  if (table) {
+    table.addEventListener("click", onSortClick);
+  }
+
   function paintBreakdown(rows) {
-    var table = document.getElementById("hist-breakdown");
+    var tableEl = document.getElementById("hist-breakdown");
     var card = document.getElementById("hist-breakdown-card");
-    var tbody = table ? table.querySelector("tbody") : null;
+    var tbody = tableEl ? tableEl.querySelector("tbody") : null;
     if (!tbody) {
       return;
     }
@@ -86,6 +195,7 @@
 
   var card = document.getElementById("hist-holdings-card");
   var heldUrl = card ? card.getAttribute("data-held-url") : "";
+  var fillsUrl = card ? card.getAttribute("data-fills-url") : "";
   var pathUrl = card ? card.getAttribute("data-path-url") : "";
   var universeUrl = card ? card.getAttribute("data-universe-url") : "";
   var ticketUrl = card ? card.getAttribute("data-ticket-url") : "";
@@ -121,7 +231,7 @@
     }
     var buySummary = document.getElementById("hist-buy-summary");
     if (buySummary && view) {
-      buySummary.textContent = "Buy a researched name on " + view;
+      buySummary.textContent = "Trade a researched name on " + view;
     }
     var caption = document.getElementById("hist-held-caption");
     if (caption) {
@@ -169,6 +279,7 @@
         var view = (root && root.getAttribute("data-view-date")) || day;
         applyViewDate(view);
         markHeldBusy(false);
+        resort(wrap.querySelector("table"));
         refreshTicket();
       })
       .catch(function () {
@@ -186,6 +297,32 @@
         }
         note.innerHTML =
           'Could not load closes for this date. <button type="button" class="secondary hist-retry-marks">Retry prices</button>';
+      });
+  }
+
+  function loadFills() {
+    var fillsCard = document.getElementById("hist-fills-card");
+    var wrap = document.getElementById("hist-fills");
+    var url = fillsUrl || (fillsCard && fillsCard.getAttribute("data-fills-url")) || "";
+    if (!url || !wrap) {
+      return;
+    }
+    fetch(url, { headers: { Accept: "text/html" } })
+      .then(function (r) {
+        if (!r.ok) {
+          throw new Error("fills " + r.status);
+        }
+        return r.text();
+      })
+      .then(function (html) {
+        wrap.innerHTML = html;
+        var hasChip = wrap.querySelector(".timeline-chip");
+        if (fillsCard) {
+          fillsCard.hidden = !hasChip;
+        }
+      })
+      .catch(function () {
+        /* keep the last painted fills */
       });
   }
 
@@ -233,17 +370,20 @@
           var pick = trs[j].querySelector(".hist-buy-pick");
           if (closeCell) {
             closeCell.textContent = closeLabel(row && row.mark, view);
+            if (row && row.mark && row.mark.close != null) {
+              closeCell.setAttribute("data-value", String(row.mark.close));
+            } else {
+              closeCell.removeAttribute("data-value");
+            }
           }
-          if (pick) {
-            pick.disabled = !(row && row.pickable);
-            if (row && row.listing) {
-              pick.setAttribute("data-listing", row.listing);
-            }
-            if (row && row.currency) {
-              pick.setAttribute("data-currency", row.currency);
-            }
+          if (pick && row && row.listing) {
+            pick.setAttribute("data-listing", row.listing);
+          }
+          if (pick && row && row.currency) {
+            pick.setAttribute("data-currency", row.currency);
           }
         }
+        resort(table);
       })
       .catch(function () {
         var cells = table.querySelectorAll(".hist-buy-close");
@@ -284,13 +424,29 @@
   var heldWrap = document.getElementById("hist-held-table");
   if (heldWrap) {
     heldWrap.addEventListener("click", function (ev) {
-      var btn = ev.target.closest ? ev.target.closest(".hist-retry-marks") : null;
-      if (!btn) {
+      var retry = ev.target.closest ? ev.target.closest(".hist-retry-marks") : null;
+      if (retry) {
+        ev.preventDefault();
+        loadHoldings(currentDate());
+        loadUniverse(currentDate());
+        return;
+      }
+      if (ev.target.closest && ev.target.closest(".hist-sort")) {
+        onSortClick(ev);
+        return;
+      }
+      var sellBtn = ev.target.closest ? ev.target.closest(".hist-sell-pick") : null;
+      if (!sellBtn) {
         return;
       }
       ev.preventDefault();
-      loadHoldings(currentDate());
-      loadUniverse(currentDate());
+      pickTrade({
+        side: "sell",
+        ticker: String(sellBtn.getAttribute("data-ticker") || ""),
+        listing: String(sellBtn.getAttribute("data-listing") || ""),
+        currency: String(sellBtn.getAttribute("data-currency") || ""),
+        qty: String(sellBtn.getAttribute("data-qty") || ""),
+      });
     });
   }
 
@@ -305,7 +461,6 @@
   var ticketError = document.getElementById("hist-ticket-error");
   var ticketConfirm = document.getElementById("hist-ticket-confirm");
   var ticketEmpty = document.getElementById("hist-ticket-empty");
-  var ticketCurrency = "";
 
   function setTicketError(msg) {
     if (!ticketError) {
@@ -355,9 +510,7 @@
       "&ticker=" +
       encodeURIComponent(ticker) +
       "&quantity=" +
-      encodeURIComponent(qty) +
-      "&currency=" +
-      encodeURIComponent(ticketCurrency);
+      encodeURIComponent(qty);
     fetch(url, { headers: { Accept: "application/json" } })
       .then(function (r) {
         if (!r.ok) {
@@ -376,7 +529,7 @@
               ": " +
               fmt(mark.close);
           } else {
-            ticketFill.textContent = closeLabel(mark, view);
+            ticketFill.textContent = "";
           }
         }
         if (ticketEstimate) {
@@ -401,20 +554,12 @@
         } else if (ticketAfter) {
           ticketAfter.textContent = "";
         }
-        var quoted = mark.status === "quoted" && mark.close != null;
         var hasQty = qty !== "" && Number(qty) > 0;
+        var blocked = body.block && body.block.message;
         if (ticketConfirm) {
-          ticketConfirm.disabled = !(quoted && hasQty);
+          ticketConfirm.disabled = !hasQty || !!blocked;
         }
-        if (!quoted) {
-          setTicketError(
-            mark.status === "unavailable"
-              ? "Yahoo failed for this listing on " + view + "."
-              : "No close on or before " + view + "."
-          );
-        } else {
-          setTicketError("");
-        }
+        setTicketError(blocked || "");
       })
       .catch(function () {
         setTicketError("Could not preview this ticket.");
@@ -424,25 +569,38 @@
       });
   }
 
-  function pickBuy(ticker, listing, currency) {
-    ticketCurrency = currency || "";
+  function pickTrade(opts) {
+    var side = opts.side || "buy";
+    var ticker = opts.ticker || "";
+    var listing = opts.listing || ticker;
     if (ticketEmpty) {
-      ticketEmpty.textContent = "Buy " + ticker + " on " + currentDate() + ".";
+      ticketEmpty.textContent =
+        (side === "sell" ? "Sell " : "Buy ") + (ticker || listing) + " on " + currentDate() + ".";
     }
     if (ticketSide) {
-      ticketSide.value = "buy";
+      ticketSide.value = side;
     }
     if (ticketTicker) {
-      ticketTicker.value = ticker;
+      ticketTicker.value = ticker || listing;
     }
     if (ticketListing) {
       ticketListing.value = listing || ticker;
     }
     if (ticketConfirm) {
-      ticketConfirm.textContent = "Confirm buy";
+      ticketConfirm.textContent = side === "sell" ? "Confirm sell" : "Confirm buy";
     }
-    if (ticketQty && !ticketQty.value) {
-      ticketQty.focus();
+    if (ticketQty) {
+      if (side === "sell") {
+        if (opts.qty) {
+          ticketQty.value = opts.qty;
+          ticketQty.setAttribute("max", opts.qty);
+        }
+      } else {
+        ticketQty.removeAttribute("max");
+        if (!ticketQty.value) {
+          ticketQty.focus();
+        }
+      }
     }
     refreshTicket();
   }
@@ -450,15 +608,16 @@
   if (table) {
     table.addEventListener("click", function (ev) {
       var btn = ev.target.closest ? ev.target.closest(".hist-buy-pick") : null;
-      if (!btn || btn.disabled) {
+      if (!btn) {
         return;
       }
       ev.preventDefault();
-      pickBuy(
-        String(btn.getAttribute("data-ticker") || ""),
-        String(btn.getAttribute("data-listing") || ""),
-        String(btn.getAttribute("data-currency") || "")
-      );
+      pickTrade({
+        side: "buy",
+        ticker: String(btn.getAttribute("data-ticker") || ""),
+        listing: String(btn.getAttribute("data-listing") || ""),
+        currency: String(btn.getAttribute("data-currency") || ""),
+      });
     });
   }
   if (ticketTicker) {
@@ -471,6 +630,64 @@
   }
   if (ticketQty) {
     ticketQty.addEventListener("input", refreshTicket);
+  }
+
+  function postForm(form) {
+    var url = form.getAttribute("action");
+    if (!url) {
+      return;
+    }
+    var data = new FormData(form);
+    fetch(url, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: data,
+    })
+      .then(function (r) {
+        return r.json().then(
+          function (body) {
+            return { ok: r.ok, body: body };
+          },
+          function () {
+            return { ok: false, body: { message: "Could not save this fill." } };
+          }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          setTicketError((res.body && res.body.message) || "Could not save this fill.");
+          return;
+        }
+        setTicketError("");
+        var day = (res.body && res.body.view_date) || currentDate();
+        loadHoldings(day);
+        loadUniverse(day);
+        loadFills();
+        loadPath();
+        refreshTicket();
+      })
+      .catch(function () {
+        setTicketError("Could not save this fill.");
+      });
+  }
+
+  if (ticketForm) {
+    ticketForm.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      postForm(ticketForm);
+    });
+  }
+
+  var fillsCard = document.getElementById("hist-fills-card");
+  if (fillsCard) {
+    fillsCard.addEventListener("submit", function (ev) {
+      var form = ev.target;
+      if (!form || String(form.tagName || "").toUpperCase() !== "FORM") {
+        return;
+      }
+      ev.preventDefault();
+      postForm(form);
+    });
   }
 
   function bindChart(points) {
@@ -517,7 +734,10 @@
     });
   }
 
-  if (pathUrl) {
+  function loadPath() {
+    if (!pathUrl) {
+      return;
+    }
     fetch(pathUrl, { headers: { Accept: "application/json" } })
       .then(function (r) {
         if (!r.ok) {
@@ -557,4 +777,5 @@
   if (universeUrl) {
     loadUniverse(card ? card.getAttribute("data-view-date") : "");
   }
+  loadPath();
 })();

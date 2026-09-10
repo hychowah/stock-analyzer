@@ -48,6 +48,7 @@
 <div class="card" id="hist-holdings-card"
      data-view-date="{{ payload.paper.view_date }}"
      data-held-url="/fragments/portfolio/histories/{{ h.id }}/held"
+     data-fills-url="/fragments/portfolio/histories/{{ h.id }}/fills"
      data-path-url="/api/portfolio/histories/{{ h.id }}/path"
      data-universe-url="/api/portfolio/histories/{{ h.id }}/universe"
      data-ticket-url="/api/portfolio/histories/{{ h.id }}/ticket"
@@ -63,15 +64,61 @@
     </div>
   </form>
   <p class="muted" id="hist-held-caption">What the paper book held on {{ payload.paper.view_date }}. Names marked “sold later” are gone from today’s copied actual — not from a live IB walk.</p>
-  <div class="hist-holdings-layout">
-    <div id="hist-held-table">
-    {% with history_id=h.id, view_date=payload.paper.view_date, held=payload.paper.held, cash=payload.paper.cash, base_currency=payload.paper.base_currency, sold_later=payload.sold_later, pane='pending' %}
-      {% include "partials/held_table.html" %}
-    {% endwith %}
+  <div id="hist-held-table">
+  {% with history_id=h.id, view_date=payload.paper.view_date, rows=payload.holdings, cash=payload.paper.cash, base_currency=payload.paper.base_currency, sold_later=payload.sold_later, pane='pending' %}
+    {% include "partials/held_table.html" %}
+  {% endwith %}
+  </div>
+
+  <div class="hist-desk">
+    <div class="hist-research">
+      <h2 id="hist-buy-summary">Trade a researched name on {{ payload.paper.view_date }}</h2>
+      <p class="muted">Today’s catalog. Search filters this table. Close is that day’s Yahoo close. Pick a name to buy, or pick a holding above to sell — both use the ticket.</p>
+      <p><label>Search <input id="hist-universe-filter" type="search" placeholder="MELI or 0700.HK"/></label></p>
+      <div class="table-freeze">
+      <table id="hist-universe" data-sort-table="universe">
+        <thead>
+          <tr>
+            <th><button type="button" class="hist-sort" data-sort="ticker" data-type="text">Ticker</button></th>
+            <th><button type="button" class="hist-sort" data-sort="close" data-type="num">Close</button></th>
+            <th><button type="button" class="hist-sort" data-sort="verdict" data-type="text">Verdict</button></th>
+            <th><button type="button" class="hist-sort" data-sort="mos" data-type="num">MoS %</button></th>
+            <th><button type="button" class="hist-sort" data-sort="session" data-type="text">Session</button></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in payload.universe %}
+          <tr data-ticker="{{ row.ticker }}" data-listing="{{ row.listing }}"
+              data-currency="{{ row.currency or '' }}">
+            <td class="mono" data-col="ticker" data-value="{{ row.ticker }}">{{ row.ticker }}</td>
+            <td class="num hist-buy-close" data-col="close" data-ticker="{{ row.ticker }}"><span class="hist-skel-bar"></span></td>
+            <td data-col="verdict" data-value="{{ row.audit_verdict or '' }}">{{ row.audit_verdict or '—' }}</td>
+            <td class="num" data-col="mos"{% if row.margin_of_safety_pct is not none %} data-value="{{ row.margin_of_safety_pct }}"{% endif %}>{{ row.margin_of_safety_pct | fmt_num(1) }}</td>
+            <td class="mono" data-col="session" data-value="{{ row.session_date or '' }}">{{ row.session_date or '' }}</td>
+            <td>
+              <button type="button" class="hist-buy-pick secondary hist-js-only" data-ticker="{{ row.ticker }}"
+                      data-listing="{{ row.listing }}"
+                      data-currency="{{ row.currency or '' }}">Buy…</button>
+              <noscript>
+                <form method="post" action="/portfolio/histories/{{ h.id }}/decisions">
+                  <input type="hidden" name="side" value="buy"/>
+                  <input type="hidden" name="ticker" value="{{ row.ticker }}"/>
+                  <input type="hidden" name="as_of" value="{{ payload.paper.view_date }}"/>
+                  <label>Qty <input name="quantity" type="number" step="any" min="0" placeholder="qty" required style="width:5rem"/></label>
+                  <button type="submit">Buy</button>
+                </form>
+              </noscript>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
     </div>
     <form class="hist-ticket" id="hist-ticket-form" method="post" action="/portfolio/histories/{{ h.id }}/decisions">
       <h2>Ticket</h2>
-      <p class="muted" id="hist-ticket-empty">Select a researched name to buy. Sell stays on the holdings row.</p>
+      <p class="muted" id="hist-ticket-empty">Search a researched name to buy, or pick a holding to sell.</p>
       <input type="hidden" name="side" id="hist-ticket-side" value="buy"/>
       <input type="hidden" name="listing" id="hist-ticket-listing" value=""/>
       <input type="hidden" name="as_of" id="hist-ticket-asof" value="{{ payload.paper.view_date }}"/>
@@ -90,54 +137,14 @@
   </div>
 </div>
 
-{% if payload.decisions %}
-<div class="card">
+<div class="card" id="hist-fills-card" data-fills-url="/fragments/portfolio/histories/{{ h.id }}/fills"{% if not payload.decisions %} hidden{% endif %}>
   <h2>What-if fills</h2>
-  <div class="timeline">
-    {% for d in payload.decisions %}
-    <form class="timeline-chip" method="post" action="/portfolio/histories/{{ h.id }}/decisions/{{ d.id }}/delete">
-      <a href="/portfolio/histories/{{ h.id }}?date={{ d.as_of }}">{{ d.as_of }} · {{ d.side }} {{ d.listing }} · {{ d.quantity | fmt_num(2) }}</a>
-      <button type="submit" class="secondary">Remove</button>
-    </form>
-    {% endfor %}
+  <div id="hist-fills">
+  {% with history_id=h.id, decisions=payload.decisions %}
+    {% include "partials/hist_fills.html" %}
+  {% endwith %}
   </div>
 </div>
-{% endif %}
-
-<details class="card" open>
-  <summary id="hist-buy-summary">Buy a researched name on {{ payload.paper.view_date }}</summary>
-  <p class="muted">Today’s catalog. Search filters this table. Close is that day’s Yahoo close. A name with no close on or before this date is not a buy.</p>
-  <p><label>Filter <input id="hist-universe-filter" type="search" placeholder="MELI"/></label></p>
-  <div class="table-freeze">
-  <table id="hist-universe">
-    <thead><tr><th>Ticker</th><th>Close</th><th>Verdict</th><th>MoS %</th><th>Session</th><th></th></tr></thead>
-    <tbody>
-      {% for row in payload.universe %}
-      <tr data-ticker="{{ row.ticker }}" data-listing="{{ row.quote_listing or row.ticker }}">
-        <td class="mono">{{ row.ticker }}</td>
-        <td class="num hist-buy-close" data-ticker="{{ row.ticker }}"><span class="hist-skel-bar"></span></td>
-        <td>{{ row.audit_verdict or '—' }}</td>
-        <td class="num">{{ row.margin_of_safety_pct | fmt_num(1) }}</td>
-        <td class="mono">{{ row.session_date or '' }}</td>
-        <td>
-          <button type="button" class="hist-buy-pick secondary" data-ticker="{{ row.ticker }}"
-                  data-listing="{{ row.quote_listing or row.ticker }}" disabled>Buy…</button>
-          <noscript>
-            <form method="post" action="/portfolio/histories/{{ h.id }}/decisions">
-              <input type="hidden" name="side" value="buy"/>
-              <input type="hidden" name="ticker" value="{{ row.ticker }}"/>
-              <input type="hidden" name="as_of" value="{{ payload.paper.view_date }}"/>
-              <label>Qty <input name="quantity" type="number" step="any" min="0" placeholder="qty" required style="width:5rem"/></label>
-              <button type="submit">Buy</button>
-            </form>
-          </noscript>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  </div>
-</details>
 
 <div class="card" id="hist-breakdown-card" hidden>
   <h2>Contribution to Δ</h2>

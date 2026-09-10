@@ -1,0 +1,9 @@
+{
+  "slug": "whatif-desk",
+  "session_key": "2026-09-09-whatif-desk",
+  "status": "scaffolded",
+  "created_at": "2026-09-09T13:32:49Z",
+  "updated_at": "2026-09-09T13:32:49Z",
+  "work_type": "W4",
+  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+}

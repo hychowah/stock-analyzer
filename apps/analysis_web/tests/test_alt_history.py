@@ -11,24 +11,29 @@ from packages.catalog_api.client import CatalogApi
 from datetime import date, timedelta
 
 from apps.analysis_web.services.alt_history import (
+    CatalogSnap,
     PricedFill,
     ReplayError,
-    buy_universe,
+    catalog_snaps,
     compare_at,
     compare_path,
     drop_hyp_fill,
+    missing_fx_message,
     walk_compare,
     trial_replay,
     history_from_ib,
     overlay_fills,
     path_dates,
+    persist_ticket,
     prices_on,
-    resolve_buy,
-    resolve_sell,
     replay,
     state_on,
+    ticket_block,
     with_hyp_fill,
 )
+from apps.analysis_web.services.alt_history_view import build_ticket
+from apps.analysis_web.services.mark_book import AsOfMark, MarkedLot
+from apps.analysis_web.services.paper_account import PaperAccount
 from apps.analysis_web.services.alt_history_store import (
     copy_history,
     create_from_ib,
@@ -200,6 +205,28 @@ class ReplayTests(unittest.TestCase):
         self.assertAlmostEqual(out.lot_by_listing("ZZZZ").qty, 1.0, places=5)  # type: ignore[union-attr]
 
 
+def _rich_account() -> PaperAccount:
+    return PaperAccount(
+        as_of="2026-03-31",
+        cash=1_000_000.0,
+        stock=0.0,
+        nav=1_000_000.0,
+        loan=0.0,
+        maintenance=0.0,
+        excess=1_000_000.0,
+        buying_power=2_000_000.0,
+        n_unquoted=0,
+        n_unavailable=0,
+        base_currency="HKD",
+    )
+
+
+def _mark(listing: str, close: float | None, *, status: str | None = None) -> AsOfMark:
+    if status is None:
+        status = "quoted" if close is not None else "unquoted"
+    return AsOfMark(listing=listing, as_of="2026-03-31", status=status, close=close)
+
+
 class ResolveTests(unittest.TestCase):
     def setUp(self):
         self._td = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -207,106 +234,97 @@ class ResolveTests(unittest.TestCase):
         self.api = CatalogApi(archive_root=self.archive, readonly=True)
         self.ib = _ib()
         self.hist = history_from_ib(self.ib, name="copy")
-        self.closes = {
-            "AAPL": 200.0,
-            "META": 50.0,
-            "0700.HK": 10.0,
-        }
-
-        def get_close(listing: str, date: str) -> float | None:
-            return self.closes.get(listing.upper())
-
-        self.get_close = get_close
+        self.snaps = catalog_snaps(self.api)
 
     def tearDown(self):
         del self.api
         self._td.cleanup()
 
+    def _buy(self, ticker: str, *, hist=None, close=200.0, quantity=1.0, **kwargs):
+        listing = ticker
+        return persist_ticket(
+            build_ticket(
+                hist or self.hist,
+                account=_rich_account(),
+                held=(),
+                side="buy",
+                view_date="2026-03-31",
+                mark=_mark(listing, close),
+                snaps=self.snaps,
+                listing=listing,
+                ticker=ticker,
+                quantity=quantity,
+                **kwargs,
+            )
+        )
+
     def test_buy_unknown_ticker_rejected(self):
         with self.assertRaises(ReplayError) as ctx:
-            resolve_buy(
-                self.api,
-                self.hist,
-                ticker="ZZZZ",
-                as_of="2026-03-31",
-                quantity=1,
-                notional=None,
-                override_price=None,
-                get_close=self.get_close,
-            )
+            self._buy("ZZZZ")
         self.assertEqual(ctx.exception.code, "not_in_catalog")
 
     def test_buy_resolves_listing_and_close(self):
-        fill = resolve_buy(
-            self.api,
-            self.hist,
-            ticker="AAPL",
-            as_of="2026-03-31",
-            quantity=1,
-            notional=None,
-            override_price=None,
-            get_close=self.get_close,
-        )
+        fill = self._buy("AAPL")
         self.assertEqual(fill.listing, "AAPL")
         self.assertEqual(fill.catalog_ticker, "AAPL")
         self.assertEqual(fill.price_mode, "close")
         self.assertAlmostEqual(fill.fill_price, 200.0, places=5)
+        self.assertEqual(fill.currency, "USD")
 
     def test_override_fill(self):
-        fill = resolve_buy(
-            self.api,
-            self.hist,
-            ticker="AAPL",
-            as_of="2026-03-31",
-            quantity=1,
-            notional=None,
-            override_price=180.0,
-            get_close=self.get_close,
-        )
+        fill = self._buy("AAPL", override_price=180.0)
         self.assertEqual(fill.price_mode, "override")
         self.assertAlmostEqual(fill.fill_price, 180.0, places=5)
 
     def test_no_close_rejected(self):
         with self.assertRaises(ReplayError) as ctx:
-            resolve_buy(
-                self.api,
-                self.hist,
-                ticker="AAPL",
-                as_of="2026-03-31",
-                quantity=1,
-                notional=None,
-                override_price=None,
-                get_close=lambda *_: None,
-            )
+            self._buy("AAPL", close=None)
         self.assertEqual(ctx.exception.code, "no_close")
+        block = ticket_block(
+            self.hist,
+            side="buy",
+            mark_status="unquoted",
+            close=None,
+            currency="USD",
+            fx=self.hist.seed.fx_for("USD"),
+            listing="AAPL",
+            view_date="2026-03-31",
+        )
+        self.assertIsNotNone(block)
+        assert block is not None
+        self.assertEqual(ctx.exception.message, block.message)
 
     def test_sell_from_alt_state(self):
-        held = state_on(self.hist, "2026-03-31")
-        fill = resolve_sell(
-            held,
-            self.hist,
+        lot = MarkedLot(
             listing="META",
-            as_of="2026-03-31",
-            quantity=2,
-            notional=None,
-            override_price=None,
-            get_close=self.get_close,
+            qty=10.0,
+            close=50.0,
+            value_base=4000.0,
+            error=None,
+            ib_symbol="META",
+            currency="USD",
+            stmt_fx=8.0,
+        )
+        fill = persist_ticket(
+            build_ticket(
+                self.hist,
+                account=_rich_account(),
+                held=(lot,),
+                side="sell",
+                view_date="2026-03-31",
+                mark=_mark("META", 50.0),
+                snaps=self.snaps,
+                listing="META",
+                ticker="META",
+                quantity=2,
+            )
         )
         self.assertEqual(fill.side, "sell")
         self.assertEqual(fill.ib_symbol, "META")
         self.assertAlmostEqual(fill.fill_price, 50.0, places=5)
 
-    def test_resolve_buy_ignores_live_fx_after_copy(self):
-        fill = resolve_buy(
-            self.api,
-            self.hist,
-            ticker="AAPL",
-            as_of="2026-03-31",
-            quantity=1,
-            notional=None,
-            override_price=None,
-            get_close=self.get_close,
-        )
+    def test_ticket_buy_ignores_live_fx_after_copy(self):
+        fill = self._buy("AAPL")
         self.assertAlmostEqual(
             fill.stmt_fx or 0,
             self.hist.seed.fx_for(fill.currency) or 0,
@@ -314,22 +332,99 @@ class ResolveTests(unittest.TestCase):
         )
         for ccy, _rate in self.hist.seed.fx_by_ccy:
             self.ib.snapshot.forex_closes[ccy] = 99.0
-        again = resolve_buy(
-            self.api,
-            self.hist,
-            ticker="AAPL",
-            as_of="2026-03-31",
-            quantity=1,
-            notional=None,
-            override_price=None,
-            get_close=self.get_close,
-        )
+        again = self._buy("AAPL")
         self.assertAlmostEqual(again.stmt_fx or 0, fill.stmt_fx or 0, places=5)
 
-    def test_buy_universe_latest(self):
-        rows = buy_universe(self.api)
-        tickers = {r["ticker"] for r in rows}
-        self.assertEqual(tickers, {"META", "AAPL", "ORCL"})
+    def test_catalog_snaps_latest(self):
+        snaps = catalog_snaps(self.api)
+        self.assertEqual({s.ticker for s in snaps}, {"META", "AAPL", "ORCL"})
+        meta = next(s for s in snaps if s.ticker == "META")
+        self.assertAlmostEqual(meta.fv_bear or 0, 350.0, places=5)
+        self.assertEqual(meta.listing, "META")
+        self.assertNotIn("quote_listing", meta.as_json())
+        self.assertEqual(meta.currency, "USD")
+
+    def test_missing_fx_message_names_currency(self):
+        msg = missing_fx_message("USD", "HKD")
+        self.assertIn("USD", msg)
+        self.assertIn("HKD", msg)
+        self.assertIn("frozen at copy", msg)
+        self.assertNotIn("No statement FX", msg)
+        block = ticket_block(
+            self.hist,
+            side="buy",
+            mark_status="quoted",
+            close=10.0,
+            currency="EUR",
+            fx=None,
+        )
+        self.assertIsNotNone(block)
+        assert block is not None
+        self.assertEqual(block.code, "missing_fx")
+        self.assertIn("EUR", block.message)
+
+    def test_ticket_buy_missing_fx_when_no_frozen_rate(self):
+        from dataclasses import replace
+
+        lots = tuple(
+            lot
+            for lot in self.hist.seed.lots
+            if (lot.currency or "").strip().upper() != "USD"
+        )
+        hist = replace(self.hist, seed=replace(self.hist.seed, fx_by_ccy=(), lots=lots))
+        self.assertIsNone(hist.seed.fx_for("USD"))
+        with self.assertRaises(ReplayError) as ctx:
+            self._buy("AAPL", hist=hist)
+        self.assertEqual(ctx.exception.code, "missing_fx")
+        self.assertIn("USD", ctx.exception.message)
+        self.assertIn("frozen at copy", ctx.exception.message)
+        self.assertNotIn("No statement FX", ctx.exception.message)
+
+    def test_ticket_buy_uses_lot_fx_when_map_empty(self):
+        from dataclasses import replace
+
+        from apps.analysis_web.services.book_state import Lot
+
+        usd_lot = Lot(
+            listing="VSNT",
+            currency="USD",
+            qty=1.0,
+            stmt_fx=7.8397,
+            ib_symbol="VSNT",
+        )
+        hist = replace(
+            self.hist,
+            seed=replace(self.hist.seed, fx_by_ccy=(), lots=self.hist.seed.lots + (usd_lot,)),
+        )
+        usd = hist.seed.fx_for("USD")
+        self.assertIsNotNone(usd)
+        fill = self._buy("AAPL", hist=hist)
+        self.assertEqual(fill.currency, "USD")
+        self.assertAlmostEqual(fill.stmt_fx or 0, usd or 0, places=5)
+
+    def test_empty_snap_currency_is_a_block(self):
+        snaps = (
+            CatalogSnap(ticker="AAPL", listing="AAPL", currency=""),
+        )
+        ticket = build_ticket(
+            self.hist,
+            account=_rich_account(),
+            held=(),
+            side="buy",
+            view_date="2026-03-31",
+            mark=_mark("AAPL", 200.0),
+            snaps=snaps,
+            listing="AAPL",
+            ticker="AAPL",
+            quantity=1,
+        )
+        self.assertIsNotNone(ticket.block)
+        assert ticket.block is not None
+        self.assertEqual(ticket.block.code, "missing_currency")
+        with self.assertRaises(ReplayError) as ctx:
+            persist_ticket(ticket)
+        self.assertEqual(ctx.exception.code, "missing_currency")
+        self.assertEqual(ctx.exception.message, ticket.block.message)
 
 
 class CopyLedgerTests(unittest.TestCase):

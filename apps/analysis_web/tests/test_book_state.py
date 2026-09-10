@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from apps.analysis_web.services.book_state import as_of_book
+from apps.analysis_web.services.book_state import BookState, Lot, as_of_book
 from apps.analysis_web.services.ib_statement import IbBook, Trade, parse_activity_csv
 
 
@@ -110,6 +110,36 @@ class AsOfBookFixtureTests(unittest.TestCase):
             179.0 * 8.0,
             places=5,
         )
+
+    def test_fx_for_uses_lot_when_map_empty(self):
+        seed = BookState(
+            lots=(
+                Lot(
+                    listing="VSNT",
+                    currency="USD",
+                    qty=1.0,
+                    stmt_fx=7.8397,
+                    ib_symbol="VSNT",
+                ),
+            ),
+            cash_base=0.0,
+            as_of="2026-01-01",
+            caveats=(),
+            base_currency="HKD",
+            fx_by_ccy=(),
+        )
+        self.assertAlmostEqual(seed.fx_for("USD") or 0, 7.8397, places=4)
+        self.assertIsNone(seed.fx_for("EUR"))
+        self.assertAlmostEqual(seed.fx_for("HKD") or 0, 1.0, places=5)
+        mapped = BookState(
+            lots=seed.lots,
+            cash_base=0.0,
+            as_of="2026-01-01",
+            caveats=(),
+            base_currency="HKD",
+            fx_by_ccy=(("USD", 8.0),),
+        )
+        self.assertAlmostEqual(mapped.fx_for("USD") or 0, 8.0, places=5)
 
     def test_bad_date_raises(self):
         with self.assertRaises(ValueError):

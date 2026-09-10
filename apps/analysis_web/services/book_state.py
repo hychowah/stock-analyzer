@@ -59,6 +59,11 @@ class BookState:
         return None
 
     def fx_for(self, currency: str) -> float | None:
+        """Frozen statement rate for a currency.
+
+        Map first. If the map is empty (older copies), a lot of that
+        currency's ``stmt_fx``. Never 1.0 except when currency is the base.
+        """
         cur = (currency or "").strip().upper()
         base = (self.base_currency or "").strip().upper()
         if cur and cur == base:
@@ -66,6 +71,9 @@ class BookState:
         for ccy, rate in self.fx_by_ccy:
             if ccy == cur:
                 return rate
+        for lot in self.lots:
+            if (lot.currency or "").strip().upper() == cur and lot.stmt_fx is not None:
+                return lot.stmt_fx
         return None
 
     def as_json(self) -> dict[str, Any]:

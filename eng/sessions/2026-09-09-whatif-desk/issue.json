@@ -1,0 +1,39 @@
+{
+  "goal": "What-if desk: holdings display math, combined buy/sell ticket, frozen-FX sentence, JSON POST without reload, client sort",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent FX or recompute MoS",
+    "Do not call Live NAV / last print from what-if",
+    "Do not merge holdings and research into one Names table",
+    "Do not persist NAV paths or rewrite a saved seed Forex map"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Holdings table shows Weight % of quoted stock, Downside % vs the close on the row, stored MoS; uncovered lots are —",
+    "One TradeDesk: searchable researched-name list + one ticket for buy and sell; holdings pick is sell",
+    "missing_fx names the currency and the frozen copy; never 'No statement FX for USD'; no invented 1.0; empty map uses a lot's frozen stmt_fx of that currency",
+    "IB lots join catalog via catalog_lookup_tickers (same overlay as /portfolio)",
+    "JS POST /decisions with Accept application/json returns 200 and does not navigate; noscript stays 303",
+    "Client-side header sort on holdings and research list",
+    "HTML GET still does not fetch Yahoo; no live_nav.js or quotes.js on the page",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_alt_history.py apps/analysis_web/tests/test_book_state.py apps/analysis_web/tests/test_templating.py -q"
+  ]
+}

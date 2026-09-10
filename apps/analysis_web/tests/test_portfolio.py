@@ -50,8 +50,8 @@ def _mini_archive(base: Path) -> Path:
             INSERT INTO runs (
               run_id, ticker, session_date, session_key, path,
               audit_verdict, fv_base, fv_bear, margin_of_safety_pct, asof_price,
-              quote_listing, quote_listing_source, exported_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              quote_listing, quote_listing_source, exported_at, currency
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 f"research:{ticker}:{session}",
@@ -67,6 +67,7 @@ def _mini_archive(base: Path) -> Path:
                 ticker,
                 "stamp",
                 "2026-08-10T00:00:00Z",
+                "USD",
             ),
         )
     conn.commit()

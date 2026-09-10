@@ -1,0 +1,12 @@
+{% if decisions %}
+<div class="timeline">
+  {% for d in decisions %}
+  <form class="timeline-chip" method="post" action="/portfolio/histories/{{ history_id }}/decisions/{{ d.id }}/delete">
+    <a href="/portfolio/histories/{{ history_id }}?date={{ d.as_of }}">{{ d.as_of }} · {{ d.side }} {{ d.listing }} · {{ d.quantity | fmt_num(2) }}</a>
+    <button type="submit" class="secondary">Remove</button>
+  </form>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted">No what-if fills yet.</p>
+{% endif %}

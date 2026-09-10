@@ -20,6 +20,7 @@ from packages.kd_research.spawn_gate import (
     record_spawn_event,
     session_enforces_spawn,
     session_is_abandoned,
+    write_abandon,
 )
 
 
@@ -262,6 +263,21 @@ class SpawnGateTests(unittest.TestCase):
             rows = check_phase_status_graph(s)
             fails = [r for r in rows if r[0] == "FAIL"]
             self.assertTrue(any("2e_fy2023" in r[2] for r in fails), rows)
+
+    def test_write_abandon_refuses_completed_session(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s)
+            _status(s)
+            write_abandon(s, reason="spawn_failed", phase_id="0", detail="ok in progress")
+            self.assertTrue(session_is_abandoned(s))
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s)
+            _write(s / "meta" / "prediction_snapshot.json", {"run_id": "x"})
+            with self.assertRaises(RuntimeError):
+                write_abandon(s, reason="spawn_failed", detail="should refuse")
+            self.assertFalse(session_is_abandoned(s))
 
 
 if __name__ == "__main__":

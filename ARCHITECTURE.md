@@ -88,7 +88,7 @@ Research records live under `archive/` (or `ARCHIVE_ROOT`). Product and harness 
 
 | Folder | What it is | How it may change |
 |--------|------------|-------------------|
-| `archive/research/` | One complete analysis per ticker and session key | Writable while in progress. **Do not rewrite after it is completed** (a snapshot exists). New view → new folder. |
+| `archive/research/` | One complete analysis per ticker and session key | Writable while in progress. **Do not rewrite after `session_is_completed`** (`packages.kd_research.session_state`: snapshot exists, or `run_manifest.immutable` / completed status). New view → new folder. |
 | `archive/outcomes/` | Later marks: what the market did after the call | Never edits research. Mark files may be refreshed. |
 | `archive/catalog/` | JSON indexes for rebuild and watch. Production sqlite may live in local home | **Index you can rebuild.** Disk sessions are the source of numbers. |
 | `archive/library/` | Reusable primary documents (filings, transcripts), not judgments | Add documents, not judgments. **Not in git.** |
@@ -192,7 +192,7 @@ python3 scripts/rebuild_catalog.py
 python3 scripts/export_compare_db.py --all --rebuild
 ```
 
-`rebuild_catalog.py` refreshes JSON indexes. SQLite schema freshness is `export_compare_db.py --all --rebuild`.
+`rebuild_catalog.py` refreshes JSON indexes. `export_compare_db.py --all --rebuild` recreates the sqlite warehouse only — it does not rewrite `meta/prediction_snapshot.json`. Snapshot freeze stays on finalize.
 
 **Analyze jobs** (`packages/research_jobs`): `ensure_analyze` is idempotent for a live intent. It writes `job.json` as `starting` (that occupies a slot) **before** scaffold, then spawns a detached Grok process. A second Start for the same ticker and as-of date returns that job — it does not create `__r2` while the first is live, failed, or cancelled. `__r2` is for a new intent after complete or abandon. Resume does not re-scaffold. Killing the website must not kill the worker. Cancel is best-effort on the orchestrator PID and **keeps** the session (you can resume). Liveness is worker evidence (`orchestrator_alive` / `session_busy`), not “this integer is dead.” The next UI boot runs `reconcile_jobs` and continues an interrupted start.
 
@@ -244,7 +244,7 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | `/runs/{run_id}` | One run: decision strip, football-field PNG + Read CIO cover when present, price vs analysis, Context; bear/base/bull/model in details |
 | `/artifact` | Allowlisted session file. Markdown reports use the document title and a section list; in-archive `.md` links stay on this page. Architecture and harness still use the plain sanitizer. |
 | `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin). Start form is ticker + as-of + harness; Busy/Grok-missing stay on the form. |
-| `/analyze/{id}` | Wait page is the resume hint (phase token hidden when the hint exists). Complete offers Open catalog run / Read CIO cover. Cancel keeps the session; discard writes `abandon.json` unless a snapshot exists |
+| `/analyze/{id}` | Wait page is the resume hint (phase token hidden when the hint exists). Complete offers Open catalog run / Read CIO cover. Cancel keeps the session; discard writes `abandon.json` unless `session_is_completed` |
 | `/analyze-artifact` | In-progress session file (handoffs/phase; FV and report bodies blocked until snapshot) |
 | `/compares` | Two-run audits. List does not SSE-reload. |
 | `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |

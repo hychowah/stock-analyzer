@@ -11,11 +11,11 @@ from packages.kd_research.gates import complete_checks, entry_checks
 from packages.kd_research.operating_path import (
     check_1d_complete,
     check_operating_path_hooks,
-    designed_phase_ids,
     session_enforces_1d,
 )
 from packages.kd_research.phase_graph import (
     check_phase_graph_entry,
+    designed_phase_ids,
     normalize_subagent_id,
     prerequisites_for,
     subagent_allowed_in_phase,

@@ -21,8 +21,8 @@ from packages.kd_research.library import (
     load_manifest,
     required_annual_count,
     session_enforces_library,
-    session_is_completed,
 )
+from packages.kd_research.session_state import session_is_completed
 from packages.kd_research.paths import (
     TICKER_BLOCKLIST,
     ensure_archive_tree,

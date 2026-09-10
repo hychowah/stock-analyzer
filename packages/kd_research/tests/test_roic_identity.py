@@ -364,7 +364,7 @@ class LookbackTests(unittest.TestCase):
         _write(s / "data/valuation_model.json", _vm(_identity()))
         conn = open_db(root, rebuild=True)
         try:
-            export_session(s, conn, refresh_snapshot=False)
+            export_session(s, conn)
             keys = {
                 r[0]: (r[1], r[2])
                 for r in conn.execute(

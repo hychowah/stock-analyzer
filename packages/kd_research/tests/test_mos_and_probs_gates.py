@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from packages.kd_research.gates import (
-    check_mos_units,
+from packages.kd_research.decision import (
     check_scenario_probability_keys,
     extract_scenario_prob_mass,
 )
+from packages.kd_research.valuation_hygiene import check_mos_units
 
 
 class ScenarioProbabilityKeysTest(unittest.TestCase):

@@ -82,19 +82,25 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         for ln in e_lines:
             self.assertNotIn("/ when street_estimates.json exists", ln)
 
-    def test_agent5_fence_is_current_only(self) -> None:
+    def test_agent5_fence_loads_law_does_not_restate(self) -> None:
         prompts = _read("harness/agent_prompts.md")
         self.assertNotIn("this prompt is 2.18", prompts)
         self.assertNotIn("4d wins 4e", prompts)
-        self.assertIn("destock analog", prompts)
-        self.assertIn("independence_gate", prompts)
-        self.assertIn("independent_y1", prompts)
-        self.assertIn("destock_this_print", prompts)
-        self.assertIn("used_as:fy1_baseline", prompts)
         agent5 = prompts.split("### Agent 5")[1].split("### Agent 12")[0]
+        self.assertIn("§10c", agent5)
+        self.assertIn("§10d", agent5)
+        self.assertIn("§10e", agent5)
+        self.assertIn("Do not load ROOT/harness/law_history.md", agent5)
+        self.assertNotIn("Y1 LAW", agent5)
+        self.assertNotIn("STREET IS THE DEFAULT Y1 START", agent5)
         self.assertNotIn("4d` does **not** win `4e", agent5)
         self.assertNotIn("On 2.7–2.17 sessions", agent5)
-        self.assertIn("do not load ROOT/harness/law_history.md", agent5)
+        self.assertNotIn("|delta|>5% FAIL", agent5)
+        self.assertIn("§8 **5b**", agent5)
+        ra = _read("harness/RESEARCH_AGENTS.md")
+        eight = ra.split("## 8.")[1].split("## 9.")[0]
+        self.assertIn("stress_bind", eight)
+        self.assertIn("roc_screen_rebuttal", eight)
 
     def test_independent_base_path_gone_from_current_law(self) -> None:
         self.assertNotIn("independent base path", _read("harness/RESEARCH_AGENTS.md"))
@@ -119,14 +125,16 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         self.assertIn("2.28", blob34)
         self.assertIn("destock_this_print", blob34)
 
-    def test_harness_map_current_street(self) -> None:
+    def test_harness_map_points_at_law_homes(self) -> None:
         text = _read("harness/HARNESS_MAP.md")
         self.assertNotIn("4d wins 4e", text)
         self.assertNotIn("< **2.28.0**", text)
         self.assertNotIn("4d` does **not** win `4e", text)
-        self.assertIn("independent_y1", text)
-        self.assertIn("destock_this_print", text)
-        self.assertIn("RESEARCH_AGENTS.md` §10c", text)
+        self.assertNotIn("independent_y1", text)
+        self.assertNotIn("destock_this_print", text)
+        self.assertIn("§10c", text)
+        self.assertIn("§10d", text)
+        self.assertIn("§10e", text)
         self.assertIn("§5 identity; modules advisory", text)
 
     def test_one_orch_bind_before_classify(self) -> None:
@@ -174,7 +182,26 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         self.assertIn("2.18.0–2.27.x", text)
         prompts = _read("harness/agent_prompts.md")
         agent5 = prompts.split("### Agent 5")[1].split("### Agent 12")[0]
-        self.assertIn("do not load ROOT/harness/law_history.md", agent5)
+        self.assertIn("Do not load ROOT/harness/law_history.md", agent5)
+
+    def test_no_restated_y1_roic_wacc_essays_outside_homes(self) -> None:
+        """Maps, Agent 5/13, and schema descriptions point; they do not restate §10c–e."""
+        ra = _read("harness/RESEARCH_AGENTS.md")
+        self.assertIn("## 10c.", ra)
+        self.assertIn("## 10d.", ra)
+        self.assertIn("## 10e.", ra)
+        self.assertIn("independent_y1", ra)
+        self.assertIn("destock_this_print", ra)
+        prompts = _read("harness/agent_prompts.md")
+        agent5 = prompts.split("### Agent 5")[1].split("### Agent 12")[0]
+        agent13 = prompts.split("### Agent 13")[1]
+        for blob, name in ((agent5, "agent5"), (agent13, "agent13")):
+            self.assertNotIn("keep_independent_vs_street is illegal", blob, name)
+            self.assertNotIn("coupon is not Kd", blob, name)
+        schema = _read("harness/schemas/valuation_model.schema.json")
+        self.assertNotIn("On 2.7-2.17", schema)
+        self.assertNotIn("On 2.18-2.27", schema)
+        self.assertIn("RESEARCH_AGENTS.md §10c", schema)
 
 
 if __name__ == "__main__":

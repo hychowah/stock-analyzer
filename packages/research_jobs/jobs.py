@@ -33,6 +33,7 @@ from packages.research_jobs.paths import (
 from packages.research_jobs.prompt import build_prompt
 from packages.harness_pin.pin import PinError, UnknownVersion, resolve
 from packages.kd_research.paths import PROJECT_ROOT, parse_session_key, research_root
+from packages.kd_research.session_state import session_is_completed
 from packages.kd_research.spawn_gate import write_abandon
 from packages.kd_research.ticker_lookup import LookupBackend, check_ticker
 
@@ -173,7 +174,7 @@ def count_running_analyze(archive_root: Path) -> int:
 
 
 def _maybe_abandon(session: Path, *, reason: str, detail: str) -> None:
-    if _session_snapshot(session).is_file():
+    if session_is_completed(session):
         return
     write_abandon(session, reason=reason, detail=detail)
 
@@ -744,7 +745,7 @@ def cancel_analyze(archive_root: Path, analyze_id_value: str) -> dict[str, Any]:
 def discard_analyze(archive_root: Path, analyze_id_value: str) -> dict[str, Any]:
     job = get_analyze(archive_root, analyze_id_value)
     session = Path(str(job["session_root"]))
-    if _session_snapshot(session).is_file():
+    if session_is_completed(session):
         raise AnalyzeDiscardRefused("session already finalized")
     kill(job)
     _maybe_abandon(session, reason="ui_discard", detail="UI discard")
@@ -769,7 +770,7 @@ def resume_analyze(
     session = Path(str(job["session_root"]))
     if job.get("abandoned"):
         raise AnalyzeValidationError("session is abandoned; start a new analysis")
-    if _session_snapshot(session).is_file():
+    if session_is_completed(session):
         raise AnalyzeValidationError("session already finalized")
     if not session.is_dir():
         raise AnalyzeValidationError("session_root missing")

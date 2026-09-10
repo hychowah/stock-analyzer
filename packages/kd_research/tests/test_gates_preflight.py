@@ -11,12 +11,10 @@ from pathlib import Path
 
 from packages.kd_research.paths import PROJECT_ROOT as ROOT
 
-from packages.kd_research.gates import (
-    check_llm_model_identity,
-    check_phase0_coverage,
-    check_stress_coverage,
-    entry_checks,
-)
+from packages.kd_research.decision import check_stress_coverage
+from packages.kd_research.gates import entry_checks
+from packages.kd_research.phase_status import check_phase0_coverage
+from packages.kd_research.provenance import check_llm_model_identity
 from packages.kd_research.url_health import classify_source, check_url
 
 

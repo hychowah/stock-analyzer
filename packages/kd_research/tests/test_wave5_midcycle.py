@@ -52,9 +52,12 @@ class PromptLawTests(unittest.TestCase):
         self.assertGreaterEqual(parsed, (2, 13, 0))
 
     def test_agent5_requires_construction(self) -> None:
-        text = (ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
-        self.assertIn("mid_cycle_construction", text)
-        self.assertIn("peak SOI cannot license", text)
+        prompts = (ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
+        law = (ROOT / "harness" / "RESEARCH_AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("§10d", prompts)
+        self.assertIn("mid_cycle_construction", law)
+        self.assertIn("peak_year", law)
+        self.assertIn("never license a franchise", law)
 
     def test_pair8_good_is_not_peak_as_midcycle(self) -> None:
         text = (ROOT / "harness" / "exemplars" / "valuation_decision_quality.md").read_text(

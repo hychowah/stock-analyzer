@@ -63,18 +63,10 @@ Ship **features, analysis programs, UI, platform APIs, and research-runtime tool
 ## Write allowlist (default)
 
 - `eng/`, `packages/`, `apps/`, `programs/`, `scripts/` (tooling), `harness/` (when W1)  
-- **Allow:** `ARCHITECTURE.md` (human map — update in the same change set when architecture changes)  
-- **Allow:** root `AGENTS.md` only when the router must point at a new surface (keep ≤150 lines)  
-- **Allow:** root `COMMIT.md` (checkout git/python how-to; policy stays Git discipline)  
-- **Allow append:** `archive/library/**` (ingest/harvest; never rewrite completed research sessions)  
-- **Allow append:** `archive/comparisons/**` (session-valuation-audit packets; never rewrite completed research sessions)  
-- **Allow append:** `archive/research_jobs/**` (Analyze control plane; never a catalog source)  
-- **Allow create:** new empty `archive/research/<T>/<new-key>/` via `pin.scaffold_research` → that pin’s `scripts/scaffold_session.py` after `check_ticker` (no `--force`; scaffold writes the typed ticker; `quote_symbol` stays null until the orchestrator stamps a confirmed listing)  
-- **Allow:** `registry/abandon.json` **and** `registry/phase_status.json` mutation via `spawn_gate.write_abandon` only for (a) spawn-fail-after-scaffold or (b) UI Discard of a session with **no** `meta/prediction_snapshot.json`  
-- **Deny:** `write_abandon` / `phase_status` edits when `prediction_snapshot.json` exists or `run_manifest.immutable` / status completed  
-- **Deny:** rewrite of completed `archive/research/**` and `archive/outcomes/**`  
-- **Deny:** Mode B writes of `valuation_model.json`, reports, `audit.json`, `prediction_snapshot.json`  
-- **Deny:** `--force` / `scaffold(..., force=True)` from Analyze
+- **Allow:** `ARCHITECTURE.md`, root `AGENTS.md` (≤150-line router), `COMMIT.md`  
+- **Allow append:** `archive/library/**`, `archive/comparisons/**`, `archive/research_jobs/**`  
+- **Deny:** rewrite of a session where `session_is_completed` is true (`packages.kd_research.session_state`) and of `archive/outcomes/**`  
+- Analyze scaffold / Discard / spawn-fail / `--force` / `quote_symbol`: only through `packages.research_jobs`, `spawn_gate`, and pin scaffold — do not restate those packages here.
 
 ## Verify
 

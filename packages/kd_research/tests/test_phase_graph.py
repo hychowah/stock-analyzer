@@ -123,6 +123,58 @@ class PhaseGraphEntryTests(unittest.TestCase):
             fails = [r for r in rows if r[0] == "FAIL"]
             self.assertEqual(fails, [], fails)
 
+    def test_price_snapshot_required_since_242(self):
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            data = build_phase_status_skeleton("X", "2026-01-01")
+            for pid in ("orch", "0", "1_parallel", "1b", "1c", "1d"):
+                _set_phase(data, pid, "complete")
+            data["current_phase"] = "2_parallel"
+            _write_status(s, data)
+            for rel in (
+                "registry/sector_config.json",
+                "registry/market_context.json",
+                "registry/sec_filings.json",
+                "registry/latest_quarter.json",
+                "registry/filing_deep_dive.json",
+                "registry/operating_path_brief.json",
+            ):
+                p = s / rel
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(
+                    json.dumps({"ticker": "X", "session_date": "2026-01-01"}),
+                    encoding="utf-8",
+                )
+            (s / "data").mkdir(parents=True, exist_ok=True)
+            (s / "data" / "sp_financials.csv").write_text(
+                "ticker,item\nX,1\n", encoding="utf-8"
+            )
+            man = s / "meta" / "run_manifest.json"
+            man.parent.mkdir(parents=True, exist_ok=True)
+            man.write_text(
+                json.dumps(
+                    {
+                        "status": "scaffolded",
+                        "orchestrator_model": "grok-4.5",
+                        "default_subagent_model": "grok-4.5",
+                        "harness_version": "2.42.0",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rows = entry_checks(s, "2_parallel", ticker="X")
+            fails = [r for r in rows if r[0] == "FAIL"]
+            self.assertTrue(
+                any("price_snapshot" in r[1] for r in fails),
+                fails,
+            )
+            (s / "data" / "price_snapshot.json").write_text("{}\n", encoding="utf-8")
+            rows2 = entry_checks(s, "2_parallel", ticker="X")
+            snap_fails = [
+                r for r in rows2 if r[0] == "FAIL" and "price_snapshot" in r[1]
+            ]
+            self.assertEqual(snap_fails, [], rows2)
+
     def test_order_integrity(self):
         with tempfile.TemporaryDirectory() as td:
             s = Path(td)

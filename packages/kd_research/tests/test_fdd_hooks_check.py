@@ -7,10 +7,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from packages.kd_research.gates import (
+from packages.kd_research.check_core import validate_hooks_list
+from packages.kd_research.consumption import (
     check_filing_deep_dive_hooks,
     check_market_context_hooks_intensity,
-    validate_hooks_list,
 )
 
 

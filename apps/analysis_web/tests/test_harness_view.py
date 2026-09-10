@@ -87,12 +87,6 @@ _SPEC = {
             "since": "2.19.0",
         },
         {
-            "id": "price_snapshot",
-            "before": "2_parallel",
-            "path": "data/price_snapshot.json",
-            "note": "Orchestrator freeze before Phase 2.",
-        },
-        {
             "id": "spawn_or_abandon",
             "since": "2.20.0",
             "note": "Specialists must be spawn_subagent.",
@@ -242,10 +236,13 @@ class PageModelTests(unittest.TestCase):
         self.assertFalse(any(n["id"] == "bind_library" for n in phase["notes"]))
         self.assertNotIn("2b", _phases(model))
 
-    def test_price_snapshot_on_phase_and_spawn_on_page(self):
+    def test_price_snapshot_is_a_need_and_spawn_on_page(self):
         model = harness_page_model(_SPEC)
         phase = _phases(model)["2_parallel"][1]
-        self.assertTrue(any(n["id"] == "price_snapshot" for n in phase["notes"]))
+        self.assertTrue(
+            any(n["path"] == "data/price_snapshot.json" for n in phase["needs"])
+        )
+        self.assertFalse(any(n.get("id") == "price_snapshot" for n in phase["notes"]))
         page_ids = [n["id"] for n in model["notes"]]
         self.assertIn("spawn_or_abandon", page_ids)
         # 2_5 is not in this spec, so 5b cannot attach to a missing phase

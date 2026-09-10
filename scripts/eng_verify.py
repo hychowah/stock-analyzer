@@ -16,12 +16,6 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Paths Mode B must never treat as writable product state for completed research.
-IMMUTABLE_PREFIXES = (
-    "archive/research/",
-    "archive/outcomes/",
-)
-
 
 def _run(cmd: list[str], *, cwd: Path) -> int:
     print("+", " ".join(cmd))
@@ -153,6 +147,64 @@ def _changed_paths_vs_base(root: Path, base: str) -> list[str]:
     return sorted(paths)
 
 
+def _research_session_from_rel(rel: str) -> tuple[str, str, str] | None:
+    """Return (prefix, ticker, session_key) for archive/research or fixture research paths."""
+    parts = rel.replace("\\", "/").split("/")
+    try:
+        i = parts.index("research")
+    except ValueError:
+        return None
+    if i == 0 or parts[i - 1] != "archive":
+        return None
+    if i + 2 >= len(parts):
+        return None
+    prefix = "/".join(parts[: i + 1])
+    return prefix, parts[i + 1], parts[i + 2]
+
+
+def check_completed_session_dirty(root: Path, changed: list[str] | None = None) -> list[str]:
+    """Fail when the git change set tracks completed research or outcomes.
+
+    In-progress Analyze scaffolds and new empty trees are legal. Ordinary
+    on-disk rewrites under gitignore are not visible here — export is
+    insert-only so those paths cannot mutate snapshots.
+    """
+    errs: list[str] = []
+    if changed is None:
+        if not _git_ok(root):
+            return errs
+        base = None
+        for cand in ("main", "master", "origin/main", "origin/master"):
+            if _git_ref_exists(root, cand):
+                base = cand
+                break
+        if base is None:
+            return errs
+        changed = _changed_paths_vs_base(root, base)
+
+    sys.path.insert(0, str(root))
+    from packages.kd_research.session_state import session_is_completed
+
+    for rel in changed:
+        posix = rel.replace("\\", "/")
+        if posix.startswith("archive/outcomes/") or posix.startswith(
+            "eng/fixtures/archive/outcomes/"
+        ):
+            errs.append(f"change set touches archive/outcomes: {posix}")
+            continue
+        parsed = _research_session_from_rel(posix)
+        if parsed is None:
+            continue
+        prefix, ticker, key = parsed
+        session = root.joinpath(*prefix.split("/"), ticker, key)
+        if "prediction_snapshot.json" in posix.split("/"):
+            errs.append(f"change set touches completed research session: {posix}")
+            continue
+        if session.is_dir() and session_is_completed(session):
+            errs.append(f"change set touches completed research session: {posix}")
+    return errs
+
+
 def check_harness_version_bump(root: Path) -> list[str]:
     """If Mode A research-runtime paths changed vs main, harness/VERSION must change too."""
     errs: list[str] = []
@@ -264,10 +316,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print("OK structural + ticker blocklist + harness/VERSION")
 
-    print("== eng_verify: immutability policy (documented) ==")
-    for p in IMMUTABLE_PREFIXES:
-        print(f"  deny writes: {p}")
-    print("OK policy listed (enforced by process + future hooks)")
+    print("== eng_verify: completed-session dirty check ==")
+    dirt = check_completed_session_dirty(root)
+    if dirt:
+        for e in dirt:
+            print(f"FAIL: {e}")
+        return 1
+    print("OK no completed research/outcomes in the change set")
 
     print("== eng_verify: Mode A version bump (W1) ==")
     if args.skip_version_check:

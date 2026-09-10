@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from packages.kd_research.gates import check_agent4_isolation
+from packages.kd_research.isolation import check_agent4_isolation
 
 
 class Agent4IsolationTests(unittest.TestCase):

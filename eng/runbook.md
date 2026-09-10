@@ -23,32 +23,17 @@ Mode A full law: `harness/RESEARCH_AGENTS.md` (root `AGENTS.md` is router only).
 # Scaffold Mode B work session
 python3 scripts/scaffold_eng_session.py --slug catalog-api-mvp
 
-# Verify (pytest subset + archive immutability policy checks)
+# Verify (tree, ticker blocklist, VERSION bump, completed-session dirty check, pytest)
 python3 scripts/eng_verify.py
 
 # Catalog health / list (live archive)
 python3 -m packages.catalog_api health
 python3 -m packages.catalog_api list-runs --limit 5
 
-# Analysis UI (FastAPI + Jinja; install deps once)
-# pip install -r apps/analysis_web/requirements.txt
+# Analysis UI
 python3 -m apps.analysis_web
-# default: replace UI when git HEAD moves; Grok jobs keep running
-# python3 -m apps.analysis_web --no-auto-restart
-# or: bash apps/analysis_web/init.sh
-# → http://127.0.0.1:8765/
-# Runs list: ticker_prefix, sector/region/harness dropdowns, session/MoS/price/FV ranges, column sort
-# JSON: python3 -m packages.catalog_api list-runs --ticker-prefix M --harness-version 2.17.0 --mos-min 0 --session-date-from 2026-08-01
-# Session compare (Grok audit → archive/comparisons/): UI /compares or
-#   COMPARE_SPAWN=fake python -m packages.compare_jobs start --run-a research:META:2026-08-03 --run-b research:META:DATE2
-# Mode A Analyze (Grok orchestrator → new archive/research session; control plane archive/research_jobs/):
-#   AGENT_SPAWN=fake python -m packages.research_jobs start --ticker COHR --harness-version live
-#   python scripts/publish_harness_release.py   # snapshot live runtime → pins/<VERSION>/
-#   UI /harness — pin pipeline map + briefing inspector (prompt on demand)
-#   python -m packages.research_jobs {list,get,cancel,discard,resume,reconcile}
-#   UI /analyze — kill UI does not kill Grok; cancel=kill-only; discard=abandon; ANALYZE_MAX=3; GROK_JOBS_MAX defaults to kind-slot sum (set 1 to serialize)
-#   Real Grok Analyze refuses non-default ARCHIVE_ROOT. Do not uvicorn --reload.
-#   UI git-SHA supervisor replaces FastAPI only; never taskkill /T the UI (that would kill Grok).
+# ANALYZE_MAX, taskkill /T, git-SHA supervisor: ARCHITECTURE.md + apps/analysis_web/README.md
+# Analyze / Compare CLIs: python -m packages.research_jobs --help / compare_jobs --help
 
 # Experiment summary program
 python3 programs/experiment_summary.py
@@ -68,7 +53,7 @@ python3 scripts/check_session.py --ticker META --date 2026-08-03 --full
 3. Thin JSON indexes (`runs_index.json`, `tickers_index.json`) are written **atomically** (temp + `os.replace`).  
 4. `finalize_session` **patches** one run into indexes by default (not full disk scan). Use `--full-catalog-rebuild` for recovery.  
 5. Never run `export_compare_db --all --rebuild` under a hot UI without staging.  
-6. Mode B must **not** call export with snapshot refresh on live `archive/research`.
+6. `--all --rebuild` recreates sqlite only — it does not rewrite `meta/prediction_snapshot.json`.
 
 ```bash
 # Default finalize (sqlite upsert + catalog patch)
@@ -85,7 +70,7 @@ python3 -m packages.catalog_api calibration --horizon 1m
 ## Fixture refresh
 
 ```bash
-# Optional: slim copy + re-export (does not mutate live research meta if --no-refresh-snapshot)
+# Optional: slim copy + re-export (export is insert-only; does not write prediction_snapshot.json)
 python3 scripts/sync_eng_fixtures.py --tickers META,JPM --dates 2026-08-03,2026-07-25
 ```
 

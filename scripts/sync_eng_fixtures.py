@@ -74,10 +74,8 @@ def _export_fixture_sqlite(dest_project: Path, pairs: list[tuple[str, str]]) -> 
         if not session.is_dir():
             print(f"SKIP export missing {session}")
             continue
-        # Never refresh snapshots on fixture trees in a way that touches live meta —
-        # these are copies; refresh_snapshot=False keeps extract-only.
         try:
-            export_session(session, conn, refresh_snapshot=False)
+            export_session(session, conn)
             n_ok += 1
         except Exception as e:  # noqa: BLE001
             print(f"WARN export {ticker} {key}: {e}")

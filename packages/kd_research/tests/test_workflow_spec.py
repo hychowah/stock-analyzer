@@ -61,7 +61,9 @@ class WorkflowSpecTests(unittest.TestCase):
         paths = {row["path"] for row in p2["entry"]}
         self.assertIn(BRIEF_REL, paths)
         self.assertIn("registry/filing_deep_dive.json", paths)
-        self.assertIn("data/price_snapshot.json", paths)
+        snap = next(row for row in p2["entry"] if row["path"] == "data/price_snapshot.json")
+        self.assertTrue(snap["required"])
+        self.assertEqual(snap.get("since"), "2.42.0")
         p1 = next(p for p in spec["phases"] if p["id"] == "1_parallel")
         self.assertIn(BIND_REL, {row["path"] for row in p1["entry"]})
         a4 = next(a for a in p2["agents"] if a["id"] == "4")

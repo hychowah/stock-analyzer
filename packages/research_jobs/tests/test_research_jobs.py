@@ -294,6 +294,18 @@ class ResearchJobsTests(unittest.TestCase):
         self.assertEqual(out["status"], "failed")
         self.assertTrue((Path(job["session_root"]) / "registry" / "abandon.json").is_file())
 
+    def test_completed_manifest_without_snapshot_blocks_discard(self) -> None:
+        job = self._start()
+        session = Path(job["session_root"])
+        man = session / "meta" / "run_manifest.json"
+        data = json.loads(man.read_text(encoding="utf-8"))
+        data["status"] = "completed"
+        man.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        self.assertFalse((session / "meta" / "prediction_snapshot.json").is_file())
+        with self.assertRaises(AnalyzeDiscardRefused):
+            discard_analyze(self.archive, job["analyze_id"])
+        self.assertFalse((session / "registry" / "abandon.json").is_file())
+
     def test_stub_snapshot_blocks_discard_and_cancel_abandon(self) -> None:
         job = self._start()
         session = Path(job["session_root"])

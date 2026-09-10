@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "description": "Maps agent_ids to exemplar files. Orchestrator injects paths into subagent prompts. See harness/design_phase_status_and_exemplars.md.",
+  "exemplars": [
+    {
+      "id": "rationale_quality",
+      "path": "harness/exemplars/rationale_quality.md",
+      "agents": ["4", "5", "2e", "12", "13"],
+      "max_pairs": 2
+    },
+    {
+      "id": "hooks_quality",
+      "path": "harness/exemplars/hooks_quality.md",
+      "agents": ["5", "13", "1d_merge"],
+      "max_pairs": 2
+    },
+    {
+      "id": "valuation_decision_quality",
+      "path": "harness/exemplars/valuation_decision_quality.md",
+      "agents": ["5", "13"],
+      "max_pairs": 3
+    },
+    {
+      "id": "handoff_quality",
+      "path": "harness/exemplars/handoff_quality.md",
+      "agents": ["*"],
+      "max_pairs": 1
+    }
+  ]
+}

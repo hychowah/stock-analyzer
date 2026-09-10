@@ -1,4 +1,4 @@
-"""Check catalog wiring: when-tags, unique ids, PATH_EXTRAS for workflow_spec."""
+"""Check catalog wiring: when-tags, unique ids, node extras for workflow_spec."""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ import unittest
 from pathlib import Path
 
 from packages.kd_research.check_catalog import (
-    PATH_EXTRAS,
     CheckRow,
     catalog_rows,
     run_catalog,
@@ -17,6 +16,7 @@ from packages.kd_research.check_catalog import _build_rows  # noqa: PLC2701
 from packages.kd_research.gates import entry_checks
 from packages.kd_research.library import BIND_REL, LIBRARY_SINCE
 from packages.kd_research.operating_path import BRIEF_REL, OPPATH_SINCE
+from packages.kd_research.phase_graph import PHASE_GRAPH, PRICE_SNAPSHOT_REL, PRICE_SNAPSHOT_SINCE
 from packages.kd_research.street_bind import STREET_REL, STREET_SINCE
 from packages.kd_research.workflow_spec import build_workflow_spec
 
@@ -134,15 +134,19 @@ class CheckCatalogTests(unittest.TestCase):
         text = src.read_text(encoding="utf-8")
         self.assertNotIn("packages.kd_research.gates", text)
 
-    def test_path_extras_match_domain_constants(self) -> None:
-        by = {(p.phase, p.rel): p for p in PATH_EXTRAS}
-        self.assertEqual(by[("1_parallel", BIND_REL)].since, LIBRARY_SINCE)
-        self.assertTrue(by[("1_parallel", BIND_REL)].required)
-        self.assertEqual(by[("2_parallel", BRIEF_REL)].since, OPPATH_SINCE)
-        self.assertEqual(by[("2_parallel", STREET_REL)].since, STREET_SINCE)
-        self.assertFalse(by[("2_parallel", STREET_REL)].required)
+    def test_path_extras_live_on_the_node(self) -> None:
+        by_phase = {n.phase_id: n for n in PHASE_GRAPH}
+        extras_1p = {vp.rel: vp for vp in by_phase["1_parallel"].entry_versioned}
+        extras_2p = {vp.rel: vp for vp in by_phase["2_parallel"].entry_versioned}
+        self.assertEqual(extras_1p[BIND_REL].since, LIBRARY_SINCE)
+        self.assertTrue(extras_1p[BIND_REL].required)
+        self.assertEqual(extras_2p[BRIEF_REL].since, OPPATH_SINCE)
+        self.assertEqual(extras_2p[STREET_REL].since, STREET_SINCE)
+        self.assertFalse(extras_2p[STREET_REL].required)
+        self.assertEqual(extras_2p[PRICE_SNAPSHOT_REL].since, PRICE_SNAPSHOT_SINCE)
+        self.assertTrue(extras_2p[PRICE_SNAPSHOT_REL].required)
 
-    def test_workflow_spec_reads_path_extras(self) -> None:
+    def test_workflow_spec_reads_node_entry(self) -> None:
         spec = build_workflow_spec()
         p2 = next(p for p in spec["phases"] if p["id"] == "2_parallel")
         paths = {row["path"] for row in p2["entry"]}
@@ -152,5 +156,6 @@ class CheckCatalogTests(unittest.TestCase):
         self.assertIn(BIND_REL, {row["path"] for row in p1["entry"]})
         src = Path(__file__).resolve().parents[1] / "workflow_spec.py"
         text = src.read_text(encoding="utf-8")
-        self.assertNotIn("from packages.kd_research.street_bind import STREET_SINCE", text)
-        self.assertIn("PATH_EXTRAS", text)
+        self.assertNotIn("from packages.kd_research.gates import", text)
+        self.assertNotIn("PATH_EXTRAS", text)
+        self.assertIn("dump_entry_rows", text)

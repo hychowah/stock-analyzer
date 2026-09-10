@@ -10,6 +10,7 @@ from pathlib import Path
 from packages.kd_research.paths import PROJECT_ROOT as ROOT
 
 from packages.kd_research.annuals import (
+    check_1c_year_dive_complete,
     is_annual_form,
     list_annuals,
     normalize_fiscal_year,
@@ -17,7 +18,7 @@ from packages.kd_research.annuals import (
     session_enforces_year_dives,
 )
 from packages.kd_research.excerpt_check import excerpt_in_text
-from packages.kd_research.gates import check_1c_year_dive_complete, complete_checks
+from packages.kd_research.gates import complete_checks
 
 SOURCE = (
     "Item 1. Business\nWe sell widgets in North America and Europe.\n"

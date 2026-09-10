@@ -1,0 +1,27 @@
+{
+  "goal": "One home per invariant; completed research is not rewritten by projection or verify",
+  "non_goals": [
+    "Do not run research Phases 0\u20135",
+    "Do not mutate archive/research or archive/outcomes history"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

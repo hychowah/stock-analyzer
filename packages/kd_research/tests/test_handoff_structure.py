@@ -6,12 +6,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from packages.kd_research.gates import (
+from packages.kd_research.phase_status import (
     check_handoff_headers,
+    check_handoffs,
     check_phase_status_disk,
     primary_artifact_exists,
 )
-from packages.kd_research.phase_status import check_handoffs
 
 
 GOOD_HANDOFF = """# What I did

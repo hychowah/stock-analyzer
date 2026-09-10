@@ -1,13 +1,14 @@
 /**
- * /portfolio Book: Live vs period mode and Play of reconstructed MTM.
- * Fetches GET /api/portfolio/mtm-path. Writes holding-pl-applied and
- * #mtm-tbody while mode is path. Does not write #quote-status.
+ * /portfolio Book: period Play of reconstructed MTM on #mtm-tbody.
+ * Fetches GET /api/portfolio/mtm-path. Does not paint the heatmap.
+ * Does not write #quote-status.
  */
 (function () {
   "use strict";
 
   var root = document.getElementById("book-pl-mode");
-  if (!root) {
+  var mtmBody = document.getElementById("mtm-tbody");
+  if (!root || !mtmBody) {
     return;
   }
 
@@ -16,23 +17,17 @@
   var scrub = document.getElementById("book-pl-scrub");
   var dateEl = document.getElementById("book-pl-date");
   var statusEl = document.getElementById("book-pl-status");
-  var heatCaption = document.getElementById("heatmap-caption");
   var mtmCaption = document.getElementById("mtm-caption");
-  var mtmBody = document.getElementById("mtm-tbody");
-  var liveHeatCaption = heatCaption ? heatCaption.textContent : "";
   var liveMtmCaption = mtmCaption ? mtmCaption.textContent : "";
-  var liveMtmHtml = mtmBody ? mtmBody.innerHTML : "";
+  var liveMtmHtml = mtmBody.innerHTML;
 
   var PATH_CAPTION =
-    "Tile area is |P/L| since period start (Yahoo daily close × lots that day × statement FX). Stock % is the listing; NAV % is this holding’s P/L as % of starting NAV.";
-  var PATH_MTM_CAPTION =
     "Reconstructed from Yahoo daily closes × lots as of each day, not the IB statement MTM file. Gains at top, losses at bottom.";
 
   var STEP_MS = 350;
   var frames = [];
   var index = 0;
   var timer = null;
-  var period = "live";
 
   function setStatus(msg) {
     if (statusEl) {
@@ -40,18 +35,17 @@
     }
   }
 
-  function mode() {
-    return root.getAttribute("data-mode") || "live";
+  function period() {
+    return root.getAttribute("data-period") || "live";
   }
 
-  function setMode(next) {
-    root.setAttribute("data-mode", next);
+  function setPeriod(next) {
+    root.setAttribute("data-period", next);
     var chips = root.querySelectorAll("[data-book-pl]");
     for (var i = 0; i < chips.length; i++) {
       var on = chips[i].getAttribute("data-book-pl") === next;
       chips[i].setAttribute("aria-pressed", on ? "true" : "false");
     }
-    document.dispatchEvent(new CustomEvent("book-pl-mode-changed"));
   }
 
   function isNum(v) {
@@ -83,38 +77,56 @@
     }
   }
 
-  function emitRows(rows) {
-    document.dispatchEvent(
-      new CustomEvent("holding-pl-applied", {
-        detail: { rows: rows || [] },
-      })
-    );
+  function makeRow(row) {
+    var tr = document.createElement("tr");
+    tr.setAttribute("data-name", row.name || "");
+    var name = document.createElement("td");
+    name.className = "mono";
+    name.textContent = row.name || "";
+    var cell = document.createElement("td");
+    cell.className = "perf-bar-cell";
+    var bar = document.createElement("span");
+    bar.className = "perf-bar " + (row.sign || "zero");
+    cell.appendChild(bar);
+    var pl = document.createElement("td");
+    pl.className = "num";
+    tr.appendChild(name);
+    tr.appendChild(cell);
+    tr.appendChild(pl);
+    return tr;
+  }
+
+  function updateRow(tr, row) {
+    var bar = tr.querySelector(".perf-bar");
+    var pl = tr.querySelector("td.num");
+    if (bar) {
+      bar.className = "perf-bar " + (row.sign || "zero");
+      bar.style.width = (row.bar_pct || 0).toFixed(1) + "%";
+    }
+    if (pl) {
+      pl.textContent = fmtNum(row.pl);
+    }
   }
 
   function paintBars(bars) {
-    if (!mtmBody) {
-      return;
+    var list = bars || [];
+    while (mtmBody.children.length > list.length) {
+      mtmBody.removeChild(mtmBody.lastChild);
     }
-    mtmBody.textContent = "";
-    (bars || []).forEach(function (row) {
-      var tr = document.createElement("tr");
-      var name = document.createElement("td");
-      name.className = "mono";
-      name.textContent = row.name || "";
-      var cell = document.createElement("td");
-      cell.className = "perf-bar-cell";
-      var bar = document.createElement("span");
-      bar.className = "perf-bar " + (row.sign || "zero");
-      bar.style.width = (row.bar_pct || 0).toFixed(1) + "%";
-      cell.appendChild(bar);
-      var pl = document.createElement("td");
-      pl.className = "num";
-      pl.textContent = fmtNum(row.pl);
-      tr.appendChild(name);
-      tr.appendChild(cell);
-      tr.appendChild(pl);
-      mtmBody.appendChild(tr);
-    });
+    for (var i = 0; i < list.length; i++) {
+      var row = list[i];
+      var tr = mtmBody.children[i];
+      if (!tr) {
+        tr = makeRow(row);
+        mtmBody.appendChild(tr);
+      }
+      tr.setAttribute("data-name", row.name || "");
+      var nameCell = tr.querySelector("td.mono");
+      if (nameCell) {
+        nameCell.textContent = row.name || "";
+      }
+      updateRow(tr, row);
+    }
   }
 
   function showFrame(i) {
@@ -129,23 +141,17 @@
     if (dateEl) {
       dateEl.textContent = fr.t || "";
     }
-    emitRows(fr.rows || []);
     paintBars(fr.bars || []);
   }
 
   function restoreLive() {
     stopTimer();
     frames = [];
-    period = "live";
-    if (heatCaption) {
-      heatCaption.textContent = liveHeatCaption;
-    }
+    setPeriod("live");
     if (mtmCaption) {
       mtmCaption.textContent = liveMtmCaption;
     }
-    if (mtmBody) {
-      mtmBody.innerHTML = liveMtmHtml;
-    }
+    mtmBody.innerHTML = liveMtmHtml;
     if (dateEl) {
       dateEl.textContent = "";
     }
@@ -158,14 +164,11 @@
       playBtn.disabled = true;
     }
     setStatus("");
-    setMode("live");
   }
 
   function loadPeriod(next) {
     stopTimer();
-    period = next;
-    setMode("path");
-    emitRows([]);
+    setPeriod(next);
     if (playBtn) {
       playBtn.disabled = true;
     }
@@ -183,7 +186,7 @@
         });
       })
       .then(function (payload) {
-        if (mode() !== "path" || period !== next) {
+        if (period() !== next) {
           return;
         }
         if (!payload.ok) {
@@ -192,23 +195,16 @@
             "Period marks failed";
           setStatus(detail);
           frames = [];
-          emitRows([]);
           return;
         }
         var body = payload.body || {};
         frames = body.frames || [];
-        if (heatCaption) {
-          heatCaption.textContent = PATH_CAPTION;
-        }
         if (mtmCaption) {
-          mtmCaption.textContent = PATH_MTM_CAPTION;
+          mtmCaption.textContent = PATH_CAPTION;
         }
         if (!frames.length) {
           setStatus(body.error || "No daily closes in this period");
-          emitRows([]);
-          if (mtmBody) {
-            mtmBody.textContent = "";
-          }
+          mtmBody.textContent = "";
           return;
         }
         setStatus("");
@@ -223,17 +219,16 @@
         showFrame(frames.length - 1);
       })
       .catch(function () {
-        if (mode() !== "path" || period !== next) {
+        if (period() !== next) {
           return;
         }
         setStatus("Period marks failed");
         frames = [];
-        emitRows([]);
       });
   }
 
   function play() {
-    if (frames.length < 2 || mode() !== "path") {
+    if (frames.length < 2 || period() === "live") {
       return;
     }
     if (index >= frames.length - 1) {
@@ -260,7 +255,7 @@
       return;
     }
     var next = btn.getAttribute("data-book-pl");
-    if (!next || next === period) {
+    if (!next || next === period()) {
       return;
     }
     if (next === "live") {
@@ -278,7 +273,7 @@
   }
   if (scrub) {
     scrub.addEventListener("input", function () {
-      if (mode() !== "path") {
+      if (period() === "live") {
         return;
       }
       stopTimer();

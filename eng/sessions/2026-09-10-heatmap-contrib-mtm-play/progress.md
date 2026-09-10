@@ -21,3 +21,9 @@
   - `holding-pl-applied` exclusive writer by Live vs path mode
   - Playwright: extra % on live tiles; 1W Play; Live restore; phone stacked regions
   - `eng_verify` PASS
+- 2026-09-10T07:45:00Z reshape plan + code: Play is MTM bars, not Day move
+  - User: animation in Mark-to-market P/L, not the heatmap
+  - SDR: one period owner; live_nav.js does not know mode
+  - Strip moved onto the MTM card; single `data-period` token
+  - heatmap stays live `holding-pl-applied`; mtm_play.js does not emit tiles
+  - pytest live_nav/portfolio/mtm_path green; Playwright: 1W Play changes MTM bars only, Live restores IB table

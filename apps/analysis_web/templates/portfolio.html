@@ -82,25 +82,6 @@
 
 {% if view.ib or (view.summary and not view.error) %}
 <div class="card">
-  {% if view.ib %}
-  <div id="book-pl-mode" class="book-pl-strip" data-mode="live">
-    <div class="book-pl-chips" role="group" aria-label="Book P/L time">
-      <button type="button" data-book-pl="live" aria-pressed="true">Live</button>
-      <button type="button" data-book-pl="1w" aria-pressed="false">1W</button>
-      <button type="button" data-book-pl="1m" aria-pressed="false">1M</button>
-      <button type="button" data-book-pl="ytd" aria-pressed="false">YTD</button>
-      <button type="button" data-book-pl="statement" aria-pressed="false">Statement</button>
-    </div>
-    <div class="book-pl-play">
-      <button type="button" id="book-pl-play" disabled>Play</button>
-      <button type="button" id="book-pl-pause" hidden>Pause</button>
-      <input type="range" id="book-pl-scrub" min="0" max="0" value="0" disabled
-             aria-label="Period frame">
-      <span id="book-pl-date" class="mono muted"></span>
-    </div>
-    <p id="book-pl-status" class="muted"></p>
-  </div>
-  {% endif %}
   <h2>Day move</h2>
   <p id="heatmap-caption" class="muted">Tile area is the |day change| of that holding (change % × value). Stock % is the listing; NAV % is this holding’s day P/L as % of Live NAV. Gainers left, losers right (stacked on a narrow screen).</p>
   <div id="heatmap" class="heatmap-stage">
@@ -145,7 +126,26 @@
 {% if view.performance and view.performance.mtm %}
 <div class="card">
   <h2>Mark-to-market P/L</h2>
-  <p id="mtm-caption" class="muted">Stocks, signed. Largest 20 by |P/L| plus other. Gains at top, losses at bottom.{% if view.ib %} Follows the Live / period control above.{% endif %}</p>
+  {% if view.ib %}
+  <div id="book-pl-mode" class="book-pl-strip" data-period="live">
+    <div class="book-pl-chips" role="group" aria-label="Mark-to-market period">
+      <button type="button" data-book-pl="live" aria-pressed="true">Live</button>
+      <button type="button" data-book-pl="1w" aria-pressed="false">1W</button>
+      <button type="button" data-book-pl="1m" aria-pressed="false">1M</button>
+      <button type="button" data-book-pl="ytd" aria-pressed="false">YTD</button>
+      <button type="button" data-book-pl="statement" aria-pressed="false">Statement</button>
+    </div>
+    <div class="book-pl-play">
+      <button type="button" id="book-pl-play" disabled>Play</button>
+      <button type="button" id="book-pl-pause" hidden>Pause</button>
+      <input type="range" id="book-pl-scrub" min="0" max="0" value="0" disabled
+             aria-label="Period frame">
+      <span id="book-pl-date" class="mono muted"></span>
+    </div>
+    <p id="book-pl-status" class="muted"></p>
+  </div>
+  {% endif %}
+  <p id="mtm-caption" class="muted">Stocks, signed. Largest 20 by |P/L| plus other. Gains at top, losses at bottom. Live is the IB statement file. Period Play is Yahoo daily closes × lots as of each day, statement FX.</p>
   <table class="perf-table">
     <thead>
       <tr><th>Symbol</th><th></th><th>P/L</th></tr>

@@ -1017,6 +1017,7 @@ th.num a.sort {
   max-width: 100%;
   border-radius: 3px;
   background: var(--faint);
+  transition: width 0.28s linear;
 }
 .perf-bar.pos {
   background: #86efac;

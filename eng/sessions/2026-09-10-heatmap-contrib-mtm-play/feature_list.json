@@ -8,9 +8,15 @@
     },
     {
       "id": "heatmap-contrib-mtm-play",
-      "description": "Heatmap extra NAV-contribution %; period Play of reconstructed MTM frames on heatmap + bars",
+      "description": "Heatmap extra NAV-contribution % and mtm-path API (superseded Play-on-heatmap; see mtm-play-not-heatmap)",
       "passes": true,
       "verify": "pytest live_nav + portfolio + mtm_path; Playwright /portfolio; eng_verify"
+    },
+    {
+      "id": "mtm-play-not-heatmap",
+      "description": "Play animates MTM bars only; heatmap stays live; strip is the MTM time-base owner",
+      "passes": true,
+      "verify": "pytest live_nav + mtm_path; Playwright MTM Play does not change heatmap; eng_verify"
     },
     {
       "id": "implement",

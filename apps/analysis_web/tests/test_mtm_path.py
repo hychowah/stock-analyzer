@@ -274,8 +274,10 @@ class MtmPathHttpTests(unittest.TestCase):
             Path(__file__).resolve().parents[1] / "static" / "mtm_play.js"
         ).read_text(encoding="utf-8")
         self.assertIn("/api/portfolio/mtm-path", js)
-        self.assertIn("holding-pl-applied", js)
-        self.assertIn("book-pl-mode-changed", js)
+        self.assertIn("mtm-tbody", js)
+        self.assertIn("data-period", js)
+        self.assertNotIn("holding-pl-applied", js)
+        self.assertNotIn("book-pl-mode-changed", js)
         self.assertNotIn("/api/quotes", js)
         self.assertNotIn('getElementById("quote-status")', js)
 

@@ -1,7 +1,7 @@
 /**
- * /portfolio holding-P/L heatmap. Listens to holding-pl-applied (does not fetch).
- * Tile area is |pl|. Live: pl is day_pl. Path: pl is value(t) − value(start).
- * Gainers and losers occupy separate regions; each side is squarified on its own.
+ * /portfolio day-move heatmap. Listens to holding-pl-applied (does not fetch).
+ * Tile area is |pl| (live day_pl). Gainers and losers occupy separate regions;
+ * each side is squarified on its own. Period Play does not paint this map.
  */
 (function () {
   "use strict";
@@ -333,7 +333,7 @@
     clearSvg();
     hasPaint = true;
     if (!nodes.length) {
-      setStatus("No signed P/L in this frame");
+      setStatus("No day moves yet");
       return;
     }
     setStatus("");

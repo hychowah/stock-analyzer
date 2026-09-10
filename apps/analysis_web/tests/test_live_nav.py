@@ -278,8 +278,13 @@ class LiveNavHttpTests(unittest.TestCase):
         self.assertIn(b"/static/heatmap.js", html)
         self.assertIn(b"/static/mtm_play.js", html)
         self.assertIn(b'id="book-pl-mode"', html)
+        self.assertIn(b'data-period="live"', html)
         self.assertIn(b'id="book-pl-play"', html)
         self.assertIn(b'id="mtm-tbody"', html)
+        self.assertGreater(html.find(b"Mark-to-market P/L"), html.find(b"Day move"))
+        self.assertGreater(html.find(b'id="book-pl-mode"'), html.find(b"Mark-to-market P/L"))
+        self.assertGreater(html.find(b"Day move"), 0)
+        self.assertLess(html.find(b"Day move"), html.find(b'id="book-pl-mode"'))
         self.assertIn(b"Tile area is the |day change|", html)
         self.assertNotIn(b"quote_listing or yahoo_listing", html)
 
@@ -351,6 +356,7 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertIn("quotes-applied", navjs)
         self.assertIn("holding-pl-applied", navjs)
         self.assertNotIn("live-nav-applied", navjs)
+        self.assertNotIn("book-pl-mode", navjs)
         self.assertNotIn('fetch("/api/quotes"', navjs)
         self.assertIn("Does not call /api/quotes", navjs)
 
@@ -363,8 +369,7 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertIn("Gainers", hjs)
         self.assertIn("losers", hjs)
         self.assertIn("NAV", hjs)
-        self.assertIn("No signed P/L in this frame", hjs)
-        self.assertNotIn("No day moves yet", hjs)
+        self.assertIn("No day moves yet", hjs)
         self.assertIn("max-width: 1100px", hjs)
         self.assertNotIn("fetch(", hjs)
 

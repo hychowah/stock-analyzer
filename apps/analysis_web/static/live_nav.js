@@ -1,8 +1,8 @@
 /**
  * /portfolio only: poll GET /api/portfolio/live-nav, paint Live NAV / day
  * P/L / live values, then dispatch quotes-applied (Live cells, Downside)
- * and holding-pl-applied (heatmap rows) while Book mode is Live.
- * Sole writer of #quote-status. Does not call /api/quotes.
+ * and holding-pl-applied (heatmap rows). Sole writer of #quote-status.
+ * Does not call /api/quotes. Does not read the MTM period strip.
  */
 (function () {
   "use strict";
@@ -10,7 +10,6 @@
   var DEFAULT_TTL_MS = 120000;
   var timer = null;
   var ttlMs = DEFAULT_TTL_MS;
-  var lastRows = [];
 
   function statusEl() {
     return document.getElementById("quote-status");
@@ -101,11 +100,6 @@
     el.title = "vs prior daily close";
   }
 
-  function bookPlMode() {
-    var el = document.getElementById("book-pl-mode");
-    return (el && el.getAttribute("data-mode")) || "live";
-  }
-
   function holdingRows(rows) {
     return (rows || []).map(function (r) {
       return {
@@ -118,9 +112,6 @@
   }
 
   function emitHoldingPl(rows) {
-    if (bookPlMode() !== "live") {
-      return;
-    }
     document.dispatchEvent(
       new CustomEvent("holding-pl-applied", {
         detail: { rows: holdingRows(rows) },
@@ -195,7 +186,6 @@
           setStatus(body.error);
           paintNav(body);
           paintDay(body);
-          lastRows = [];
           emitHoldingPl([]);
           return;
         }
@@ -214,8 +204,7 @@
             detail: { quotes: body.quotes || [] },
           })
         );
-        lastRows = body.rows || [];
-        emitHoldingPl(lastRows);
+        emitHoldingPl(body.rows || []);
         setStatus(statusLine(body));
       })
       .catch(function () {
@@ -235,11 +224,6 @@
     armTimer();
   }
 
-  document.addEventListener("book-pl-mode-changed", function () {
-    if (bookPlMode() === "live") {
-      emitHoldingPl(lastRows);
-    }
-  });
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") {
       poll();

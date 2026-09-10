@@ -3,106 +3,104 @@
 **Mode:** B (W4 UI)  
 **Session:** `eng/sessions/2026-09-10-heatmap-contrib-mtm-play`  
 **Home:** enhance `/portfolio` Book — do not add a second page  
-**Not:** a new valuation, a live-nav poll, a what-if path, or a vendor chart
+**Not:** a new valuation, a live-nav poll, a what-if path, a heatmap film strip, or a vendor chart
 
-Absorbed SDR (Direction mixed → reshape): Live vs period mode (not a 1D chip); one `holding-pl-applied` event and exclusive writer; path lots are the union of start and t (missing = 0).
+Absorbed SDR (Direction mixed → reshape, 2026-09-10): one Book P/L writer for period Play; `live_nav.js` does not know mode.  
+User correction: **Play animates Mark-to-market P/L bars, not the Day move heatmap.** Heatmap stays Live.
 
 ---
 
 ## Goal — done means
 
-1. Each live heatmap tile shows **two percentages**: the stock’s own `change_pct`, and **this holding’s contribution to my book** (`day_pl / live_nav × 100`). Title has both plus dollar P/L.
-2. `/portfolio` Book has a **shared Live / period strip** (Live · 1W · 1M · YTD · statement) plus **Play / Pause** that drives both the heatmap and the MTM bars. Default is **Live** (existing poll + server-rendered IB MTM). Path chips enter **path mode**.
-3. Path mode loads `GET /api/portfolio/mtm-path` once and plays daily frames. Heatmap area is `|pl|` (same two-region squarify). Extra % is `pl / start_nav × 100`. MTM bars follow the current frame (`signed_bar_rows` on the payload).
-4. Display math only. Heatmap.js still does not fetch. Returning to Live restores poll tiles and the original IB tbody.
+1. Each **Day move** heatmap tile shows **two percentages**: the stock’s `change_pct`, and this holding’s day P/L as % of Live NAV (`day_pl / live_nav × 100`). Title has both plus dollars. Tiles always come from the live-nav poll. Period Play does not paint the heatmap.
+2. **Mark-to-market P/L** owns a **period strip** (Live · 1W · 1M · YTD · statement) plus **Play / Pause / scrub**. Live shows the server-rendered IB MTM table. A period chip loads `GET /api/portfolio/mtm-path` and Play walks those frames **on the bars**.
+3. One time-base token on the MTM strip (`live` | `1w` | `1m` | `ytd` | `statement`). `live_nav.js` does not read it. Heatmap heading stays “Day move”.
+4. Display math only. Heatmap.js still does not fetch. No-JS: IB MTM table stays in HTML.
 
 ---
 
-## Current shape
+## Current shape (after 046549d — wrong split)
 
-| Piece | What it actually does |
-|-------|------------------------|
-| Live NAV | `live_nav.js` → `GET /api/portfolio/live-nav`. Rows have `day_pl`, `change_pct`, `live_value_base`. Event `live-nav-applied` is `{ rows }` only. |
-| Heatmap | Projects those rows: area ∝ `|day_pl|`, label = ticker + stock `%`. No second `%`. No `fetch`. |
-| Book MTM | Server-rendered IB statement stocks via `signed_bar_rows`. One CSV window. No play. |
-| Daily marks | `book_state.as_of_book` + `mark_book.mark_lots`. Used by what-if, not Book. |
+| Piece | What it does now | What it should do |
+|-------|------------------|-------------------|
+| Heatmap | Also plays path frames; card still says “Day move” | Live day-move only, extra NAV % |
+| Strip | Above Day move; `data-mode` + JS `period` + `aria-pressed` | On the MTM card; one `data-period` token |
+| `live_nav.js` | Gates `holding-pl-applied` on mode | Always emit live tiles; no mode |
+| `mtm_play.js` | Emits tiles + writes bars | Writes MTM bars only |
+
+Python `mtm_path` identity is already right. Do not reopen it.
 
 ---
 
 ## Design it twice
 
-### A — Two engines, one tile event, Live vs period mode (winner)
+### A — Heatmap is Live; MTM strip is the only period owner (winner)
 
 ```text
-mark_live_nav     →  row.day_pl + row.contrib_pct     # Live; contrib = day_pl / live_nav
-mtm_path          →  frames[{ t, rows, bars }]        # period; pl = value(t) − value(start)
-                                                      # missing side = 0; None iff held unquoted
-live_nav.js       →  holding-pl-applied               # only while mode is Live
-mtm_play.js       →  holding-pl-applied + MTM tbody   # only while mode is path
-heatmap.js        →  SVG from { ib_symbol, pl, change_pct, contrib_pct }
+mark_live_nav  →  row.day_pl + row.contrib_pct     # contrib = day_pl / live_nav
+live_nav.js    →  header, quotes-applied,
+                  holding-pl-applied always         # pl ← day_pl; no mode
+heatmap.js     →  SVG from that event               # fetch-free; heading Day move
+mtm_path       →  frames[{ t, bars, rows }]         # pl = value(t) − value(start)
+mtm_play.js    →  #mtm-tbody only                   # fetch, Play, captions
 ```
 
-**Live (default).** Existing poll. Header + quotes-applied always. Tiles only if `data-mode="live"`. IB MTM tbody is the no-JS fact. Play disabled.
+**Day move.** Unchanged poll. Extra % on tiles. Never calls `mtm-path`. Never listens to Play.
 
-**Path.** Chips `1W` / `1M` / `YTD` / `statement` set `data-mode="path"`. One user-initiated GET (not a poll). Live-nav still paints the header and quotes, **does not** emit tiles. Player is the only tile/bar writer until Live resumes.
+**MTM.** Strip lives on this card. Token `data-period`. Live = cloned IB tbody, Play disabled. Period = one GET, last frame painted, Play walks `bars` (width + P/L). Errors on `#book-pl-status`. Does not emit `holding-pl-applied`. Does not write `#quote-status` or `#heatmap-status`.
+
+Path identity (unchanged):
 
 ```
 pl_i(t)        = value_i(t) − value_i(start)
                  not held on one side → 0
-                 None only when a held lot is unquoted / unavailable
-change_pct_i   = (close_t / close_start − 1) × 100   # listing, independent of qty
-contrib_pct_i  = pl_i(t) / start_nav × 100
+                 None only when a held lot is unquoted
+contrib_pct_i  = pl_i(t) / start_nav × 100   # on path rows; heatmap does not use them
 ```
 
-Names on a frame = union of lots at `start` and at `t`. Sold names keep `pl` (mark 0 after the sale). Do not stuff period P/L into `day_pl`. Do not put `live_nav` or `playing` on the tile event.
+**Why this is from-scratch given the user correction:** two engines stay; the film strip is a property of MTM, not of the live heatmap. Exclusive tile write is unnecessary once path does not paint tiles. SDR “one writer” still holds for **bars**: only `mtm_play.js` writes `#mtm-tbody` after first paint. `live_nav.js` is a poller, not a mode peer.
 
-**Why this is from-scratch:** two engines (last-print vs daily walk), one projector schema, one mode so heatmap and MTM share a time base. Contribution is a named fact. Heatmap stays a projector.
+### B — Shared Live/path mode still driving both cards (rejected)
 
-### B — CSS grow of statement MTM + client-only extra % (rejected)
-
-No period that means anything, no book walk, second % has no identity.
+That is 046549d. Play on the heatmap contradicts “animation in Mark-to-market P/L”. It also forced the mutex the last review called a protocol, not an interface.
 
 ---
 
 ## What to change
 
-### Marker (`services/live_nav.py`)
+### Plan / session
 
-`contrib_pct` on each row when `day_pl` and `live_nav` are numeric and `live_nav ≠ 0`. Identity: `day_pl / live_nav × 100`.
+This file. Feature-list item for the reshape. `ARCHITECTURE.md` / README: Play is MTM bars; heatmap is live only.
 
-### Event (`static/live_nav.js`)
+### `live_nav.js`
 
-Replace `live-nav-applied` with `holding-pl-applied` `{ rows: [{ ib_symbol, pl, change_pct, contrib_pct }] }` mapping `pl ← day_pl`. Emit **only** when `#book-pl-mode` is Live. Still sole writer of `#quote-status`. On `book-pl-mode-changed` back to Live, re-emit last rows. Do not recompute contrib from a book total on the event.
+Drop `bookPlMode`, `book-pl-mode-changed`, and the emit gate. Always map `pl ← day_pl` and emit `holding-pl-applied`. Still sole writer of `#quote-status`. Does not mention heatmap mode.
 
-### Path (`services/mtm_path.py` + `routes/api.py`)
+### `mtm_play.js` + `portfolio.html`
 
-Pure module. No `alt_history_view`. `as_of_book`, `mark_lots` / `marks_on`, `HistoryService.get_many`, `range_for_span`.
+Move `#book-pl-mode` onto the Mark-to-market card. Rename to a single `data-period` (drop `data-mode="path"` and the parallel `period` var). Stop emitting `holding-pl-applied`. Stop touching heatmap captions/status. Play / Pause / scrub update `#mtm-tbody` from `frame.bars`. Restore cloned IB HTML on Live. Bar width uses a short CSS transition so Play is visible as motion, not only as new numbers.
 
-`GET /api/portfolio/mtm-path?period=1w` → `{ period, start, end, start_nav, base_currency, frames: [{ t, nav, total_pl, rows, bars }] }`. Allowlisted: `1w`, `1m`, `ytd`, `statement`. Live is not this resource. Bad period → 400. Empty book → empty frames + English `error`. Each frame `bars` is `signed_bar_rows` on numeric `pl`. Path errors are not `#quote-status`.
+### `heatmap.js`
 
-### Player (`static/mtm_play.js` + shared strip on `portfolio.html`)
-
-`#book-pl-mode` sits above Day move and is the time base for MTM too (waterfall stays between the two cards). Live chip vs path chips. Play / Pause / range. Fetches `mtm-path` in path mode. Dispatches `holding-pl-applied` and replaces `#mtm-tbody`. Restores cloned IB tbody on Live. Does not write `#quote-status`. Captions name Yahoo reconstruction vs the IB file.
-
-### Heatmap (`static/heatmap.js` + CSS)
-
-One listener: `holding-pl-applied`. Layout key is `pl`. Second label: `NAV` + `contrib_pct`. Hide NAV % before hiding the ticker. Title: ticker · stock % · NAV % · P/L. **No `fetch`.**
+Stay a projector of live `holding-pl-applied`. Empty copy: “No day moves yet”. No fetch.
 
 ### Tests / docs
 
-As in Verify. `ARCHITECTURE.md` `/portfolio` + README API row.
+- `live_nav.js` has `holding-pl-applied` and does **not** contain `book-pl-mode`.
+- `mtm_play.js` fetches `mtm-path`, writes `mtm-tbody`, does **not** contain `holding-pl-applied`.
+- Page: `id="book-pl-mode"` after “Mark-to-market P/L”, not before “Day move”.
+- `ARCHITECTURE.md` `/portfolio`: heatmap extra %; Play walks MTM bars.
 
 ---
 
 ## Non-goals
 
-- What-if / histories heatmap or playing those paths on Book.
-- Intraday tick replay / WebSocket.
-- Changing Live tile area (still `|day_pl|` / `|pl|` of that day).
-- Vendor chart libraries / a new URL.
-- Replacing IB statement MTM with Yahoo as the stored fact.
-- Playing Live (one frame).
+- Playing the heatmap / changing Day move tile area.
+- What-if / histories on Book.
+- Intraday ticks / WebSocket / vendor charts.
+- Replacing IB statement MTM as the stored / no-JS fact.
 - Labeling Live as `1D`.
+- Reopening `mtm_path.py` identity (union, missing = 0).
 
 ---
 
@@ -113,11 +111,11 @@ python scripts/eng_verify.py
 python -m pytest apps/analysis_web/tests/test_live_nav.py apps/analysis_web/tests/test_portfolio.py apps/analysis_web/tests/test_mtm_path.py -q
 ```
 
-Browser: `python -m apps.analysis_web`. Playwright on `/portfolio`:
+Browser: `/portfolio`
 
-- Live tiles show stock % and NAV % after live-nav lands.
+- Live heatmap: stock % + NAV %; does not change when 1W/Play runs.
 - Live does not call `/api/portfolio/mtm-path`.
-- Select statement (fixture) or 1W: Play walks dates; regions stay signed; MTM bars follow; Pause stops; Live restores poll tiles and IB bars.
+- On MTM card, 1W (or statement): Play walks bar widths and P/L; Pause stops; Live restores IB bars.
 - Header Live NAV / day P/L / holdings still paint. Desktop and phone.
 - No-JS: statement MTM table still in HTML.
 
@@ -125,9 +123,7 @@ Browser: `python -m apps.analysis_web`. Playwright on `/portfolio`:
 
 ## Risks
 
-- **Two % on a small tile.** Hide NAV % first; keep both in `title`.
-- **IB MTM vs Yahoo path.** Captions must not collapse them. Live keeps the IB table.
-- **Poll vs Play clobber.** Exclusive emit by mode is load-bearing.
-- **`heatmap.js` fetch test.** Player fetches; heatmap stays fetch-free.
-- **What-if import.** `mtm_path` must not depend on `alt_history_view`.
-- **FX.** Statement Forex close. No live FX series.
+- **IB MTM vs Yahoo path.** Caption on the MTM card must name the played series. Live keeps the IB table.
+- **Bar rebuild kills CSS transition.** Update width on existing rows (or set width after insert) so Play is motion.
+- **`heatmap.js` fetch test.** Unchanged: heatmap has no `fetch`; player still does.
+- **FX.** Statement Forex close.

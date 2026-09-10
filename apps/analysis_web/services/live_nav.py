@@ -145,13 +145,17 @@ def mark_live_nav(
         if ending_nav is not None:
             can_mark = can_mark and stmt_val is not None
         live_value: float | None = None
+        lot_day_pl: float | None = None
         if can_mark:
             live_value = float(qty) * float(live_price) * float(fx)
             n_repriced += 1
             if stmt_val is not None:
                 delta_sum += live_value - float(stmt_val)
             if q is not None and q.prev_close is not None:
-                day_pl_sum += float(qty) * (float(live_price) - float(q.prev_close)) * float(fx)
+                lot_day_pl = (
+                    float(qty) * (float(live_price) - float(q.prev_close)) * float(fx)
+                )
+                day_pl_sum += lot_day_pl
                 have_day = True
             if q is not None and q.as_of and (as_of is None or str(q.as_of) > as_of):
                 as_of = str(q.as_of)
@@ -177,6 +181,7 @@ def mark_live_nav(
                 "quantity": qty,
                 "live_price": live_price,
                 "change_pct": None if q is None else q.change_pct,
+                "day_pl": lot_day_pl,
                 "stmt_value_base": stmt_val,
                 "live_value_base": live_value,
                 "print_kind": None if q is None else q.print_kind,

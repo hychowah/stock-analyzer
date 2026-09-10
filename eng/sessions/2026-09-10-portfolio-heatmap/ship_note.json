@@ -1,0 +1,6 @@
+{
+  "session_key": "2026-09-10-portfolio-heatmap",
+  "status": "complete",
+  "summary": "Book /portfolio paints a live day-move heatmap from the same live-nav poll. Tile area is |qty × (last − prev close) × statement FX|; gainers and losers sit in separate regions. Display math only.",
+  "commit_subject": "Add live day-move heatmap on portfolio Book"
+}

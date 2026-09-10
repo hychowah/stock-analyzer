@@ -1,7 +1,8 @@
 /**
- * /portfolio only: poll GET /api/portfolio/live-nav, paint Live NAV, then
- * dispatch quotes-applied so quotes.js fills Live cells and Downside.
- * Sole writer of #quote-status on this page. Does not call /api/quotes.
+ * /portfolio only: poll GET /api/portfolio/live-nav, paint Live NAV / day
+ * P/L / live values, then dispatch quotes-applied (Live cells, Downside)
+ * and live-nav-applied (heatmap rows). Sole writer of #quote-status.
+ * Does not call /api/quotes.
  */
 (function () {
   "use strict";
@@ -99,6 +100,14 @@
     el.title = "vs prior daily close";
   }
 
+  function emitLiveNav(rows) {
+    document.dispatchEvent(
+      new CustomEvent("live-nav-applied", {
+        detail: { rows: rows || [] },
+      })
+    );
+  }
+
   function paintLiveValues(rows) {
     var by = Object.create(null);
     (rows || []).forEach(function (r) {
@@ -166,6 +175,7 @@
           setStatus(body.error);
           paintNav(body);
           paintDay(body);
+          emitLiveNav([]);
           return;
         }
         if (body.ttl_sec) {
@@ -183,6 +193,7 @@
             detail: { quotes: body.quotes || [] },
           })
         );
+        emitLiveNav(body.rows || []);
         setStatus(statusLine(body));
       })
       .catch(function () {

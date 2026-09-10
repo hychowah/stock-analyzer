@@ -1,0 +1,36 @@
+{
+  "goal": "Live day-move heatmap on /portfolio: tile area is |change % x holding value|, gainers and losers clustered",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not add a second Yahoo poll or a heatmap API",
+    "Do not heatmap what-if / histories",
+    "Do not size tiles by weight or raw |change_pct|"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "/portfolio shows a live heatmap painted from GET /api/portfolio/live-nav",
+    "Tile area is |day_pl| (qty x (last - prev_close) x stmt_fx)",
+    "Gainers and losers occupy separate regions (not mixed)",
+    "Playwright review of /portfolio heatmap (desktop + phone)",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_live_nav.py apps/analysis_web/tests/test_portfolio.py -q"
+  ]
+}

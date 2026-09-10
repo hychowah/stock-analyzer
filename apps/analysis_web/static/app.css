@@ -394,6 +394,41 @@ table:has(thead) tr:hover {
   font-weight: 400;
   font-size: 0.75rem;
 }
+.heatmap-stage {
+  position: relative;
+  min-height: 240px;
+  height: min(42vh, 320px);
+  background: var(--chart-stage);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+#heatmap-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.heatmap-rect {
+  stroke: var(--chart-stage);
+  stroke-width: 2;
+}
+.heatmap-label,
+.heatmap-chg {
+  font-family: ui-monospace, monospace;
+  font-weight: 600;
+  pointer-events: none;
+}
+.heatmap-label {
+  font-size: 0.72rem;
+}
+.heatmap-chg {
+  font-size: 0.68rem;
+}
+@media (max-width: 1100px) {
+  .heatmap-stage {
+    height: min(50vh, 280px);
+    min-height: 200px;
+  }
+}
 .decision-strip {
   margin: 0.75rem 0 1.25rem;
 }

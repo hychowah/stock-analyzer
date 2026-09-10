@@ -70,8 +70,20 @@ class MarkLiveNavTests(unittest.TestCase):
         by = {r["ib_symbol"]: r for r in out["rows"]}
         self.assertAlmostEqual(by["META"]["live_value_base"], 4400.0, places=5)
         self.assertAlmostEqual(by["700"]["live_value_base"], 1000.0, places=5)
+        self.assertAlmostEqual(by["META"]["day_pl"], 10 * (55 - 50) * 8, places=5)
+        self.assertAlmostEqual(by["700"]["day_pl"], 0.0, places=5)
+        self.assertAlmostEqual(
+            sum(r["day_pl"] or 0 for r in out["rows"]), out["day_pl"], places=5
+        )
         qsyms = {q["symbol"] for q in out["quotes"]}
         self.assertEqual(qsyms, {"0700.HK", "META"})
+
+    def test_row_day_pl_none_without_prev_close(self):
+        lots = [_lot("META", qty=10, value=4000, fx=8.0)]
+        q = QuotePrint(symbol="META", price=55.0, prev_close=None, change_pct=None)
+        out = mark_live_nav(lots, _quotes(q), ending_nav=5500.0)
+        self.assertIsNone(out["rows"][0]["day_pl"])
+        self.assertIsNone(out["day_pl"])
 
     def test_missing_quote_keeps_statement(self):
         lots = [
@@ -241,6 +253,7 @@ class LiveNavHttpTests(unittest.TestCase):
         self.assertEqual(qsyms, {"META", "0700.HK"})
         by = {row["ib_symbol"]: row for row in body["rows"]}
         self.assertAlmostEqual(by["META"]["live_value_base"], 4400.0, places=5)
+        self.assertAlmostEqual(by["META"]["day_pl"], 10 * (55 - 50) * 8, places=5)
         self.assertEqual(by["700"]["listing"], "0700.HK")
 
     def test_page_hooks(self):
@@ -258,6 +271,9 @@ class LiveNavHttpTests(unittest.TestCase):
         self.assertIn(b'data-quote-symbol="META"', html)
         self.assertIn(b"data-live-value", html)
         self.assertIn(b"/static/live_nav.js", html)
+        self.assertIn(b'id="heatmap"', html)
+        self.assertIn(b"/static/heatmap.js", html)
+        self.assertIn(b"Tile area is the |day change|", html)
         self.assertNotIn(b"quote_listing or yahoo_listing", html)
 
     def test_chunked_http_51_listings(self):
@@ -326,8 +342,20 @@ class QuotesJsOptOutTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("/api/portfolio/live-nav", navjs)
         self.assertIn("quotes-applied", navjs)
+        self.assertIn("live-nav-applied", navjs)
         self.assertNotIn('fetch("/api/quotes"', navjs)
         self.assertIn("Does not call /api/quotes", navjs)
+
+    def test_heatmap_js_is_a_projection(self):
+        hjs = (
+            Path(__file__).resolve().parents[1] / "static" / "heatmap.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("live-nav-applied", hjs)
+        self.assertIn("day_pl > 0", hjs)
+        self.assertIn("Gainers", hjs)
+        self.assertIn("losers", hjs)
+        self.assertIn("max-width: 1100px", hjs)
+        self.assertNotIn("fetch(", hjs)
 
     def test_runs_page_still_polls(self):
         runs = (

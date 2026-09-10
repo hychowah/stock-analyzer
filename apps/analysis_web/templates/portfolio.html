@@ -80,6 +80,17 @@
   {% endif %}
 </div>
 
+{% if view.ib or (view.summary and not view.error) %}
+<div class="card">
+  <h2>Day move</h2>
+  <p class="muted">Tile area is the |day change| of that holding (change % × value). Gainers left, losers right (stacked on a narrow screen). Color is the signed change %.</p>
+  <div id="heatmap" class="heatmap-stage">
+    <svg id="heatmap-svg" role="img" aria-label="Portfolio day-move heatmap"></svg>
+  </div>
+  <p id="heatmap-status" class="muted">Waiting for live marks…</p>
+</div>
+{% endif %}
+
 {% if view.performance and view.performance.waterfall %}
 <div class="card">
   <h2>Change in NAV</h2>
@@ -201,4 +212,5 @@
 {% endblock %}
 {% block scripts %}
 <script src="/static/live_nav.js" defer></script>
+<script src="/static/heatmap.js" defer></script>
 {% endblock %}

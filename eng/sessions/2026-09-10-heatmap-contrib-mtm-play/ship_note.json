@@ -1,0 +1,11 @@
+{
+  "session_key": "2026-09-10-heatmap-contrib-mtm-play",
+  "work_type": "W4",
+  "summary": "Book heatmap tiles show stock % and NAV-contribution %. A shared Live/period strip plus Play walks reconstructed daily MTM on the heatmap and bars. Live restores the poll and the IB MTM table.",
+  "commit_subject": "Add heatmap NAV % and playable period MTM on Book",
+  "verify": {
+    "eng_verify": "PASS",
+    "pytest": "test_live_nav, test_portfolio, test_mtm_path green; eng_verify 1004 passed",
+    "browser": "/portfolio desktop+phone: live tiles have NAV %; 1W Play walks frames; Live restores IB MTM and poll tiles"
+  }
+}

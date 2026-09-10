@@ -412,7 +412,8 @@ table:has(thead) tr:hover {
   stroke-width: 2;
 }
 .heatmap-label,
-.heatmap-chg {
+.heatmap-chg,
+.heatmap-nav {
   font-family: ui-monospace, monospace;
   font-weight: 600;
   pointer-events: none;
@@ -422,6 +423,51 @@ table:has(thead) tr:hover {
 }
 .heatmap-chg {
   font-size: 0.68rem;
+}
+.heatmap-nav {
+  font-size: 0.62rem;
+}
+.book-pl-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.book-pl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.book-pl-chips button {
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  min-height: 0;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--chip-fg);
+}
+.book-pl-chips button[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+}
+.book-pl-play {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.book-pl-play button {
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  min-height: 0;
+}
+.book-pl-play input[type="range"] {
+  width: 8rem;
+}
+#book-pl-status {
+  flex-basis: 100%;
+  margin: 0;
 }
 @media (max-width: 1100px) {
   .heatmap-stage {

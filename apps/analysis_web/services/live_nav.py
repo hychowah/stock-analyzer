@@ -221,6 +221,13 @@ def mark_live_nav(
         if float(ending_nav) != 0:
             delta_pct = (live_nav / float(ending_nav) - 1.0) * 100.0
 
+    for row in rows:
+        dp = row.get("day_pl")
+        if dp is not None and live_nav not in (None, 0):
+            row["contrib_pct"] = float(dp) / float(live_nav) * 100.0
+        else:
+            row["contrib_pct"] = None
+
     return {
         "statement_nav": ending_nav,
         "live_nav": live_nav,

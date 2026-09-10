@@ -1,8 +1,8 @@
 /**
  * /portfolio only: poll GET /api/portfolio/live-nav, paint Live NAV / day
  * P/L / live values, then dispatch quotes-applied (Live cells, Downside)
- * and live-nav-applied (heatmap rows). Sole writer of #quote-status.
- * Does not call /api/quotes.
+ * and holding-pl-applied (heatmap rows) while Book mode is Live.
+ * Sole writer of #quote-status. Does not call /api/quotes.
  */
 (function () {
   "use strict";
@@ -10,6 +10,7 @@
   var DEFAULT_TTL_MS = 120000;
   var timer = null;
   var ttlMs = DEFAULT_TTL_MS;
+  var lastRows = [];
 
   function statusEl() {
     return document.getElementById("quote-status");
@@ -100,10 +101,29 @@
     el.title = "vs prior daily close";
   }
 
-  function emitLiveNav(rows) {
+  function bookPlMode() {
+    var el = document.getElementById("book-pl-mode");
+    return (el && el.getAttribute("data-mode")) || "live";
+  }
+
+  function holdingRows(rows) {
+    return (rows || []).map(function (r) {
+      return {
+        ib_symbol: r && r.ib_symbol,
+        pl: r && r.day_pl,
+        change_pct: r && r.change_pct,
+        contrib_pct: r && r.contrib_pct,
+      };
+    });
+  }
+
+  function emitHoldingPl(rows) {
+    if (bookPlMode() !== "live") {
+      return;
+    }
     document.dispatchEvent(
-      new CustomEvent("live-nav-applied", {
-        detail: { rows: rows || [] },
+      new CustomEvent("holding-pl-applied", {
+        detail: { rows: holdingRows(rows) },
       })
     );
   }
@@ -175,7 +195,8 @@
           setStatus(body.error);
           paintNav(body);
           paintDay(body);
-          emitLiveNav([]);
+          lastRows = [];
+          emitHoldingPl([]);
           return;
         }
         if (body.ttl_sec) {
@@ -193,7 +214,8 @@
             detail: { quotes: body.quotes || [] },
           })
         );
-        emitLiveNav(body.rows || []);
+        lastRows = body.rows || [];
+        emitHoldingPl(lastRows);
         setStatus(statusLine(body));
       })
       .catch(function () {
@@ -213,6 +235,11 @@
     armTimer();
   }
 
+  document.addEventListener("book-pl-mode-changed", function () {
+    if (bookPlMode() === "live") {
+      emitHoldingPl(lastRows);
+    }
+  });
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") {
       poll();

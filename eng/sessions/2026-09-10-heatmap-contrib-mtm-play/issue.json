@@ -1,0 +1,38 @@
+{
+  "goal": "Heatmap extra NAV-contribution % plus playable Mark-to-market P/L over a selected period",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not add a second live-nav poll or put fetch in heatmap.js",
+    "Do not heatmap or play what-if / histories on Book",
+    "Do not change 1D tile area identity (|day_pl|)",
+    "Do not replace IB statement MTM with Yahoo as a stored fact"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "eng_verify.py passes",
+    "Each live heatmap tile shows stock change % and contrib_pct = day_pl / live_nav",
+    "Shared Live / 1W / 1M / YTD / statement strip plus Play/Pause on /portfolio Book",
+    "GET /api/portfolio/mtm-path returns daily frames; pl = value(t) - value(start)",
+    "heatmap.js still does not fetch; mtm_play.js is the path writer",
+    "Playwright: extra % on 1D; Play walks a longer period; 1D restores live",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_live_nav.py apps/analysis_web/tests/test_portfolio.py apps/analysis_web/tests/test_mtm_path.py -q"
+  ]
+}

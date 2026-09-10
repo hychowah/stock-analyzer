@@ -1,7 +1,7 @@
 /**
- * /portfolio day-move heatmap. Listens to live-nav-applied (does not fetch).
- * Tile area is |day_pl| (change % × holding value). Gainers and losers
- * occupy separate regions; each side is squarified on its own.
+ * /portfolio holding-P/L heatmap. Listens to holding-pl-applied (does not fetch).
+ * Tile area is |pl|. Live: pl is day_pl. Path: pl is value(t) − value(start).
+ * Gainers and losers occupy separate regions; each side is squarified on its own.
  */
 (function () {
   "use strict";
@@ -12,6 +12,8 @@
   var CHG_CAP = 8;
   var MIN_LABEL_W = 52;
   var MIN_LABEL_H = 32;
+  var MIN_CHG_H = 44;
+  var MIN_NAV_H = 58;
 
   var root = document.getElementById("heatmap");
   var svg = document.getElementById("heatmap-svg");
@@ -60,10 +62,18 @@
     return (n > 0 ? "+" : "") + n.toFixed(1) + "%";
   }
 
+  function fmtNavPct(n) {
+    if (!isNum(n)) {
+      return "—";
+    }
+    var digits = Math.abs(n) >= 1 ? 1 : 2;
+    return "NAV " + (n > 0 ? "+" : "") + n.toFixed(digits) + "%";
+  }
+
   function sumAbs(items) {
     var s = 0;
     for (var i = 0; i < items.length; i++) {
-      s += Math.abs(items[i].day_pl);
+      s += Math.abs(items[i].pl);
     }
     return s;
   }
@@ -215,7 +225,7 @@
     return items.map(function (it) {
       return {
         item: it,
-        area: Math.abs(it.day_pl),
+        area: Math.abs(it.pl),
         x: 0,
         y: 0,
         w: 0,
@@ -225,7 +235,7 @@
   }
 
   function byAbsDesc(a, b) {
-    return Math.abs(b.day_pl) - Math.abs(a.day_pl);
+    return Math.abs(b.pl) - Math.abs(a.pl);
   }
 
   function layoutHeatmap(rows, width, height) {
@@ -233,10 +243,10 @@
     var down = [];
     for (var i = 0; i < rows.length; i++) {
       var r = rows[i];
-      if (!r || !isNum(r.day_pl) || r.day_pl === 0) {
+      if (!r || !isNum(r.pl) || r.pl === 0) {
         continue;
       }
-      if (r.day_pl > 0) {
+      if (r.pl > 0) {
         up.push(r);
       } else {
         down.push(r);
@@ -323,24 +333,25 @@
     clearSvg();
     hasPaint = true;
     if (!nodes.length) {
-      setStatus("No day moves yet");
+      setStatus("No signed P/L in this frame");
       return;
     }
     setStatus("");
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       var it = n.item;
-      var sign = it.day_pl > 0 ? "up" : "down";
+      var sign = it.pl > 0 ? "up" : "down";
       var g = svgEl("g", {
         class: "heatmap-tile heatmap-" + sign,
         "data-sign": sign,
         "data-ib-symbol": it.ib_symbol || "",
-        "data-day-pl": String(it.day_pl),
+        "data-pl": String(it.pl),
       });
       var titleBits = [
         it.ib_symbol || "",
         fmtPct(it.change_pct),
-        fmtSigned(it.day_pl),
+        fmtNavPct(it.contrib_pct),
+        fmtSigned(it.pl),
       ];
       var title = svgEl("title");
       title.textContent = titleBits.join(" · ");
@@ -366,7 +377,7 @@
         });
         name.textContent = it.ib_symbol || "";
         g.appendChild(name);
-        if (n.h >= MIN_LABEL_H + 12) {
+        if (n.h >= MIN_CHG_H) {
           var chg = svgEl("text", {
             x: tx,
             y: n.y + 32,
@@ -375,6 +386,16 @@
           });
           chg.textContent = fmtPct(it.change_pct);
           g.appendChild(chg);
+        }
+        if (n.h >= MIN_NAV_H && isNum(it.contrib_pct)) {
+          var nav = svgEl("text", {
+            x: tx,
+            y: n.y + 46,
+            fill: ink,
+            class: "heatmap-nav",
+          });
+          nav.textContent = fmtNavPct(it.contrib_pct);
+          g.appendChild(nav);
         }
       }
       svg.appendChild(g);
@@ -386,7 +407,7 @@
     paint(lastRows);
   }
 
-  document.addEventListener("live-nav-applied", onApplied);
+  document.addEventListener("holding-pl-applied", onApplied);
   if (typeof ResizeObserver === "function") {
     new ResizeObserver(function () {
       if (hasPaint || lastRows.length) {

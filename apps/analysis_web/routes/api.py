@@ -219,6 +219,38 @@ def api_portfolio_live_nav(
     return marked
 
 
+def _empty_mtm_path(*, error: str | None, period: str = "") -> dict[str, Any]:
+    return {
+        "error": error,
+        "period": period,
+        "start": None,
+        "end": None,
+        "start_nav": None,
+        "base_currency": "",
+        "frames": [],
+    }
+
+
+@router.get("/portfolio/mtm-path")
+def api_portfolio_mtm_path(
+    period: str = Query(..., min_length=1),
+    svc: HistoryService = Depends(get_history_service),
+) -> dict[str, Any]:
+    """Daily reconstructed MTM frames for the live IB book. Display math."""
+    from apps.analysis_web.services.mtm_path import PeriodError, mtm_path_for
+    from apps.analysis_web.services.portfolio import load_ib_book
+
+    book, err = load_ib_book()
+    if err:
+        return _empty_mtm_path(error=str(err), period=period)
+    if book is None:
+        return _empty_mtm_path(error="No IB book yet.", period=period)
+    try:
+        return mtm_path_for(book, svc, period)
+    except PeriodError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
 class CompareStartBody(BaseModel):
     run_id_a: str = Field(..., min_length=1)
     run_id_b: str = Field(..., min_length=1)

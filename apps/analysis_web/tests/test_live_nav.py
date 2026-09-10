@@ -75,6 +75,8 @@ class MarkLiveNavTests(unittest.TestCase):
         self.assertAlmostEqual(
             sum(r["day_pl"] or 0 for r in out["rows"]), out["day_pl"], places=5
         )
+        self.assertAlmostEqual(by["META"]["contrib_pct"], 400.0 / 5900.0 * 100.0, places=5)
+        self.assertAlmostEqual(by["700"]["contrib_pct"], 0.0, places=5)
         qsyms = {q["symbol"] for q in out["quotes"]}
         self.assertEqual(qsyms, {"0700.HK", "META"})
 
@@ -83,6 +85,7 @@ class MarkLiveNavTests(unittest.TestCase):
         q = QuotePrint(symbol="META", price=55.0, prev_close=None, change_pct=None)
         out = mark_live_nav(lots, _quotes(q), ending_nav=5500.0)
         self.assertIsNone(out["rows"][0]["day_pl"])
+        self.assertIsNone(out["rows"][0]["contrib_pct"])
         self.assertIsNone(out["day_pl"])
 
     def test_missing_quote_keeps_statement(self):
@@ -273,6 +276,10 @@ class LiveNavHttpTests(unittest.TestCase):
         self.assertIn(b"/static/live_nav.js", html)
         self.assertIn(b'id="heatmap"', html)
         self.assertIn(b"/static/heatmap.js", html)
+        self.assertIn(b"/static/mtm_play.js", html)
+        self.assertIn(b'id="book-pl-mode"', html)
+        self.assertIn(b'id="book-pl-play"', html)
+        self.assertIn(b'id="mtm-tbody"', html)
         self.assertIn(b"Tile area is the |day change|", html)
         self.assertNotIn(b"quote_listing or yahoo_listing", html)
 
@@ -342,7 +349,8 @@ class QuotesJsOptOutTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("/api/portfolio/live-nav", navjs)
         self.assertIn("quotes-applied", navjs)
-        self.assertIn("live-nav-applied", navjs)
+        self.assertIn("holding-pl-applied", navjs)
+        self.assertNotIn("live-nav-applied", navjs)
         self.assertNotIn('fetch("/api/quotes"', navjs)
         self.assertIn("Does not call /api/quotes", navjs)
 
@@ -350,10 +358,13 @@ class QuotesJsOptOutTests(unittest.TestCase):
         hjs = (
             Path(__file__).resolve().parents[1] / "static" / "heatmap.js"
         ).read_text(encoding="utf-8")
-        self.assertIn("live-nav-applied", hjs)
-        self.assertIn("day_pl > 0", hjs)
+        self.assertIn("holding-pl-applied", hjs)
+        self.assertIn("pl > 0", hjs)
         self.assertIn("Gainers", hjs)
         self.assertIn("losers", hjs)
+        self.assertIn("NAV", hjs)
+        self.assertIn("No signed P/L in this frame", hjs)
+        self.assertNotIn("No day moves yet", hjs)
         self.assertIn("max-width: 1100px", hjs)
         self.assertNotIn("fetch(", hjs)
 

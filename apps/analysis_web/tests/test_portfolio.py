@@ -239,6 +239,7 @@ class PortfolioHttpTests(unittest.TestCase):
         self.assertIn(b'id="live-nav"', r.content)
         self.assertIn(b"/static/live_nav.js", r.content)
         self.assertIn(b"/static/heatmap.js", r.content)
+        self.assertIn(b"/static/mtm_play.js", r.content)
         self.assertIn(b'id="heatmap"', r.content)
         self.assertIn(b'data-fv-bear="350.0"', r.content)
         self.assertIn(b">As-of<", r.content)

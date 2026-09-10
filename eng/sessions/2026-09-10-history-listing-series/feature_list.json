@@ -1,0 +1,28 @@
+{
+  "features": [
+    {
+      "id": "listing-keyed-history",
+      "description": "HistoryService stores one successful daily series per listing; get_many(..., since=); coverage is fetched period not first bar",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_price_history.py -q"
+    },
+    {
+      "id": "yahoo-cover-planner",
+      "description": "YahooHistoryBackend.history_many takes since; period_covering trails from today; Fake records since",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_yahoo_bars.py apps/analysis_web/tests/test_price_history.py -q"
+    },
+    {
+      "id": "http-range-view",
+      "description": "GET /api/price-history?range= maps to since, slices bars, echoes range; chart JS unchanged",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_price_history.py -q"
+    },
+    {
+      "id": "date-consumers",
+      "description": "mtm_path_for and load_histories pass since=start; range_for_span deleted",
+      "passes": false,
+      "verify": "pytest apps/analysis_web/tests/test_mtm_path.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_mark_book.py -q"
+    }
+  ]
+}

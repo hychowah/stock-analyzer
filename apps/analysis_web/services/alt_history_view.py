@@ -52,7 +52,6 @@ from apps.analysis_web.services.price_history import (
     HistoryService,
     PriceBar,
     PriceHistory,
-    range_for_span,
 )
 
 
@@ -63,8 +62,12 @@ def load_histories(
     start: str,
     end: str,
 ) -> dict[str, PriceHistory]:
-    """One PriceHistory per listing, including series with error set."""
-    range_key = range_for_span(start, end)
+    """One PriceHistory per listing, including series with error set.
+
+    ``end`` is the caller's mark window; extra bars after end stay (close_on).
+    Fetch covers ``start`` through now. Do not pick a Yahoo period here.
+    """
+    _ = end
     keys: list[str] = []
     seen: set[str] = set()
     for raw in listings:
@@ -75,7 +78,7 @@ def load_histories(
         keys.append(listing)
     if not keys:
         return {}
-    return svc.get_many(keys, range_key)
+    return svc.get_many(keys, since=start)
 
 
 def load_bars(

@@ -286,8 +286,10 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertNotIn("path", body)
         self.assertEqual(body["view_date"], "2026-03-31")
         self.assertTrue(any(row["listing"] == "META" for row in body["held"]))
-        ranges = {key for _sym, key in self._backend.calls}
-        self.assertNotIn("max", ranges)
+        self.assertTrue(self._backend.many_calls)
+        for _syms, since in self._backend.many_calls:
+            self.assertRegex(since, r"^\d{4}-\d{2}-\d{2}$")
+            self.assertNotEqual(since, "max")
 
         doc = self.client.get(f"/api/portfolio/histories/{hid}")
         self.assertEqual(doc.status_code, 200)

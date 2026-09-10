@@ -15,7 +15,6 @@ from apps.analysis_web.services.mark_book import AsOfMark, MarkedLot, MarkedNav,
 from apps.analysis_web.services.price_history import (
     HistoryService,
     PriceHistory,
-    range_for_span,
 )
 from apps.analysis_web.services.signed_bars import signed_bar_rows
 
@@ -254,8 +253,7 @@ def mtm_path_for(
 ) -> dict[str, Any]:
     start, end = resolve_period(period, ib_book.snapshot, today=today)
     listings = window_listings(ib_book, start, end)
-    range_key = range_for_span(start, end)
-    histories = svc.get_many(listings, range_key) if listings else {}
+    histories = svc.get_many(listings, since=start) if listings else {}
     body = build_mtm_path(ib_book, histories, start=start, end=end)
     body["period"] = period
     return body

@@ -66,7 +66,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/fragments/runs` | HTML table fragment for live search/sort (not a shareable page) |
 | `/api/health`, `/api/runs` | JSON API (`ticker` exact, `ticker_prefix` starts-with, ranges, `harness_version`, `sort`/`dir`) |
 | `/api/quotes` | Last print for catalog `quote_listing` values (Runs and run detail). Chart-name repair is in `yahoo_bars`; rows stay keyed by the request. Portfolio does not call this. |
-| `/api/price-history` | Daily closes for one `quote_listing` (`symbol`, `range=1m\|3m\|6m\|1y\|2y\|5y\|max`) |
+| `/api/price-history` | Daily closes for one `quote_listing` (`symbol`, `range=1m\|3m\|6m\|1y\|2y\|5y\|max` is a display window, not the store key) |
 | `/api/events` | SSE: `hello`, `catalog_changed`, `portfolio_changed` |
 | `/api/fingerprint` | Poll fallback token for live reload |
 

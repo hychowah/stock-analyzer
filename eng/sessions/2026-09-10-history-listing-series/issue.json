@@ -1,0 +1,35 @@
+{
+  "goal": "Daily closes are one in-process series per listing; Yahoo period is fetch metadata, not store identity",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not merge QuoteService with HistoryService",
+    "Do not add a disk cache, Cache type, or Yahoo daemon",
+    "Do not change last-print TTL or 1m+5d snapshot"
+  ],
+  "work_type": "W2",
+  "success_criteria": [
+    "HistoryService store is listing-keyed; get_many(listings, since=) is the only read",
+    "Yahoo period tokens live in YahooHistoryBackend / period_covering, not mtm_path or alt_history_view",
+    "GET /api/price-history?range= slices the JSON body and does not use range as the store key",
+    "Errors are not cached; FakeHistoryBackend tests cover 5y-then-1y hit and 1y-then-5y miss",
+    "pytest apps/analysis_web/tests/test_price_history.py apps/analysis_web/tests/test_mtm_path.py apps/analysis_web/tests/test_histories.py apps/analysis_web/tests/test_yahoo_bars.py apps/analysis_web/tests/test_mark_book.py -q",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/",
+    "ARCHITECTURE.md"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

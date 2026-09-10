@@ -245,9 +245,9 @@ class YahooHistoryBackendResolveTests(unittest.TestCase):
     def test_history_follows_hk_padding(self):
         dl = _TableDownload({("1378.HK", "1y", "1d"): _rows(20.0, 21.0)})
         be = YahooHistoryBackend(
-            yf=object(), download=dl, search=lambda yf, q: []
+            yf=object(), download=dl, search=lambda yf, q: [], today="2026-09-10"
         )
-        hist = be.history("01378.HK", "1y")
+        hist = be.history("01378.HK", since="2026-03-01")
         self.assertIsNone(hist.error)
         self.assertEqual(hist.symbol, "01378.HK")
         self.assertEqual(hist.bars[-1].close, 21.0)
@@ -260,9 +260,9 @@ class YahooHistoryBackendResolveTests(unittest.TestCase):
             }
         )
         be = YahooHistoryBackend(
-            yf=object(), download=dl, search=lambda yf, q: []
+            yf=object(), download=dl, search=lambda yf, q: [], today="2026-09-10"
         )
-        got = be.history_many(["META", "AAPL", "NOPE"], "1y")
+        got = be.history_many(["META", "AAPL", "NOPE"], since="2026-03-01")
         self.assertEqual(len(dl.calls), 1)
         self.assertEqual(dl.calls[0][0], ("META", "AAPL", "NOPE"))
         self.assertEqual(got["META"].bars[-1].close, 100.0)
@@ -275,7 +275,7 @@ class YahooHistoryBackendResolveTests(unittest.TestCase):
             download=lambda *a, **k: (_ for _ in ()).throw(AssertionError("download")),
             search=lambda yf, q: [],
         )
-        hist = be.history("  ", "1y")
+        hist = be.history("  ", since="2026-03-01")
         self.assertEqual(hist.error, "unavailable")
         self.assertEqual(hist.bars, ())
 

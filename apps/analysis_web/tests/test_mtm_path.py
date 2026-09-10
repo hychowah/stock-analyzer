@@ -39,7 +39,6 @@ def _book() -> IbBook:
 def _hist(symbol: str, bars: list[PriceBar]) -> PriceHistory:
     return PriceHistory(
         symbol=symbol,
-        range="3m",
         source="fake",
         bars=tuple(bars),
     )

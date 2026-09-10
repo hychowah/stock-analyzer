@@ -50,8 +50,10 @@ from apps.analysis_web.config import archive_root
 from apps.analysis_web.deps import get_api, get_history_service, get_quote_service
 from apps.analysis_web.services.price_history import (
     HistoryService,
+    bars_in_window,
     parse_history_symbol,
     parse_range,
+    since_for_range,
 )
 from apps.analysis_web.services.quotes import QuoteService, parse_symbol_query
 from apps.analysis_web.services.runs_query import runs_list_q
@@ -128,14 +130,22 @@ def api_price_history(
     ),
     svc: HistoryService = Depends(get_history_service),
 ) -> dict[str, Any]:
-    """Daily closes for one requested listing. Chart-name repair is in yahoo_bars."""
+    """Daily closes for one requested listing. Chart-name repair is in yahoo_bars.
+
+    ``?range=`` is the chart vocabulary. It is not the cache key.
+    """
     try:
         listing = parse_history_symbol(symbol)
         parsed_range = parse_range(range_key)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    hist = svc.get(listing, parsed_range)
+    today = svc.today
+    hist = svc.get(listing, since=since_for_range(parsed_range, today=today))
+    sliced = bars_in_window(hist.bars, parsed_range, today=today)
     body = hist.as_json()
+    body["range"] = parsed_range
+    body["bars"] = [b.as_json() for b in sliced]
+    body["count"] = len(sliced)
     body["ttl_sec"] = svc.ttl_sec
     return body
 

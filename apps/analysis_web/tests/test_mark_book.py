@@ -138,13 +138,12 @@ class CloseOnTests(unittest.TestCase):
 
 class AsOfMarkTests(unittest.TestCase):
     def test_error_is_unavailable_empty_bars_after_d_is_unquoted(self):
-        missing = FakeHistoryBackend({}).history("ZZZZ", "1y")
+        missing = FakeHistoryBackend({}).history("ZZZZ", since="2025-10-01")
         self.assertEqual(missing.error, "unavailable")
         self.assertEqual(mark_on(missing, "2026-03-31").status, "unavailable")
 
         later = PriceHistory(
             symbol="META",
-            range="1y",
             bars=(PriceBar("2026-04-10", 60.0),),
         )
         unquoted = mark_on(later, "2026-03-31")
@@ -153,7 +152,6 @@ class AsOfMarkTests(unittest.TestCase):
 
         friday = PriceHistory(
             symbol="META",
-            range="1y",
             bars=(PriceBar("2026-03-27", 49.0),),
         )
         sat = mark_on(friday, "2026-03-28")

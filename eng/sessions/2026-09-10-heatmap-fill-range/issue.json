@@ -1,0 +1,38 @@
+{
+  "goal": "Portfolio heatmap fill-screen plus a date range that shows holding influence over that window",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not animate or scrub the heatmap",
+    "Do not use the native Fullscreen API",
+    "Do not share the MTM Play strip with the heatmap",
+    "Do not invent a second P/L engine or path URL"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "Fill screen grows the heatmap SVG to the viewport; Exit and Escape restore the in-page stage",
+    "Live heatmap is the day-move from live-nav; a from/to window paints last-frame mtm-path rows (area = |period P/L|)",
+    "GET /api/portfolio/mtm-path accepts period= XOR start=&end=",
+    "heatmap.js still does not fetch; mtm_play.js still does not paint tiles",
+    "eng_verify.py passes",
+    "pytest live_nav + portfolio + mtm_path pass",
+    "Browser: fill, range, Live restore, MTM Play independent, desktop and phone"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest apps/analysis_web/tests/test_live_nav.py apps/analysis_web/tests/test_portfolio.py apps/analysis_web/tests/test_mtm_path.py -q"
+  ]
+}

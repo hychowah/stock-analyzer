@@ -243,20 +243,38 @@ def _empty_mtm_path(*, error: str | None, period: str = "") -> dict[str, Any]:
 
 @router.get("/portfolio/mtm-path")
 def api_portfolio_mtm_path(
-    period: str = Query(..., min_length=1),
+    period: str | None = Query(None),
+    start: str | None = Query(None),
+    end: str | None = Query(None),
     svc: HistoryService = Depends(get_history_service),
 ) -> dict[str, Any]:
-    """Daily reconstructed MTM frames for the live IB book. Display math."""
-    from apps.analysis_web.services.mtm_path import PeriodError, mtm_path_for
+    """Daily reconstructed MTM frames for the live IB book. Display math.
+
+    Pass ``period=`` (1w, 1m, ytd, statement) or ``start=`` and ``end=``,
+    not both.
+    """
+    from apps.analysis_web.services.mtm_path import (
+        PeriodError,
+        choose_path_args,
+        mtm_path_for,
+        mtm_path_window,
+    )
     from apps.analysis_web.services.portfolio import load_ib_book
 
+    try:
+        kind, a, b = choose_path_args(period, start, end)
+    except PeriodError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    token = a if kind == "period" else ""
     book, err = load_ib_book()
     if err:
-        return _empty_mtm_path(error=str(err), period=period)
+        return _empty_mtm_path(error=str(err), period=token)
     if book is None:
-        return _empty_mtm_path(error="No IB book yet.", period=period)
+        return _empty_mtm_path(error="No IB book yet.", period=token)
     try:
-        return mtm_path_for(book, svc, period)
+        if kind == "period":
+            return mtm_path_for(book, svc, a)
+        return mtm_path_window(book, svc, a, b)
     except PeriodError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

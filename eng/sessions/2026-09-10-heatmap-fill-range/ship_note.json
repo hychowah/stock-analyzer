@@ -1,0 +1,10 @@
+{
+  "session_key": "2026-09-10-heatmap-fill-range",
+  "work_type": "W4",
+  "summary": "Portfolio heatmap Fill screen plus Live vs from/to last-frame holding influence. mtm-path accepts period= XOR start=&end=. MTM Play unchanged.",
+  "verify": {
+    "eng_verify": "PASS 1025",
+    "pytest": "test_live_nav + test_portfolio + test_mtm_path 46 passed",
+    "browser": "http://127.0.0.1:8780/portfolio fill, 1W, custom range, Live restore, MTM independent, phone stack"
+  }
+}

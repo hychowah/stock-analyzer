@@ -18,6 +18,8 @@ from apps.analysis_web.services.ib_statement import (
 from apps.analysis_web.services.mtm_path import (
     PeriodError,
     build_mtm_path,
+    choose_path_args,
+    parse_window_dates,
     resolve_period,
     trade_cash_by_listing,
     window_listings,
@@ -68,6 +70,29 @@ class ResolvePeriodTests(unittest.TestCase):
             resolve_period("1d", stmt, today="2026-09-10")
         with self.assertRaises(PeriodError):
             resolve_period("live", stmt, today="2026-09-10")
+
+
+class ChoosePathArgsTests(unittest.TestCase):
+    def test_period_xor_window(self):
+        self.assertEqual(choose_path_args("1w", None, None), ("period", "1w", ""))
+        self.assertEqual(
+            choose_path_args(None, "2026-01-01", "2026-03-31"),
+            ("window", "2026-01-01", "2026-03-31"),
+        )
+        with self.assertRaises(PeriodError):
+            choose_path_args(None, None, None)
+        with self.assertRaises(PeriodError):
+            choose_path_args("1w", "2026-01-01", "2026-03-31")
+        with self.assertRaises(PeriodError):
+            choose_path_args(None, "2026-01-01", None)
+        with self.assertRaises(PeriodError):
+            parse_window_dates("2026-03-31", "2026-01-01")
+        with self.assertRaises(PeriodError):
+            parse_window_dates("nope", "2026-01-01")
+        self.assertEqual(
+            parse_window_dates("2026-01-01", "2026-03-31"),
+            ("2026-01-01", "2026-03-31"),
+        )
 
 
 class BuildMtmPathTests(unittest.TestCase):
@@ -331,6 +356,39 @@ class MtmPathHttpTests(unittest.TestCase):
         r = self.client.get("/api/portfolio/mtm-path?period=1d")
         self.assertEqual(r.status_code, 400)
 
+    def test_start_end_path_has_frames(self):
+        r = self.client.get(
+            "/api/portfolio/mtm-path?start=2026-01-01&end=2026-03-31"
+        )
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["period"], "")
+        self.assertEqual(body["start"], "2026-01-01")
+        self.assertEqual(body["end"], "2026-03-31")
+        self.assertTrue(body["frames"])
+        last = body["frames"][-1]
+        self.assertEqual(last["t"], "2026-03-31")
+        by = {row["ib_symbol"]: row for row in last["rows"]}
+        self.assertIn("META", by)
+        self.assertIn("pl", by["META"])
+        self.assertIn("contrib_pct", by["META"])
+
+    def test_period_and_dates_is_400(self):
+        r = self.client.get(
+            "/api/portfolio/mtm-path?period=statement&start=2026-01-01&end=2026-03-31"
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_start_after_end_is_400(self):
+        r = self.client.get(
+            "/api/portfolio/mtm-path?start=2026-03-31&end=2026-01-01"
+        )
+        self.assertEqual(r.status_code, 400)
+
+    def test_missing_args_is_400(self):
+        r = self.client.get("/api/portfolio/mtm-path")
+        self.assertEqual(r.status_code, 400)
+
     def test_player_js_fetches_path_not_quotes(self):
         js = (
             Path(__file__).resolve().parents[1] / "static" / "mtm_play.js"
@@ -342,6 +400,17 @@ class MtmPathHttpTests(unittest.TestCase):
         self.assertNotIn("book-pl-mode-changed", js)
         self.assertNotIn("/api/quotes", js)
         self.assertNotIn('getElementById("quote-status")', js)
+
+    def test_heatmap_range_js_fetches_path_not_bars(self):
+        js = (
+            Path(__file__).resolve().parents[1] / "static" / "heatmap_range.js"
+        ).read_text(encoding="utf-8")
+        self.assertIn("/api/portfolio/mtm-path?period=", js)
+        self.assertIn("start=", js)
+        self.assertIn("heatmap-range-applied", js)
+        self.assertIn("heatmap-live", js)
+        self.assertNotIn("mtm-tbody", js)
+        self.assertNotIn("holding-pl-applied", js)
 
 
 if __name__ == "__main__":

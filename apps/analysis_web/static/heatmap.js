@@ -1,7 +1,10 @@
 /**
- * /portfolio day-move heatmap. Listens to holding-pl-applied (does not fetch).
- * Tile area is |pl| (live day_pl). Gainers and losers occupy separate regions;
- * each side is squarified on its own. Period Play does not paint this map.
+ * /portfolio heatmap. Exclusive SVG writer. Does not fetch.
+ * Live: holding-pl-applied (cached as lastLiveRows even during a window).
+ * Range: heatmap-range-applied while #heatmap-card data-heatmap-period=range.
+ * heatmap-live: repaint lastLiveRows after the token returns to live.
+ * Fill screen is a CSS class on #heatmap-card; Escape exits.
+ * Tile area is |pl|. Gainers and losers occupy separate regions.
  */
 (function () {
   "use strict";
@@ -18,12 +21,23 @@
   var root = document.getElementById("heatmap");
   var svg = document.getElementById("heatmap-svg");
   var statusEl = document.getElementById("heatmap-status");
+  var card = document.getElementById("heatmap-card");
+  var fillBtn = document.getElementById("heatmap-fill");
   if (!root || !svg) {
     return;
   }
 
   var lastRows = [];
+  var lastLiveRows = [];
   var hasPaint = false;
+
+  function isRange() {
+    return !!(card && card.getAttribute("data-heatmap-period") === "range");
+  }
+
+  function fillOn() {
+    return !!(card && card.classList.contains("heatmap-fill"));
+  }
 
   function setStatus(msg) {
     if (!statusEl) {
@@ -333,10 +347,14 @@
     clearSvg();
     hasPaint = true;
     if (!nodes.length) {
-      setStatus("No day moves yet");
+      if (!isRange()) {
+        setStatus("No day moves yet");
+      }
       return;
     }
-    setStatus("");
+    if (!isRange()) {
+      setStatus("");
+    }
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i];
       var it = n.item;
@@ -402,12 +420,66 @@
     }
   }
 
-  function onApplied(ev) {
+  function onLiveApplied(ev) {
+    lastLiveRows = (ev && ev.detail && ev.detail.rows) || [];
+    if (isRange()) {
+      return;
+    }
+    lastRows = lastLiveRows;
+    paint(lastRows);
+  }
+
+  function onRangeApplied(ev) {
+    if (!isRange()) {
+      return;
+    }
     lastRows = (ev && ev.detail && ev.detail.rows) || [];
     paint(lastRows);
   }
 
-  document.addEventListener("holding-pl-applied", onApplied);
+  function onLiveRestore() {
+    if (isRange()) {
+      return;
+    }
+    lastRows = lastLiveRows;
+    paint(lastRows);
+  }
+
+  function setFill(on) {
+    if (!card) {
+      return;
+    }
+    if (on) {
+      card.classList.add("heatmap-fill");
+      document.body.classList.add("heatmap-fill-open");
+    } else {
+      card.classList.remove("heatmap-fill");
+      document.body.classList.remove("heatmap-fill-open");
+    }
+    if (fillBtn) {
+      fillBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      fillBtn.textContent = on ? "Exit" : "Fill screen";
+    }
+    if (hasPaint || lastRows.length) {
+      paint(lastRows);
+    }
+  }
+
+  document.addEventListener("holding-pl-applied", onLiveApplied);
+  document.addEventListener("heatmap-range-applied", onRangeApplied);
+  document.addEventListener("heatmap-live", onLiveRestore);
+  if (fillBtn) {
+    fillBtn.addEventListener("click", function () {
+      setFill(!fillOn());
+    });
+  }
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Escape" || !fillOn()) {
+      return;
+    }
+    ev.preventDefault();
+    setFill(false);
+  });
   if (typeof ResizeObserver === "function") {
     new ResizeObserver(function () {
       if (hasPaint || lastRows.length) {

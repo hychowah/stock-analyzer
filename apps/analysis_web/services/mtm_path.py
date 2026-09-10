@@ -355,3 +355,59 @@ def mtm_path_for(
     body = build_mtm_path(ib_book, histories, start=start, end=end)
     body["period"] = period
     return body
+
+
+def parse_window_dates(start: str, end: str) -> tuple[str, str]:
+    """Inclusive YYYY-MM-DD pair. Raises PeriodError if unusable."""
+    a = (start or "").strip()[:10]
+    b = (end or "").strip()[:10]
+    if len(a) < 10 or len(b) < 10:
+        raise PeriodError("start and end must be YYYY-MM-DD")
+    try:
+        date.fromisoformat(a)
+        date.fromisoformat(b)
+    except ValueError as e:
+        raise PeriodError("start and end must be YYYY-MM-DD") from e
+    if a > b:
+        raise PeriodError("period start is after end")
+    return a, b
+
+
+def mtm_path_window(
+    ib_book: IbBook,
+    svc: HistoryService,
+    start: str,
+    end: str,
+) -> dict[str, Any]:
+    a, b = parse_window_dates(start, end)
+    listings = window_listings(ib_book, a, b)
+    histories = svc.get_many(listings, since=a) if listings else {}
+    body = build_mtm_path(ib_book, histories, start=a, end=b)
+    body["period"] = ""
+    return body
+
+
+def choose_path_args(
+    period: str | None,
+    start: str | None,
+    end: str | None,
+) -> tuple[str, str, str]:
+    """Either a named period or a free window. Not both.
+
+    Returns ``("period", period, "")`` or ``("window", start, end)``.
+    """
+    p = (period or "").strip()
+    a = (start or "").strip()
+    b = (end or "").strip()
+    has_p = bool(p)
+    has_a = bool(a)
+    has_b = bool(b)
+    if has_p and (has_a or has_b):
+        raise PeriodError("pass period= or start= and end=, not both")
+    if has_a != has_b:
+        raise PeriodError("start and end must both be set")
+    if has_p:
+        return ("period", p, "")
+    if has_a:
+        return ("window", a, b)
+    raise PeriodError("pass period= or start= and end=")

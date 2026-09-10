@@ -394,6 +394,44 @@ table:has(thead) tr:hover {
   font-weight: 400;
   font-size: 0.75rem;
 }
+.heatmap-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.6rem;
+}
+.heatmap-toolbar h2 {
+  margin: 0;
+}
+#heatmap-fill {
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  min-height: 0;
+}
+.heatmap-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.heatmap-range label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.heatmap-range input[type="date"] {
+  font: inherit;
+}
+#heatmap-show {
+  padding: 0.2rem 0.65rem;
+  font-size: 0.8rem;
+  min-height: 0;
+}
 .heatmap-stage {
   position: relative;
   min-height: 240px;
@@ -401,6 +439,30 @@ table:has(thead) tr:hover {
   background: var(--chart-stage);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+body.heatmap-fill-open {
+  overflow: hidden;
+}
+#heatmap-card.heatmap-fill {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  margin: 0;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  width: 100%;
+  max-width: none;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+#heatmap-card.heatmap-fill .heatmap-stage {
+  flex: 1;
+  height: auto;
+  min-height: 0;
 }
 #heatmap-svg {
   width: 100%;
@@ -473,6 +535,11 @@ table:has(thead) tr:hover {
   .heatmap-stage {
     height: min(50vh, 280px);
     min-height: 200px;
+  }
+  #heatmap-card.heatmap-fill .heatmap-stage {
+    flex: 1;
+    height: auto;
+    min-height: 0;
   }
 }
 .decision-strip {

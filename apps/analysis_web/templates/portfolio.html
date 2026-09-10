@@ -81,8 +81,23 @@
 </div>
 
 {% if view.ib or (view.summary and not view.error) %}
-<div class="card">
-  <h2>Day move</h2>
+<div class="card" id="heatmap-card" data-heatmap-period="live"{% if view.ib %} data-period-from="{{ view.ib.period_from or '' }}" data-period-to="{{ view.ib.period_to or '' }}"{% endif %}>
+  <div class="heatmap-toolbar">
+    <h2 id="heatmap-heading">Day move</h2>
+    <button type="button" id="heatmap-fill" aria-pressed="false">Fill screen</button>
+  </div>
+  <div id="heatmap-range" class="heatmap-range">
+    <div class="book-pl-chips" role="group" aria-label="Heatmap period">
+      <button type="button" data-heatmap-window="live" aria-pressed="true">Live</button>
+      <button type="button" data-heatmap-window="1w" aria-pressed="false">1W</button>
+      <button type="button" data-heatmap-window="1m" aria-pressed="false">1M</button>
+      <button type="button" data-heatmap-window="ytd" aria-pressed="false">YTD</button>
+      <button type="button" data-heatmap-window="statement" aria-pressed="false">Statement</button>
+    </div>
+    <label>From <input type="date" id="heatmap-from" aria-label="Heatmap from"></label>
+    <label>To <input type="date" id="heatmap-to" aria-label="Heatmap to"></label>
+    <button type="button" id="heatmap-show">Show</button>
+  </div>
   <p id="heatmap-caption" class="muted">Tile area is the |day change| of that holding (change % × value). Stock % is the listing; NAV % is this holding’s day P/L as % of Live NAV. Gainers left, losers right (stacked on a narrow screen).</p>
   <div id="heatmap" class="heatmap-stage">
     <svg id="heatmap-svg" role="img" aria-label="Portfolio day-move heatmap"></svg>
@@ -232,5 +247,6 @@
 {% block scripts %}
 <script src="/static/live_nav.js" defer></script>
 <script src="/static/heatmap.js" defer></script>
+<script src="/static/heatmap_range.js" defer></script>
 <script src="/static/mtm_play.js" defer></script>
 {% endblock %}

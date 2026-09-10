@@ -52,7 +52,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/api/compares/{compare_id}` | JSON job status |
 | `/api/portfolio` | JSON portfolio summary + positions + `ib` + `performance` (statement join; no Yahoo). `performance.mtm` rows are `{name, pl, bar_pct, sign}` (gains at top, losses at bottom) |
 | `/api/portfolio/live-nav` | Statement NAV adjusted by holdings × Yahoo last print. Aggregates + `quotes` (QuotePrint JSON) + per-lot `rows` (each row has `day_pl` and `contrib_pct` = day_pl / live_nav). Display math; FX is the statement Forex close |
-| `/api/portfolio/mtm-path` | Daily reconstructed MTM frames for a period (`1w`, `1m`, `ytd`, `statement`). `pl` is value(t) − value(start); not the IB MTM file. User-initiated; not a poll |
+| `/api/portfolio/mtm-path` | Daily reconstructed MTM frames for a period (`1w`, `1m`, `ytd`, `statement`). `pl` is value(t) − value(start) + IB fill cash after start; not the IB MTM file. User-initiated; not a poll |
 | `/api/portfolio/histories` | List alternative histories + today Δ from the cash-book mark (daily close), not Live NAV |
 | `/api/portfolio/histories/{id}` | History document (name, fork, fills). No holdings, no path, no Yahoo. |
 | `/api/portfolio/histories/{id}/holdings` | As-of account: `held` + `account` (cash/stock/NAV, paper Reg-T loan/excess/buying power). Cash is `account.cash` as of `date`, not a top-level field. No sold-later flag. |

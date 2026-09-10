@@ -27,3 +27,5 @@
   - Strip moved onto the MTM card; single `data-period` token
   - heatmap stays live `holding-pl-applied`; mtm_play.js does not emit tiles
   - pytest live_nav/portfolio/mtm_path green; Playwright: 1W Play changes MTM bars only, Live restores IB table
+- 2026-09-10T12:00:00Z bugfix: Play P/L was value(t)−value(start), so a YTD buy showed as full market value and a sale as a loss (SGOV −361k, LULU sign flip vs Live). Identity is now value(t)−value(start)+IB fill cash after start.
+- 2026-09-10T12:15:00Z verified: pytest mtm_path + eng_verify PASS (1018). Live book statement path last frame matches IB MTM (HY9H 233k vs 237k; LULU −27.4k vs −27.4k; COHR −29.1k vs −29.1k). YTD SGOV +8.8k not −361k. Browser on :8778: Statement/YTD bars, 1W Play, Live restore. Restart the :8765 UI to pick up the uncommitted fix.

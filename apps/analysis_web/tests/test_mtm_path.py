@@ -19,6 +19,7 @@ from apps.analysis_web.services.mtm_path import (
     PeriodError,
     build_mtm_path,
     resolve_period,
+    trade_cash_by_listing,
     window_listings,
 )
 from apps.analysis_web.services.price_history import (
@@ -70,7 +71,7 @@ class ResolvePeriodTests(unittest.TestCase):
 
 
 class BuildMtmPathTests(unittest.TestCase):
-    def test_pl_is_value_minus_start(self):
+    def test_hold_through_is_price_move(self):
         book = _book()
         histories = {
             "META": _hist(
@@ -103,7 +104,7 @@ class BuildMtmPathTests(unittest.TestCase):
         names = [r["name"] for r in out["frames"][1]["bars"]]
         self.assertEqual(names, ["META"])
 
-    def test_buy_mid_window_is_union_not_missing(self):
+    def test_buy_mid_window_is_mark_minus_fill_not_full_value(self):
         book = _book()
         histories = {
             "META": _hist(
@@ -128,9 +129,13 @@ class BuildMtmPathTests(unittest.TestCase):
         last = {r["ib_symbol"]: r for r in out["frames"][-1]["rows"]}
         self.assertIn("META", last)
         self.assertIsNotNone(last["META"]["pl"])
-        self.assertGreater(last["META"]["pl"], 0.0)
+        # 12 bought @ 40, comm -1 USD, fx 8; still held 12 @ 44.
+        value_t = 12 * 44 * 8
+        fill_cash = (-480.0 + -1.0) * 8
+        self.assertAlmostEqual(last["META"]["pl"], value_t + fill_cash, places=5)
+        self.assertLess(last["META"]["pl"], value_t)
 
-    def test_sold_name_keeps_zero_minus_start(self):
+    def test_sold_name_is_fill_minus_start_not_minus_value(self):
         stmt = IbStatement(
             account_id="U1",
             period_from="2026-03-01",
@@ -171,7 +176,56 @@ class BuildMtmPathTests(unittest.TestCase):
         )
         last = {r["ib_symbol"]: r for r in out["frames"][-1]["rows"]}
         self.assertIn("GONE", last)
-        self.assertAlmostEqual(last["GONE"]["pl"], 0.0 - (10 * 50 * 1), places=5)
+        # Sold at the start mark: MTM is 0, not −start value.
+        self.assertAlmostEqual(last["GONE"]["pl"], 0.0, places=5)
+
+    def test_round_trip_keeps_realized_without_end_lot(self):
+        stmt = IbStatement(
+            account_id="U1",
+            period_from="2026-03-01",
+            period_to="2026-03-10",
+            base_currency="USD",
+            forex_closes={"USD": 1.0},
+            nav_assets=[NavAsset(asset_class="Cash", current_total=0.0)],
+            positions=[
+                Position(
+                    ib_symbol="FLIP",
+                    asset_category="Stocks",
+                    currency="USD",
+                    quantity=0.0,
+                    listing_exch="NASDAQ",
+                )
+            ],
+        )
+        buy = Trade(
+            row_index=0,
+            discriminator="Order",
+            asset_category="Stocks",
+            currency="USD",
+            ib_symbol="FLIP",
+            traded_at="2026-03-04T10:00:00",
+            quantity=10.0,
+            proceeds=-500.0,
+            commission=0.0,
+        )
+        sell = Trade(
+            row_index=1,
+            discriminator="Order",
+            asset_category="Stocks",
+            currency="USD",
+            ib_symbol="FLIP",
+            traded_at="2026-03-06T10:00:00",
+            quantity=-10.0,
+            proceeds=550.0,
+            commission=0.0,
+        )
+        book = IbBook(snapshot=stmt, trades=[buy, sell])
+        out = build_mtm_path(
+            book, {}, start="2026-03-03", end="2026-03-07"
+        )
+        last = {r["ib_symbol"]: r for r in out["frames"][-1]["rows"]}
+        self.assertIn("FLIP", last)
+        self.assertAlmostEqual(last["FLIP"]["pl"], 50.0, places=5)
 
     def test_held_unquoted_pl_is_none(self):
         book = _book()
@@ -191,6 +245,15 @@ class BuildMtmPathTests(unittest.TestCase):
         keys = window_listings(book, "2026-01-01", "2026-03-31")
         self.assertIn("META", keys)
         self.assertIn("0700.HK", keys)
+
+    def test_trade_cash_excludes_start_day_includes_sell(self):
+        book = _book()
+        cash, unknown = trade_cash_by_listing(
+            book, after="2026-01-15", through="2026-02-20"
+        )
+        self.assertEqual(unknown, set())
+        self.assertNotIn("0700.HK", cash)
+        self.assertAlmostEqual(cash["META"], (110.0 - 1.0) * 8, places=5)
 
 
 class MtmPathHttpTests(unittest.TestCase):

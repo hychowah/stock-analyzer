@@ -230,11 +230,16 @@ def _qty_factor(trade_day: str, *, as_of: str, period_to: str) -> float:
     return 0.0
 
 
-def _stock_cash_effect(trade: Trade, stmt: IbStatement) -> float | None:
+def stock_fill_cash_base(trade: Trade, stmt: IbStatement) -> float | None:
+    """Proceeds + commission in base. None when proceeds cannot be valued."""
     proceeds = _num(trade.proceeds)
     commission = _num(trade.commission) or 0.0
     if proceeds is None:
-        return None
+        qty = _num(trade.quantity)
+        px = _num(trade.trade_price)
+        if qty is None or px is None:
+            return None
+        proceeds = -qty * px
     native = proceeds + commission
     ccy = (trade.currency or "").strip()
     return stmt.value_base(native, ccy)
@@ -296,7 +301,7 @@ def as_of_book(ib_book: IbBook, as_of: str) -> BookState:
         qty[sym] = qty.get(sym, 0.0) + factor * signed
         if trade.currency:
             currency.setdefault(sym, trade.currency)
-        effect = _stock_cash_effect(trade, stmt)
+        effect = stock_fill_cash_base(trade, stmt)
         if cash is not None and effect is not None:
             cash = cash + factor * effect
 

@@ -1,7 +1,8 @@
 """Reconstructed period MTM for the live IB book.
 
-Walks ``as_of_book`` and marks with Yahoo daily closes. Display math, not
-a valuation and not the IB statement MTM file. Does not import what-if.
+Walks ``as_of_book`` and marks with Yahoo daily closes. P/L is mark change
+net of IB fill cash, not position-value change. Display math, not a
+valuation and not the IB statement MTM file. Does not import what-if.
 """
 
 from __future__ import annotations
@@ -9,7 +10,12 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-from apps.analysis_web.services.book_state import as_of_book, trade_date
+from apps.analysis_web.services.book_state import (
+    as_of_book,
+    listing_for,
+    stock_fill_cash_base,
+    trade_date,
+)
 from apps.analysis_web.services.ib_statement import IbBook, IbStatement
 from apps.analysis_web.services.mark_book import AsOfMark, MarkedLot, MarkedNav, mark_lots, marks_on
 from apps.analysis_web.services.price_history import (
@@ -60,23 +66,95 @@ def resolve_period(
     return start, end
 
 
+def _is_stock_cat(category: str | None) -> bool:
+    return (category or "Stocks").strip().lower() == "stocks"
+
+
+def _exch_by_symbol(ib_book: IbBook) -> dict[str, str | None]:
+    exch: dict[str, str | None] = {}
+    stmt = ib_book.snapshot
+    for pos in stmt.positions or ():
+        if not _is_stock_cat(pos.asset_category):
+            continue
+        sym = (pos.ib_symbol or "").strip()
+        if sym:
+            exch[sym] = pos.listing_exch
+    for inst in stmt.instruments or ():
+        if not _is_stock_cat(inst.asset_category):
+            continue
+        sym = (inst.ib_symbol or "").strip()
+        if sym:
+            exch.setdefault(sym, inst.listing_exch)
+    return exch
+
+
+def _listing_of(ib_symbol: str, exch: dict[str, str | None]) -> str:
+    sym = (ib_symbol or "").strip()
+    return listing_for(sym, exch.get(sym))
+
+
 def window_listings(ib_book: IbBook, start: str, end: str) -> list[str]:
     """Listings that can appear on the walk (start, end, and in-window fills)."""
-    days = {start[:10], end[:10]}
-    for trade in ib_book.trades or ():
-        day = trade_date(trade.traded_at)
-        if day and start[:10] <= day <= end[:10]:
-            days.add(day)
+    a = start[:10]
+    b = end[:10]
+    days = {a, b}
+    exch = _exch_by_symbol(ib_book)
     seen: list[str] = []
     have: set[str] = set()
+
+    def _add(key: str) -> None:
+        k = (key or "").strip().upper()
+        if k and k not in have:
+            have.add(k)
+            seen.append(k)
+
+    for trade in ib_book.trades or ():
+        if not _is_stock_cat(trade.asset_category):
+            continue
+        day = trade_date(trade.traded_at)
+        if day and a <= day <= b:
+            days.add(day)
+            _add(_listing_of(trade.ib_symbol, exch))
     for day in sorted(days):
         book = as_of_book(ib_book, day)
         for lot in book.lots:
-            key = (lot.listing or "").strip().upper()
-            if key and key not in have:
-                have.add(key)
-                seen.append(key)
+            _add(lot.listing)
     return seen
+
+
+def trade_cash_by_listing(
+    ib_book: IbBook,
+    *,
+    after: str,
+    through: str,
+) -> tuple[dict[str, float], set[str]]:
+    """Fill cash in base with ``after < trade_day <= through``.
+
+    Unknown cash (no proceeds and no qty×price) is listed separately so
+    that listing's P/L stays None instead of looking like a market-value
+    change.
+    """
+    a = after[:10]
+    b = through[:10]
+    exch = _exch_by_symbol(ib_book)
+    stmt = ib_book.snapshot
+    cash: dict[str, float] = {}
+    unknown: set[str] = set()
+    for trade in ib_book.trades or ():
+        if not _is_stock_cat(trade.asset_category):
+            continue
+        day = trade_date(trade.traded_at)
+        if day is None or day <= a or day > b:
+            continue
+        key = _listing_of(trade.ib_symbol, exch)
+        if not key:
+            continue
+        effect = stock_fill_cash_base(trade, stmt)
+        if effect is None:
+            unknown.add(key)
+            continue
+        cash[key] = cash.get(key, 0.0) + float(effect)
+    return cash, unknown
 
 
 def _held(row: MarkedLot | None) -> bool:
@@ -113,7 +191,7 @@ def _by_listing(marked: MarkedNav) -> dict[str, MarkedLot]:
 def _frame_dates(histories: dict[str, PriceHistory], start: str, end: str) -> list[str]:
     a = start[:10]
     b = end[:10]
-    days: set[str] = {a}
+    days: set[str] = {a, b}
     for hist in histories.values():
         for bar in hist.bars or ():
             t = (bar.t or "")[:10]
@@ -129,23 +207,27 @@ def _frame_rows(
     start_marks: dict[str, AsOfMark],
     t_marks: dict[str, AsOfMark],
     start_nav: float | None,
+    cash_by: dict[str, float],
+    cash_unknown: set[str],
+    ib_by_listing: dict[str, str],
 ) -> list[dict[str, Any]]:
-    listings = sorted(set(start_by) | set(t_by))
+    listings = sorted(set(start_by) | set(t_by) | set(cash_by) | set(cash_unknown))
     out: list[dict[str, Any]] = []
     for listing in listings:
         s_row = start_by.get(listing)
         t_row = t_by.get(listing)
         held_s = _held(s_row)
         held_t = _held(t_row)
-        if not held_s and not held_t:
+        cash = float(cash_by.get(listing, 0.0))
+        if not held_s and not held_t and abs(cash) <= _QTY_EPS and listing not in cash_unknown:
             continue
         val_s = _side_value(s_row, held=held_s)
         val_t = _side_value(t_row, held=held_t)
         pl: float | None
-        if val_s is None or val_t is None:
+        if listing in cash_unknown or val_s is None or val_t is None:
             pl = None
         else:
-            pl = val_t - val_s
+            pl = val_t - val_s + cash
         c0 = _close_of(start_marks.get(listing))
         c1 = _close_of(t_marks.get(listing))
         change_pct: float | None = None
@@ -160,7 +242,7 @@ def _frame_rows(
         elif s_row is not None and s_row.ib_symbol:
             ib = str(s_row.ib_symbol)
         else:
-            ib = listing
+            ib = ib_by_listing.get(listing) or listing
         out.append(
             {
                 "ib_symbol": ib,
@@ -180,7 +262,11 @@ def build_mtm_path(
     start: str,
     end: str,
 ) -> dict[str, Any]:
-    """Frames from start through end. ``pl`` is value(t) − value(start)."""
+    """Frames from start through end.
+
+    ``pl`` is value(t) − value(start) + fill cash after start through t.
+    Buys and sells are cash, not fake P/L.
+    """
     a = (start or "").strip()[:10]
     b = (end or "").strip()[:10]
     stmt = ib_book.snapshot
@@ -207,17 +293,29 @@ def build_mtm_path(
     start_marked = mark_lots(start_book, start_marks)
     start_by = _by_listing(start_marked)
     start_nav = float(start_marked.nav)
+    exch = _exch_by_symbol(ib_book)
+    ib_by_listing: dict[str, str] = {}
+    for trade in ib_book.trades or ():
+        if not _is_stock_cat(trade.asset_category):
+            continue
+        key = _listing_of(trade.ib_symbol, exch)
+        if key and (trade.ib_symbol or "").strip() and key not in ib_by_listing:
+            ib_by_listing[key] = str(trade.ib_symbol).strip()
     frames: list[dict[str, Any]] = []
     for t in _frame_dates(histories, a, b):
         t_book = as_of_book(ib_book, t)
         t_marks = marks_on(histories, t)
         t_marked = mark_lots(t_book, t_marks)
+        cash_by, cash_unknown = trade_cash_by_listing(ib_book, after=a, through=t)
         rows = _frame_rows(
             start_by=start_by,
             t_by=_by_listing(t_marked),
             start_marks=start_marks,
             t_marks=t_marks,
             start_nav=start_nav,
+            cash_by=cash_by,
+            cash_unknown=cash_unknown,
+            ib_by_listing=ib_by_listing,
         )
         pairs = [
             (str(r["ib_symbol"]), float(r["pl"]))

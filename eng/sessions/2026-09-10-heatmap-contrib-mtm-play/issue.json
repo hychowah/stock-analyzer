@@ -13,7 +13,7 @@
     "eng_verify.py passes",
     "Each live heatmap tile shows stock change % and contrib_pct = day_pl / live_nav",
     "Shared Live / 1W / 1M / YTD / statement strip plus Play/Pause on the MTM card",
-    "GET /api/portfolio/mtm-path returns daily frames; pl = value(t) - value(start)",
+    "GET /api/portfolio/mtm-path returns daily frames; pl = value(t) - value(start) + IB fill cash",
     "heatmap.js still does not fetch; mtm_play.js writes MTM bars only, not heatmap tiles",
     "Playwright: extra % on live heatmap; MTM Play walks bars without changing tiles; Live restores IB bars",
     "Feature list items verified before passes=true"

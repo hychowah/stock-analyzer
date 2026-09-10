@@ -22,7 +22,7 @@
   var liveMtmHtml = mtmBody.innerHTML;
 
   var PATH_CAPTION =
-    "Reconstructed from Yahoo daily closes × lots as of each day, not the IB statement MTM file. Gains at top, losses at bottom.";
+    "Reconstructed MTM: Yahoo closes on lots plus IB fill cash, so buys and sells are not fake P/L. Statement FX. Not the IB MTM file. Gains at top, losses at bottom.";
 
   var STEP_MS = 350;
   var frames = [];

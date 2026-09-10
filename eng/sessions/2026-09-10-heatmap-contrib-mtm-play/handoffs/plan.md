@@ -28,7 +28,7 @@ User correction: **Play animates Mark-to-market P/L bars, not the Day move heatm
 | `live_nav.js` | Gates `holding-pl-applied` on mode | Always emit live tiles; no mode |
 | `mtm_play.js` | Emits tiles + writes bars | Writes MTM bars only |
 
-Python `mtm_path` identity is already right. Do not reopen it.
+Do not reopen heatmap-vs-bars (union, missing = 0). **Amendment 2026-09-10:** P/L is not position-value change. `pl = value(t) − value(start) + IB fill cash after start through t`.
 
 ---
 
@@ -41,7 +41,7 @@ mark_live_nav  →  row.day_pl + row.contrib_pct     # contrib = day_pl / live_n
 live_nav.js    →  header, quotes-applied,
                   holding-pl-applied always         # pl ← day_pl; no mode
 heatmap.js     →  SVG from that event               # fetch-free; heading Day move
-mtm_path       →  frames[{ t, bars, rows }]         # pl = value(t) − value(start)
+mtm_path       →  frames[{ t, bars, rows }]         # pl = Δvalue + fill cash
 mtm_play.js    →  #mtm-tbody only                   # fetch, Play, captions
 ```
 
@@ -49,12 +49,13 @@ mtm_play.js    →  #mtm-tbody only                   # fetch, Play, captions
 
 **MTM.** Strip lives on this card. Token `data-period`. Live = cloned IB tbody, Play disabled. Period = one GET, last frame painted, Play walks `bars` (width + P/L). Errors on `#book-pl-status`. Does not emit `holding-pl-applied`. Does not write `#quote-status` or `#heatmap-status`.
 
-Path identity (unchanged):
+Path identity (amended 2026-09-10 — fill cash, not market-value change):
 
 ```
-pl_i(t)        = value_i(t) − value_i(start)
+pl_i(t)        = value_i(t) − value_i(start) + fill cash after start through t
                  not held on one side → 0
-                 None only when a held lot is unquoted
+                 None only when a held lot is unquoted, or fill cash is unknown
+                 round-trip fills with no end lot still keep realized P/L
 contrib_pct_i  = pl_i(t) / start_nav × 100   # on path rows; heatmap does not use them
 ```
 
@@ -100,7 +101,7 @@ Stay a projector of live `holding-pl-applied`. Empty copy: “No day moves yet�
 - Intraday ticks / WebSocket / vendor charts.
 - Replacing IB statement MTM as the stored / no-JS fact.
 - Labeling Live as `1D`.
-- Reopening `mtm_path.py` identity (union, missing = 0).
+- Reopening heatmap-vs-bars union / missing = 0. The P/L formula is fill cash, not `value(t) − value(start)` alone.
 
 ---
 

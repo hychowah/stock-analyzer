@@ -19,6 +19,12 @@
       "verify": "pytest live_nav + mtm_path; Playwright MTM Play does not change heatmap; eng_verify"
     },
     {
+      "id": "mtm-path-fill-cash",
+      "description": "Period Play P/L is mark change plus IB fill cash, not position-value change (buys as fake gains, sells as fake losses)",
+      "passes": true,
+      "verify": "pytest test_mtm_path: hold-through price move; buy is not full value; sell is not minus start value; round-trip realized; eng_verify"
+    },
+    {
       "id": "implement",
       "description": "Implement the primary change for this slug",
       "passes": true,

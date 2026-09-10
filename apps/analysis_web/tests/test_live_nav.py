@@ -282,7 +282,7 @@ class LiveNavHttpTests(unittest.TestCase):
         self.assertIn(b'id="heatmap-show"', html)
         self.assertIn(b'data-heatmap-window="live"', html)
         self.assertIn(b"/static/heatmap.js", html)
-        self.assertIn(b"/static/heatmap_range.js", html)
+        self.assertNotIn(b"/static/heatmap_range.js", html)
         self.assertIn(b"/static/mtm_play.js", html)
         self.assertIn(b'id="book-pl-mode"', html)
         self.assertIn(b'data-period="live"', html)
@@ -367,13 +367,14 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertNotIn('fetch("/api/quotes"', navjs)
         self.assertIn("Does not call /api/quotes", navjs)
 
-    def test_heatmap_js_is_a_projection(self):
+    def test_heatmap_js_is_the_card(self):
         hjs = (
             Path(__file__).resolve().parents[1] / "static" / "heatmap.js"
         ).read_text(encoding="utf-8")
         self.assertIn("holding-pl-applied", hjs)
-        self.assertIn("heatmap-range-applied", hjs)
-        self.assertIn("heatmap-live", hjs)
+        self.assertIn("/api/portfolio/mtm-path?period=", hjs)
+        self.assertIn("start=", hjs)
+        self.assertIn("end=", hjs)
         self.assertIn("lastLiveRows", hjs)
         self.assertIn("heatmap-fill", hjs)
         self.assertIn("Escape", hjs)
@@ -383,24 +384,15 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertIn("NAV", hjs)
         self.assertIn("No day moves yet", hjs)
         self.assertIn("max-width: 1100px", hjs)
-        self.assertNotIn("fetch(", hjs)
-
-    def test_heatmap_range_js_fetches_path_not_bars(self):
-        rjs = (
-            Path(__file__).resolve().parents[1] / "static" / "heatmap_range.js"
-        ).read_text(encoding="utf-8")
-        self.assertIn("/api/portfolio/mtm-path?period=", rjs)
-        self.assertIn("start=", rjs)
-        self.assertIn("end=", rjs)
-        self.assertIn("heatmap-range-applied", rjs)
-        self.assertIn("heatmap-live", rjs)
-        self.assertIn("aria-label", rjs)
-        self.assertIn("holding-influence heatmap", rjs)
-        self.assertNotIn("mtm-tbody", rjs)
-        self.assertNotIn("holding-pl-applied", rjs)
-        self.assertNotIn("timedelta", rjs)
-        self.assertNotIn("getFullYear", rjs)
-        self.assertNotIn("quote-status", rjs)
+        self.assertIn("aria-label", hjs)
+        self.assertIn("holding-influence heatmap", hjs)
+        self.assertIn("fetch(", hjs)
+        self.assertNotIn("heatmap-range-applied", hjs)
+        self.assertNotIn("heatmap-live", hjs)
+        self.assertNotIn("mtm-tbody", hjs)
+        self.assertNotIn("timedelta", hjs)
+        self.assertNotIn("getFullYear", hjs)
+        self.assertNotIn("quote-status", hjs)
 
     def test_runs_page_still_polls(self):
         runs = (

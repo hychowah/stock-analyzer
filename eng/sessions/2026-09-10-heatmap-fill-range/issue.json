@@ -13,7 +13,7 @@
     "Fill screen grows the heatmap SVG to the viewport; Exit and Escape restore the in-page stage",
     "Live heatmap is the day-move from live-nav; a from/to window paints last-frame mtm-path rows (area = |period P/L|)",
     "GET /api/portfolio/mtm-path accepts period= XOR start=&end=",
-    "heatmap.js still does not fetch; mtm_play.js still does not paint tiles",
+    "heatmap.js is the heatmap card (Live from holding-pl-applied; a window fetches /api/portfolio/mtm-path last frame); mtm_play.js still does not paint tiles",
     "eng_verify.py passes",
     "pytest live_nav + portfolio + mtm_path pass",
     "Browser: fill, range, Live restore, MTM Play independent, desktop and phone"

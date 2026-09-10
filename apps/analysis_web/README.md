@@ -95,7 +95,7 @@ The header is two maps: **Primary** (Runs, Analyze, Compare, Portfolio) and **La
 
 No-JS: the GET form still submits. Invalid ranges (min > max, bad date) return HTTP 400. Unknown ticker / prefix returns HTTP 404 and an abort card.
 
-Portfolio live marks (`data-quote-poll="0"` + `static/live_nav.js`): one GET `/api/portfolio/live-nav`; `quotes.js` paints Live/Downside from `quotes-applied` and does not fetch `/api/quotes` on that page. `heatmap.js` paints tiles from `holding-pl-applied` when Live (no fetch; `pl ← day_pl`) and from `heatmap-range-applied` for a window; Fill screen is a CSS class on `#heatmap-card`. `heatmap_range.js` fetches `/api/portfolio/mtm-path` (`period=` or `start=`&`end=`) and does not write MTM bars. `mtm_play.js` fetches `/api/portfolio/mtm-path` and writes only the MTM bars.
+Portfolio live marks (`data-quote-poll="0"` + `static/live_nav.js`): one GET `/api/portfolio/live-nav`; `quotes.js` paints Live/Downside from `quotes-applied` and does not fetch `/api/quotes` on that page. `heatmap.js` is the heatmap card (Live tiles from `holding-pl-applied`, a window fetches `/api/portfolio/mtm-path` last frame, Fill screen is a CSS class on `#heatmap-card`). It does not write MTM bars. `mtm_play.js` fetches `/api/portfolio/mtm-path` and writes only the MTM bars.
 
 Catalog live reload (`data-live-reload="1"` + `static/live.js`): SSE first, 5s fingerprint poll if SSE is unhealthy. On the runs page (`data-live-partial="1"`) a catalog change refetches `/fragments/runs` instead of a full reload, so an in-progress ticker search is not wiped. Analyze and Compare list/detail pages do not opt in; a running job patches status in JS and uses `<meta refresh=15>`.
 

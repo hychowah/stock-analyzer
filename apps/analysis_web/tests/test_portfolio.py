@@ -239,7 +239,7 @@ class PortfolioHttpTests(unittest.TestCase):
         self.assertIn(b'id="live-nav"', r.content)
         self.assertIn(b"/static/live_nav.js", r.content)
         self.assertIn(b"/static/heatmap.js", r.content)
-        self.assertIn(b"/static/heatmap_range.js", r.content)
+        self.assertNotIn(b"/static/heatmap_range.js", r.content)
         self.assertIn(b"/static/mtm_play.js", r.content)
         self.assertIn(b'id="heatmap"', r.content)
         self.assertIn(b'id="heatmap-card"', r.content)

@@ -401,16 +401,16 @@ class MtmPathHttpTests(unittest.TestCase):
         self.assertNotIn("/api/quotes", js)
         self.assertNotIn('getElementById("quote-status")', js)
 
-    def test_heatmap_range_js_fetches_path_not_bars(self):
+    def test_heatmap_js_fetches_path_not_bars(self):
         js = (
-            Path(__file__).resolve().parents[1] / "static" / "heatmap_range.js"
+            Path(__file__).resolve().parents[1] / "static" / "heatmap.js"
         ).read_text(encoding="utf-8")
         self.assertIn("/api/portfolio/mtm-path?period=", js)
         self.assertIn("start=", js)
-        self.assertIn("heatmap-range-applied", js)
-        self.assertIn("heatmap-live", js)
+        self.assertIn("holding-pl-applied", js)
+        self.assertNotIn("heatmap-range-applied", js)
+        self.assertNotIn("heatmap-live", js)
         self.assertNotIn("mtm-tbody", js)
-        self.assertNotIn("holding-pl-applied", js)
 
 
 if __name__ == "__main__":

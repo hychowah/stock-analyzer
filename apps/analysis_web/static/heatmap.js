@@ -1,8 +1,7 @@
 /**
- * /portfolio heatmap. Exclusive SVG writer. Does not fetch.
- * Live: holding-pl-applied (cached as lastLiveRows even during a window).
- * Range: heatmap-range-applied while #heatmap-card data-heatmap-period=range.
- * heatmap-live: repaint lastLiveRows after the token returns to live.
+ * /portfolio heatmap card. Size, time-base, and SVG.
+ * Live rows come from holding-pl-applied. A window fetches
+ * GET /api/portfolio/mtm-path (last frame). Does not write MTM bars.
  * Fill screen is a CSS class on #heatmap-card; Escape exits.
  * Tile area is |pl|. Gainers and losers occupy separate regions.
  */
@@ -17,12 +16,25 @@
   var MIN_LABEL_H = 32;
   var MIN_CHG_H = 44;
   var MIN_NAV_H = 58;
+  var LIVE_HEADING = "Day move";
+  var RANGE_HEADING = "Holding influence";
+  var LIVE_LABEL = "Portfolio day-move heatmap";
+  var RANGE_LABEL = "Portfolio holding-influence heatmap";
+  var RANGE_CAPTION =
+    "Tile area is the |period change| of that holding (mark change plus IB fill cash). Stock % is the listing move over the window; NAV % is this holding’s P/L as % of NAV at the start of the window. Gainers left, losers right (stacked on a narrow screen).";
 
   var root = document.getElementById("heatmap");
   var svg = document.getElementById("heatmap-svg");
   var statusEl = document.getElementById("heatmap-status");
   var card = document.getElementById("heatmap-card");
   var fillBtn = document.getElementById("heatmap-fill");
+  var rangeRoot = document.getElementById("heatmap-range");
+  var heading = document.getElementById("heatmap-heading");
+  var caption = document.getElementById("heatmap-caption");
+  var fromEl = document.getElementById("heatmap-from");
+  var toEl = document.getElementById("heatmap-to");
+  var showBtn = document.getElementById("heatmap-show");
+  var liveCaption = caption ? caption.textContent : "";
   if (!root || !svg) {
     return;
   }
@@ -30,6 +42,7 @@
   var lastRows = [];
   var lastLiveRows = [];
   var hasPaint = false;
+  var req = 0;
 
   function isRange() {
     return !!(card && card.getAttribute("data-heatmap-period") === "range");
@@ -37,6 +50,23 @@
 
   function fillOn() {
     return !!(card && card.classList.contains("heatmap-fill"));
+  }
+
+  function setToken(period) {
+    if (card) {
+      card.setAttribute("data-heatmap-period", period);
+    }
+  }
+
+  function setWindowPressed(name) {
+    if (!rangeRoot) {
+      return;
+    }
+    var chips = rangeRoot.querySelectorAll("[data-heatmap-window]");
+    for (var i = 0; i < chips.length; i++) {
+      var on = chips[i].getAttribute("data-heatmap-window") === name;
+      chips[i].setAttribute("aria-pressed", on ? "true" : "false");
+    }
   }
 
   function setStatus(msg) {
@@ -420,29 +450,117 @@
     }
   }
 
+  function showRows(rows) {
+    lastRows = rows || [];
+    paint(lastRows);
+  }
+
   function onLiveApplied(ev) {
     lastLiveRows = (ev && ev.detail && ev.detail.rows) || [];
     if (isRange()) {
       return;
     }
-    lastRows = lastLiveRows;
-    paint(lastRows);
+    showRows(lastLiveRows);
   }
 
-  function onRangeApplied(ev) {
-    if (!isRange()) {
-      return;
+  function restoreLive(statusMsg) {
+    req += 1;
+    setToken("live");
+    if (heading) {
+      heading.textContent = LIVE_HEADING;
     }
-    lastRows = (ev && ev.detail && ev.detail.rows) || [];
-    paint(lastRows);
+    if (caption) {
+      caption.textContent = liveCaption;
+    }
+    svg.setAttribute("aria-label", LIVE_LABEL);
+    setWindowPressed("live");
+    showRows(lastLiveRows);
+    if (statusMsg) {
+      setStatus(statusMsg);
+    }
   }
 
-  function onLiveRestore() {
-    if (isRange()) {
+  function beginRange() {
+    setToken("range");
+    if (heading) {
+      heading.textContent = RANGE_HEADING;
+    }
+    if (caption) {
+      caption.textContent = RANGE_CAPTION;
+    }
+    svg.setAttribute("aria-label", RANGE_LABEL);
+    showRows([]);
+    setStatus("Loading period marks…");
+  }
+
+  function rowMap(rows) {
+    return (rows || []).map(function (r) {
+      return {
+        ib_symbol: r && r.ib_symbol,
+        pl: r && r.pl,
+        change_pct: r && r.change_pct,
+        contrib_pct: r && r.contrib_pct,
+      };
+    });
+  }
+
+  function applyBody(body, windowName) {
+    var frames = (body && body.frames) || [];
+    if (body && body.start && fromEl) {
+      fromEl.value = body.start;
+    }
+    if (body && body.end && toEl) {
+      toEl.value = body.end;
+    }
+    if (caption) {
+      var text = RANGE_CAPTION;
+      if (body && body.start && body.end) {
+        text += " Window " + body.start + " to " + body.end + ".";
+      }
+      caption.textContent = text;
+    }
+    setWindowPressed(windowName);
+    if (!frames.length) {
+      showRows([]);
+      setStatus((body && body.error) || "No daily closes in this period");
       return;
     }
-    lastRows = lastLiveRows;
-    paint(lastRows);
+    var last = frames[frames.length - 1];
+    showRows(rowMap(last.rows));
+    setStatus("");
+  }
+
+  function loadUrl(url, windowName) {
+    var my = ++req;
+    beginRange();
+    fetch(url, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then(function (res) {
+        return res.json().then(function (body) {
+          return { ok: res.ok, body: body };
+        });
+      })
+      .then(function (payload) {
+        if (my !== req) {
+          return;
+        }
+        if (!payload.ok) {
+          var detail =
+            (payload.body && (payload.body.detail || payload.body.error)) ||
+            "Period marks failed";
+          restoreLive(detail);
+          return;
+        }
+        applyBody(payload.body || {}, windowName);
+      })
+      .catch(function () {
+        if (my !== req) {
+          return;
+        }
+        restoreLive("Period marks failed");
+      });
   }
 
   function setFill(on) {
@@ -466,8 +584,6 @@
   }
 
   document.addEventListener("holding-pl-applied", onLiveApplied);
-  document.addEventListener("heatmap-range-applied", onRangeApplied);
-  document.addEventListener("heatmap-live", onLiveRestore);
   if (fillBtn) {
     fillBtn.addEventListener("click", function () {
       setFill(!fillOn());
@@ -480,6 +596,58 @@
     ev.preventDefault();
     setFill(false);
   });
+  if (rangeRoot) {
+    var pf = card ? card.getAttribute("data-period-from") || "" : "";
+    var pt = card ? card.getAttribute("data-period-to") || "" : "";
+    if (fromEl && pf) {
+      fromEl.title = "Statement from " + pf;
+    }
+    if (toEl && pt) {
+      toEl.title = "Statement to " + pt;
+    }
+    rangeRoot.addEventListener("click", function (ev) {
+      var btn =
+        ev.target && ev.target.closest
+          ? ev.target.closest("[data-heatmap-window]")
+          : null;
+      if (!btn || !rangeRoot.contains(btn)) {
+        return;
+      }
+      var next = btn.getAttribute("data-heatmap-window");
+      if (!next) {
+        return;
+      }
+      if (next === "live") {
+        restoreLive("");
+        return;
+      }
+      loadUrl(
+        "/api/portfolio/mtm-path?period=" + encodeURIComponent(next),
+        next
+      );
+    });
+  }
+  if (showBtn) {
+    showBtn.addEventListener("click", function () {
+      var a = fromEl && fromEl.value;
+      var b = toEl && toEl.value;
+      if (!a || !b) {
+        setStatus("Choose from and to dates");
+        return;
+      }
+      if (a > b) {
+        setStatus("From must be on or before to");
+        return;
+      }
+      loadUrl(
+        "/api/portfolio/mtm-path?start=" +
+          encodeURIComponent(a) +
+          "&end=" +
+          encodeURIComponent(b),
+        "custom"
+      );
+    });
+  }
   if (typeof ResizeObserver === "function") {
     new ResizeObserver(function () {
       if (hasPaint || lastRows.length) {

@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 
 from packages.catalog_api.client import CatalogApi
 
-from apps.analysis_web.deps import get_api, get_history_service
+from apps.analysis_web.deps import get_api, get_close_refresh, get_daily_closes
 from apps.analysis_web.services.alt_history import (
     NotFoundError,
     ReplayError,
@@ -44,8 +44,9 @@ from apps.analysis_web.services.alt_history_view import (
     ticket_on,
     universe_on,
 )
+from apps.analysis_web.services.close_refresh import CloseRefresh
+from apps.analysis_web.services.daily_closes import DailyCloses
 from apps.analysis_web.services.portfolio import load_ib_book
-from apps.analysis_web.services.price_history import HistoryService
 from apps.analysis_web.templating import render_fragment, render_page
 
 router = APIRouter(tags=["histories"])
@@ -88,7 +89,8 @@ def _empty_list_payload() -> dict:
 @router.get("/portfolio/histories", response_class=HTMLResponse)
 def page_histories(
     request: Request,
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
+    refresher: CloseRefresh = Depends(get_close_refresh),
 ) -> HTMLResponse:
     try:
         rows = list_histories()
@@ -99,6 +101,15 @@ def page_histories(
             error=e.message,
             payload=_empty_list_payload(),
         )
+    from apps.analysis_web.services.alt_history import listings_for_path
+
+    listings: list[str] = []
+    forks: list[str] = []
+    for hist in rows:
+        forks.append(hist.fork_date)
+        listings.extend(listings_for_path(hist))
+    if listings:
+        refresher.prime(listings, since=min(forks) if forks else "0001-01-01")
     payload = list_payload(rows, svc)
     return render_page(request, "histories.html", payload=payload, error=None)
 
@@ -152,6 +163,7 @@ def page_history_detail(
     history_id: int,
     date: str = "",
     api: CatalogApi = Depends(get_api),
+    refresher: CloseRefresh = Depends(get_close_refresh),
 ) -> HTMLResponse:
     try:
         hist = get_history(history_id)
@@ -171,6 +183,9 @@ def page_history_detail(
             title="What-if",
             message=e.message,
         )
+    from apps.analysis_web.services.alt_history import listings_for_path
+
+    refresher.prime(listings_for_path(hist), since=hist.fork_date)
     payload = editor_page(
         hist,
         view_date=date or None,
@@ -204,7 +219,7 @@ def post_decision(
     notional: str = Form(""),
     override_price: str = Form(""),
     api: CatalogApi = Depends(get_api),
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         hist = get_history(history_id)
@@ -329,7 +344,7 @@ def post_delete_history(history_id: int) -> RedirectResponse:
 
 @router.get("/api/portfolio/histories")
 def api_histories(
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         rows = list_histories()
@@ -371,7 +386,7 @@ def api_history(history_id: int):
 def api_history_holdings(
     history_id: int,
     date: str = Query(""),
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         hist = get_history(history_id)
@@ -393,7 +408,7 @@ def fragment_held_table(
     history_id: int,
     date: str = Query(""),
     api: CatalogApi = Depends(get_api),
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ) -> HTMLResponse:
     try:
         hist = get_history(history_id)
@@ -454,7 +469,7 @@ def api_history_universe(
     history_id: int,
     date: str = Query(""),
     api: CatalogApi = Depends(get_api),
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         hist = get_history(history_id)
@@ -479,7 +494,7 @@ def api_history_ticket(
     ticker: str = Query(""),
     quantity: str = Query(""),
     api: CatalogApi = Depends(get_api),
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         hist = get_history(history_id)
@@ -503,7 +518,7 @@ def api_history_ticket(
 @router.get("/api/portfolio/histories/{history_id}/path")
 def api_history_path(
     history_id: int,
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         hist = get_history(history_id)
@@ -519,7 +534,7 @@ def api_history_path(
 @router.get("/api/portfolio/histories/{history_id}/path.svg")
 def api_history_path_svg(
     history_id: int,
-    svc: HistoryService = Depends(get_history_service),
+    svc: DailyCloses = Depends(get_daily_closes),
 ):
     try:
         hist = get_history(history_id)

@@ -8,6 +8,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from apps.analysis_web.services.price_history import FakeHistoryBackend
+from apps.analysis_web.tests.closes_util import tmp_closes
+
 class ChangeFeedUnitTests(unittest.TestCase):
     def test_fingerprint_changes_on_db_touch(self):
         from apps.analysis_web.services.change_feed import (
@@ -146,7 +149,12 @@ class EventsEndpointTests(unittest.TestCase):
         importlib.reload(app_mod)
         from fastapi.testclient import TestClient
 
-        self.client = TestClient(app_mod.create_app())
+        self.client = TestClient(
+            app_mod.create_app(
+                history_backend=FakeHistoryBackend(),
+                daily_closes=tmp_closes(self._td.name),
+            )
+        )
 
     def tearDown(self):
         self.client.close()

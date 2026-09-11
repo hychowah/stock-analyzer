@@ -300,8 +300,8 @@ def ticket_block(
     status = (mark_status or "").strip().lower()
     if status == "unavailable":
         if key:
-            return TicketBlock("unavailable", f"Yahoo failed for {key}.")
-        return TicketBlock("unavailable", "Yahoo failed for this listing.")
+            return TicketBlock("unavailable", f"No stored close for {key}.")
+        return TicketBlock("unavailable", "No stored close for this listing.")
     if status != "quoted" or close is None:
         if key and day:
             return TicketBlock("no_close", f"No close for {key} on or before {day}.")

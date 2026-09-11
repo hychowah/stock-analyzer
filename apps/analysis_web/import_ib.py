@@ -140,6 +140,30 @@ def rebuild_book(*, db: Path | None = None) -> list[dict]:
     return out
 
 
+def _refresh_closes() -> None:
+    """Fill DailyCloses for the live book. Yahoo is the writer; ingest waits."""
+    import logging
+
+    log = logging.getLogger(__name__)
+    try:
+        from apps.analysis_web.services.close_refresh import CloseRefresh
+        from apps.analysis_web.services.daily_closes import DailyCloses
+        from apps.analysis_web.services.mtm_path import closes_refresh_scope
+        from apps.analysis_web.services.portfolio import load_ib_book
+        from apps.analysis_web.services.price_history import YahooHistoryBackend
+
+        book, err = load_ib_book()
+        if book is None:
+            if err:
+                log.warning("close refresh skipped: %s", err)
+            return
+        store = DailyCloses()
+        listings, since = closes_refresh_scope(list(store.listings()), book)
+        CloseRefresh(store, YahooHistoryBackend()).ensure(listings, since=since)
+    except Exception:
+        log.exception("close refresh after IB import failed")
+
+
 def _print_result(result: dict) -> None:
     print(f"imported {result['imported']}")
     print(f"account {result['account_id']} {result['period_from']}..{result['period_to']}")
@@ -172,12 +196,14 @@ def main(argv: list[str] | None = None) -> int:
             results = rebuild_book()
             for result in results:
                 _print_result(result)
+            _refresh_closes()
             return 0
         src = Path(args.src) if args.src else find_default_csv()
         if not src.is_file():
             raise FileNotFoundError(str(src))
         result = import_statement(src)
         _print_result(result)
+        _refresh_closes()
     except (OSError, ValueError, FileNotFoundError, StoreError) as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1

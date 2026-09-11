@@ -1,6 +1,6 @@
 """Reconstructed period MTM for the live IB book.
 
-Walks ``as_of_book`` and marks with Yahoo daily closes. P/L is mark change
+Walks ``as_of_book`` and marks with stored daily closes. P/L is mark change
 net of IB fill cash, not position-value change. Display math, not a
 valuation and not the IB statement MTM file. Does not import what-if.
 """
@@ -18,8 +18,8 @@ from apps.analysis_web.services.book_state import (
 )
 from apps.analysis_web.services.ib_statement import IbBook, IbStatement
 from apps.analysis_web.services.mark_book import AsOfMark, MarkedLot, MarkedNav, mark_lots, marks_on
+from apps.analysis_web.services.daily_closes import DailyCloses
 from apps.analysis_web.services.price_history import (
-    HistoryService,
     PriceHistory,
 )
 from apps.analysis_web.services.signed_bars import signed_bar_rows
@@ -118,6 +118,46 @@ def window_listings(ib_book: IbBook, start: str, end: str) -> list[str]:
         if day and a <= day <= b:
             _add(_listing_of(trade.ib_symbol, exch))
     return seen
+
+
+def book_close_need(ib_book: IbBook, *, today: str | None = None) -> tuple[list[str], str]:
+    """Listings the live IB book can mark, and the earliest cover date.
+
+    Cover is min(statement period_from, YTD, first stock trade). Window is
+    that day through today so sold-in-window names are included.
+    """
+    day = (today or utc_today()).strip()[:10]
+    ytd = f"{day[:4]}-01-01"
+    start_stmt = (ib_book.snapshot.period_from or "").strip()[:10]
+    first = start_stmt if len(start_stmt) == 10 else ytd
+    for trade in ib_book.trades or ():
+        td = trade_date(trade.traded_at)
+        if td and len(td) == 10 and td < first:
+            first = td
+    if first > ytd:
+        first = ytd
+    return window_listings(ib_book, first, day), first
+
+
+def closes_refresh_scope(
+    store_listings: list[str],
+    book: IbBook | None,
+    *,
+    today: str | None = None,
+) -> tuple[list[str], str]:
+    """Union of stored listings and the live book universe, plus cover date.
+
+    CloseRefresh does not know the book. Callers (HTML, ingest, idle) do.
+    """
+    from apps.analysis_web.services.price_history import COVERED_ALL, _unique_listings
+
+    listings = list(store_listings)
+    since = COVERED_ALL
+    if book is not None:
+        extra, need = book_close_need(book, today=today)
+        listings = _unique_listings(listings + extra)
+        since = need
+    return listings, since
 
 
 def trade_cash_by_listing(
@@ -399,14 +439,14 @@ def build_mtm_path(
 
 def mtm_path_for(
     ib_book: IbBook,
-    svc: HistoryService,
+    closes: DailyCloses,
     period: str,
     *,
     today: str | None = None,
 ) -> dict[str, Any]:
     start, end = resolve_period(period, ib_book.snapshot, today=today)
     listings = window_listings(ib_book, start, end)
-    histories = svc.get_many(listings, since=start) if listings else {}
+    histories = closes.series(listings) if listings else {}
     body = build_mtm_path(ib_book, histories, start=start, end=end)
     body["period"] = period
     return body
@@ -430,13 +470,13 @@ def parse_window_dates(start: str, end: str) -> tuple[str, str]:
 
 def mtm_path_window(
     ib_book: IbBook,
-    svc: HistoryService,
+    closes: DailyCloses,
     start: str,
     end: str,
 ) -> dict[str, Any]:
     a, b = parse_window_dates(start, end)
     listings = window_listings(ib_book, a, b)
-    histories = svc.get_many(listings, since=a) if listings else {}
+    histories = closes.series(listings) if listings else {}
     body = build_mtm_path(ib_book, histories, start=a, end=b)
     body["period"] = ""
     return body
@@ -444,14 +484,14 @@ def mtm_path_window(
 
 def mtm_interval_for(
     ib_book: IbBook,
-    svc: HistoryService,
+    closes: DailyCloses,
     period: str,
     *,
     today: str | None = None,
 ) -> dict[str, Any]:
     start, end = resolve_period(period, ib_book.snapshot, today=today)
     listings = window_listings(ib_book, start, end)
-    histories = svc.get_many(listings, since=start) if listings else {}
+    histories = closes.series(listings) if listings else {}
     body = build_mtm_interval(ib_book, histories, start=start, end=end)
     body["period"] = period
     return body
@@ -459,13 +499,13 @@ def mtm_interval_for(
 
 def mtm_interval_window(
     ib_book: IbBook,
-    svc: HistoryService,
+    closes: DailyCloses,
     start: str,
     end: str,
 ) -> dict[str, Any]:
     a, b = parse_window_dates(start, end)
     listings = window_listings(ib_book, a, b)
-    histories = svc.get_many(listings, since=a) if listings else {}
+    histories = closes.series(listings) if listings else {}
     body = build_mtm_interval(ib_book, histories, start=a, end=b)
     body["period"] = ""
     return body

@@ -1,0 +1,15 @@
+{
+  "session": "2026-09-11-daily-closes",
+  "summary": "Daily closes live in local-home sqlite. Heatmap/Play/what-if/price-history GETs read DailyCloses. Yahoo is CloseRefresh (HTML prime, IB import, idle). HistoryService RAM TTL is gone. Live NAV stays last prints.",
+  "not": [
+    "Persisted heatmap stills",
+    "Disk last-print store",
+    "Heatmap Play",
+    "SSR tiles"
+  ],
+  "verify": {
+    "eng_verify": "PASS 1035",
+    "pytest_targeted": "test_daily_closes test_close_refresh test_price_history test_mtm_path test_histories test_live_nav 95 passed",
+    "reshape": "series(listings); GET price-history store-only; CloseRefresh Yahoo-only; create_app(history_backend=)"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "goal": "Daily closes live on disk; heatmap GETs read them; Yahoo is a writer, not a click",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not persist heatmap stills or last prints",
+    "Do not Play on the heatmap"
+  ],
+  "work_type": "W4",
+  "success_criteria": [
+    "DailyCloses sqlite in local home; series() has no network",
+    "CloseRefresh.ensure writes Yahoo into DailyCloses; GET /mtm-interval and /mtm-path do not call it",
+    "HistoryService RAM TTL is gone; HISTORY_TTL_SEC is gone",
+    "/portfolio HTML primes CloseRefresh without waiting; Live NAV still QuoteService",
+    "ARCHITECTURE.md and apps/analysis_web/README.md name daily_closes.sqlite and CloseRefresh",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py"
+  ]
+}

@@ -9,6 +9,8 @@ import time
 import unittest
 from pathlib import Path
 
+from apps.analysis_web.services.price_history import FakeHistoryBackend
+from apps.analysis_web.tests.closes_util import tmp_closes
 from apps.analysis_web.services.quotes import (
     FakeQuoteBackend,
     MAX_SYMBOLS,
@@ -194,7 +196,10 @@ class QuotesApiTests(unittest.TestCase):
         import apps.analysis_web.app as app_mod
 
         importlib.reload(app_mod)
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend(),
+            daily_closes=tmp_closes(self._td.name),
+        )
         be = FakeQuoteBackend(
             {
                 "META": _q("META", 580.0),

@@ -14,7 +14,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
+import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -33,11 +35,9 @@ from starlette.types import Scope
 from apps.analysis_web.config import archive_root, static_dir
 from apps.analysis_web.identity import boot_git_sha
 from apps.analysis_web.routes import analyze, api, architecture, artifacts, compares, events, harness, histories, pages
-from apps.analysis_web.services.price_history import (
-    HistoryService,
-    YahooHistoryBackend,
-    history_ttl_sec,
-)
+from apps.analysis_web.services.close_refresh import CloseRefresh
+from apps.analysis_web.services.daily_closes import DailyCloses
+from apps.analysis_web.services.price_history import HistoryBackend, YahooHistoryBackend
 from apps.analysis_web.services.quotes import QuoteService, YahooPrintBackend, quote_ttl_sec
 from apps.analysis_web.templating import create_templates, render_page
 
@@ -78,20 +78,50 @@ class StaticFilesNoCache(StaticFiles):
         return response
 
 
-@asynccontextmanager
-async def _lifespan(_app: FastAPI):
-    import logging
+_IDLE_SEC = 1800
 
+
+def _idle_ensure(app: FastAPI) -> None:
+    from apps.analysis_web.services.mtm_path import closes_refresh_scope
+    from apps.analysis_web.services.portfolio import load_ib_book
+
+    store = getattr(app.state, "daily_closes", None)
+    refresher = getattr(app.state, "close_refresh", None)
+    if store is None or refresher is None:
+        return
+    book, _err = load_ib_book()
+    listings, since = closes_refresh_scope(list(store.listings()), book)
+    if listings:
+        refresher.ensure(listings, since=since)
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
     try:
         from packages.agent_jobs.reconcile import reconcile_jobs
 
         reconcile_jobs(archive_root())
     except Exception:
         logging.getLogger(__name__).exception("reconcile_jobs failed")
+    stop = threading.Event()
+
+    def _idle() -> None:
+        while not stop.wait(timeout=_IDLE_SEC):
+            try:
+                _idle_ensure(app)
+            except Exception:
+                logging.getLogger(__name__).exception("close refresh idle failed")
+
+    threading.Thread(target=_idle, name="close-refresh-idle", daemon=True).start()
     yield
+    stop.set()
 
 
-def create_app() -> FastAPI:
+def create_app(
+    *,
+    history_backend: HistoryBackend | None = None,
+    daily_closes: DailyCloses | None = None,
+) -> FastAPI:
     app = FastAPI(
         title="Archive Analysis",
         description="Catalog UI plus job scheduler: Analyze starts Mode A; Compare appends archive/comparisons/. Does not author phases or FV.",
@@ -101,9 +131,9 @@ def create_app() -> FastAPI:
     app.state.templates = create_templates()
     app.state.git_sha = boot_git_sha()
     app.state.quote_service = QuoteService(YahooPrintBackend(), ttl_sec=quote_ttl_sec())
-    app.state.history_service = HistoryService(
-        YahooHistoryBackend(), ttl_sec=history_ttl_sec()
-    )
+    app.state.daily_closes = daily_closes if daily_closes is not None else DailyCloses()
+    backend = history_backend if history_backend is not None else YahooHistoryBackend()
+    app.state.close_refresh = CloseRefresh(app.state.daily_closes, backend)
 
     static_path = static_dir()
     static_path.mkdir(parents=True, exist_ok=True)

@@ -558,7 +558,9 @@
           return;
         }
         var body = payload.body || {};
-        lastIntervalByUrl[url] = body;
+        if ((body.rows || []).length) {
+          lastIntervalByUrl[url] = body;
+        }
         applyBody(body, windowName);
       })
       .catch(function () {

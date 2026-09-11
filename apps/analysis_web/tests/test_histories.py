@@ -8,11 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from apps.analysis_web.services.price_history import (
-    FakeHistoryBackend,
-    HistoryService,
-    PriceBar,
-)
+from apps.analysis_web.services.price_history import FakeHistoryBackend, PriceBar
+from apps.analysis_web.tests.closes_util import seed_app_closes
 from apps.analysis_web.tests.test_book_state import FIXTURE
 from apps.analysis_web.tests.test_portfolio import _mini_archive
 
@@ -54,13 +51,14 @@ class HistoryHttpTests(unittest.TestCase):
         cfg2.local_dir = lambda: self._local  # type: ignore[assignment]
         port.local_dir = cfg2.local_dir  # type: ignore[assignment]
 
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend()
+        )
         from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
 
         self._app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
-        self._backend = FakeHistoryBackend(_bars())
-        self._app.state.history_service = HistoryService(
-            self._backend, ttl_sec=60
+        self._store, self._backend = seed_app_closes(
+            self._app, self._local / "daily_closes.sqlite", _bars()
         )
         from fastapi.testclient import TestClient
 
@@ -289,10 +287,7 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertNotIn("path", body)
         self.assertEqual(body["view_date"], "2026-03-31")
         self.assertTrue(any(row["listing"] == "META" for row in body["held"]))
-        self.assertTrue(self._backend.many_calls)
-        for _syms, since in self._backend.many_calls:
-            self.assertRegex(since, r"^\d{4}-\d{2}-\d{2}$")
-            self.assertNotEqual(since, "max")
+        self.assertEqual(self._backend.many_calls, [])
 
         doc = self.client.get(f"/api/portfolio/histories/{hid}")
         self.assertEqual(doc.status_code, 200)
@@ -433,21 +428,9 @@ class HistoryHttpTests(unittest.TestCase):
         self.assertFalse(hasattr(page, "until"))
         self.assertIsInstance(page.sold_later, frozenset)
 
-        captured: list[tuple[str, str]] = []
-
-        def fake_load(svc, listings, *, start, end):
-            captured.append((start, end))
-            return {}
-
-        from unittest.mock import patch
-
-        with patch(
-            "apps.analysis_web.services.alt_history_view.load_histories", fake_load
-        ):
-            held = account_on(
-                hist, self._app.state.history_service, view_date="2026-03-31"
-            )
-        self.assertEqual(captured[0][1], "2026-03-31")
+        held = account_on(
+            hist, self._app.state.daily_closes, view_date="2026-03-31"
+        )
         self.assertTrue(held.held)
         self.assertIsInstance(held, AsOfAccount)
         self.assertIsInstance(held.held[0], MarkedLot)
@@ -663,7 +646,7 @@ class HistoryHttpTests(unittest.TestCase):
 
         hist = get_history(int(hid))
         asof = account_on(
-            hist, self._app.state.history_service, view_date="2026-03-31"
+            hist, self._app.state.daily_closes, view_date="2026-03-31"
         )
         rows = holding_rows(asof, catalog_snaps(CatalogApi(self.archive, readonly=True)))
         meta = next(r for r in rows if r.lot.listing == "META")

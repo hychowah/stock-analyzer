@@ -331,7 +331,7 @@
       return "Loading closes for " + view + "…";
     }
     if (mark.status === "unavailable") {
-      return "Yahoo failed";
+      return "No stored close";
     }
     if (mark.status !== "quoted" || mark.close == null) {
       return "No close on or before " + view;
@@ -388,7 +388,7 @@
       .catch(function () {
         var cells = table.querySelectorAll(".hist-buy-close");
         for (var i = 0; i < cells.length; i++) {
-          cells[i].textContent = "Yahoo failed";
+          cells[i].textContent = "No stored close";
         }
       });
   }

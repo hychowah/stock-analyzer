@@ -21,7 +21,7 @@
   </table>
   <p class="muted">Paper account on {{ view_date }} · Yahoo daily close on or before this date, not live last print.{% if account.base_currency %} {{ account.base_currency }}.{% endif %} Paper Reg-T 25%, not IB house margin. Header Δ is still today. Weight is of quoted stock, not NAV. Downside is this row’s close versus stored bear FV. MoS is the stored snapshot.</p>
   {% if account.n_unavailable %}
-  <p class="err" role="status">Yahoo failed for {{ account.n_unavailable }} listing{% if account.n_unavailable != 1 %}s{% endif %}.
+  <p class="err" role="status">No stored close for {{ account.n_unavailable }} listing{% if account.n_unavailable != 1 %}s{% endif %}.
     <button type="button" class="secondary hist-retry-marks">Retry prices</button>
   </p>
   {% endif %}
@@ -62,7 +62,7 @@
       <td class="num hist-skel" data-col="mos" aria-label="Loading MoS"><span class="hist-skel-bar"></span></td>
       {% else %}
       {% if lot.error == 'unavailable' %}
-      <td class="muted" data-col="close">Yahoo failed</td>
+      <td class="muted" data-col="close">No stored close</td>
       <td class="muted" data-col="value">—</td>
       {% elif lot.close is none %}
       <td class="muted" data-col="close">No close on or before {{ view_date }}</td>

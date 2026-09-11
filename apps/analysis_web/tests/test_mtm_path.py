@@ -17,9 +17,11 @@ from apps.analysis_web.services.ib_statement import (
 )
 from apps.analysis_web.services.mtm_path import (
     PeriodError,
+    book_close_need,
     build_mtm_interval,
     build_mtm_path,
     choose_path_args,
+    closes_refresh_scope,
     parse_window_dates,
     resolve_period,
     trade_cash_by_listing,
@@ -27,10 +29,10 @@ from apps.analysis_web.services.mtm_path import (
 )
 from apps.analysis_web.services.price_history import (
     FakeHistoryBackend,
-    HistoryService,
     PriceBar,
     PriceHistory,
 )
+from apps.analysis_web.tests.closes_util import seed_app_closes
 from apps.analysis_web.tests.test_ib_statement import FIXTURE
 from apps.analysis_web.tests.test_portfolio import _mini_archive
 
@@ -71,6 +73,22 @@ class ResolvePeriodTests(unittest.TestCase):
             resolve_period("1d", stmt, today="2026-09-10")
         with self.assertRaises(PeriodError):
             resolve_period("live", stmt, today="2026-09-10")
+
+
+class BookCloseNeedTests(unittest.TestCase):
+    def test_cover_is_ytd_when_statement_is_this_year(self):
+        book = _book()
+        listings, since = book_close_need(book, today="2026-09-10")
+        self.assertEqual(since, "2026-01-01")
+        self.assertIn("META", listings)
+        self.assertIn("0700.HK", listings)
+
+    def test_scope_unions_store_listings(self):
+        book = _book()
+        listings, since = closes_refresh_scope(["AAPL"], book, today="2026-09-10")
+        self.assertEqual(since, "2026-01-01")
+        self.assertIn("AAPL", listings)
+        self.assertIn("META", listings)
 
 
 class ChoosePathArgsTests(unittest.TestCase):
@@ -334,8 +352,10 @@ class MtmPathHttpTests(unittest.TestCase):
         cfg2.local_dir = lambda: self._local  # type: ignore[assignment]
         port.local_dir = cfg2.local_dir  # type: ignore[assignment]
 
-        self._app = app_mod.create_app()
-        be = FakeHistoryBackend(
+        self._app = app_mod.create_app(history_backend=FakeHistoryBackend())
+        seed_app_closes(
+            self._app,
+            self._local / "daily_closes.sqlite",
             {
                 "META": [
                     PriceBar("2026-01-02", 40.0),
@@ -347,9 +367,8 @@ class MtmPathHttpTests(unittest.TestCase):
                     PriceBar("2026-03-20", 10.0),
                     PriceBar("2026-03-31", 10.5),
                 ],
-            }
+            },
         )
-        self._app.state.history_service = HistoryService(be, ttl_sec=60)
         from fastapi.testclient import TestClient
 
         self.client = TestClient(self._app)

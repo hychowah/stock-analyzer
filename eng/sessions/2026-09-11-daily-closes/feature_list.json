@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "daily-closes",
+      "description": "DailyCloses sqlite in local home; series() is a disk read",
+      "passes": false,
+      "verify": "pytest test_daily_closes; GET mtm-interval does not call Yahoo backend"
+    },
+    {
+      "id": "close-refresh",
+      "description": "CloseRefresh writes Yahoo; GET interval/path/price-history do not wait on it",
+      "passes": false,
+      "verify": "pytest test_close_refresh test_price_history test_mtm_path test_histories"
+    },
+    {
+      "id": "docs",
+      "description": "ARCHITECTURE.md and README name daily_closes.sqlite and CloseRefresh as writer",
+      "passes": false,
+      "verify": "ARCHITECTURE.md and apps/analysis_web/README.md mention daily_closes.sqlite"
+    },
+    {
+      "id": "implement",
+      "description": "Implement the primary change for this slug",
+      "passes": false,
+      "verify": "python3 scripts/eng_verify.py"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

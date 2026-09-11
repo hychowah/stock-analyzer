@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from apps.analysis_web.services.price_history import FakeHistoryBackend
+
 
 def _mini_archive(base: Path) -> Path:
     archive = base / "archive"
@@ -209,7 +211,7 @@ class PortfolioHttpTests(unittest.TestCase):
 
         from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
 
-        app = app_mod.create_app()
+        app = app_mod.create_app(history_backend=FakeHistoryBackend())
         app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
         self.client = TestClient(app)
 

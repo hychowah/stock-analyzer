@@ -48,47 +48,10 @@ from apps.analysis_web.services.paper_account import (
     preview_sell,
 )
 from apps.analysis_web.templating import downside_pct
+from apps.analysis_web.services.daily_closes import DailyCloses
 from apps.analysis_web.services.price_history import (
-    HistoryService,
     PriceBar,
-    PriceHistory,
 )
-
-
-def load_histories(
-    svc: HistoryService,
-    listings: list[str],
-    *,
-    start: str,
-    end: str,
-) -> dict[str, PriceHistory]:
-    """One PriceHistory per listing, including series with error set.
-
-    ``end`` is the caller's mark window; extra bars after end stay (close_on).
-    Fetch covers ``start`` through now. Do not pick a Yahoo period here.
-    """
-    _ = end
-    keys: list[str] = []
-    seen: set[str] = set()
-    for raw in listings:
-        listing = (raw or "").strip().upper()
-        if not listing or listing in seen:
-            continue
-        seen.add(listing)
-        keys.append(listing)
-    if not keys:
-        return {}
-    return svc.get_many(keys, since=start)
-
-
-def load_bars(
-    svc: HistoryService,
-    listings: list[str],
-    *,
-    start: str,
-    end: str,
-) -> dict[str, tuple[PriceBar, ...]]:
-    return {k: v.bars for k, v in load_histories(svc, listings, start=start, end=end).items()}
 
 
 def _span(hist: History) -> str:
@@ -271,7 +234,7 @@ def card_for(
 
 def list_payload(
     histories: list[History],
-    svc: HistoryService,
+    svc: DailyCloses,
     *,
     until: str | None = None,
 ) -> dict[str, Any]:
@@ -282,7 +245,7 @@ def list_payload(
         forks.append(hist.fork_date)
         listings.update(listings_for_path(hist))
     start = min(forks) if forks else end
-    bars = load_bars(svc, sorted(listings), start=start, end=end)
+    bars = {k: v.bars for k, v in svc.series(sorted(listings)).items()}
     cards = [card_for(hist, bars, until=end) for hist in histories]
     overlay = None
     if len(cards) >= 2:
@@ -466,7 +429,7 @@ def _missing_mark(listing: str, day: str) -> AsOfMark:
 
 def account_on(
     hist: History,
-    svc: HistoryService,
+    svc: DailyCloses,
     *,
     view_date: str | None = None,
 ) -> AsOfAccount:
@@ -477,7 +440,7 @@ def account_on(
     view = _clamp_view(hist, view_date, utc_today())
     as_of = state_on(hist, view)
     listings = [lot.listing for lot in as_of.lots if lot.listing]
-    histories = load_histories(svc, listings, start=hist.fork_date, end=view)
+    histories = svc.series(listings)
     marks = marks_on(histories, view)
     for listing in listings:
         key = listing.strip().upper()
@@ -496,17 +459,17 @@ def account_on(
 
 def mark_listing(
     hist: History,
-    svc: HistoryService,
+    svc: DailyCloses,
     listing: str,
     *,
     view_date: str,
 ) -> AsOfMark:
-    """One listing's close on D. Cache-hot when the as-of pane already loaded D."""
+    """One listing's close on D. Disk read of DailyCloses.series."""
     key = (listing or "").strip().upper()
     day = _clamp_view(hist, view_date, utc_today())
     if not key:
         return _missing_mark("", day)
-    histories = load_histories(svc, [key], start=hist.fork_date, end=day)
+    histories = svc.series([key])
     series = histories.get(key)
     if series is None:
         return _missing_mark(key, day)
@@ -515,7 +478,7 @@ def mark_listing(
 
 def universe_on(
     hist: History,
-    svc: HistoryService,
+    svc: DailyCloses,
     snaps: tuple[CatalogSnap, ...] | list[CatalogSnap],
     *,
     view_date: str | None = None,
@@ -523,7 +486,7 @@ def universe_on(
     """Catalog snaps plus AsOfMark on listing. Second fetch vs account_on."""
     view = _clamp_view(hist, view_date, utc_today())
     listings = [snap.listing for snap in snaps if snap.listing]
-    histories = load_histories(svc, listings, start=hist.fork_date, end=view)
+    histories = svc.series(listings)
     out: list[BuyCandidate] = []
     for snap in snaps:
         listing = snap.listing or snap.ticker
@@ -684,7 +647,7 @@ def build_ticket(
 
 def ticket_on(
     hist: History,
-    svc: HistoryService,
+    svc: DailyCloses,
     *,
     view_date: str | None,
     side: str,
@@ -740,14 +703,14 @@ def path_on_bars(
 
 def path_on(
     hist: History,
-    svc: HistoryService,
+    svc: DailyCloses,
     *,
     until: str | None = None,
 ) -> PathView:
     """NAV walk from fork. Last point is header Δ. No holdings table."""
     end = until or utc_today()
     listings = listings_for_path(hist)
-    bars = load_bars(svc, listings, start=hist.fork_date, end=end)
+    bars = {k: v.bars for k, v in svc.series(listings).items()}
     return path_on_bars(hist, bars, until=end)
 
 

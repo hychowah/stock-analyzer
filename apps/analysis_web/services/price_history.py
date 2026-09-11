@@ -1,16 +1,14 @@
-"""Daily closes for the analysis UI.
+"""Daily-close value types and Yahoo/fake fetch backends.
 
-Callers pass one catalog ``quote_listing`` and the earliest calendar day they
-must mark or plot. One successful series per listing lives in process RAM.
-Yahoo period is how we fetched, not who we are. Chart-name repair lives in
-yahoo_bars. This module does not know catalog identity, FV, or MoS.
+Durable storage is DailyCloses. Yahoo writes through CloseRefresh, not a
+GET. Callers pass one catalog ``quote_listing`` and the earliest calendar
+day they must mark or plot. Yahoo period is how we fetched, not who we
+are. Chart-name repair lives in yahoo_bars. This module does not know
+catalog identity, FV, or MoS.
 """
 
 from __future__ import annotations
 
-import os
-import threading
-import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Protocol
@@ -24,7 +22,6 @@ from apps.analysis_web.services.yahoo_bars import (
 )
 
 
-DEFAULT_TTL_SEC = 900
 DEFAULT_RANGE = "1y"
 # HTTP chart vocabulary and yfinance period tokens. Not a store key.
 RANGES: dict[str, str] = {
@@ -48,22 +45,10 @@ RANGE_SPAN_DAYS: dict[str, int | None] = {
 }
 # Stored coverage for a max fetch: earlier than any real caller since.
 COVERED_ALL = "0001-01-01"
-_PERIOD_ORDER = ("1m", "3m", "6m", "1y", "2y", "5y", "max")
-_PERIOD_RANK = {key: i for i, key in enumerate(_PERIOD_ORDER)}
 
 
-def history_ttl_sec() -> int:
-    raw = (os.environ.get("HISTORY_TTL_SEC") or "").strip()
-    if not raw:
-        return DEFAULT_TTL_SEC
-    try:
-        n = int(raw)
-    except ValueError:
-        return DEFAULT_TTL_SEC
-    return n if n >= 1 else DEFAULT_TTL_SEC
-
-
-def _utc_today() -> str:
+def utc_today() -> str:
+    """UTC calendar day YYYY-MM-DD. HTTP range slice clock."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
@@ -162,11 +147,16 @@ def _one_or_unavailable(
 
 class HistoryBackend(Protocol):
     def history_many(
-        self, symbols: list[str], *, since: str
+        self,
+        symbols: list[str],
+        *,
+        since: str,
+        preferred_charts: dict[str, str] | None = None,
     ) -> dict[str, PriceHistory]:
         """One round of daily closes covering ``since`` through now.
 
         Fake series are complete. Yahoo maps ``since`` to a trailing period.
+        ``preferred_charts`` is listing → last Yahoo chart name (writer only).
         """
         ...
 
@@ -190,8 +180,13 @@ class FakeHistoryBackend:
         )
 
     def history_many(
-        self, symbols: list[str], *, since: str
+        self,
+        symbols: list[str],
+        *,
+        since: str,
+        preferred_charts: dict[str, str] | None = None,
     ) -> dict[str, PriceHistory]:
+        _ = preferred_charts
         unique = _unique_listings(symbols)
         self.many_calls.append((tuple(unique), since))
         out: dict[str, PriceHistory] = {}
@@ -242,7 +237,7 @@ def period_covering(since: str, *, today: str | None = None) -> str:
     Pad a week so close_on(start) can land on the prior session. Invalid since → max.
     """
     start = _parse_day(since)
-    now = _parse_day(today) or _parse_day(_utc_today())
+    now = _parse_day(today) or _parse_day(utc_today())
     if start is None or now is None:
         return "max"
     span = (now - start).days
@@ -264,17 +259,13 @@ def period_covering(since: str, *, today: str | None = None) -> str:
     return "max"
 
 
-def _wider_period(left: str, right: str) -> str:
-    return left if _PERIOD_RANK[left] >= _PERIOD_RANK[right] else right
-
-
 def since_for_period(period_key: str, *, today: str | None = None) -> str:
     """A cover date that period_covering maps back to ``period_key`` (inside the bucket)."""
     key = period_key if period_key in RANGE_SPAN_DAYS else "max"
     days = RANGE_SPAN_DAYS[key]
     if days is None:
         return COVERED_ALL
-    now = _parse_day(today) or _parse_day(_utc_today())
+    now = _parse_day(today) or _parse_day(utc_today())
     if now is None:
         return COVERED_ALL
     inner = max(0, days - 7)
@@ -287,7 +278,7 @@ def since_for_range(range_key: str, *, today: str | None = None) -> str:
     days = RANGE_SPAN_DAYS[key]
     if days is None:
         return COVERED_ALL
-    now = _parse_day(today) or _parse_day(_utc_today())
+    now = _parse_day(today) or _parse_day(utc_today())
     if now is None:
         return COVERED_ALL
     return (now - timedelta(days=days)).isoformat()
@@ -323,6 +314,7 @@ class YahooHistoryBackend:
         self._download = download
         self._search = search
         self._today = today
+        self.last_charts: dict[str, str] = {}
 
     def history(self, symbol: str, *, since: str) -> PriceHistory:
         return _one_or_unavailable(
@@ -332,11 +324,16 @@ class YahooHistoryBackend:
         )
 
     def history_many(
-        self, symbols: list[str], *, since: str
+        self,
+        symbols: list[str],
+        *,
+        since: str,
+        preferred_charts: dict[str, str] | None = None,
     ) -> dict[str, PriceHistory]:
         unique = _unique_listings(symbols)
         period_key = period_covering(since, today=self._today)
         period = RANGES[period_key]
+        self.last_charts = {}
         if not unique:
             return {}
         try:
@@ -346,9 +343,18 @@ class YahooHistoryBackend:
                 s: PriceHistory(symbol=s, source=self.source, error=str(e))
                 for s in unique
             }
+        fetch = list(unique)
+        pref: dict[str, str] = {}
+        for raw_k, raw_v in (preferred_charts or {}).items():
+            k = (raw_k or "").strip().upper()
+            v = (raw_v or "").strip().upper()
+            if k and v:
+                pref[k] = v
+                if v not in fetch:
+                    fetch.append(v)
         resolved = resolve_close_series(
             yf,
-            unique,
+            fetch,
             period=period,
             interval="1d",
             download=self._download,
@@ -356,7 +362,11 @@ class YahooHistoryBackend:
         )
         out: dict[str, PriceHistory] = {}
         for sym in unique:
-            _yahoo, rows = resolved.get(sym, (sym, []))
+            yahoo, rows = resolved.get(sym, (sym, []))
+            if not rows:
+                chart = pref.get(sym)
+                if chart:
+                    yahoo, rows = resolved.get(chart, (chart, []))
             bars = bars_from_closes(rows)
             if not bars:
                 out[sym] = PriceHistory(
@@ -365,102 +375,9 @@ class YahooHistoryBackend:
                     error="unavailable",
                 )
             else:
+                chart_name = str(yahoo or sym).strip().upper() or sym
+                self.last_charts[sym] = chart_name
                 out[sym] = PriceHistory(
                     symbol=sym, source=self.source, bars=bars
                 )
         return out
-
-
-class HistoryService:
-    """In-process daily-close map + single-flight in front of a HistoryBackend.
-
-    Store key is listing. Cache only error is None. A blip must not freeze as
-    unavailable. Coverage is the Yahoo period we asked for, not the first bar
-    (a 2-year IPO and a truncated 1y fetch can look the same).
-    On miss, fetch max(needed period, period already stored) so a short poll
-    cannot shrink a long series. Single-flight is one in-process batch, like
-    QuoteService; it is not yahoo_bars's yfinance lock.
-    """
-
-    def __init__(
-        self,
-        backend: HistoryBackend,
-        *,
-        ttl_sec: int = DEFAULT_TTL_SEC,
-        today: str | None = None,
-    ):
-        self._backend = backend
-        self._ttl = max(1, int(ttl_sec))
-        self._today = today
-        self._lock = threading.Lock()
-        self._cv = threading.Condition(self._lock)
-        self._store: dict[str, tuple[float, PriceHistory, str]] = {}
-        self._batch_fetching = False
-
-    @property
-    def ttl_sec(self) -> int:
-        return self._ttl
-
-    @property
-    def today(self) -> str:
-        return self._today or _utc_today()
-
-    def get(self, symbol: str, *, since: str) -> PriceHistory:
-        return _one_or_unavailable(
-            self.get_many([symbol], since=since), symbol
-        )
-
-    def get_many(
-        self, symbols: list[str], *, since: str
-    ) -> dict[str, PriceHistory]:
-        """One row per unique listing, covering since through the latest stored bar."""
-        unique = _unique_listings(symbols)
-        need = normalize_since(since)
-        out: dict[str, PriceHistory] = {}
-        if not unique:
-            return out
-        now = time.monotonic()
-        with self._cv:
-            while self._batch_fetching:
-                self._cv.wait(timeout=30)
-            missing: list[str] = []
-            today = self.today
-            need_period = period_covering(need, today=today)
-            fetch_period = need_period
-            for s in unique:
-                hit = self._store.get(s)
-                stored_period = hit[2] if hit is not None else None
-                if (
-                    hit is not None
-                    and hit[0] > now
-                    and _PERIOD_RANK[stored_period] >= _PERIOD_RANK[need_period]
-                ):
-                    out[s] = hit[1]
-                else:
-                    missing.append(s)
-                    if stored_period is not None:
-                        fetch_period = _wider_period(fetch_period, stored_period)
-            fetch_since = (
-                need
-                if fetch_period == need_period
-                else since_for_period(fetch_period, today=today)
-            )
-            if not missing:
-                return out
-            self._batch_fetching = True
-        try:
-            fetched = dict(self._backend.history_many(missing, since=fetch_since))
-            expires = time.monotonic() + self._ttl
-            with self._cv:
-                for s in missing:
-                    hist = fetched.get(s) or PriceHistory(
-                        symbol=s, error="unavailable"
-                    )
-                    if hist.error is None:
-                        self._store[s] = (expires, hist, fetch_period)
-                    out[s] = hist
-            return out
-        finally:
-            with self._cv:
-                self._batch_fetching = False
-                self._cv.notify_all()

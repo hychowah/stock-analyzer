@@ -1,11 +1,9 @@
-"""Price history service + /api/price-history (FakeHistoryBackend; no network)."""
+"""Daily-close value types + /api/price-history (store read; no network)."""
 
 from __future__ import annotations
 
 import os
 import tempfile
-import threading
-import time
 import unittest
 from pathlib import Path
 
@@ -13,7 +11,6 @@ from apps.analysis_web.services.price_history import (
     COVERED_ALL,
     DEFAULT_RANGE,
     FakeHistoryBackend,
-    HistoryService,
     PriceBar,
     RANGES,
     bars_from_closes,
@@ -24,6 +21,7 @@ from apps.analysis_web.services.price_history import (
     since_for_period,
     since_for_range,
 )
+from apps.analysis_web.tests.closes_util import seed_app_closes, tmp_closes
 from apps.analysis_web.services.yahoo_bars import bar_date, close_series
 
 
@@ -41,10 +39,6 @@ def _bars() -> list[PriceBar]:
         PriceBar("2026-08-03", 400.0),
         PriceBar("2026-09-08", 410.0),
     ]
-
-
-def _svc(be: FakeHistoryBackend, *, ttl_sec: int = 60) -> HistoryService:
-    return HistoryService(be, ttl_sec=ttl_sec, today=TODAY)
 
 
 class ParseAndBarsTests(unittest.TestCase):
@@ -131,7 +125,7 @@ class PeriodCoveringTests(unittest.TestCase):
         self.assertEqual(len(bars_in_window(bars, "max", today=TODAY)), 4)
 
 
-class FakeBackendAndCacheTests(unittest.TestCase):
+class FakeBackendTests(unittest.TestCase):
     def test_missing_symbol_is_error(self):
         be = FakeHistoryBackend({"META": _bars()})
         hit = be.history("META", since=SINCE_1Y)
@@ -140,152 +134,6 @@ class FakeBackendAndCacheTests(unittest.TestCase):
         self.assertEqual(hit.bars[-1].close, 410.0)
         self.assertEqual(miss.error, "unavailable")
         self.assertEqual(miss.bars, ())
-
-    def test_longer_series_covers_shorter_since(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be)
-        first = svc.get("META", since=SINCE_1Y)
-        second = svc.get("meta", since=SINCE_1Y)
-        self.assertEqual(len(be.calls), 1)
-        self.assertEqual(first.bars[0].close, second.bars[0].close)
-        svc.get("META", since=SINCE_5Y)
-        self.assertEqual(len(be.calls), 2)
-        self.assertEqual(be.calls[1], ("META", SINCE_5Y))
-        svc.get("META", since=SINCE_1Y)
-        self.assertEqual(len(be.calls), 2)
-
-    def test_five_year_then_one_year_is_one_round(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be)
-        svc.get("META", since=SINCE_5Y)
-        svc.get("META", since=SINCE_1Y)
-        self.assertEqual(len(be.many_calls), 1)
-
-    def test_coverage_is_fetched_period_not_first_bar(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be)
-        svc.get("META", since=SINCE_1Y)
-        self.assertEqual(len(be.many_calls), 1)
-        svc.get("META", since=SINCE_5Y)
-        self.assertEqual(len(be.many_calls), 2)
-        svc.get("META", since=SINCE_MAX)
-        self.assertEqual(len(be.many_calls), 3)
-        svc.get("META", since=SINCE_5Y)
-        self.assertEqual(len(be.many_calls), 3)
-
-    def test_expired_long_series_does_not_shrink(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be, ttl_sec=1)
-        svc.get("META", since=SINCE_5Y)
-        time.sleep(1.1)
-        svc.get("META", since=SINCE_1M)
-        self.assertEqual(len(be.many_calls), 2)
-        self.assertEqual(period_covering(be.many_calls[1][1], today=TODAY), "5y")
-
-    def test_ttl_expiry_refetches(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be, ttl_sec=1)
-        svc.get("META", since=SINCE_1Y)
-        time.sleep(1.1)
-        svc.get("META", since=SINCE_1Y)
-        self.assertEqual(len(be.calls), 2)
-
-    def test_errors_are_not_cached(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be)
-        miss = svc.get("NOPE", since=SINCE_1Y)
-        self.assertEqual(miss.error, "unavailable")
-        svc.get("NOPE", since=SINCE_1Y)
-        self.assertEqual(len(be.calls), 2)
-        svc.get("META", since=SINCE_1Y)
-        svc.get("META", since=SINCE_1Y)
-        self.assertEqual(len(be.calls), 3)
-
-    def test_single_flight(self):
-        started = threading.Event()
-        release = threading.Event()
-
-        class Slow(FakeHistoryBackend):
-            def history_many(self, symbols, *, since):  # type: ignore[override]
-                started.set()
-                release.wait(timeout=2)
-                return super().history_many(symbols, since=since)
-
-        be = Slow({"META": _bars()})
-        svc = _svc(be)
-        results: list = []
-
-        def worker():
-            results.append(svc.get("META", since=SINCE_1Y))
-
-        t1 = threading.Thread(target=worker)
-        t2 = threading.Thread(target=worker)
-        t1.start()
-        self.assertTrue(started.wait(timeout=2))
-        t2.start()
-        time.sleep(0.05)
-        release.set()
-        t1.join(timeout=2)
-        t2.join(timeout=2)
-        self.assertEqual(len(be.calls), 1)
-        self.assertEqual(len(results), 2)
-        self.assertEqual(results[0].bars[-1].close, 410.0)
-
-    def test_waiter_rechecks_coverage(self):
-        started = threading.Event()
-        release = threading.Event()
-
-        class Slow(FakeHistoryBackend):
-            def history_many(self, symbols, *, since):  # type: ignore[override]
-                started.set()
-                release.wait(timeout=2)
-                return super().history_many(symbols, since=since)
-
-        be = Slow({"META": _bars()})
-        svc = _svc(be)
-        short: list = []
-        long: list = []
-
-        def short_worker():
-            short.append(svc.get("META", since=SINCE_1Y))
-
-        def long_worker():
-            long.append(svc.get("META", since=SINCE_5Y))
-
-        t1 = threading.Thread(target=short_worker)
-        t2 = threading.Thread(target=long_worker)
-        t1.start()
-        self.assertTrue(started.wait(timeout=2))
-        t2.start()
-        time.sleep(0.05)
-        release.set()
-        t1.join(timeout=2)
-        t2.join(timeout=2)
-        self.assertEqual(len(be.many_calls), 2)
-        self.assertEqual(be.many_calls[0][1], SINCE_1Y)
-        self.assertEqual(be.many_calls[1][1], SINCE_5Y)
-        self.assertEqual(len(short), 1)
-        self.assertEqual(len(long), 1)
-
-    def test_get_many_one_backend_round(self):
-        be = FakeHistoryBackend({"META": _bars(), "AAPL": [PriceBar("2026-01-02", 50.0)]})
-        svc = _svc(be)
-        got = svc.get_many(["meta", "AAPL", "NOPE"], since=SINCE_1Y)
-        self.assertEqual(len(be.many_calls), 1)
-        self.assertEqual(be.many_calls[0][0], ("META", "AAPL", "NOPE"))
-        self.assertEqual(got["META"].bars[-1].close, 410.0)
-        self.assertEqual(got["AAPL"].bars[0].close, 50.0)
-        self.assertEqual(got["NOPE"].error, "unavailable")
-        svc.get_many(["META", "AAPL"], since=SINCE_1Y)
-        self.assertEqual(len(be.many_calls), 1)
-
-    def test_get_blank_symbol_is_unavailable(self):
-        be = FakeHistoryBackend({"META": _bars()})
-        svc = _svc(be)
-        miss = svc.get("  ", since=SINCE_1Y)
-        self.assertEqual(miss.error, "unavailable")
-        self.assertEqual(miss.bars, ())
-        self.assertEqual(len(be.many_calls), 0)
 
 
 class PriceHistoryApiTests(unittest.TestCase):
@@ -300,14 +148,20 @@ class PriceHistoryApiTests(unittest.TestCase):
         import apps.analysis_web.app as app_mod
 
         importlib.reload(app_mod)
-        self._app = app_mod.create_app()
-        be = FakeHistoryBackend(
-            {"META": _bars(), "ADYEN.AS": [PriceBar("2026-08-01", 1400.0)]}
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend(),
+            daily_closes=tmp_closes(self._td.name),
         )
-        self._app.state.history_service = HistoryService(
-            be, ttl_sec=900, today=TODAY
+        series = {
+            "META": _bars(),
+            "ADYEN.AS": [PriceBar("2026-08-01", 1400.0)],
+        }
+        self._store, self._backend = seed_app_closes(
+            self._app,
+            Path(self._td.name) / "daily_closes.sqlite",
+            series,
+            today=TODAY,
         )
-        self._backend = be
         from fastapi.testclient import TestClient
 
         self.client = TestClient(self._app)
@@ -324,19 +178,20 @@ class PriceHistoryApiTests(unittest.TestCase):
         self.assertEqual(body["range"], "1y")
         self.assertEqual(body["interval"], "1d")
         self.assertEqual(body["count"], 4)
-        self.assertEqual(body["ttl_sec"], 900)
+        self.assertNotIn("ttl_sec", body)
         self.assertIsNone(body["error"])
         self.assertEqual(body["bars"][-1], {"t": "2026-09-08", "close": 410.0})
 
     def test_range_is_a_view_not_the_store(self):
         self.client.get("/api/price-history", params={"symbol": "META", "range": "5y"})
-        self.assertEqual(len(self._backend.many_calls), 1)
+        self.assertEqual(len(self._backend.many_calls), 0)
         r = self.client.get("/api/price-history", params={"symbol": "META", "range": "1m"})
         self.assertEqual(r.status_code, 200)
         body = r.json()
         self.assertEqual(body["range"], "1m")
-        self.assertEqual(body["bars"], [{"t": "2026-09-08", "close": 410.0}])
-        self.assertEqual(len(self._backend.many_calls), 1)
+        sliced = bars_in_window(_bars(), "1m")
+        self.assertEqual(body["bars"], [b.as_json() for b in sliced])
+        self.assertEqual(len(self._backend.many_calls), 0)
 
     def test_history_unavailable(self):
         r = self.client.get("/api/price-history", params={"symbol": "NOPE"})
@@ -345,6 +200,16 @@ class PriceHistoryApiTests(unittest.TestCase):
         self.assertEqual(body["error"], "unavailable")
         self.assertEqual(body["bars"], [])
         self.assertEqual(body["count"], 0)
+        self.assertEqual(len(self._backend.many_calls), 0)
+
+    def test_get_does_not_hold_the_writer(self):
+        src = (
+            Path(__file__).resolve().parents[1] / "routes" / "api.py"
+        ).read_text(encoding="utf-8")
+        fn = src.split("def api_price_history", 1)[1].split("\n@router", 1)[0]
+        self.assertNotIn("get_close_refresh", fn)
+        self.assertNotIn("refresher", fn)
+        self.assertNotIn("CloseRefresh", fn)
 
     def test_history_empty_symbol_400(self):
         r = self.client.get("/api/price-history")

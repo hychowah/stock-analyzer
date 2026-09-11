@@ -15,6 +15,7 @@ from apps.analysis_web.services.live_nav import (
     lots_from_view,
     mark_live_nav,
 )
+from apps.analysis_web.services.price_history import FakeHistoryBackend
 from apps.analysis_web.services.quotes import (
     MAX_SYMBOLS,
     FakeQuoteBackend,
@@ -232,7 +233,7 @@ class LiveNavHttpTests(unittest.TestCase):
         cfg2.local_dir = lambda: self._local  # type: ignore[assignment]
         port.local_dir = cfg2.local_dir  # type: ignore[assignment]
 
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(history_backend=FakeHistoryBackend())
         be = FakeQuoteBackend(
             {
                 "META": _q("META", 55.0, prev=50.0),
@@ -289,6 +290,16 @@ class LiveNavHttpTests(unittest.TestCase):
         fn = src.split("def page_portfolio", 1)[1].split("\n@", 1)[0]
         self.assertIn("load_live_lots", fn)
         self.assertIn("svc.prime", fn)
+        self.assertIn("book_close_need", fn)
+        self.assertIn("refresher.prime", fn)
+
+    def test_run_page_primes_quote_listing(self):
+        src = (
+            Path(__file__).resolve().parents[1] / "routes" / "pages.py"
+        ).read_text(encoding="utf-8")
+        fn = src.split("def page_run(", 1)[1].split("\n@", 1)[0]
+        self.assertIn("quote_listing", fn)
+        self.assertIn("refresher.prime", fn)
 
     def test_page_hooks(self):
         r = self.client.get("/portfolio")
@@ -409,6 +420,7 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertIn("end=", hjs)
         self.assertIn("lastLiveRows", hjs)
         self.assertIn("lastIntervalByUrl", hjs)
+        self.assertIn("(body.rows || []).length", hjs)
         self.assertIn("heatmap-fill", hjs)
         self.assertIn("Escape", hjs)
         self.assertIn("pl > 0", hjs)

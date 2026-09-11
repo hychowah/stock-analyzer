@@ -19,7 +19,9 @@ from packages.catalog_api.client import (
     TickerNotFound,
 )
 
-from apps.analysis_web.deps import get_api, get_quote_service
+from apps.analysis_web.deps import get_api, get_close_refresh, get_quote_service
+from apps.analysis_web.services.close_refresh import CloseRefresh
+from apps.analysis_web.services.price_history import COVERED_ALL
 from apps.analysis_web.services.quotes import QuoteService
 from apps.analysis_web.services.runs_query import (
     RUN_QUERY_KEYS,
@@ -204,6 +206,7 @@ def page_run(
     request: Request,
     run_id: str,
     api: CatalogApi = Depends(get_api),
+    refresher: CloseRefresh = Depends(get_close_refresh),
 ) -> HTMLResponse:
     run_id = run_id.strip()
     try:
@@ -289,6 +292,10 @@ def page_run(
         except (DbMissing, ValueError):
             sibling_links = []
             comparable_siblings = []
+
+    listing = str(run.get("quote_listing") or "").strip()
+    if listing:
+        refresher.prime([listing], since=COVERED_ALL)
 
     return render_page(
         request,
@@ -456,12 +463,18 @@ def page_portfolio(
     pass_only: str = "0",
     api: CatalogApi = Depends(get_api),
     svc: QuoteService = Depends(get_quote_service),
+    refresher: CloseRefresh = Depends(get_close_refresh),
 ) -> HTMLResponse:
     from apps.analysis_web.services.live_nav import load_live_lots
-    from apps.analysis_web.services.portfolio import active_portfolio_view
+    from apps.analysis_web.services.mtm_path import book_close_need
+    from apps.analysis_web.services.portfolio import active_portfolio_view, load_ib_book
 
     lots, _meta = load_live_lots()
     svc.prime([lot.listing for lot in lots if lot.listing])
+    book, _err = load_ib_book()
+    if book is not None:
+        listings, since = book_close_need(book)
+        refresher.prime(listings, since=since)
     po = pass_only not in ("", "0", "false", "False")
     view = active_portfolio_view(api, pass_only=po)
     return render_page(

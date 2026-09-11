@@ -10,6 +10,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from apps.analysis_web.services.price_history import FakeHistoryBackend
+from apps.analysis_web.tests.closes_util import tmp_closes
+
 
 def _write_session(archive: Path, ticker: str, key: str, *, fv: float) -> None:
     research = archive / "research" / ticker / key
@@ -602,7 +605,10 @@ class AnalysisWebTests(unittest.TestCase):
 
         importlib.reload(app_mod)
         # Recreate app so deps pick up new ARCHIVE_ROOT
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend(),
+            daily_closes=tmp_closes(self._td.name),
+        )
         from fastapi.testclient import TestClient
 
         self.client = TestClient(self._app)
@@ -1298,7 +1304,10 @@ class AnalysisWebQueryTests(unittest.TestCase):
         import apps.analysis_web.app as app_mod
 
         importlib.reload(app_mod)
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend(),
+            daily_closes=tmp_closes(self._td.name),
+        )
         from fastapi.testclient import TestClient
 
         self.client = TestClient(self._app)
@@ -1541,7 +1550,10 @@ class AnalysisWebCompareTests(unittest.TestCase):
         import apps.analysis_web.app as app_mod
 
         importlib.reload(app_mod)
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend(),
+            daily_closes=tmp_closes(self._td.name),
+        )
         from fastapi.testclient import TestClient
 
         self.client = TestClient(self._app)
@@ -1811,7 +1823,10 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         import apps.analysis_web.app as app_mod
 
         importlib.reload(app_mod)
-        self._app = app_mod.create_app()
+        self._app = app_mod.create_app(
+            history_backend=FakeHistoryBackend(),
+            daily_closes=tmp_closes(self._td.name),
+        )
         from fastapi.testclient import TestClient
 
         self.client = TestClient(self._app)

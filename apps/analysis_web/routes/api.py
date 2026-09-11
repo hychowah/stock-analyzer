@@ -47,13 +47,18 @@ from packages.research_jobs.jobs import (
 )
 
 from apps.analysis_web.config import archive_root
-from apps.analysis_web.deps import get_api, get_history_service, get_quote_service
+from apps.analysis_web.deps import (
+    get_api,
+    get_daily_closes,
+    get_quote_service,
+)
+from apps.analysis_web.services.daily_closes import DailyCloses
 from apps.analysis_web.services.price_history import (
-    HistoryService,
+    PriceHistory,
     bars_in_window,
     parse_history_symbol,
     parse_range,
-    since_for_range,
+    utc_today,
 )
 from apps.analysis_web.services.quotes import QuoteService, parse_symbol_query
 from apps.analysis_web.services.runs_query import runs_list_q
@@ -128,25 +133,27 @@ def api_price_history(
     range_key: str = Query(
         "1y", alias="range", description="1m, 3m, 6m, 1y, 2y, 5y, or max"
     ),
-    svc: HistoryService = Depends(get_history_service),
+    closes: DailyCloses = Depends(get_daily_closes),
 ) -> dict[str, Any]:
-    """Daily closes for one requested listing. Chart-name repair is in yahoo_bars.
+    """Daily closes for one requested listing. Display slice of DailyCloses.
 
-    ``?range=`` is the chart vocabulary. It is not the cache key.
+    ``?range=`` is the chart vocabulary. It is not the store key.
+    Does not call Yahoo. Missing series is unavailable until HTML/idle prime.
     """
     try:
         listing = parse_history_symbol(symbol)
         parsed_range = parse_range(range_key)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    today = svc.today
-    hist = svc.get(listing, since=since_for_range(parsed_range, today=today))
+    today = utc_today()
+    hist = closes.series([listing]).get(listing) or PriceHistory(
+        symbol=listing, error="unavailable"
+    )
     sliced = bars_in_window(hist.bars, parsed_range, today=today)
     body = hist.as_json()
     body["range"] = parsed_range
     body["bars"] = [b.as_json() for b in sliced]
     body["count"] = len(sliced)
-    body["ttl_sec"] = svc.ttl_sec
     return body
 
 
@@ -238,7 +245,7 @@ def api_portfolio_mtm_path(
     period: str | None = Query(None),
     start: str | None = Query(None),
     end: str | None = Query(None),
-    svc: HistoryService = Depends(get_history_service),
+    closes: DailyCloses = Depends(get_daily_closes),
 ) -> dict[str, Any]:
     """Daily reconstructed MTM frames for the live IB book. Display math.
 
@@ -265,8 +272,8 @@ def api_portfolio_mtm_path(
         return _empty_mtm_path(error="No IB book yet.", period=token)
     try:
         if kind == "period":
-            return mtm_path_for(book, svc, a)
-        return mtm_path_window(book, svc, a, b)
+            return mtm_path_for(book, closes, a)
+        return mtm_path_window(book, closes, a, b)
     except PeriodError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -288,7 +295,7 @@ def api_portfolio_mtm_interval(
     period: str | None = Query(None),
     start: str | None = Query(None),
     end: str | None = Query(None),
-    svc: HistoryService = Depends(get_history_service),
+    closes: DailyCloses = Depends(get_daily_closes),
 ) -> dict[str, Any]:
     """One still: value(end) − value(start) + fill cash after start through end.
 
@@ -315,8 +322,8 @@ def api_portfolio_mtm_interval(
         return _empty_mtm_interval(error="No IB book yet.", period=token)
     try:
         if kind == "period":
-            return mtm_interval_for(book, svc, a)
-        return mtm_interval_window(book, svc, a, b)
+            return mtm_interval_for(book, closes, a)
+        return mtm_interval_window(book, closes, a, b)
     except PeriodError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

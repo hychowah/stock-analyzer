@@ -11,6 +11,7 @@ import unittest
 from dataclasses import asdict
 from pathlib import Path
 
+from apps.analysis_web.services.price_history import FakeHistoryBackend
 from apps.analysis_web.tests.test_portfolio import _mini_archive
 
 
@@ -392,7 +393,7 @@ class IbPortfolioHttpTests(unittest.TestCase):
 
         from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
 
-        app = app_mod.create_app()
+        app = app_mod.create_app(history_backend=FakeHistoryBackend())
         app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
         self.client = TestClient(app)
 
@@ -481,7 +482,7 @@ class CorruptSqliteHttpTests(unittest.TestCase):
 
         from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
 
-        app = app_mod.create_app()
+        app = app_mod.create_app(history_backend=FakeHistoryBackend())
         app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
         self.client = TestClient(app)
 

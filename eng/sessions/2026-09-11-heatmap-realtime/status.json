@@ -1,0 +1,9 @@
+{
+  "slug": "heatmap-realtime",
+  "session_key": "2026-09-11-heatmap-realtime",
+  "status": "implemented",
+  "created_at": "2026-09-11T05:44:48Z",
+  "updated_at": "2026-09-11T06:05:00Z",
+  "work_type": "W4",
+  "resume_hint": "Implemented. Verifier should flip passes after checking ship_note.json and eng_verify. Do not commit without user agreement."
+}

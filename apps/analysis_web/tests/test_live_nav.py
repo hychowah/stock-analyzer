@@ -11,6 +11,7 @@ from pathlib import Path
 from apps.analysis_web.services.live_nav import (
     MarkLot,
     fetch_prints,
+    lots_from_ib_book,
     lots_from_view,
     mark_live_nav,
 )
@@ -152,6 +153,19 @@ class MarkLiveNavTests(unittest.TestCase):
         self.assertEqual(out["rows"][0]["ib_symbol"], "META")
 
 
+class LotsFromIbBookTests(unittest.TestCase):
+    def test_snapshot_lots_match_print_listing(self):
+        from apps.analysis_web.services.ib_statement import IbBook, parse_activity_csv
+
+        stmt = parse_activity_csv(FIXTURE)
+        lots = lots_from_ib_book(IbBook(snapshot=stmt, trades=list(stmt.trades)))
+        by = {lot.ib_symbol: lot for lot in lots}
+        self.assertEqual(by["META"].listing, "META")
+        self.assertEqual(by["700"].listing, "0700.HK")
+        self.assertEqual(by["META"].quantity, 10.0)
+        self.assertAlmostEqual(by["META"].stmt_fx or 0, 8.0, places=5)
+
+
 class LotsFromViewTests(unittest.TestCase):
     def test_weights_only_json_empty(self):
         view = {
@@ -258,6 +272,23 @@ class LiveNavHttpTests(unittest.TestCase):
         self.assertAlmostEqual(by["META"]["live_value_base"], 4400.0, places=5)
         self.assertAlmostEqual(by["META"]["day_pl"], 10 * (55 - 50) * 8, places=5)
         self.assertEqual(by["700"]["listing"], "0700.HK")
+
+    def test_live_nav_does_not_join_catalog(self):
+        src = (
+            Path(__file__).resolve().parents[1] / "routes" / "api.py"
+        ).read_text(encoding="utf-8")
+        fn = src.split("def api_portfolio_live_nav", 1)[1].split("\n@router", 1)[0]
+        self.assertIn("load_live_lots", fn)
+        self.assertNotIn("active_portfolio_view", fn)
+        self.assertNotIn("CatalogApi", fn)
+
+    def test_portfolio_page_primes_listings(self):
+        src = (
+            Path(__file__).resolve().parents[1] / "routes" / "pages.py"
+        ).read_text(encoding="utf-8")
+        fn = src.split("def page_portfolio", 1)[1].split("\n@", 1)[0]
+        self.assertIn("load_live_lots", fn)
+        self.assertIn("svc.prime", fn)
 
     def test_page_hooks(self):
         r = self.client.get("/portfolio")
@@ -372,10 +403,12 @@ class QuotesJsOptOutTests(unittest.TestCase):
             Path(__file__).resolve().parents[1] / "static" / "heatmap.js"
         ).read_text(encoding="utf-8")
         self.assertIn("holding-pl-applied", hjs)
-        self.assertIn("/api/portfolio/mtm-path?period=", hjs)
+        self.assertIn("/api/portfolio/mtm-interval?period=", hjs)
+        self.assertNotIn("/api/portfolio/mtm-path?period=", hjs)
         self.assertIn("start=", hjs)
         self.assertIn("end=", hjs)
         self.assertIn("lastLiveRows", hjs)
+        self.assertIn("lastIntervalByUrl", hjs)
         self.assertIn("heatmap-fill", hjs)
         self.assertIn("Escape", hjs)
         self.assertIn("pl > 0", hjs)
@@ -383,6 +416,8 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertIn("losers", hjs)
         self.assertIn("NAV", hjs)
         self.assertIn("No day moves yet", hjs)
+        self.assertIn("Loading period marks", hjs)
+        self.assertNotIn("function beginRange", hjs)
         self.assertIn("max-width: 1100px", hjs)
         self.assertIn("aria-label", hjs)
         self.assertIn("holding-influence heatmap", hjs)
@@ -393,6 +428,7 @@ class QuotesJsOptOutTests(unittest.TestCase):
         self.assertNotIn("timedelta", hjs)
         self.assertNotIn("getFullYear", hjs)
         self.assertNotIn("quote-status", hjs)
+        self.assertNotIn("body.frames", hjs)
 
     def test_runs_page_still_polls(self):
         runs = (

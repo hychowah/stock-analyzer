@@ -17,6 +17,7 @@ from apps.analysis_web.services.ib_statement import (
 )
 from apps.analysis_web.services.mtm_path import (
     PeriodError,
+    build_mtm_interval,
     build_mtm_path,
     choose_path_args,
     parse_window_dates,
@@ -128,6 +129,31 @@ class BuildMtmPathTests(unittest.TestCase):
         )
         names = [r["name"] for r in out["frames"][1]["bars"]]
         self.assertEqual(names, ["META"])
+
+    def test_interval_rows_match_last_frame(self):
+        book = _book()
+        histories = {
+            "META": _hist(
+                "META",
+                [PriceBar("2026-03-20", 50.0), PriceBar("2026-03-21", 55.0)],
+            ),
+            "0700.HK": _hist(
+                "0700.HK",
+                [PriceBar("2026-03-20", 10.0), PriceBar("2026-03-21", 10.0)],
+            ),
+        }
+        path = build_mtm_path(
+            book, histories, start="2026-03-20", end="2026-03-21"
+        )
+        still = build_mtm_interval(
+            book, histories, start="2026-03-20", end="2026-03-21"
+        )
+        self.assertNotIn("frames", still)
+        self.assertNotIn("bars", still)
+        self.assertEqual(still["rows"], path["frames"][-1]["rows"])
+        self.assertEqual(still["start_nav"], path["start_nav"])
+        self.assertEqual(still["start"], path["start"])
+        self.assertEqual(still["end"], path["end"])
 
     def test_buy_mid_window_is_mark_minus_fill_not_full_value(self):
         book = _book()
@@ -401,16 +427,47 @@ class MtmPathHttpTests(unittest.TestCase):
         self.assertNotIn("/api/quotes", js)
         self.assertNotIn('getElementById("quote-status")', js)
 
-    def test_heatmap_js_fetches_path_not_bars(self):
+    def test_statement_interval_matches_path_last_frame(self):
+        path = self.client.get("/api/portfolio/mtm-path?period=statement")
+        still = self.client.get("/api/portfolio/mtm-interval?period=statement")
+        self.assertEqual(still.status_code, 200)
+        pbody = path.json()
+        sbody = still.json()
+        self.assertEqual(sbody["period"], "statement")
+        self.assertEqual(sbody["start"], pbody["start"])
+        self.assertEqual(sbody["end"], pbody["end"])
+        self.assertEqual(sbody["rows"], pbody["frames"][-1]["rows"])
+        self.assertNotIn("frames", sbody)
+        self.assertNotIn("bars", sbody)
+
+    def test_interval_xor_and_window(self):
+        r = self.client.get("/api/portfolio/mtm-interval")
+        self.assertEqual(r.status_code, 400)
+        r = self.client.get(
+            "/api/portfolio/mtm-interval?period=statement&start=2026-01-01&end=2026-03-31"
+        )
+        self.assertEqual(r.status_code, 400)
+        r = self.client.get(
+            "/api/portfolio/mtm-interval?start=2026-01-01&end=2026-03-31"
+        )
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["period"], "")
+        self.assertTrue(body["rows"])
+        self.assertNotIn("frames", body)
+
+    def test_heatmap_js_fetches_interval_not_path(self):
         js = (
             Path(__file__).resolve().parents[1] / "static" / "heatmap.js"
         ).read_text(encoding="utf-8")
-        self.assertIn("/api/portfolio/mtm-path?period=", js)
+        self.assertIn("/api/portfolio/mtm-interval?period=", js)
+        self.assertNotIn("/api/portfolio/mtm-path?period=", js)
         self.assertIn("start=", js)
         self.assertIn("holding-pl-applied", js)
         self.assertNotIn("heatmap-range-applied", js)
         self.assertNotIn("heatmap-live", js)
         self.assertNotIn("mtm-tbody", js)
+        self.assertNotIn("function beginRange", js)
 
 
 if __name__ == "__main__":

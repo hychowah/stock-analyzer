@@ -188,42 +188,34 @@ def _empty_live_nav(*, ttl_sec: int, error: str | None = None) -> dict[str, Any]
 
 @router.get("/portfolio/live-nav")
 def api_portfolio_live_nav(
-    pass_only: str = "0",
-    api: CatalogApi = Depends(get_api),
     svc: QuoteService = Depends(get_quote_service),
 ) -> dict[str, Any]:
-    """Statement NAV adjusted by holdings × Yahoo last print. Display math."""
+    """Mark current lots with last prints. Not a catalog join. Display math."""
     from apps.analysis_web.services.live_nav import (
         fetch_prints,
-        lots_from_view,
+        load_live_lots,
         mark_live_nav,
     )
-    from apps.analysis_web.services.portfolio import active_portfolio_view
 
-    po = pass_only not in ("", "0", "false", "False")
-    view = active_portfolio_view(api, pass_only=po)
-    if view.get("error"):
-        return _empty_live_nav(ttl_sec=svc.ttl_sec, error=str(view["error"]))
-    lots = lots_from_view(view)
+    lots, meta = load_live_lots()
+    if meta.get("error") and not lots:
+        return _empty_live_nav(ttl_sec=svc.ttl_sec, error=str(meta["error"]))
     listings = [lot.listing for lot in lots if lot.listing]
     prints = fetch_prints(svc.get_many, listings)
     by = {q.symbol.upper(): q for q in prints}
-    ib = view.get("ib") or {}
-    ending = ib.get("ending_nav")
+    ending = meta.get("ending_nav")
     try:
         ending_nav = float(ending) if ending is not None else None
     except (TypeError, ValueError):
         ending_nav = None
-    cash = ib.get("cash_value")
+    cash = meta.get("cash")
     try:
         cash_f = float(cash) if cash is not None else None
     except (TypeError, ValueError):
         cash_f = None
     marked = mark_live_nav(lots, by, ending_nav=ending_nav, cash=cash_f)
-    marked["base_currency"] = (
-        str(view.get("currency") or ib.get("base_currency") or "")
-    )
-    marked["period_to"] = ib.get("period_to")
+    marked["base_currency"] = str(meta.get("base_currency") or "")
+    marked["period_to"] = meta.get("period_to")
     marked["ttl_sec"] = svc.ttl_sec
     marked["error"] = None
     return marked
@@ -275,6 +267,56 @@ def api_portfolio_mtm_path(
         if kind == "period":
             return mtm_path_for(book, svc, a)
         return mtm_path_window(book, svc, a, b)
+    except PeriodError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+
+def _empty_mtm_interval(*, error: str | None, period: str = "") -> dict[str, Any]:
+    return {
+        "error": error,
+        "period": period,
+        "start": None,
+        "end": None,
+        "start_nav": None,
+        "base_currency": "",
+        "rows": [],
+    }
+
+
+@router.get("/portfolio/mtm-interval")
+def api_portfolio_mtm_interval(
+    period: str | None = Query(None),
+    start: str | None = Query(None),
+    end: str | None = Query(None),
+    svc: HistoryService = Depends(get_history_service),
+) -> dict[str, Any]:
+    """One still: value(end) − value(start) + fill cash after start through end.
+
+    Pass ``period=`` (1w, 1m, ytd, statement) or ``start=`` and ``end=``,
+    not both. No frames, no bars. Display math.
+    """
+    from apps.analysis_web.services.mtm_path import (
+        PeriodError,
+        choose_path_args,
+        mtm_interval_for,
+        mtm_interval_window,
+    )
+    from apps.analysis_web.services.portfolio import load_ib_book
+
+    try:
+        kind, a, b = choose_path_args(period, start, end)
+    except PeriodError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    token = a if kind == "period" else ""
+    book, err = load_ib_book()
+    if err:
+        return _empty_mtm_interval(error=str(err), period=token)
+    if book is None:
+        return _empty_mtm_interval(error="No IB book yet.", period=token)
+    try:
+        if kind == "period":
+            return mtm_interval_for(book, svc, a)
+        return mtm_interval_window(book, svc, a, b)
     except PeriodError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 

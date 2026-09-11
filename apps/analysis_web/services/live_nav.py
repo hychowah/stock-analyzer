@@ -2,6 +2,9 @@
 
 ``mark_live_nav`` is a pure function: lots + quotes in, aggregates out.
 No Yahoo, sqlite, or catalog. FX stays on the lot (statement close).
+
+``load_live_lots`` reads the IB snapshot (or JSON fallback). It does not
+join catalog research. HTML is the only catalog join on /portfolio.
 """
 
 from __future__ import annotations
@@ -38,6 +41,83 @@ def _num(raw: Any) -> float | None:
 def _listing(raw: Any) -> str | None:
     s = str(raw or "").strip().upper()
     return s or None
+
+
+def lots_from_ib_book(ib_book: Any) -> list[MarkLot]:
+    """Stock lots from the IB snapshot. Print listing, qty, stmt value, FX."""
+    from apps.analysis_web.services.portfolio import holding_print_listing
+
+    stmt = ib_book.snapshot
+    out: list[MarkLot] = []
+    for pos in stmt.positions or ():
+        if (pos.asset_category or "Stocks").lower() != "stocks":
+            continue
+        listing = holding_print_listing(pos.ib_symbol, pos.listing_exch)
+        out.append(
+            MarkLot(
+                ib_symbol=str(pos.ib_symbol or "").strip(),
+                listing=_listing(listing),
+                quantity=_num(pos.quantity),
+                stmt_value_base=_num(stmt.value_base(pos.value, pos.currency)),
+                stmt_fx=_num(stmt.forex_close(pos.currency)),
+            )
+        )
+    return out
+
+
+def load_live_lots() -> tuple[list[MarkLot], dict[str, Any]]:
+    """IB snapshot lots, or JSON fallback. No catalog join.
+
+    meta keys: error, ending_nav, cash, base_currency, period_to.
+    """
+    from apps.analysis_web.services.portfolio import (
+        holding_print_listing,
+        load_book,
+        load_ib_book,
+    )
+
+    empty_meta = {
+        "error": None,
+        "ending_nav": None,
+        "cash": None,
+        "base_currency": "",
+        "period_to": None,
+    }
+    book, err = load_ib_book()
+    if err:
+        meta = dict(empty_meta)
+        meta["error"] = err
+        return [], meta
+    if book is not None:
+        stmt = book.snapshot
+        cash_row = stmt.nav_asset("Cash")
+        return lots_from_ib_book(book), {
+            "error": None,
+            "ending_nav": stmt.ending_nav,
+            "cash": cash_row.current_total if cash_row else None,
+            "base_currency": str(stmt.base_currency or ""),
+            "period_to": stmt.period_to,
+        }
+    json_book = load_book()
+    view = {
+        "error": json_book.error,
+        "ib": None,
+        "positions": [
+            {
+                "ib_symbol": pos.ticker,
+                "ticker": pos.ticker,
+                "shares": pos.shares,
+                "print_listing": holding_print_listing(pos.ticker, None),
+                "stmt_fx": 1.0,
+            }
+            for pos in json_book.positions
+        ],
+    }
+    lots = lots_from_view(view)
+    meta = dict(empty_meta)
+    meta["error"] = json_book.error if not lots else None
+    meta["base_currency"] = str(json_book.currency or "")
+    return lots, meta
 
 
 def lots_from_view(view: dict[str, Any]) -> list[MarkLot]:

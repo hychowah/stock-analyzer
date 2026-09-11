@@ -1,7 +1,9 @@
 /**
  * /portfolio heatmap card. Size, time-base, and SVG.
  * Live rows come from holding-pl-applied. A window fetches
- * GET /api/portfolio/mtm-path (last frame). Does not write MTM bars.
+ * GET /api/portfolio/mtm-interval (one still). Does not write MTM bars.
+ * Rows and heading commit together. Loading is a status line on the
+ * current map, not an empty stage.
  * Fill screen is a CSS class on #heatmap-card; Escape exits.
  * Tile area is |pl|. Gainers and losers occupy separate regions.
  */
@@ -41,6 +43,7 @@
 
   var lastRows = [];
   var lastLiveRows = [];
+  var lastIntervalByUrl = Object.create(null);
   var hasPaint = false;
   var req = 0;
 
@@ -480,19 +483,6 @@
     }
   }
 
-  function beginRange() {
-    setToken("range");
-    if (heading) {
-      heading.textContent = RANGE_HEADING;
-    }
-    if (caption) {
-      caption.textContent = RANGE_CAPTION;
-    }
-    svg.setAttribute("aria-label", RANGE_LABEL);
-    showRows([]);
-    setStatus("Loading period marks…");
-  }
-
   function rowMap(rows) {
     return (rows || []).map(function (r) {
       return {
@@ -504,13 +494,10 @@
     });
   }
 
-  function applyBody(body, windowName) {
-    var frames = (body && body.frames) || [];
-    if (body && body.start && fromEl) {
-      fromEl.value = body.start;
-    }
-    if (body && body.end && toEl) {
-      toEl.value = body.end;
+  function applyRangeChrome(body) {
+    setToken("range");
+    if (heading) {
+      heading.textContent = RANGE_HEADING;
     }
     if (caption) {
       var text = RANGE_CAPTION;
@@ -519,20 +506,37 @@
       }
       caption.textContent = text;
     }
+    svg.setAttribute("aria-label", RANGE_LABEL);
+    if (body && body.start && fromEl) {
+      fromEl.value = body.start;
+    }
+    if (body && body.end && toEl) {
+      toEl.value = body.end;
+    }
+  }
+
+  function applyBody(body, windowName) {
+    applyRangeChrome(body);
     setWindowPressed(windowName);
-    if (!frames.length) {
+    var rows = (body && body.rows) || [];
+    if (!rows.length) {
       showRows([]);
       setStatus((body && body.error) || "No daily closes in this period");
       return;
     }
-    var last = frames[frames.length - 1];
-    showRows(rowMap(last.rows));
-    setStatus("");
+    showRows(rowMap(rows));
+    setStatus((body && body.error) || "");
   }
 
   function loadUrl(url, windowName) {
+    var cached = lastIntervalByUrl[url];
+    if (cached) {
+      req += 1;
+      applyBody(cached, windowName);
+      return;
+    }
     var my = ++req;
-    beginRange();
+    setStatus("Loading period marks…");
     fetch(url, {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
@@ -553,7 +557,9 @@
           restoreLive(detail);
           return;
         }
-        applyBody(payload.body || {}, windowName);
+        var body = payload.body || {};
+        lastIntervalByUrl[url] = body;
+        applyBody(body, windowName);
       })
       .catch(function () {
         if (my !== req) {
@@ -622,7 +628,7 @@
         return;
       }
       loadUrl(
-        "/api/portfolio/mtm-path?period=" + encodeURIComponent(next),
+        "/api/portfolio/mtm-interval?period=" + encodeURIComponent(next),
         next
       );
     });
@@ -640,7 +646,7 @@
         return;
       }
       loadUrl(
-        "/api/portfolio/mtm-path?start=" +
+        "/api/portfolio/mtm-interval?start=" +
           encodeURIComponent(a) +
           "&end=" +
           encodeURIComponent(b),

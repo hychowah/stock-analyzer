@@ -390,7 +390,11 @@ class IbPortfolioHttpTests(unittest.TestCase):
 
         from fastapi.testclient import TestClient
 
-        self.client = TestClient(app_mod.create_app())
+        from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
+
+        app = app_mod.create_app()
+        app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
+        self.client = TestClient(app)
 
     def tearDown(self):
         import apps.analysis_web.config as cfg
@@ -475,7 +479,11 @@ class CorruptSqliteHttpTests(unittest.TestCase):
         port.local_dir = cfg2.local_dir  # type: ignore[assignment]
         from fastapi.testclient import TestClient
 
-        self.client = TestClient(app_mod.create_app())
+        from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
+
+        app = app_mod.create_app()
+        app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
+        self.client = TestClient(app)
 
     def tearDown(self):
         import apps.analysis_web.config as cfg

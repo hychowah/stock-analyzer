@@ -245,6 +245,20 @@ class QuoteService:
     def ttl_sec(self) -> int:
         return self._ttl
 
+    def prime(self, listings: list[str]) -> None:
+        """Start the same fetch get_many uses. Return immediately. HTML must not wait."""
+        unique = _unique_listings(listings)
+        if not unique:
+            return
+
+        def _run() -> None:
+            try:
+                self.get_many(unique)
+            except Exception:
+                return
+
+        threading.Thread(target=_run, name="quote-prime", daemon=True).start()
+
     def get_many(self, symbols: list[str]) -> list[QuotePrint]:
         unique = _unique_listings(symbols)
         if not unique:

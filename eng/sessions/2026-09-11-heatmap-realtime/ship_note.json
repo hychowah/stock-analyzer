@@ -1,0 +1,17 @@
+{
+  "session": "2026-09-11-heatmap-realtime",
+  "summary": "Heatmap loadup: live-nav is lots x prints (no catalog join), QuoteService.prime overlaps HTML, window is GET /api/portfolio/mtm-interval (one still). Heatmap chrome and rows commit together.",
+  "not": [
+    "WebSockets or a disk quote store",
+    "SSR tiles",
+    "heatmap Play",
+    "?frames=last on mtm-path",
+    "shared film cache with Play"
+  ],
+  "verify": {
+    "eng_verify": "PASS 1031",
+    "probe_before": "live-nav warm 73ms; YTD path 251ms / 740KB / 182 frames",
+    "probe_after": "live-nav warm 8ms; YTD interval 42ms / 4.8KB / 37 rows",
+    "browser": ":8790 /portfolio desktop+390px Live, 1W, YTD, Live restore, Fill/Exit; heatmap GETs mtm-interval not mtm-path"
+  }
+}

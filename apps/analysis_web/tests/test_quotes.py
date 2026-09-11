@@ -145,6 +145,42 @@ class FakeBackendAndCacheTests(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0][0].price, 1.0)
 
+    def test_prime_returns_immediately_and_single_flights(self):
+        started = threading.Event()
+        release = threading.Event()
+
+        class Slow(FakeQuoteBackend):
+            def quote_many(self, symbols):  # type: ignore[override]
+                started.set()
+                release.wait(timeout=2)
+                return super().quote_many(symbols)
+
+        be = Slow({"META": _q("META", 1.0)})
+        svc = QuoteService(be, ttl_sec=60)
+        t0 = time.monotonic()
+        svc.prime(["META"])
+        self.assertLess(time.monotonic() - t0, 0.2)
+        self.assertTrue(started.wait(timeout=2))
+        results: list[list] = []
+
+        def worker():
+            results.append(svc.get_many(["META"]))
+
+        t = threading.Thread(target=worker)
+        t.start()
+        time.sleep(0.05)
+        release.set()
+        t.join(timeout=2)
+        self.assertEqual(len(be.calls), 1)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0][0].price, 1.0)
+
+    def test_prime_empty_is_noop(self):
+        be = FakeQuoteBackend({"META": _q("META", 1.0)})
+        svc = QuoteService(be, ttl_sec=60)
+        svc.prime([])
+        self.assertEqual(be.calls, [])
+
 
 class QuotesApiTests(unittest.TestCase):
     def setUp(self):

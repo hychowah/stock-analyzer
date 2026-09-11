@@ -94,10 +94,9 @@ def _listing_of(ib_symbol: str, exch: dict[str, str | None]) -> str:
 
 
 def window_listings(ib_book: IbBook, start: str, end: str) -> list[str]:
-    """Listings that can appear on the walk (start, end, and in-window fills)."""
+    """Listings that can appear: start lots, end lots, and in-window fills."""
     a = start[:10]
     b = end[:10]
-    days = {a, b}
     exch = _exch_by_symbol(ib_book)
     seen: list[str] = []
     have: set[str] = set()
@@ -108,17 +107,16 @@ def window_listings(ib_book: IbBook, start: str, end: str) -> list[str]:
             have.add(k)
             seen.append(k)
 
+    for lot in as_of_book(ib_book, a).lots:
+        _add(lot.listing)
+    for lot in as_of_book(ib_book, b).lots:
+        _add(lot.listing)
     for trade in ib_book.trades or ():
         if not _is_stock_cat(trade.asset_category):
             continue
         day = trade_date(trade.traded_at)
         if day and a <= day <= b:
-            days.add(day)
             _add(_listing_of(trade.ib_symbol, exch))
-    for day in sorted(days):
-        book = as_of_book(ib_book, day)
-        for lot in book.lots:
-            _add(lot.listing)
     return seen
 
 
@@ -255,6 +253,70 @@ def _frame_rows(
     return out
 
 
+def _ib_by_listing(ib_book: IbBook) -> dict[str, str]:
+    exch = _exch_by_symbol(ib_book)
+    out: dict[str, str] = {}
+    for trade in ib_book.trades or ():
+        if not _is_stock_cat(trade.asset_category):
+            continue
+        key = _listing_of(trade.ib_symbol, exch)
+        if key and (trade.ib_symbol or "").strip() and key not in out:
+            out[key] = str(trade.ib_symbol).strip()
+    return out
+
+
+def build_mtm_interval(
+    ib_book: IbBook,
+    histories: dict[str, PriceHistory],
+    *,
+    start: str,
+    end: str,
+) -> dict[str, Any]:
+    """One still: value(end) − value(start) + fill cash after start through end.
+
+    Same row identity as the last frame of ``build_mtm_path``. No frames, no bars.
+    """
+    a = (start or "").strip()[:10]
+    b = (end or "").strip()[:10]
+    stmt = ib_book.snapshot
+    base: dict[str, Any] = {
+        "start": a,
+        "end": b,
+        "start_nav": None,
+        "base_currency": (stmt.base_currency or "").strip(),
+        "rows": [],
+        "error": None,
+    }
+    if len(a) < 10 or len(b) < 10:
+        base["error"] = "period dates are missing"
+        return base
+    if a > b:
+        base["error"] = "period start is after end"
+        return base
+    start_book = as_of_book(ib_book, a)
+    start_marks = marks_on(histories, a)
+    start_marked = mark_lots(start_book, start_marks)
+    start_by = _by_listing(start_marked)
+    start_nav = float(start_marked.nav)
+    t_book = as_of_book(ib_book, b)
+    t_marks = marks_on(histories, b)
+    t_marked = mark_lots(t_book, t_marks)
+    cash_by, cash_unknown = trade_cash_by_listing(ib_book, after=a, through=b)
+    rows = _frame_rows(
+        start_by=start_by,
+        t_by=_by_listing(t_marked),
+        start_marks=start_marks,
+        t_marks=t_marks,
+        start_nav=start_nav,
+        cash_by=cash_by,
+        cash_unknown=cash_unknown,
+        ib_by_listing=_ib_by_listing(ib_book),
+    )
+    base["start_nav"] = start_nav
+    base["rows"] = rows
+    return base
+
+
 def build_mtm_path(
     ib_book: IbBook,
     histories: dict[str, PriceHistory],
@@ -293,14 +355,7 @@ def build_mtm_path(
     start_marked = mark_lots(start_book, start_marks)
     start_by = _by_listing(start_marked)
     start_nav = float(start_marked.nav)
-    exch = _exch_by_symbol(ib_book)
-    ib_by_listing: dict[str, str] = {}
-    for trade in ib_book.trades or ():
-        if not _is_stock_cat(trade.asset_category):
-            continue
-        key = _listing_of(trade.ib_symbol, exch)
-        if key and (trade.ib_symbol or "").strip() and key not in ib_by_listing:
-            ib_by_listing[key] = str(trade.ib_symbol).strip()
+    ib_by_listing = _ib_by_listing(ib_book)
     frames: list[dict[str, Any]] = []
     for t in _frame_dates(histories, a, b):
         t_book = as_of_book(ib_book, t)
@@ -383,6 +438,35 @@ def mtm_path_window(
     listings = window_listings(ib_book, a, b)
     histories = svc.get_many(listings, since=a) if listings else {}
     body = build_mtm_path(ib_book, histories, start=a, end=b)
+    body["period"] = ""
+    return body
+
+
+def mtm_interval_for(
+    ib_book: IbBook,
+    svc: HistoryService,
+    period: str,
+    *,
+    today: str | None = None,
+) -> dict[str, Any]:
+    start, end = resolve_period(period, ib_book.snapshot, today=today)
+    listings = window_listings(ib_book, start, end)
+    histories = svc.get_many(listings, since=start) if listings else {}
+    body = build_mtm_interval(ib_book, histories, start=start, end=end)
+    body["period"] = period
+    return body
+
+
+def mtm_interval_window(
+    ib_book: IbBook,
+    svc: HistoryService,
+    start: str,
+    end: str,
+) -> dict[str, Any]:
+    a, b = parse_window_dates(start, end)
+    listings = window_listings(ib_book, a, b)
+    histories = svc.get_many(listings, since=a) if listings else {}
+    body = build_mtm_interval(ib_book, histories, start=a, end=b)
     body["period"] = ""
     return body
 

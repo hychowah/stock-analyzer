@@ -55,6 +55,9 @@ class HistoryHttpTests(unittest.TestCase):
         port.local_dir = cfg2.local_dir  # type: ignore[assignment]
 
         self._app = app_mod.create_app()
+        from apps.analysis_web.services.quotes import FakeQuoteBackend, QuoteService
+
+        self._app.state.quote_service = QuoteService(FakeQuoteBackend({}), ttl_sec=120)
         self._backend = FakeHistoryBackend(_bars())
         self._app.state.history_service = HistoryService(
             self._backend, ttl_sec=60

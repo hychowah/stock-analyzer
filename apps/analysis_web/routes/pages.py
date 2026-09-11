@@ -19,7 +19,8 @@ from packages.catalog_api.client import (
     TickerNotFound,
 )
 
-from apps.analysis_web.deps import get_api
+from apps.analysis_web.deps import get_api, get_quote_service
+from apps.analysis_web.services.quotes import QuoteService
 from apps.analysis_web.services.runs_query import (
     RUN_QUERY_KEYS,
     query_public_map,
@@ -454,9 +455,13 @@ def page_portfolio(
     request: Request,
     pass_only: str = "0",
     api: CatalogApi = Depends(get_api),
+    svc: QuoteService = Depends(get_quote_service),
 ) -> HTMLResponse:
+    from apps.analysis_web.services.live_nav import load_live_lots
     from apps.analysis_web.services.portfolio import active_portfolio_view
 
+    lots, _meta = load_live_lots()
+    svc.prime([lot.listing for lot in lots if lot.listing])
     po = pass_only not in ("", "0", "false", "False")
     view = active_portfolio_view(api, pass_only=po)
     return render_page(

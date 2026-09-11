@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "live-lots-prime",
+      "description": "live-nav marks IB lots without catalog join; QuoteService.prime overlaps HTML",
+      "passes": false,
+      "verify": "pytest test_live_nav test_quotes; live-nav source has load_live_lots not active_portfolio_view"
+    },
+    {
+      "id": "mtm-interval",
+      "description": "GET /api/portfolio/mtm-interval is one still; rows match path last frame; heatmap fetches it",
+      "passes": false,
+      "verify": "pytest test_mtm_path; heatmap.js has mtm-interval not mtm-path"
+    },
+    {
+      "id": "heatmap-commit",
+      "description": "Heatmap chrome and rows commit together; loading is a status line; no empty stage",
+      "passes": false,
+      "verify": "heatmap.js has no beginRange; Loading period marks; Playwright /portfolio 1W/YTD/Live"
+    },
+    {
+      "id": "implement",
+      "description": "Implement the primary change for this slug",
+      "passes": false,
+      "verify": "python3 scripts/eng_verify.py"
+    },
+    {
+      "id": "verify",
+      "description": "Verifier marks features after real checks",
+      "passes": false,
+      "verify": "ship_note.json present when complete"
+    }
+  ]
+}

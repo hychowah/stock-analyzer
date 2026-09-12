@@ -13,6 +13,7 @@ from packages.kd_research.street_bind import check_street_bind
 from packages.kd_research.street_y1 import (
     CALIB,
     GATED,
+    INDEPENDENT,
     Y1,
     StreetY1Policy,
     Y1_BAND,
@@ -51,6 +52,11 @@ class StreetY1PolicyTests(unittest.TestCase):
             self.assertTrue(p.independent_y1_ok)
             self.assertIn("independent_y1", p.responses)
             self.assertTrue(p.rehydrate)
+            _stamp(s, "3.0.0")
+            p = StreetY1Policy.for_session(s)
+            self.assertEqual(p, INDEPENDENT)
+            self.assertTrue(p.gate_optional)
+            self.assertFalse(p.fy1_baseline_required)
 
     def test_injected_fail_band_is_not_hardcoded_five_pct(self) -> None:
         """A second copy of 0.05 in bind would still FAIL at 7% under a 10% band."""

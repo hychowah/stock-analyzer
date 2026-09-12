@@ -75,3 +75,6 @@ archive/catalog/*.sqlite-*
 
 # Agent-chosen scratch
 /tmp/
+
+# Damodaran source EPUBs and full chapter text (hub .md may be tracked)
+ref/Investment Valuation/source/

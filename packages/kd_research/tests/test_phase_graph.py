@@ -16,6 +16,7 @@ from packages.kd_research.phase_graph import (
     check_phase_graph_entry,
     check_phase_status_graph,
     check_phase_status_order_integrity,
+    graph_for_session,
     normalize_subagent_id,
     phase_status_map,
     subagent_allowed_in_phase,
@@ -346,6 +347,98 @@ class GraphContractTests(unittest.TestCase):
         smap = phase_status_map(data)
         rows = check_phase_status_order_integrity(smap)
         self.assertEqual([r for r in rows if r[0] == "FAIL"], [], rows)
+
+
+class ReadySetGraphTests(unittest.TestCase):
+    def _stamp(self, session: Path, version: str) -> None:
+        (session / "meta").mkdir(parents=True, exist_ok=True)
+        (session / "meta" / "run_manifest.json").write_text(
+            json.dumps(
+                {
+                    "status": "scaffolded",
+                    "orchestrator_model": "grok-4.5",
+                    "harness_version": version,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def test_300_1c_does_not_wait_on_1_parallel(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            self._stamp(s, "3.0.0")
+            data = build_phase_status_skeleton("X", "2026-01-01")
+            _set_phase(data, "orch", "complete")
+            data["current_phase"] = "1c"
+            _write_status(s, data)
+            rows = check_phase_graph_entry(s, "1c", subagent_id="2e")
+            fails = [r for r in rows if r[0] == "FAIL" and "prereq" in r[1]]
+            self.assertEqual(fails, [], rows)
+
+    def test_244_1c_still_waits_on_1_parallel(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            self._stamp(s, "2.44.0")
+            data = build_phase_status_skeleton("X", "2026-01-01")
+            _set_phase(data, "orch", "complete")
+            data["current_phase"] = "1c"
+            _write_status(s, data)
+            rows = check_phase_graph_entry(s, "1c", subagent_id="2e")
+            self.assertTrue(
+                any(r[0] == "FAIL" and "prereq.1_parallel" in r[1] for r in rows),
+                rows,
+            )
+
+    def test_300_1d_does_not_wait_on_1c(self) -> None:
+        g = graph_for_session(None)
+        self.assertEqual(g["1d"].priors, ("0", "1b"))
+        self.assertNotIn("registry/filing_deep_dive.json", g["1d"].entry_required)
+
+    def test_300_agent4_entry_skips_oppath_brief(self) -> None:
+        node = graph_for_session(None)["2_parallel"]
+        self.assertNotIn("registry/operating_path_brief.json", node.entry_required_for("4"))
+        self.assertIn("registry/operating_path_brief.json", node.entry_required_for("5"))
+
+    def test_300_agent4_priors_skip_1d(self) -> None:
+        node = graph_for_session(None)["2_parallel"]
+        self.assertEqual(node.priors_for("4"), ("orch",))
+        self.assertEqual(node.priors_for("5"), ("1d",))
+        self.assertEqual(node.priors_for("12"), ("orch",))
+
+    def test_300_agent4_can_enter_before_1d(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            self._stamp(s, "3.0.0")
+            data = build_phase_status_skeleton("X", "2026-01-01")
+            _set_phase(data, "orch", "complete")
+            data["current_phase"] = "2_parallel"
+            _write_status(s, data)
+            rows = check_phase_graph_entry(s, "2_parallel", subagent_id="4")
+            fails = [r for r in rows if r[0] == "FAIL" and "prereq" in r[1]]
+            self.assertEqual(fails, [], rows)
+            rows5 = check_phase_graph_entry(s, "2_parallel", subagent_id="5")
+            self.assertTrue(
+                any(r[0] == "FAIL" and "prereq.1d" in r[1] for r in rows5),
+                rows5,
+            )
+
+    def test_300_charts_wait_on_1d_not_2_5(self) -> None:
+        g = graph_for_session(None)
+        self.assertEqual(g["3"].priors, ("1d",))
+        self.assertEqual(g["2_5"].priors, ("1d",))
+        self.assertEqual(g["5"].priors, ("4_parallel",))
+
+    def test_244_overlay_restores_2_5_charts_join(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            self._stamp(s, "2.44.0")
+            g = graph_for_session(s)
+            self.assertEqual(g["1b"].priors, ("1_parallel",))
+            self.assertEqual(g["1d"].priors, ("0", "1b", "1c"))
+            self.assertEqual(g["2_parallel"].priors, ("1d",))
+            self.assertEqual(g["2_5"].priors, ("2_parallel",))
+            self.assertEqual(g["3"].priors, ("2_5",))
+            self.assertEqual(g["5"].priors, ("3", "4_parallel"))
 
 
 if __name__ == "__main__":

@@ -97,6 +97,8 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         self.assertNotIn("4d` does **not** win `4e", agent5)
         self.assertNotIn("On 2.7–2.17 sessions", agent5)
         self.assertNotIn("|delta|>5% FAIL", agent5)
+        self.assertNotIn("Independent Y1 is default", agent5)
+        self.assertNotIn("banks never FCFF/WACC", agent5)
         self.assertIn("§8 **5b**", agent5)
         ra = _read("harness/RESEARCH_AGENTS.md")
         eight = ra.split("## 8.")[1].split("## 9.")[0]
@@ -168,15 +170,23 @@ class LawSurfaceFreezeTests(unittest.TestCase):
             router,
         )
 
-    def test_1d_waits_on_phase0_and_charts_after_25(self) -> None:
+    def test_1d_waits_on_phase0_and_charts_after_valuation(self) -> None:
         ra = _read("harness/RESEARCH_AGENTS.md")
-        self.assertIn("Phase 0 + 1b + 1c", ra)
-        self.assertIn("Charts (phase 3) and reports (phase 4) start after 2.5", ra)
+        self.assertIn("Phase 0 + 1b (**not** 1c)", ra)
+        self.assertIn("Charts (phase 3) start after Agent 5", ra)
+        self.assertNotIn("Charts (phase 3) and reports (phase 4) start after 2.5", ra)
         design = _read("harness/design_phase_status_and_exemplars.md")
-        self.assertIn("0 + 1b + 1c → 1d", design)
-        self.assertNotIn("\n1b + 1c → 1d", design)
-        self.assertIn("start **after 2_5**", design)
+        self.assertIn("0 + 1b → 1d", design)
+        self.assertNotIn("0 + 1b + 1c → 1d", design)
+        self.assertIn("start after Agent 5", design)
+        self.assertNotIn("start **after 2_5**, same as reports", design)
         self.assertNotIn("as soon as phase `2_parallel` is complete", design)
+        hist = _read("harness/law_history.md")
+        self.assertIn("2.44.x graph joins", hist)
+        runbook = _read("harness/orchestrator_runbook.md")
+        self.assertIn("after Phase 0 + 1b, not 1c", runbook)
+        self.assertNotIn("Phase 1d (after Phase 0 + 1b + 1c)", runbook)
+        self.assertNotIn("both wait on 2.5", runbook)
 
     def test_pair0_bad_reason_is_not_212_current_law(self) -> None:
         text = _read("harness/exemplars/hooks_quality.md")

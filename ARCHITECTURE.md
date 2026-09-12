@@ -124,24 +124,29 @@ flowchart TD
   Scaffold --> Stamp[Write quote_symbol, verify listing, bind library]
   Stamp --> Classify[Classify sector, market, research brief]
   Classify --> P0[Phase 0: background]
-  Classify --> P1[Phase 1: financials, filings, news]
-  P1 --> P1b[1b latest quarter]
-  P1 --> P1c[1c filing deep dive]
+  Classify --> Fin[2a financials]
+  Classify --> Fil[2b filings]
+  Classify --> News[2c news]
+  Fin --> P1b[1b latest quarter]
+  Fil --> P1b
+  Fil --> P1c[1c filing deep dive]
   P0 --> P1d[1d operating path]
   P1b --> P1d
-  P1c --> P1d
-  P1d --> Val[Valuation + technical + TSR]
-  Val --> Stress[Stress / risk]
+  P1d --> Val5[Agent 5 valuation]
+  Classify --> Tech[Agent 4 technical]
+  P1 --> Tsr[Agent 12 TSR]
+  Val5 --> Stress[Stress / risk]
   Stress --> Apply[Shocked-path apply]
   Apply --> Reopen[5b: bind size_cap, reopen decision]
-  Apply --> Charts[Charts]
+  Val5 --> Charts[Charts]
   Reopen --> Reports[Reports]
-  Charts --> Audit[Independent audit]
-  Reports --> Audit
+  Tech --> Reports
+  Tsr --> Reports
+  Reports --> Audit[Independent audit]
   Audit --> Final[Finalize]
 ```
 
-Check ticker (quote or listings) → scaffold (skeleton, not blank) → write `quote_symbol` + verify listing + bind library → classify/brief. Phase 0 runs in parallel with Phase 1. Then 1b latest quarter ∥ 1c filing deep dive (these wait on Phase 1 only). Then 1d operating path (waits on Phase 0 **and** 1b **and** 1c). Then valuation + technical + TSR. Then stress/risk (workers propose shocks; `python -m packages.kd_research.stress_apply` reruns Agent 5’s `fair_value_under` — not a second model). Then 5b writes `stress_bind` (size cap / expected loss) without rewriting fair value. Then charts ∥ reports (both after stress; reports copy the **Unstressed vs stressed** card; they do not wait on charts). Then audit (waits on **both** charts and reports). Then finalize.
+Check ticker (quote or listings) → scaffold (skeleton, not blank) → write `quote_symbol` + verify listing + bind library → classify/brief. Phase 0 runs in parallel with Phase 1. Then 1b latest quarter ∥ 1c filing deep dive (file gates: 1b needs financials+filings, 1c needs filings; neither waits on news). Then 1d operating path (waits on Phase 0 **and** 1b, not 1c). Technical and TSR may start without 1d. Agent 5 waits on 1d and the filing deep dive. Then stress/risk (workers propose shocks; `python -m packages.kd_research.stress_apply` reruns Agent 5’s `fair_value_under` — not a second model). Then 5b writes `stress_bind` (size cap / expected loss) without rewriting fair value. Charts start after valuation_model. Reports start after stress (they copy the **Unstressed vs stressed** card). Audit waits on reports, not charts. Then finalize.
 
 Ideas that hold the pipeline together:
 

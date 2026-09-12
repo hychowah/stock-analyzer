@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "narrative_bind.schema.json",
+  "title": "Narrative bind (story lock before DCF)",
+  "description": "Written by Agent 5 before valuation_model.json on harness >= 3.0.0. status=locked is the compute-bind gate.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "status"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["locked", "draft", "too_hard"]
+    },
+    "life_cycle_stage": { "type": "string" },
+    "who_leads": { "type": "string", "enum": ["story", "numbers"] },
+    "iv_playbook": { "type": "string" },
+    "overlays": { "type": "array", "items": { "type": "string" } },
+    "story": {
+      "type": "object",
+      "properties": {
+        "paragraph": { "type": "string" }
+      }
+    },
+    "3p": { "type": "object" },
+    "fairy_tale_flag": { "type": "boolean" },
+    "street_restory": { "type": "object" },
+    "map": { "type": "object" }
+  }
+}

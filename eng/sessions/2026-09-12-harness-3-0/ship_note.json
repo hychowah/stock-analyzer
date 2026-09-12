@@ -1,0 +1,6 @@
+{
+  "slug": "harness-3-0",
+  "harness_version": "3.0.0",
+  "summary": "Ready-set DAG (1b/1c file gates, 1d skips 1c, Agent 4/12 skip 1d, charts after VM, audit after reports) plus Damodaran lock-then-compute (narrative_bind, independent Y1, growth triad / bank engine / truncation gates).",
+  "verify": "python scripts/eng_verify.py PASS; 1101 pytest"
+}

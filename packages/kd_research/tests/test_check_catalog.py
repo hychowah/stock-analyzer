@@ -15,7 +15,7 @@ from packages.kd_research.check_catalog import (
 from packages.kd_research.check_catalog import _build_rows  # noqa: PLC2701
 from packages.kd_research.gates import entry_checks
 from packages.kd_research.library import BIND_REL, LIBRARY_SINCE
-from packages.kd_research.operating_path import BRIEF_REL, OPPATH_SINCE
+from packages.kd_research.operating_path import BRIEF_REL
 from packages.kd_research.phase_graph import PHASE_GRAPH, PRICE_SNAPSHOT_REL, PRICE_SNAPSHOT_SINCE
 from packages.kd_research.street_bind import STREET_REL, STREET_SINCE
 from packages.kd_research.workflow_spec import build_workflow_spec
@@ -148,7 +148,7 @@ class CheckCatalogTests(unittest.TestCase):
         extras_2p = {vp.rel: vp for vp in by_phase["2_parallel"].entry_versioned}
         self.assertEqual(extras_1p[BIND_REL].since, LIBRARY_SINCE)
         self.assertTrue(extras_1p[BIND_REL].required)
-        self.assertEqual(extras_2p[BRIEF_REL].since, OPPATH_SINCE)
+        self.assertNotIn(BRIEF_REL, extras_2p)
         self.assertEqual(extras_2p[STREET_REL].since, STREET_SINCE)
         self.assertFalse(extras_2p[STREET_REL].required)
         self.assertEqual(extras_2p[PRICE_SNAPSHOT_REL].since, PRICE_SNAPSHOT_SINCE)

@@ -132,15 +132,16 @@ flowchart TD
   P1c --> P1d
   P1d --> Val[Valuation + technical + TSR]
   Val --> Stress[Stress / risk]
-  Stress --> Reopen[5b: reopen decision after stress]
-  Stress --> Charts[Charts]
+  Stress --> Apply[Shocked-path apply]
+  Apply --> Reopen[5b: bind size_cap, reopen decision]
+  Apply --> Charts[Charts]
   Reopen --> Reports[Reports]
   Charts --> Audit[Independent audit]
   Reports --> Audit
   Audit --> Final[Finalize]
 ```
 
-Check ticker (quote or listings) → scaffold (skeleton, not blank) → write `quote_symbol` + verify listing + bind library → classify/brief. Phase 0 runs in parallel with Phase 1. Then 1b latest quarter ∥ 1c filing deep dive (these wait on Phase 1 only). Then 1d operating path (waits on Phase 0 **and** 1b **and** 1c). Then valuation + technical + TSR. Then stress/risk. Then a short 5b “reopen decision after stress” on the way to reports. Then charts ∥ reports (both after stress; reports do not wait on charts). Then audit (waits on **both** charts and reports). Then finalize.
+Check ticker (quote or listings) → scaffold (skeleton, not blank) → write `quote_symbol` + verify listing + bind library → classify/brief. Phase 0 runs in parallel with Phase 1. Then 1b latest quarter ∥ 1c filing deep dive (these wait on Phase 1 only). Then 1d operating path (waits on Phase 0 **and** 1b **and** 1c). Then valuation + technical + TSR. Then stress/risk (workers propose shocks; `python -m packages.kd_research.stress_apply` reruns Agent 5’s `fair_value_under` — not a second model). Then 5b writes `stress_bind` (size cap / expected loss) without rewriting fair value. Then charts ∥ reports (both after stress; reports copy the **Unstressed vs stressed** card; they do not wait on charts). Then audit (waits on **both** charts and reports). Then finalize.
 
 Ideas that hold the pipeline together:
 
@@ -211,7 +212,7 @@ python3 scripts/export_compare_db.py --all --rebuild
 | `AGENTS.md` | Short dual-mode router. Keep it short. |
 | `ARCHITECTURE.md` | This file — human map. |
 | `harness/` | Mode A law, schemas, prompts, sector/region notes, version. |
-| `packages/kd_research/` | Research runtime library: paths, phase graph, gates, catalog rebuild, spawn gate, library bind. |
+| `packages/kd_research/` | Research runtime library: paths, phase graph, gates, catalog rebuild, spawn gate, library bind, stress apply (`python -m packages.kd_research.stress_apply`). |
 | `packages/catalog_api/` | Read-only catalog library + CLI for UI and programs. |
 | `packages/research_jobs/` | Analyze job lifecycle. |
 | `packages/compare_jobs/` | Compare job lifecycle. |

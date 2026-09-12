@@ -1,0 +1,7 @@
+{
+  "session": "2026-09-12-stress-book-bind",
+  "harness_version": "2.44.0",
+  "summary": "Stress book bind (2.44.0): merged shock list is the apply input; one applied block; bind refuses unapplied bridges; reports copy format_stress_card. 2.29–2.43 keep the 25/15 cliff. Completed research not rewritten.",
+  "verify": "eng_verify PASS (1089 tests)",
+  "commit": "not committed — needs user agreement"
+}

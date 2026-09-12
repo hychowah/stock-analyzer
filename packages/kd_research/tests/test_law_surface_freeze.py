@@ -90,6 +90,7 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         self.assertIn("§10c", agent5)
         self.assertIn("§10d", agent5)
         self.assertIn("§10e", agent5)
+        self.assertIn("§10f", agent5)
         self.assertIn("Do not load ROOT/harness/law_history.md", agent5)
         self.assertNotIn("Y1 LAW", agent5)
         self.assertNotIn("STREET IS THE DEFAULT Y1 START", agent5)
@@ -101,6 +102,16 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         eight = ra.split("## 8.")[1].split("## 9.")[0]
         self.assertIn("stress_bind", eight)
         self.assertIn("roc_screen_rebuttal", eight)
+        self.assertIn("size_cap", eight)
+        self.assertIn("compute_stress_bind", eight)
+
+    def test_section1_stress_book_is_derived(self) -> None:
+        one = _read("harness/RESEARCH_AGENTS.md").split("## 1.")[1].split("## 2.")[0]
+        self.assertNotIn("stress haircuts, position sizing", one)
+        self.assertIn("fair_value_under", one)
+        self.assertIn("compute_stress_bind", one)
+        self.assertIn("§10f", one)
+        self.assertNotIn("required_mos_addon", _read("harness/agent_prompts.md"))
 
     def test_independent_base_path_gone_from_current_law(self) -> None:
         self.assertNotIn("independent base path", _read("harness/RESEARCH_AGENTS.md"))

@@ -59,6 +59,19 @@ class ReadmeCioTests(unittest.TestCase):
         rows = check_readme_quotes_decision(s)
         self.assertEqual(rows[0][0], "PASS", rows)
 
+    def test_244_atr_as_book_size_fails(self) -> None:
+        s = self._sess(
+            "2.44.0",
+            "# README\nDo not initiate — destock unresolved.\n"
+            "ATR 2.1, 800 shares as the position size.\n"
+            "Then fair value vs price as context.\n",
+        )
+        rows = check_readme_quotes_decision(s)
+        self.assertTrue(
+            any(r[0] == "FAIL" and "ATR" in r[2] for r in rows),
+            rows,
+        )
+
     def test_243_unofficial_phrase_does_not_quote(self) -> None:
         s = self._sess(
             "2.43.0",

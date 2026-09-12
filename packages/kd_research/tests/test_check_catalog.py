@@ -110,6 +110,14 @@ class CheckCatalogTests(unittest.TestCase):
         self.assertEqual(by_id["agent4_full"], frozenset({WHEN_SESSION_FULL}))
         self.assertEqual(by_id["wave1_full"], frozenset({WHEN_SESSION_FULL}))
         self.assertIn(WHEN_SESSION_FULL, by_id["cash_quality"])
+        self.assertIn("2_parallel:complete", by_id["shock_surface_2p"])
+        self.assertIn(WHEN_SESSION_FULL, by_id["shock_surface_2p"])
+        self.assertIn("2_5:complete", by_id["stress_applied_25"])
+        self.assertIn(WHEN_SESSION_FULL, by_id["stress_applied_25"])
+        self.assertIn("4_parallel:complete", by_id["stress_bind_4p"])
+        self.assertIn(WHEN_SESSION_FULL, by_id["stress_bind_4p"])
+        self.assertIn("4_parallel:complete", by_id["stress_card_4p"])
+        self.assertIn(WHEN_SESSION_FULL, by_id["stress_card_4p"])
         core_ids = {r.id for r in catalog_rows() if WHEN_SESSION_CORE in r.when}
         full_only = {
             r.id

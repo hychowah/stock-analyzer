@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Read eng/AGENTS.md + fill issue.json success criteria",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "shock-surface",
+      "description": "Agent 5 shock_surface + fair_value_under CLI; check_shock_surface on 2.44+",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_stress_book.py -q -k ShockSurface"
+    },
+    {
+      "id": "stress-apply",
+      "description": "python -m packages.kd_research.stress_apply derives haircuts; restates_bear numeric",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_stress_book.py -q -k ApplyEngine"
+    },
+    {
+      "id": "book-bind",
+      "description": "compute_stress_bind size_cap schedule; 2.43 cliff preserved; 2.44 book bind",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_stress_book.py packages/kd_research/tests/test_wave12_stress_bind.py -q"
+    },
+    {
+      "id": "report-card",
+      "description": "Unstressed vs stressed heading + numbers in README and fundamental",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_stress_book.py -q -k ReportCard"
+    },
+    {
+      "id": "docs-version",
+      "description": "VERSION 2.44.0 + ARCHITECTURE.md + law/prompts/schemas",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_law_surface_freeze.py scripts/tests/test_architecture_doc.py -q; python scripts/eng_verify.py"
+    }
+  ]
+}

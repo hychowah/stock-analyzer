@@ -60,7 +60,7 @@ PHASE_META: dict[str, dict[str, str]] = {
     "2_5": {
         "label": "Stress",
         "stage": "decide",
-        "purpose": "Risk bridge and scenario haircuts",
+        "purpose": "Risk bridge and scenario shocks",
     },
     "3": {
         "label": "Charts",

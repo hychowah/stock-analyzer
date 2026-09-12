@@ -11,6 +11,10 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup, escape
 
 from apps.analysis_web.config import templates_dir
+from packages.kd_research.decision import (
+    cheap_claim_label as _cheap_claim_label,
+    duration_label as _duration_label,
+)
 
 
 def fmt_num(v: Any, digits: int = 2) -> str:
@@ -91,43 +95,14 @@ def verdict_badge(v: Any) -> Markup:
     return Markup(f'<span class="badge {cls}">{escape(s or "—")}</span>')
 
 
-_DURATION_LABELS: dict[str, str] = {
-    "pass": "Do not initiate",
-    "too_hard": "Too hard",
-    "initiate": "Initiate",
-    "add": "Add",
-    "hold": "Hold",
-    "trim": "Trim",
-    "sell": "Sell",
-    "short": "Short",
-}
-
-_CHEAP_CLAIM_LABELS: dict[str, str] = {
-    "franchise_mos": "Franchise MoS",
-    "equity_near_book": "Equity near book",
-    "residual_option": "Residual option",
-    "not_cheap": "Not cheap",
-}
-
-
 def duration_label(v: Any) -> str:
-    """English duration.action. Stored token is unchanged."""
-    s = str(v or "").strip()
-    if not s:
-        return ""
-    if s in _DURATION_LABELS:
-        return _DURATION_LABELS[s]
-    return s.replace("_", " ").replace("-", " ").title()
+    """English duration.action. Stored token is unchanged. One map in kd_research."""
+    return _duration_label(str(v or ""))
 
 
 def cheap_claim_label(v: Any) -> str:
-    """English cheap_claim.class. Stored token is unchanged."""
-    s = str(v or "").strip()
-    if not s:
-        return ""
-    if s in _CHEAP_CLAIM_LABELS:
-        return _CHEAP_CLAIM_LABELS[s]
-    return s.replace("_", " ").replace("-", " ").title()
+    """English cheap_claim.class. Stored token is unchanged. One map in kd_research."""
+    return _cheap_claim_label(str(v or ""))
 
 
 def verdict_line_html(v: Any) -> Markup:

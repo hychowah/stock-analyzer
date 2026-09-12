@@ -1,0 +1,37 @@
+{
+  "goal": "Ship an AnalysisReport document: closed ForecastTable from stored JSON, one English duration map, reading shell (desktop chapter rail / phone chips), and Mode A 2.43.0 write contract so new reports include the model and year-by-year cash-flow path in product English. Do not rewrite completed research sessions.",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not invent fair values or cash-flow rows in the UI",
+    "Do not LLM-rewrite old markdown at read time",
+    "Do not allowlist all of data/compute/"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "ForecastTable.from_session uses named layouts only; unknown shape is None plus an English sentence",
+    "data/compute/valuation_result.json is allowlisted; other data/compute/* stay denied; in-progress still blocks the result file",
+    "One duration map in kd_research; UI imports it; Wave 8 README gate accepts the product English on harness >= 2.43.0",
+    "/runs/{run_id}/report is one AnalysisReport; JSON forecast is the only year-by-year grid; /artifact shares the reading shell",
+    "Agent 5 writes explicit_forecast; identity gate vs compute; Agent 7/11 prompts use product English; VERSION 2.43.0",
+    "eng_verify green; browser check desktop and phone"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python -m pytest packages/kd_research/tests/test_forecast_table.py packages/kd_research/tests/test_wave8_readme_cio.py packages/catalog_api/tests/test_catalog_api.py apps/analysis_web/tests/test_analysis_web.py -q",
+    "python scripts/eng_verify.py"
+  ]
+}

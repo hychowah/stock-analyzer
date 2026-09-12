@@ -817,9 +817,10 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn("<h1>Hello META</h1>", r.text)
         self.assertEqual(r.text.count("<h1"), 1)
         self.assertIn("00_META_README.md", r.text)
+        self.assertIn('class="reading"', r.text)
         self.assertRegex(
             r.text,
-            r'<h1>Hello META</h1>\s*<p class="mono muted">reports/00_META_README.md</p>',
+            r'<h1>Hello META</h1>[\s\S]*<p class="muted">reports/00_META_README.md</p>',
         )
         self.assertIn(b"report-body", r.content)
         self.assertNotIn(b"mermaid_boot.js", r.content)
@@ -914,7 +915,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"id=\"price-chart\"", r.content)
         self.assertLess(r.text.index("decision-strip"), r.text.index("run-cover"))
         self.assertLess(r.text.index("run-cover"), r.text.index('id="price-chart"'))
-        self.assertLess(r.text.index("Read CIO cover"), r.text.index('id="price-chart"'))
+        self.assertLess(r.text.index("Read analysis"), r.text.index('id="price-chart"'))
         self.assertLess(
             r.text.index("No football-field chart for this session."),
             r.text.index('id="price-chart"'),
@@ -925,7 +926,7 @@ class AnalysisWebTests(unittest.TestCase):
             r.text.index("Bear / base / bull / model"),
         )
         self.assertLess(
-            r.text.index("Read CIO cover"),
+            r.text.index("Read analysis"),
             r.text.index("Other catalog sessions"),
         )
         self.assertNotIn(b'class="grid2"', r.content)
@@ -934,7 +935,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn(b"Cheap Vs High Roic", r.content)
         self.assertNotIn(b"cheap vs high ROIC", r.content)
         self.assertIn(b"All reports (allowlisted)", r.content)
-        self.assertIn(b'Read CIO cover</a>', r.content)
+        self.assertIn(b'Read analysis</a>', r.content)
         self.assertIn(b'class="btn"', r.content)
         self.assertIn(b"No football-field chart for this session.", r.content)
         self.assertIn(b"No other catalog sessions", r.content)
@@ -947,6 +948,7 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertEqual(r.text.count('class="table-scroll"'), 3)
         js = Path(__file__).resolve().parents[1] / "static" / "price_chart.js"
         text = js.read_text(encoding="utf-8")
+        self.assertIn("/runs/research:META:2026-08-03/report", r.text)
         self.assertIn("/api/price-history", text)
         self.assertIn("loadGen", text)
         self.assertIn("Price is the scale", text)
@@ -1001,6 +1003,81 @@ class AnalysisWebTests(unittest.TestCase):
         self.assertIn("render_markdown(", arch)
         self.assertNotIn("render_session_report", arch)
 
+    def test_analysis_report_page(self):
+        research = self.archive / "research" / "META" / "2026-08-03"
+        (research / "data" / "compute").mkdir(parents=True, exist_ok=True)
+        (research / "data" / "compute" / "valuation_result.json").write_text(
+            json.dumps(
+                {
+                    "currency": "USD",
+                    "scenarios": {
+                        "base": {
+                            "revenues": [254e9, 300e9],
+                            "oi": [86e9, 103e9],
+                            "om": [0.34, 0.345],
+                            "capex": [137.5e9, 115e9],
+                            "fcff": [-42e9, -10e9],
+                        },
+                        "bear": {
+                            "revenues": [230e9, 248e9],
+                            "fcff": [-63e9, -28e9],
+                        },
+                        "bull": {
+                            "revenues": [260e9, 320e9],
+                            "fcff": [-20e9, 10e9],
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        (research / "reports" / "01_META_fundamental.md").write_text(
+            "# Fundamental\n\n## Forecast path\n\n| Y1 | Y2 |\n|---|---|\n| 1 | 2 |\n\n## Thesis\n\nBody.\n",
+            encoding="utf-8",
+        )
+        (research / "data" / "valuation_model.json").write_text(
+            json.dumps(
+                {
+                    "model": {"name": "dcf_fcff_8y", "rationale": "Ordinary owner-earnings path."},
+                    "wacc_buildup": {"applies": True, "wacc": 0.10, "rf": 0.05, "ke": 0.11},
+                }
+            ),
+            encoding="utf-8",
+        )
+        r = self.client.get("/runs/research:META:2026-08-03/report")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Do not initiate", r.text)
+        self.assertIn("dcf_fcff_8y", r.text)
+        self.assertIn("$254.0B", r.text)
+        self.assertIn('id="forecast"', r.text)
+        self.assertIn('id="verdict"', r.text)
+        self.assertIn("class=\"reading\"", r.text)
+        self.assertIn("reading-rail", r.text)
+        self.assertNotIn("Forecast path", r.text)
+        self.assertIn("Thesis", r.text)
+        self.assertEqual(r.text.count("$254.0B"), 1)
+
+    def test_analysis_report_gap_when_no_named_layout(self):
+        research = self.archive / "research" / "META" / "2026-08-03"
+        (research / "data" / "compute").mkdir(parents=True, exist_ok=True)
+        (research / "data" / "compute" / "valuation_result.json").write_text(
+            json.dumps({"model": "excess_return", "book": {"2025": 95.0}, "roe": {"base": 0.13}}),
+            encoding="utf-8",
+        )
+        r = self.client.get("/runs/research:META:2026-08-03/report")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("This model has no year-by-year cash-flow table.", r.text)
+        self.assertNotIn("<table class=\"forecast-table\">", r.text)
+
+    def test_strip_forecast_section(self):
+        from apps.analysis_web.services.render_markdown import strip_forecast_section
+
+        src = "# T\n\n## Forecast path\n\nsecret grid\n\n## Thesis\n\nkeep\n"
+        out = strip_forecast_section(src)
+        self.assertNotIn("secret grid", out)
+        self.assertIn("Thesis", out)
+        self.assertIn("keep", out)
+
     def test_run_detail_football_when_present(self):
         charts = self.archive / "research" / "META" / "2026-08-03" / "charts"
         charts.mkdir(parents=True, exist_ok=True)
@@ -1022,9 +1099,9 @@ class AnalysisWebTests(unittest.TestCase):
         )
         self.assertNotIn(b"No football-field chart for this session.", r.content)
         self.assertNotIn(b"tornado.png", r.content)
-        self.assertIn(b"Read CIO cover", r.content)
+        self.assertIn(b"Read analysis", r.content)
         self.assertLess(r.text.index('class="football-field"'), r.text.index('id="price-chart"'))
-        self.assertLess(r.text.index("Read CIO cover"), r.text.index('id="price-chart"'))
+        self.assertLess(r.text.index("Read analysis"), r.text.index('id="price-chart"'))
         img = self.client.get(
             "/artifact",
             params={
@@ -1990,8 +2067,9 @@ class AnalysisWebAnalyzeTests(unittest.TestCase):
         self.assertNotRegex(r.text, r'(?s)id="job-phase-wrap"(?:(?!hidden).)*>\s*phase\s+orch')
         self.assertIn(b'class="btn"', r.content)
         self.assertIn(b">Open catalog run</a>", r.content)
-        self.assertIn(b">Read CIO cover</a>", r.content)
+        self.assertIn(b">Read analysis</a>", r.content)
         self.assertIn(b'href="/runs/research:META:2026-08-03"', r.content)
+        self.assertIn(b'href="/runs/research:META:2026-08-03/report"', r.content)
         self.assertIn(b"00_META_README.md", r.content)
         self.assertIn(b"<ul>", r.content)
         self.assertNotIn(b'http-equiv="refresh"', r.content)

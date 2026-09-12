@@ -26,6 +26,7 @@ IN_PROGRESS_NAME_ONLY = (
 
 IN_PROGRESS_BODY_DENY = (
     "data/valuation_model.json",
+    "data/compute/valuation_result.json",
     "registry/decision.json",
     "registry/audit.json",
     "meta/prediction_snapshot.json",

@@ -1,28 +1,8 @@
-{% extends "base.html" %}
-{% block title %}{{ title or relpath }}{% endblock %}
-{% block content %}
-<div class="card">
-  <p>
-    <a href="{{ back_href or ('/runs/' ~ run_id) }}">← {{ back_label or 'Run' }}</a>
-    · <a href="/artifact?run_id={{ run_id | urlencode }}&amp;path={{ relpath | urlencode }}&amp;raw=1">Raw source</a>
-  </p>
-  <h1>{{ title or relpath }}</h1>
-  {% if title and title != relpath %}
-  <p class="mono muted">{{ relpath }}</p>
-  {% endif %}
-  {% if toc %}
-  <nav class="report-toc" aria-label="Contents">
-    <ul>
-      {% for item in toc %}
-      <li class="toc-h{{ item.level }}"><a href="#{{ item.id }}">{{ item.text }}</a></li>
-      {% endfor %}
-    </ul>
-  </nav>
-  {% endif %}
-  {% if mode == 'markdown' %}
-  <div class="report-body">{{ body_html | safe }}</div>
-  {% else %}
-  <pre>{{ body_text }}</pre>
-  {% endif %}
-</div>
+{% extends "reading.html" %}
+{% block article %}
+{% if mode == 'markdown' %}
+<div class="report-body">{{ body_html | safe }}</div>
+{% else %}
+<pre>{{ body_text }}</pre>
+{% endif %}
 {% endblock %}

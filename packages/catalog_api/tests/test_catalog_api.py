@@ -716,6 +716,11 @@ class InProgressSessionFilesTests(unittest.TestCase):
         (self.session / "reports").mkdir()
         (self.session / "registry" / "phase_status.json").write_text("{}", encoding="utf-8")
         (self.session / "data" / "valuation_model.json").write_text('{"fv":1}', encoding="utf-8")
+        (self.session / "data" / "compute").mkdir()
+        (self.session / "data" / "compute" / "valuation_result.json").write_text(
+            '{"scenarios":{}}', encoding="utf-8"
+        )
+        (self.session / "data" / "compute" / "valuation.py").write_text("print(1)\n", encoding="utf-8")
         (self.session / "reports" / "00_COHR_README.md").write_text("# hi\n", encoding="utf-8")
 
     def tearDown(self) -> None:
@@ -734,6 +739,10 @@ class InProgressSessionFilesTests(unittest.TestCase):
             )
         with self.assertRaises(ArtifactDenied):
             open_session_artifact(
+                self.session, "data/compute/valuation_result.json", snapshot_ready=False
+            )
+        with self.assertRaises(ArtifactDenied):
+            open_session_artifact(
                 self.session, "reports/00_COHR_README.md", snapshot_ready=False
             )
 
@@ -744,6 +753,19 @@ class InProgressSessionFilesTests(unittest.TestCase):
             self.session, "reports/00_COHR_README.md", snapshot_ready=True
         )
         self.assertIn(b"hi", data)
+
+    def test_complete_allows_valuation_result_not_compute_script(self) -> None:
+        from packages.catalog_api.client import ArtifactDenied
+        from packages.catalog_api.session_files import open_session_artifact
+
+        data = open_session_artifact(
+            self.session, "data/compute/valuation_result.json", snapshot_ready=True
+        )
+        self.assertIn(b"scenarios", data)
+        with self.assertRaises(ArtifactDenied):
+            open_session_artifact(
+                self.session, "data/compute/valuation.py", snapshot_ready=True
+            )
 
 
 if __name__ == "__main__":

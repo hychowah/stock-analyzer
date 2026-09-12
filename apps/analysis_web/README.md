@@ -28,9 +28,10 @@ Or: `bash apps/analysis_web/init.sh`
 | Path | Purpose |
 |------|---------|
 | `/` | Run list: live prefix search, filters, column sort, optional Latest-per-ticker; Downside % is (price − bear FV) / price (as-of, then live print). Duration is the stored snapshot action; Audit is process completeness |
-| `/runs/{run_id}` | Run detail (decision strip, football-field PNG + Read CIO cover when present, price vs analysis, Context; bear/base/bull/model in details) |
+| `/runs/{run_id}` | Run detail (decision strip, football-field PNG + Read analysis when present, price vs analysis, Context; bear/base/bull/model in details) |
+| `/runs/{run_id}/report` | Composed analysis report (verdict, model, forecast table, worth, markdown chapters) |
 | `/run?run_id=…` | Redirect → `/runs/…` (bookmark compat) |
-| `/artifact?run_id=…&path=reports/…` | Report view (markdown title + TOC + sibling `.md` links on `/artifact`; `raw=1` for source) |
+| `/artifact?run_id=…&path=reports/…` | Allowlisted session file. Markdown uses the shared reading shell (chapter rail / chips from that file’s h2s); `raw=1` for source |
 | `/experiments` | Group by `experiment_id` |
 | `/calibration` | MoS vs outcomes |
 | `/portfolio` | Portfolio: IB sqlite book (or `.local/portfolio.json` fallback) joined to latest catalog runs. Header is Live NAV + day P/L (not statement period or ending NAV). HTML primes last prints and daily closes then joins catalog. One poll (`/api/portfolio/live-nav`) marks lots × prints (not a catalog join) and paints Live NAV, Live cells, live value, Downside, and the heatmap when Live (tile area is \|day P/L\| of that holding; stock % and NAV-contribution %; gainers left, losers right). Heatmap Fill screen grows that SVG to the viewport. A from/to window paints `GET /api/portfolio/mtm-interval` (area \|period P/L\|). Mark-to-market P/L has Live / period + Play of reconstructed daily bars (not the heatmap). Does not call `/api/quotes`. Change-in-NAV waterfall + MTM bars. Sub-nav Book · What-if. |
@@ -42,7 +43,7 @@ Or: `bash apps/analysis_web/init.sh`
 | `/architecture` | Human map: live repo `ARCHITECTURE.md` (working tree, not a pin). Diagrams are inspectable figures (pan/zoom, Reset). |
 | `/harness` | Pin map: staged pipeline + briefing inspector (prompt on demand) |
 | `/api/harness/spec`, `/api/harness/prompt` | JSON from `Pin.workflow_spec` / `Pin.agent_prompt` |
-| `/analyze/{analyze_id}` | Wait page is resume_hint (phase hidden when hint exists); meta refresh 15s while running; complete offers Open catalog run / Read CIO cover; cancel = keep session; discard = abandon |
+| `/analyze/{analyze_id}` | Wait page is resume_hint (phase hidden when hint exists); meta refresh 15s while running; complete offers Open catalog run / Read analysis; cancel = keep session; discard = abandon |
 | `/analyze-artifact?analyze_id=…&path=…` | In-progress: handoffs/phase only; FV and report bodies 403 until snapshot |
 | `/compares` | Compare packets (`archive/comparisons/`). List does not SSE-reload. |
 | `/compares/new` | No-JS form to start a two-session Grok audit. Busy/Grok-missing stay on the form. |

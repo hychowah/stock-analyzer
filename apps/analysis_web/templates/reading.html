@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ title or relpath or 'Report' }}{% endblock %}
+{% block body_attrs %}class="reading"{% endblock %}
+{% block content %}
+{% set _crumb_href = crumb_href or back_href or '/' %}
+{% set _crumb_label = crumb_label or back_label or 'Back' %}
+{% set _toc = toc if toc is defined and toc else [] %}
+<div class="reading-page">
+  <header class="reading-head">
+    <p>
+      <a href="{{ _crumb_href }}">← {{ _crumb_label }}</a>
+      {% if crumb_extra %}
+      · {{ crumb_extra | safe }}
+      {% endif %}
+    </p>
+    <h1>{{ title or relpath or 'Report' }}</h1>
+    {% if meta_line %}
+    <p class="muted">{{ meta_line }}</p>
+    {% endif %}
+    {% if extra_links %}
+    <p class="reading-links">
+      {% for link in extra_links %}
+      {% if not loop.first %} · {% endif %}<a href="{{ link.href }}">{{ link.label }}</a>
+      {% endfor %}
+    </p>
+    {% endif %}
+  </header>
+  {% if _toc %}
+  <details class="reading-on-page">
+    <summary>On this page</summary>
+    <ul>
+      {% for ch in _toc %}
+      <li>
+        <a href="#{{ ch.id }}">{{ ch.title }}</a>
+        {% if ch.h2 %}
+        <ul>
+          {% for item in ch.h2 %}
+          <li><a href="#{{ item.id }}">{{ item.text }}</a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  <nav class="reading-chips" aria-label="Chapters">
+    {% for ch in _toc %}
+    <a href="#{{ ch.id }}" data-chapter="{{ ch.id }}">{{ ch.title }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+  <div class="reading-layout">
+    {% if _toc %}
+    <nav class="reading-rail" aria-label="Contents">
+      <p class="reading-rail-label">Contents</p>
+      <ul>
+        {% for ch in _toc %}
+        <li>
+          <a href="#{{ ch.id }}" data-chapter="{{ ch.id }}">{{ ch.title }}</a>
+          {% if ch.h2 %}
+          <ul class="reading-rail-h2" data-parent="{{ ch.id }}">
+            {% for item in ch.h2 %}
+            <li><a href="#{{ item.id }}">{{ item.text }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      <p class="reading-top"><a href="#top">Top</a></p>
+    </nav>
+    {% endif %}
+    <article class="reading-article" id="top">
+      {% block article %}{% endblock %}
+    </article>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/reading.js" defer></script>
+{% endblock %}

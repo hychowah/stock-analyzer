@@ -1,0 +1,26 @@
+{
+  "harness_version": "2.43.0",
+  "copied_from_sha": "f2ec36c1a033e9b2996ee2e86c21606754cab56d",
+  "copied_at": "2026-09-12T08:26:56Z",
+  "contents": [
+    "AGENTS.md",
+    "harness",
+    "packages/__init__.py",
+    "packages/kd_research",
+    "scripts/scaffold_session.py",
+    "scripts/preflight_phase.py",
+    "scripts/check_session.py",
+    "scripts/finalize_session.py",
+    "scripts/bind_library.py",
+    "scripts/ingest_library.py",
+    "scripts/harvest_library.py",
+    "scripts/verify_listing.py",
+    "scripts/verify_ticker.py",
+    "scripts/abandon_session.py",
+    "scripts/record_spawn.py",
+    "scripts/build_prediction_snapshot.py",
+    "scripts/export_compare_db.py",
+    "scripts/rebuild_catalog.py",
+    "scripts/requirements-research.txt"
+  ]
+}

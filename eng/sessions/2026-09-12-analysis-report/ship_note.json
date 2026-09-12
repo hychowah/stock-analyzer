@@ -1,0 +1,7 @@
+{
+  "session": "2026-09-12-analysis-report",
+  "harness_version": "2.43.0",
+  "summary": "Analysis report is one document: stored forecast table, product English duration, reading shell (rail/chips). New runs write explicit_forecast. Old sessions read named compute layouts. Completed research not rewritten.",
+  "verify": "eng_verify PASS; browser META path + ACGL gap; desktop rail / phone chips",
+  "commit": "not committed — needs user agreement"
+}

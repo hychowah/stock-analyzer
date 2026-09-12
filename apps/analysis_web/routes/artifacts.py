@@ -68,6 +68,11 @@ def page_artifact(
                 request, "artifact.html", run_id=rid, relpath=rel, text=text
             )
         doc = render_session_report(text, run_id=rid, relpath=rel)
+        toc = [
+            {"id": item["id"], "title": item["text"], "h2": []}
+            for item in doc["toc"]
+            if int(item.get("level") or 0) == 2
+        ]
         return render_page(
             request,
             "report.html",
@@ -75,9 +80,19 @@ def page_artifact(
             relpath=rel,
             mode="markdown",
             title=doc["title"],
-            toc=doc["toc"],
+            toc=toc,
             body_html=doc["html"],
             body_text="",
+            crumb_href=f"/runs/{rid}",
+            crumb_label="Run",
+            meta_line=rel,
+            extra_links=[
+                {
+                    "href": f"/artifact?run_id={rid}&path={rel}&raw=1",
+                    "label": "Raw source",
+                }
+            ],
+            raw_href=f"/artifact?run_id={rid}&path={rel}&raw=1",
         )
 
     # JSON: pretty-printed in <pre>
@@ -89,8 +104,14 @@ def page_artifact(
             run_id=rid,
             relpath=rel,
             mode="text",
+            title=rel,
+            toc=[],
             body_html="",
             body_text=pretty,
+            crumb_href=f"/runs/{rid}",
+            crumb_label="Run",
+            meta_line="",
+            extra_links=[],
         )
 
     # Plain text
@@ -102,8 +123,14 @@ def page_artifact(
             run_id=rid,
             relpath=rel,
             mode="text",
+            title=rel,
+            toc=[],
             body_html="",
             body_text=text,
+            crumb_href=f"/runs/{rid}",
+            crumb_label="Run",
+            meta_line="",
+            extra_links=[],
         )
 
     lower = rel.lower()

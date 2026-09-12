@@ -268,6 +268,50 @@ def _toc_from_html(html_body: str) -> list[dict[str, Any]]:
     return out
 
 
+_FORECAST_TITLES = frozenset(
+    {
+        "forecast path",
+        "forecast used in the model",
+        "the forecast used in the model",
+        "cash-flow forecast",
+        "cash flow forecast",
+        "year-by-year forecast",
+        "explicit forecast",
+    }
+)
+_MD_H2 = re.compile(r"^(#{2,3})[ \t]+(.+?)[ \t]*#*[ \t]*$")
+
+
+def strip_forecast_section(text: str) -> str:
+    """Drop a named forecast-path H2 so the composed report does not repeat the grid."""
+    out: list[str] = []
+    skipping = False
+    for line in (text or "").splitlines(keepends=True):
+        raw = line[:-1] if line.endswith("\n") else line
+        match = _MD_H2.match(raw.rstrip())
+        if match:
+            level = len(match.group(1))
+            title = match.group(2).strip().lower()
+            if level == 2 and title in _FORECAST_TITLES:
+                skipping = True
+                continue
+            if skipping and level <= 2:
+                skipping = False
+        if not skipping:
+            out.append(line)
+    return "".join(out)
+
+
+def _prefix_heading_ids(html_body: str, prefix: str) -> str:
+    if not prefix:
+        return html_body
+    return re.sub(
+        r'\bid="([^"]+)"',
+        lambda m: f'id="{prefix}-{m.group(1)}"',
+        html_body,
+    )
+
+
 def render_session_report(
     text: str,
     *,
@@ -275,6 +319,8 @@ def render_session_report(
     relpath: str,
     href_base: str = "/artifact",
     id_query: str = "run_id",
+    id_prefix: str = "",
+    strip_forecast: bool = False,
 ) -> dict[str, Any]:
     """Artifact markdown as a document: title, h2/h3 toc, rewritten sibling links.
 
@@ -283,7 +329,8 @@ def render_session_report(
     `/artifact` with query key `run_id`. Compare/analyze may pass another
     base and id_query (`compare_id` / `analyze_id`).
     """
-    html_body = render_markdown(text)
+    source = strip_forecast_section(text) if strip_forecast else text
+    html_body = render_markdown(source)
     title, html_body = _extract_title(html_body, relpath)
     html_body = _rewrite_relative_md_hrefs(
         html_body,
@@ -292,9 +339,17 @@ def render_session_report(
         href_base=href_base,
         id_query=id_query,
     )
+    if id_prefix:
+        html_body = _prefix_heading_ids(html_body, id_prefix)
+    toc = _toc_from_html(html_body)
+    if id_prefix:
+        toc = [
+            {**item, "id": item["id"] if str(item["id"]).startswith(id_prefix) else f"{id_prefix}-{item['id']}"}
+            for item in toc
+        ]
     return {
         "title": title,
-        "toc": _toc_from_html(html_body),
+        "toc": toc,
         "html": html_body,
     }
 

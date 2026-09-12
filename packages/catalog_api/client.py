@@ -25,6 +25,7 @@ DEFAULT_ALLOW_PREFIXES = (
     "registry/",
     "data/valuation_model.json",
     "data/price_snapshot.json",
+    "data/compute/valuation_result.json",
 )
 
 DEFAULT_DENY_PREFIXES = (

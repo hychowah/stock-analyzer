@@ -52,10 +52,16 @@
     {% else %}
     <p class="muted">No football-field chart for this session.</p>
     {% endif %}
+    {% if report_href %}
+    <p><a class="btn" href="{{ report_href }}">Read analysis</a>
     {% if cio_href %}
-    <p><a class="btn" href="{{ cio_href }}">Read CIO cover</a></p>
+    · <a href="{{ report_href }}#cio">CIO cover</a>
+    {% endif %}
+    </p>
+    {% elif cio_href %}
+    <p><a href="{{ cio_href }}">CIO cover</a></p>
     {% else %}
-    <p class="muted">CIO cover missing.</p>
+    <p class="muted">Analysis report missing.</p>
     {% endif %}
     <details>
       <summary>All reports (allowlisted)</summary>

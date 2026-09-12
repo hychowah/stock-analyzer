@@ -241,10 +241,11 @@ The header groups four primary jobs (Runs, Analyze, Compare, Portfolio) and a qu
 | Page | What a person uses it for |
 |------|---------------------------|
 | `/` | List completed runs; filter and sort; optional Latest (one row per ticker). First glance is ticker, as-of/live, FV, MoS, Downside, stored duration, process audit. Pick two of the same ticker to Compare |
-| `/runs/{run_id}` | One run: decision strip, football-field PNG + Read CIO cover when present, price vs analysis, Context; bear/base/bull/model in details |
-| `/artifact` | Allowlisted session file. Markdown reports use the document title and a section list; in-archive `.md` links stay on this page. Architecture and harness still use the plain sanitizer. |
+| `/runs/{run_id}` | One run: decision strip, football-field PNG + **Read analysis** (composed report) when present, price vs analysis, Context; bear/base/bull/model in details. CIO cover is a text link to `#cio` on the report. |
+| `/runs/{run_id}/report` | One **Analysis report** document: English verdict, model, year-by-year forecast table from stored JSON (`explicit_forecast` or a named compute layout), worth vs freeze, then CIO / fundamental / technical as chapters. Desktop: sticky chapter rail. Phone: sticky chapter chips. Display math only — does not invent fair values. |
+| `/artifact` | Allowlisted session file (including `data/compute/valuation_result.json`). Markdown uses the same reading shell as the analysis report (chapter rail / chips from that file’s h2s). Architecture and harness still use the plain sanitizer. |
 | `/analyze` and `/analyze/new` | Start or watch a Mode A job (`live` or a pin). Start form is ticker + as-of + harness; Busy/Grok-missing stay on the form. |
-| `/analyze/{id}` | Wait page is the resume hint (phase token hidden when the hint exists). Complete offers Open catalog run / Read CIO cover. Cancel keeps the session; discard writes `abandon.json` unless `session_is_completed` |
+| `/analyze/{id}` | Wait page is the resume hint (phase token hidden when the hint exists). Complete offers Open catalog run / Read analysis. Cancel keeps the session; discard writes `abandon.json` unless `session_is_completed` |
 | `/analyze-artifact` | In-progress session file (handoffs/phase; FV and report bodies blocked until snapshot) |
 | `/compares` | Two-run audits. List does not SSE-reload. |
 | `/compares/new` | Start a two-session Grok audit. Busy/Grok-missing stay on the form. |

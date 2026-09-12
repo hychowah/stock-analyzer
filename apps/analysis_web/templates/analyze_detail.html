@@ -51,8 +51,10 @@
         {% endif %}
       {% endif %}
     {% endfor %}
-    {% if cio.href %}
-    <a class="btn" href="{{ cio.href }}">Read CIO cover</a>
+    {% if job.catalog_run_ready and job.run_id %}
+    <a class="btn" href="/runs/{{ job.run_id }}/report">Read analysis</a>
+    {% elif cio.href %}
+    <a class="btn" href="{{ cio.href }}">Read analysis</a>
     {% endif %}
   </p>
   {% else %}

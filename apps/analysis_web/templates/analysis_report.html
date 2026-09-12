@@ -1,0 +1,110 @@
+{% extends "reading.html" %}
+{% block article %}
+<section id="verdict">
+  <h2>Verdict</h2>
+  {% for s in report.sentences %}
+  <p>{{ s }}</p>
+  {% endfor %}
+</section>
+<section id="model">
+  <h2>{{ report.model_name or "Model" }}</h2>
+  {% if report.model_why %}
+  <p>{{ report.model_why }}</p>
+  {% endif %}
+  {% if report.wacc_na %}
+  <p class="muted">{{ report.wacc_na }}</p>
+  {% elif report.wacc_rows %}
+  <dl class="wacc-list">
+    {% for row in report.wacc_rows %}
+    <div><dt>{{ row.label }}</dt><dd>{{ row.value }}</dd></div>
+    {% endfor %}
+  </dl>
+  {% endif %}
+</section>
+<section id="forecast">
+  <h2>Forecast</h2>
+  {% if report.forecast %}
+  <div class="forecast-block" data-forecast>
+    <div class="forecast-chips" role="group" aria-label="Scenario">
+      {% for scen in ("bear", "base", "bull") %}
+      {% if scen in report.forecast.present %}
+      <button type="button" data-scenario="{{ scen }}"{% if scen == "base" %} aria-pressed="true"{% endif %}>{{ scen | capitalize }}</button>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% for scen in ("bear", "base", "bull") %}
+    {% if scen in report.forecast.scenarios %}
+    {% if scen == "base" %}
+    <div class="forecast-panel table-scroll" data-scenario="base">
+      <table class="forecast-table">
+        <thead>
+          <tr>
+            <th></th>
+            {% for y in report.forecast.years %}
+            <th class="num">{{ y }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.forecast.scenarios.base.rows %}
+          <tr>
+            <th>{{ row.label }}</th>
+            {% for cell in row.cells %}
+            <td class="num">{{ cell }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <details class="forecast-fallback" data-scenario="{{ scen }}">
+      <summary>{{ scen | capitalize }}</summary>
+      <div class="table-scroll">
+        <table class="forecast-table">
+          <thead>
+            <tr>
+              <th></th>
+              {% for y in report.forecast.years %}
+              <th class="num">{{ y }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.forecast.scenarios[scen].rows %}
+            <tr>
+              <th>{{ row.label }}</th>
+              {% for cell in row.cells %}
+              <td class="num">{{ cell }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+    <p class="forecast-envelope muted">Bear {{ report.worth.bear }} · Base {{ report.worth.base }} · Bull {{ report.worth.bull }}</p>
+    <p class="muted">Source: stored {{ report.forecast.source }}{% if report.forecast.currency %} · {{ report.forecast.currency }}{% endif %}.</p>
+  </div>
+  {% else %}
+  <p class="muted">{{ report.forecast_gap }}</p>
+  {% endif %}
+</section>
+<section id="worth">
+  <h2>Worth vs price</h2>
+  <p>Freeze {{ report.worth.price }}{% if report.currency %} {{ report.currency }}{% endif %}.</p>
+  <p>Bear {{ report.worth.bear }} · Base {{ report.worth.base }} · Bull {{ report.worth.bull }}{% if report.worth.mos %} · MoS vs base {{ report.worth.mos }}{% endif %}.</p>
+  {% if report.football_href %}
+  <p><img class="football-field" src="{{ report.football_href }}" alt="Valuation football field"/></p>
+  {% endif %}
+</section>
+{% for ch in report.chapters %}
+<section id="{{ ch.id }}" class="report-chapter">
+  <p class="chapter-kicker">{{ ch.kicker }}</p>
+  <div class="report-body">{{ ch.html | safe }}</div>
+</section>
+{% endfor %}
+{% endblock %}

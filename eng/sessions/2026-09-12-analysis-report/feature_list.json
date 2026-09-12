@@ -1,0 +1,40 @@
+{
+  "features": [
+    {
+      "id": "forecast-table",
+      "description": "ForecastTable.from_session + catalog allowlist for valuation_result.json only",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_forecast_table.py packages/catalog_api/tests/test_catalog_api.py -q -k forecast"
+    },
+    {
+      "id": "duration-map",
+      "description": "One duration/cheap-claim map; Wave 8 accepts product English on >= 2.43",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_wave8_readme_cio.py apps/analysis_web/tests/test_analysis_web.py -q -k duration"
+    },
+    {
+      "id": "analysis-report",
+      "description": "AnalysisReport loader + reading shell + /runs/{id}/report",
+      "passes": true,
+      "verify": "python -m pytest apps/analysis_web/tests/test_analysis_web.py -q -k report"
+    },
+    {
+      "id": "explicit-forecast-gate",
+      "description": "Schema + Agent 5 + identity gate for explicit_forecast (2.43.0)",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_forecast_table.py -q -k explicit"
+    },
+    {
+      "id": "report-prose-law",
+      "description": "Agent 7/11 prompts + exemplar + fundamental forecast-table check",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests/test_forecast_table.py packages/kd_research/tests/test_wave8_readme_cio.py -q"
+    },
+    {
+      "id": "docs-version",
+      "description": "VERSION 2.43.0 + ARCHITECTURE.md + progress.md",
+      "passes": true,
+      "verify": "python -m pytest scripts/tests/test_architecture_doc.py -q; python scripts/eng_verify.py"
+    }
+  ]
+}

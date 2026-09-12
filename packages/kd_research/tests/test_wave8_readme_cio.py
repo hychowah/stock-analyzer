@@ -46,8 +46,34 @@ class ReadmeCioTests(unittest.TestCase):
 
     def test_agent11_cover_starts_with_duration(self) -> None:
         text = (ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
-        self.assertIn("quote** `duration.action` first", text)
+        self.assertIn("product English duration label", text)
+        self.assertIn("Do not initiate", text)
         self.assertIn("lead with the **cone + pass**", text)
+        self.assertIn("third duration phrase", text)
+
+    def test_243_english_label_quotes_pass(self) -> None:
+        s = self._sess(
+            "2.43.0",
+            "# README\nDo not initiate — destock unresolved.\nCheap claim: Not cheap.\nThen fair value vs price as context.\n",
+        )
+        rows = check_readme_quotes_decision(s)
+        self.assertEqual(rows[0][0], "PASS", rows)
+
+    def test_243_unofficial_phrase_does_not_quote(self) -> None:
+        s = self._sess(
+            "2.43.0",
+            "# README\nDo not start a new position. Then fair value vs price as context.\n",
+        )
+        rows = check_readme_quotes_decision(s)
+        self.assertEqual(rows[0][0], "FAIL", rows)
+
+    def test_216_english_only_still_needs_token(self) -> None:
+        s = self._sess(
+            "2.16.0",
+            "# README\nDo not initiate — destock unresolved.\nThen fair value vs price as context.\n",
+        )
+        rows = check_readme_quotes_decision(s)
+        self.assertEqual(rows[0][0], "FAIL", rows)
 
     def test_215_unquoted_is_warn(self) -> None:
         s = self._sess("2.15.0", "# README\nFair value vs price: 10 vs 12.\nAudit PASS.\n")

@@ -201,6 +201,72 @@ def fragment_runs(
     )
 
 
+def _football_href(api: CatalogApi, run_id: str) -> str | None:
+    try:
+        charts = api.list_artifacts(run_id, prefix="charts/")
+    except (RunNotFound, ArtifactDenied, DbMissing):
+        return None
+    for item in charts:
+        if item.get("name") == "valuation_football_field.png":
+            return f"/artifact?run_id={quote(run_id, safe='')}&path={quote(item['relpath'], safe='')}"
+    return None
+
+
+@router.get("/runs/{run_id}/report", response_class=HTMLResponse)
+def page_analysis_report(
+    request: Request,
+    run_id: str,
+    api: CatalogApi = Depends(get_api),
+) -> HTMLResponse:
+    run_id = run_id.strip()
+    try:
+        run = api.get_run(run_id)
+        session = api.get_session_root(run_id)
+    except RunNotFound:
+        return render_page(
+            request,
+            "error.html",
+            status_code=404,
+            title="Report",
+            message=f"Run not found: {run_id}",
+        )
+    except DbMissing as e:
+        return render_page(
+            request,
+            "error.html",
+            status_code=503,
+            title="Report",
+            message=f"DB missing: {e}",
+        )
+    from apps.analysis_web.services.analysis_report import load_analysis_report
+
+    football = _football_href(api, run_id)
+    report = load_analysis_report(
+        run=run, session=session, run_id=run_id, football_href=football
+    )
+    ticker = str(run.get("ticker") or "").strip()
+    extra = []
+    if report.get("raw_cio_href"):
+        extra.append({"href": report["raw_cio_href"], "label": "Raw CIO"})
+    crumb_extra = ""
+    if ticker:
+        crumb_extra = f'<a href="/?ticker_prefix={quote(ticker)}">{ticker}</a>'
+    return render_page(
+        request,
+        "analysis_report.html",
+        title=f"{ticker} · Analysis" if ticker else "Analysis",
+        crumb_href=f"/runs/{run_id}",
+        crumb_label="Run",
+        crumb_extra=crumb_extra,
+        meta_line=" · ".join(
+            p for p in (str(report.get("asof") or ""), str(report.get("currency") or "")) if p
+        ),
+        extra_links=[{"href": f"/runs/{run_id}", "label": "Open run sheet"}] + extra,
+        toc=report.get("toc") or [],
+        report=report,
+    )
+
+
 @router.get("/runs/{run_id:path}", response_class=HTMLResponse)
 def page_run(
     request: Request,
@@ -261,15 +327,8 @@ def page_run(
             }
         )
 
-    football_href = None
-    try:
-        charts = api.list_artifacts(run_id, prefix="charts/")
-    except (RunNotFound, ArtifactDenied, DbMissing):
-        charts = []
-    for item in charts:
-        if item.get("name") == "valuation_football_field.png":
-            football_href = _artifact_href(item["relpath"])
-            break
+    football_href = _football_href(api, run_id)
+    report_href = f"/runs/{run_id}/report"
 
     sibling_links: list[dict[str, Any]] = []
     comparable_siblings: list[dict[str, Any]] = []
@@ -304,6 +363,7 @@ def page_run(
         artifact_index=artifact_index,
         football_href=football_href,
         cio_href=cio_href,
+        report_href=report_href,
         sibling_links=sibling_links,
         comparable_siblings=comparable_siblings,
         chart_overlay=_chart_overlay(run, comparable_siblings),

@@ -1,0 +1,58 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Scaffold session, fill issue.json success criteria, baseline eng_verify",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "utf8-read-normalization",
+      "description": "Fix Windows-locale GBK decode failures by normalizing un-encoded read_text() to UTF-8 in shared loaders and four tests (pre-existing baseline break)",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests -q (619 passed)"
+    },
+    {
+      "id": "router-ref-wiring",
+      "description": "Router: add buyer-identity question, contingent_claim/asset_based branches, ref-recipe mapping; prompts open the ref playbook; market-contest map + hostile review in Agent 5/13",
+      "passes": true,
+      "verify": "valuation_router.md names a ref recipe per id; Agent 5 prompt has market_contest + ref-open; law-surface tests green"
+    },
+    {
+      "id": "lifecycle-truncation-gate",
+      "description": ">=3.3.0: narrative_bind life_cycle_stage enum + who_leads + stage_fit; truncation assessment mandatory (p>0 weighted base, p=0 with why_not_material)",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -k tier1 (48 passed)"
+    },
+    {
+      "id": "buyer-option-gate",
+      "description": ">=3.3.0: buyer.class with total-beta/illiquidity for private; option_screens exclusivity/materiality/no_double_count; distressed_call replaces DCF equity",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -q (48 passed)"
+    },
+    {
+      "id": "market-neutral-bridge-gate",
+      "description": ">=3.3.0: erp_method (implied default, historical needs reject reason), beta_method (bottom_up default), currency match, per-share bridge",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -q (48 passed)"
+    },
+    {
+      "id": "version-pin-3.3.0",
+      "description": "Bump harness/VERSION to 3.3.0, update valuation_checks/RESEARCH_AGENTS/law_history/HARNESS_MAP, publish pins/3.3.0",
+      "passes": true,
+      "verify": "python3 scripts/eng_verify.py (version bump + pin OK)"
+    },
+    {
+      "id": "design-review-reshape",
+      "description": "Apply strategic-design-review candidates marked 'this change': (1) unbypassable gates (erp/beta not_applicable illegal while WACC applies; buyer numeric illiquidity_discount; vc_pe ke_stepdown), (2) complete ref-recipe table + a machine test that every id has an existing ref path, (3) typed narrative_bind schema contracts",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -q (54 passed); eng_verify PASS (1162 tests)"
+    },
+    {
+      "id": "verify",
+      "description": "Full pytest + eng_verify green; ship_note written",
+      "passes": true,
+      "verify": "eng_verify PASS (1162 tests)"
+    }
+  ]
+}

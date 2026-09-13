@@ -1,0 +1,27 @@
+{
+  "session": "2026-09-13-damodaran-tier1",
+  "harness_version": "3.3.0",
+  "summary": "Tier-1 Damodaran integration as harness 3.3.0 (version-gated so stamped history stays green). Router adds the buyer question plus contingent_claim/asset_based primaries and a ref-recipe table Agent 5 must open; Agent 5 also gets a market-contest map and a hostile-review step. New 3.3.0 gates: narrative_bind life_cycle_stage/stage_fit + who_leads, buyer identity (numeric illiquidity_discount; total beta for private; ke_stepdown for vc_pe), market_contest, option_screens and distressed-call replaces DCF equity, a mandatory truncation assessment (p=0 + why_not_material, or p>0 weighted base), market-neutral wacc inputs (erp_method/beta_method not_applicable illegal while WACC applies; currency match), and per_share_bridge. Also fixed a pre-existing Windows-locale baseline break by normalizing un-encoded read_text() to UTF-8. A strategic-design-review reshape then made the new gates unbypassable, completed the ref-recipe table (one row per id) with a machine check that every ref path exists, and typed the new narrative_bind objects in the schema.",
+  "verify": "eng_verify PASS (1162 tests)",
+  "verify_commands_run": [
+    "python -m pytest packages/kd_research/tests/test_damodaran_gates.py -q",
+    "python -m pytest packages/kd_research/tests scripts/tests -q",
+    "python scripts/publish_harness_release.py",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Wrong-stage veto with engine teeth (no positive terminal g on young/idea; no perpetual growth on decline)",
+    "Apply market-neutral discipline to cost-of-equity builds, not only firm WACC (financial_service)",
+    "Whole-firm risk ledger",
+    "Consistency-identity suite (FCFE<->FCFF, WACC<->APV, DDM<->FCFE control gap, terminal reset, tax/NOL)",
+    "Operating-model double-count coverage (R&D, leases, SBC, cash+NCI, control/synergy)",
+    "Bias pre-commitment, user classification, staleness expiry",
+    "Firm-type repair engines (intangibles, EM, SOTP/users, mature-control, decline)"
+  ],
+  "risks": [
+    "3.3.0 gates FAIL new runs until Agent 5 writes the new bind/model fields; prompts + schemas + valuation_checks updated in the same change set",
+    "All new gates are version-gated at >= 3.3.0, so sessions stamped <= 3.2.0 (including all archived history and fixtures) are unaffected",
+    "The UTF-8 read normalization touches shared loaders; verified by full eng_verify (1162 tests)"
+  ],
+  "commit": "not committed - needs user agreement"
+}

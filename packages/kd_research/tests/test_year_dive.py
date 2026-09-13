@@ -260,7 +260,7 @@ class OneCComplete(unittest.TestCase):
             import jsonschema
         except ImportError:
             self.skipTest("jsonschema not installed")
-        schema = json.loads((ROOT / "harness/schemas/filing_year_dive.schema.json").read_text())
+        schema = json.loads((ROOT / "harness/schemas/filing_year_dive.schema.json").read_text(encoding="utf-8"))
         jsonschema.Draft7Validator(schema).validate(_year_doc())
 
 

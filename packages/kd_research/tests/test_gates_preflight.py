@@ -179,7 +179,7 @@ class ResearchBriefSchemaTest(unittest.TestCase):
             import jsonschema  # type: ignore
         except ImportError:
             self.skipTest("jsonschema not installed")
-        schema = json.loads(schema_path.read_text())
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
         sample = {
             "ticker": "X",
             "session_date": "2026-08-09",

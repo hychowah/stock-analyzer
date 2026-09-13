@@ -1,0 +1,36 @@
+{
+  "goal": "Tier-1 Damodaran integration: ref wiring, buyer/option router branches, mandatory life-cycle+truncation, market-neutral inputs + per-share bridge",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not renumber or rewrite completed research sessions"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "valuation_router.md routes buyer identity, contingent-claim, and asset-based branches; each playbook/overlay names the ref recipe file it must open",
+    "harness 3.3.0 gates: life_cycle_stage enum + stage_fit, mandatory truncation answer, buyer classification, option screens, distressed-call replacement, market-contest map, market-neutral erp/beta/currency, per-share bridge",
+    "All new gates version-gated at >= 3.3.0 so completed/stamped sessions stay green",
+    "Agent 5 and Agent 13 prompts carry the doctrine; valuation_checks.md updated",
+    "harness/VERSION -> 3.3.0 and pins/3.3.0 published",
+    "pytest packages apps/analysis_web/tests scripts/tests green",
+    "python3 scripts/eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "pins/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 -m pytest packages/kd_research/tests/test_damodaran_gates.py -q",
+    "python3 -m pytest packages apps/analysis_web/tests scripts/tests -q",
+    "python3 scripts/eng_verify.py"
+  ]
+}

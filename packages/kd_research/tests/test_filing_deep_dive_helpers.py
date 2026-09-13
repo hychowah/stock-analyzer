@@ -265,7 +265,7 @@ class TestSchemaValidatesMinimalDeepDive(unittest.TestCase):
         except ImportError:
             self.skipTest("jsonschema not installed")
 
-        schema = json.loads((ROOT / "harness/schemas/filing_deep_dive.schema.json").read_text())
+        schema = json.loads((ROOT / "harness/schemas/filing_deep_dive.schema.json").read_text(encoding="utf-8"))
         doc = {
             "ticker": "TEST",
             "session_date": "2026-08-03",

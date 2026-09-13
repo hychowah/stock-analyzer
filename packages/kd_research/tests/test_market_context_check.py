@@ -146,22 +146,22 @@ class MarketContextCheckTests(unittest.TestCase):
     def test_schema_file_exists_and_loads(self):
         schema_path = ROOT / "harness" / "schemas" / "market_context.schema.json"
         self.assertTrue(schema_path.is_file())
-        schema = json.loads(schema_path.read_text())
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
         self.assertIn("primary_region", schema["properties"])
         self.assertIn("intensity", schema["properties"])
-        self.assertIn("market_context", (ROOT / "harness" / "schemas" / "valuation_model.schema.json").read_text())
+        self.assertIn("market_context", (ROOT / "harness" / "schemas" / "valuation_model.schema.json").read_text(encoding="utf-8"))
 
     def test_region_modules_referenced_from_normative_spec(self):
         # Mode A law lives in RESEARCH_AGENTS.md; root AGENTS.md is router-only.
-        agents = (ROOT / "harness" / "RESEARCH_AGENTS.md").read_text()
+        agents = (ROOT / "harness" / "RESEARCH_AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("§5b", agents)
         self.assertIn("market_context.json", agents)
         self.assertIn("region_hk_china.md", agents)
         self.assertIn("market_context_hooks", agents)
-        prompts = (ROOT / "harness" / "agent_prompts.md").read_text()
+        prompts = (ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
         self.assertIn("market_context_hooks", prompts)
         self.assertIn("no always-on region agent", prompts.lower())
-        decision = (ROOT / "harness" / "region_integration.md").read_text()
+        decision = (ROOT / "harness" / "region_integration.md").read_text(encoding="utf-8")
         self.assertIn("Reject", decision)
         self.assertIn("No Agent 2f", decision)
 

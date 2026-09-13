@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sector_config.schema.json",
+  "title": "Sector Configuration (light contract)",
+  "description": "Written once per session by the orchestrator (main agent). Sector classification is agent JUDGMENT, not an algorithm: confidence is self-assessed and must be justified. Schemas enforce structure and provenance only.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "session_date",
+    "primary_sector",
+    "confidence",
+    "is_also_growth",
+    "module_file",
+    "signals",
+    "rationale",
+    "requires_manual_review"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string", "format": "date" },
+    "primary_sector": {
+      "type": "string",
+      "enum": ["banking", "insurance", "growth", "reit", "utility", "cyclical", "standard"]
+    },
+    "confidence": {
+      "type": "number", "minimum": 0, "maximum": 1,
+      "description": "Self-assessed. Below 0.70 -> fall back to 'standard' and set requires_manual_review=true."
+    },
+    "is_also_growth": { "type": "boolean" },
+    "module_file": { "type": "string", "description": "e.g. sector_banking.md, or null for standard" },
+    "signals": {
+      "type": "array",
+      "description": "Objective evidence the judgment is based on (sector/industry fields, revenue mix, regulatory status, KPIs present).",
+      "items": { "type": "string" }, "minItems": 1
+    },
+    "rationale": { "type": "string", "minLength": 20, "description": "Why this sector and this confidence." },
+    "requires_manual_review": { "type": "boolean" },
+    "runner_up": {
+      "type": "object",
+      "description": "Second-best sector hypothesis — forces the classifier to consider the alternative.",
+      "properties": {
+        "sector": { "type": "string" },
+        "why_rejected": { "type": "string" }
+      }
+    },
+    "disconfirming_signals": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Evidence AGAINST the chosen sector that was considered and weighed."
+    },
+    "growth_overlay": {
+      "type": "object",
+      "description": "Required when is_also_growth is true.",
+      "properties": {
+        "rationale": { "type": "string" },
+        "extended_forecast_years": { "type": "integer", "minimum": 7, "maximum": 10 }
+      }
+    }
+  }
+}

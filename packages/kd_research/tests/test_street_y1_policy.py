@@ -1,4 +1,4 @@
-"""StreetY1Policy table: 2.7 / 2.18 / 2.28 enums and bands."""
+"""StreetY1Policy table: 2.7 / 2.18 / 2.28 / 3.0.0 / 3.0.1 version floors."""
 
 from __future__ import annotations
 
@@ -13,7 +13,10 @@ from packages.kd_research.street_bind import check_street_bind
 from packages.kd_research.street_y1 import (
     CALIB,
     GATED,
+    GATES_228,
+    GATES_300,
     INDEPENDENT,
+    STREET_REF,
     Y1,
     StreetY1Policy,
     Y1_BAND,
@@ -52,11 +55,24 @@ class StreetY1PolicyTests(unittest.TestCase):
             self.assertTrue(p.independent_y1_ok)
             self.assertIn("independent_y1", p.responses)
             self.assertTrue(p.rehydrate)
+            self.assertEqual(p.legal_gates, GATES_228)
+            self.assertFalse(p.story_fail_requires_will_own)
             _stamp(s, "3.0.0")
             p = StreetY1Policy.for_session(s)
             self.assertEqual(p, INDEPENDENT)
             self.assertTrue(p.gate_optional)
             self.assertFalse(p.fy1_baseline_required)
+            self.assertEqual(p.legal_gates, GATES_300)
+            self.assertFalse(p.story_fail_requires_will_own)
+            _stamp(s, "3.0.1")
+            p = StreetY1Policy.for_session(s)
+            self.assertEqual(p, STREET_REF)
+            self.assertFalse(p.gate_optional)
+            self.assertTrue(p.fy1_baseline_required)
+            self.assertTrue(p.independent_y1_ok)
+            self.assertEqual(p.legal_gates, GATES_300)
+            self.assertTrue(p.story_fail_requires_will_own)
+            self.assertNotEqual(STREET_REF, GATED)
 
     def test_injected_fail_band_is_not_hardcoded_five_pct(self) -> None:
         """A second copy of 0.05 in bind would still FAIL at 7% under a 10% band."""

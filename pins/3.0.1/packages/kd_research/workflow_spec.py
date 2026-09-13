@@ -1,0 +1,281 @@
+"""Dump this process's phase graph + prompt slices as JSON.
+
+Mode B consumes the dump (via Pin.workflow_spec / agent_prompt). Entry
+files come from the node (including version overlays). Not a second path table.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+from packages.kd_research.cash_quality import WAVE7_SINCE
+from packages.kd_research.paths import PROJECT_ROOT
+from packages.kd_research.phase_graph import (
+    DISPLAY_WRITES,
+    PHASE_AGENTS,
+    PHASE_GRAPH,
+    dump_entry_rows,
+)
+from packages.kd_research.provenance import load_harness_identity
+from packages.kd_research.spawn_gate import SPAWN_SINCE, SPECIALIST_ARTIFACTS
+
+# Grammar for harness/agent_prompts.md (longest-id first when resolving).
+AGENT_HEADING_RE = re.compile(
+    r"^### Agent ([A-Za-z0-9][A-Za-z0-9._-]*)(?:\s+[—-].*)?\s*$"
+)
+AGENT_LABELS: dict[str, str] = {
+    "orchestrator": "Orchestrator",
+    "phase0_swarm": "Background swarm",
+    "2d": "Latest quarter",
+    "phase25_swarm": "Stress swarm",
+    "6": "Charts",
+    "13": "Audit",
+}
+
+TITLE_RE = re.compile(
+    r"^###\s+Agent\s+([A-Za-z0-9][A-Za-z0-9._-]*)"
+    r"(?:\s+[—-]\s*(.+?))?"
+    r"(?:\s+\(`([^`]+)`\))?\s*$"
+)
+
+
+def _label(tup: tuple[int, int, int]) -> str:
+    return f"{tup[0]}.{tup[1]}.{tup[2]}"
+
+
+def _agent_writes(aid: str) -> list[str]:
+    out: list[str] = []
+    for path in (*SPECIALIST_ARTIFACTS.get(aid, ()), *DISPLAY_WRITES.get(aid, ())):
+        if isinstance(path, str) and path not in out:
+            out.append(path)
+    return out
+
+
+def _agent_display(title: str, aid: str) -> tuple[str, str | None]:
+    m = TITLE_RE.match((title or "").strip())
+    parsed_name = (m.group(2) or "").strip() if m else ""
+    spawn_role = (m.group(3) or "").strip() if m else ""
+    if parsed_name:
+        label = parsed_name[0].upper() + parsed_name[1:] if parsed_name[0].islower() else parsed_name
+    else:
+        label = AGENT_LABELS.get(aid, f"Agent {aid}" if aid else "Agent")
+    return label, (spawn_role or None)
+
+
+def _phase_display(node) -> dict[str, str]:
+    return {
+        "label": node.label or node.phase_id,
+        "stage": node.stage or "other",
+        "purpose": node.purpose or "",
+    }
+
+
+def parse_agent_prompts(text: str) -> dict[str, dict[str, str]]:
+    """Split agent_prompts.md on ### Agent <id> headings.
+
+    Conventions = the block before the first heading. Ids are the first
+    token after 'Agent' (2e-year is one id).
+    """
+    lines = text.splitlines()
+    headings: list[tuple[int, str, str]] = []
+    for i, line in enumerate(lines):
+        m = AGENT_HEADING_RE.match(line)
+        if m:
+            aid = m.group(1)
+            title = line.strip()
+            headings.append((i, aid, title))
+    out: dict[str, dict[str, str]] = {}
+    first = headings[0][0] if headings else len(lines)
+    conventions = "\n".join(lines[:first]).strip()
+    out["_conventions"] = {"id": "_conventions", "title": "Conventions", "body": conventions}
+    for idx, (start, aid, title) in enumerate(headings):
+        end = headings[idx + 1][0] if idx + 1 < len(headings) else len(lines)
+        body = "\n".join(lines[start:end]).strip()
+        # Longest-id-first: if a shorter id was already stored, keep the longer key
+        # as its own entry; first-token regex already yields 2e-year vs 2e.
+        out[aid] = {"id": aid, "title": title, "body": body}
+    return out
+
+
+def missing_prompt_ids(text: str | None = None) -> list[str]:
+    """PHASE_AGENTS ids that have no ### Agent <id> heading."""
+    raw = text
+    if raw is None:
+        raw = (PROJECT_ROOT / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
+    parsed = parse_agent_prompts(raw)
+    missing: list[str] = []
+    for _pid, aids in PHASE_AGENTS:
+        for aid in aids:
+            if aid not in parsed:
+                missing.append(aid)
+    return missing
+
+
+def build_workflow_spec(*, root: Path | None = None) -> dict[str, Any]:
+    base = root or PROJECT_ROOT
+    ident = load_harness_identity(base)
+    version = ident.get("harness_version") or ""
+    prompts_path = base / "harness" / "agent_prompts.md"
+    prompt_text = prompts_path.read_text(encoding="utf-8") if prompts_path.is_file() else ""
+    prompts = parse_agent_prompts(prompt_text) if prompt_text else {}
+
+    phases: list[dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
+
+    def add_entry(entry: list[dict[str, Any]], pid: str, path: str, *, required: bool, since: str | None) -> None:
+        row: dict[str, Any] = {"path": path, "required": required}
+        if since:
+            row["since"] = since
+        entry.append(row)
+        edge: dict[str, Any] = {"from": path, "to": pid, "kind": "entry"}
+        if since:
+            edge["since"] = since
+        edges.append(edge)
+
+    for node in PHASE_GRAPH:
+        pid = node.phase_id
+        agents: list[dict[str, Any]] = []
+        for aid in node.subagents:
+            writes = _agent_writes(aid)
+            slice_ = prompts.get(aid) or {}
+            title = slice_.get("title") or f"### Agent {aid}"
+            label, spawn_role = _agent_display(title, aid)
+            agents.append(
+                {
+                    "id": aid,
+                    "title": title,
+                    "label": label,
+                    "spawn_role": spawn_role,
+                    "writes": writes,
+                    "prompt_present": aid in prompts,
+                }
+            )
+            for w in writes:
+                if "*" in w:
+                    continue
+                edges.append({"from": aid, "to": w, "kind": "write"})
+        entry: list[dict[str, Any]] = []
+        for row in dump_entry_rows(node):
+            add_entry(
+                entry,
+                pid,
+                row["path"],
+                required=bool(row["required"]),
+                since=row.get("since"),
+            )
+        disp = _phase_display(node)
+        phases.append(
+            {
+                "id": pid,
+                "label": disp["label"],
+                "purpose": disp["purpose"],
+                "stage": disp["stage"],
+                "agents": agents,
+                "entry": entry,
+            }
+        )
+
+    annotations: list[dict[str, Any]] = []
+    for node in PHASE_GRAPH:
+        for aid in node.annotations:
+            if aid == "5b":
+                annotations.append(
+                    {
+                        "id": "5b",
+                        "phase": node.phase_id,
+                        "agent": "orchestrator",
+                        "note": (
+                            "After 2.5, lead reopens decision.json; "
+                            "do not spawn subagent 5 in 2_5."
+                        ),
+                    }
+                )
+    annotations.extend(
+        [
+            {
+                "id": "2e-year",
+                "phase": "1c",
+                "agent": "2e-year",
+                "note": "One year-reader spawn per annual; not a PHASE_AGENTS row.",
+            },
+            {
+                "id": "spawn_or_abandon",
+                "since": _label(SPAWN_SINCE),
+                "note": "Specialists must be spawn_subagent; launch failure abandons.",
+            },
+            {
+                "id": "cash_quality",
+                "phase": "1b",
+                "since": _label(WAVE7_SINCE),
+            },
+        ]
+    )
+
+    conventions = str((prompts.get("_conventions") or {}).get("body") or "")
+    return {
+        "harness_version": version,
+        "harness_spec": ident.get("harness_spec"),
+        "phases": phases,
+        "edges": edges,
+        "annotations": annotations,
+        "conventions": conventions,
+        "conventions_present": bool(conventions),
+        "missing_prompt_ids": missing_prompt_ids(prompt_text) if prompt_text else [
+            aid for _p, aids in PHASE_AGENTS for aid in aids
+        ],
+    }
+
+
+def agent_prompt_payload(agent_id: str, *, root: Path | None = None) -> dict[str, Any]:
+    base = root or PROJECT_ROOT
+    text = (base / "harness" / "agent_prompts.md").read_text(encoding="utf-8")
+    parsed = parse_agent_prompts(text)
+    conventions = (parsed.get("_conventions") or {}).get("body") or ""
+    # Longest-id-first: prefer exact, then longest prefix match only if needed.
+    slice_ = parsed.get(agent_id)
+    if slice_ is None:
+        candidates = sorted(
+            (k for k in parsed if k != "_conventions"),
+            key=len,
+            reverse=True,
+        )
+        for k in candidates:
+            if agent_id == k:
+                slice_ = parsed[k]
+                break
+    if slice_ is None:
+        return {
+            "id": agent_id,
+            "found": False,
+            "title": None,
+            "body": "",
+            "conventions": conventions,
+        }
+    return {
+        "id": agent_id,
+        "found": True,
+        "title": slice_.get("title"),
+        "body": slice_.get("body") or "",
+        "conventions": conventions,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--agent", help="Dump one agent prompt slice instead of the full spec")
+    args = ap.parse_args(argv)
+    if args.agent:
+        json.dump(agent_prompt_payload(args.agent), sys.stdout, indent=2)
+    else:
+        json.dump(build_workflow_spec(), sys.stdout, indent=2)
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

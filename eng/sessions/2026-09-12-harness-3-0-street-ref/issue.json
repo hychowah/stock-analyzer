@@ -1,0 +1,36 @@
+{
+  "goal": "Restore Street FY+1 as the default Y1 forecast on harness 3.0.1; independent Y1 needs a named gate",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not rewrite 3.0.0 independent-default stamps",
+    "Do not start hub-freeze, implied ERP, or a second valuer"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "StreetY1Policy.STREET_REF is live on >= 3.0.1 (fy1_baseline_required, gate_optional false)",
+    "3.0.0 stamps keep INDEPENDENT",
+    "story_fail on >= 3.0.1 requires street_restory.will_own=false",
+    "Live section 10c says Street is the default Y1 forecast; no gate required is history only",
+    "harness_version is 3.0.1",
+    "eng_verify.py passes"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "ARCHITECTURE.md",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python -m pytest packages/kd_research/tests/test_street_y1_policy.py packages/kd_research/tests/test_street_ref.py packages/kd_research/tests/test_law_surface_freeze.py packages/kd_research/tests/test_wave11_gated_y1.py -q"
+  ]
+}

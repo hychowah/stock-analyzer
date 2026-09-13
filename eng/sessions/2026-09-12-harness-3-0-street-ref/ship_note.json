@@ -1,0 +1,6 @@
+{
+  "slug": "harness-3-0-street-ref",
+  "harness_version": "3.0.1",
+  "summary": "Street FY+1 is the default Y1 forecast on >= 3.0.1 (street_baseline, 5% band). independent_y1 needs a named gate. story_fail requires street_restory.will_own=false. 3.0.0 stamps keep the ungated independent default. Pin pins/3.0.1/.",
+  "verify": "python scripts/eng_verify.py PASS; 1110 pytest"
+}

@@ -71,9 +71,14 @@ class LawSurfaceFreezeTests(unittest.TestCase):
         self.assertIn("independent_y1", text)
         self.assertIn("destock_this_print", text)
         self.assertIn("street_baseline", text)
+        self.assertIn("default Y1 forecast", text)
+        self.assertNotIn("no gate required", text)
         self.assertFalse(
             any(ln.startswith("| Harness ≥ 2.28.0:") for ln in text.splitlines())
         )
+        hist = _read("harness/law_history.md")
+        self.assertIn("no gate required", hist)
+        self.assertIn("## 3.0.0 — independent Y1 default", hist)
 
     def test_agent5_4e_no_file_existence_slash(self) -> None:
         prompts = _read("harness/agent_prompts.md")

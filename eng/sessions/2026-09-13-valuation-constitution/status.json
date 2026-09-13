@@ -1,0 +1,9 @@
+{
+  "slug": "valuation-constitution",
+  "session_key": "2026-09-13-valuation-constitution",
+  "status": "scaffolded",
+  "created_at": "2026-09-13T05:28:51Z",
+  "updated_at": "2026-09-13T05:28:51Z",
+  "work_type": "W1",
+  "resume_hint": "Read issue.json and implement the first feature with passes=false."
+}

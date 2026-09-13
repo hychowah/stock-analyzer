@@ -153,7 +153,7 @@ Ideas that hold the pipeline together:
 - **Judgment is the model’s job; arithmetic is code’s job.** Agents choose discount rates, paths, and probabilities, and must write *why*. Multi-step math goes in small Python scripts under `data/compute/`, not in prose.
 - **The next phase reads files, not chat.** Handoffs and registry JSON are the product.
 - **Isolation.** A new run does not open last week’s session to copy a fair value. The document library is source text, not prior conclusions.
-- **One writer for valuation.** Agent 5 is the only author of `valuation_model.json`. Do not fan out competing valuers. Specialists must be spawned.
+- **One writer for valuation.** Agent 5 is the only author of `valuation_model.json`. Do not fan out competing valuers. Specialists must be spawned. On harness ≥ 3.1.0 that file’s `fair_value.base` is intrinsic value (a DCF or equity DCF), not a NAV/ARR/exit multiple; the engine is the `valuation_router.md` playbook, not the sector module.
 - **Version is recorded at scaffold.** `harness/VERSION` and the git SHA are captured when the folder is created. Finalize copies those fields (fills empty legacy fields only). It does not “upgrade” an old run to today’s harness.
 
 Mechanical gates: `scripts/preflight_phase.py` before later phases, `scripts/check_session.py --full` for structure and decision-quality, `scripts/finalize_session.py` after audit.

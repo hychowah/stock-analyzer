@@ -142,6 +142,292 @@ class DamodaranGateTests(unittest.TestCase):
                 rows2,
             )
 
+    def test_301_omit_tv_still_skips(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.0.1")
+            _write(s / "registry/narrative_bind.json", {"ticker": "X", "status": "locked"})
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "omit tv"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertFalse(
+                any(r[0] == "FAIL" and r[1] == "damodaran.tv_method" for r in rows),
+                rows,
+            )
+            self.assertFalse(
+                any(r[0] == "FAIL" and r[1] == "damodaran.iv_playbook" for r in rows),
+                rows,
+            )
+
+    def test_31_omit_tv_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "omit tv"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.tv_method" for r in rows),
+                rows,
+            )
+
+    def test_31_exit_multiple_space_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "exit tv"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "exit multiple"},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.tv_method" for r in rows),
+                rows,
+            )
+
+    def test_31_gordon_playbook_passes_tv(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "operating fcff"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {
+                        "method": "gordon",
+                        "g_n": 0.03,
+                        "reinvestment_rate": 0.5,
+                        "roc_n": 0.06,
+                    },
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertFalse(any(r[0] == "FAIL" for r in rows), rows)
+
+    def test_31_playbook_required(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(s / "registry/narrative_bind.json", {"ticker": "X", "status": "locked"})
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "no playbook"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.iv_playbook" for r in rows),
+                rows,
+            )
+
+    def test_31_bank_sector_requires_financial_playbook(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(s / "registry/sector_config.json", {"primary_sector": "banking"})
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "wrong playbook"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "excess_return"},
+                    "wacc_buildup": {"applies": False},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.iv_playbook" for r in rows),
+                rows,
+            )
+
+    def test_31_broker_playbook_rejects_fcff(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "financial_service"},
+            )
+            _write(s / "registry/sector_config.json", {"primary_sector": "standard"})
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "fcff", "rationale": "broker industrial"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                    "wacc_buildup": {"applies": False},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.bank_engine" for r in rows),
+                rows,
+            )
+
+    def test_31_reit_nav_model_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "real_estate"},
+            )
+            _write(s / "registry/sector_config.json", {"primary_sector": "reit"})
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "nav", "rationale": "NAV primary"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                    "wacc_buildup": {"applies": True, "wacc": 0.07},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.reit_engine" for r in rows),
+                rows,
+            )
+
+    def test_31_reit_wacc_skip_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "real_estate"},
+            )
+            _write(s / "registry/sector_config.json", {"primary_sector": "reit"})
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "after-tax dcf"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                    "wacc_buildup": {
+                        "applies": False,
+                        "not_applicable_reason": "REIT NAV/AFFO skip " + "x" * 40,
+                    },
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.reit_engine" for r in rows),
+                rows,
+            )
+
+    def test_31_pricing_used_as_value_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "dcf name but pricing as value"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                    "pricing": {"used_as": "fair_value", "method": "nav"},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.price_as_value" for r in rows),
+                rows,
+            )
+
+    def test_31_distressed_is_overlay_not_playbook(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "distressed"},
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "distress as primary"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.iv_playbook" for r in rows),
+                rows,
+            )
+
+    def test_31_price_model_name_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "young_startup"},
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "arr_multiple", "rationale": "ARR as value"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "terminal_consistency": {"method": "gordon"},
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.price_as_value" for r in rows),
+                rows,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -85,6 +85,29 @@ class SectorClassificationLawTests(unittest.TestCase):
         text = _read("harness/HARNESS_MAP.md")
         self.assertIn("§5 identity; modules advisory", text)
 
+    def test_agent5_constitution_not_sector_engine(self):
+        text = _read("harness/agent_prompts.md")
+        self.assertIn("CLASSIFY on ROOT/harness/modules/valuation_router.md", text)
+        self.assertNotIn(
+            "CHOOSE the valuation model that fits (sector module",
+            text,
+        )
+        self.assertNotIn("Gordon/exit/residual", text)
+        self.assertIn("iv_playbook", text)
+
+    def test_s9_modules_not_engine_choosers(self):
+        text = _read("harness/RESEARCH_AGENTS.md")
+        self.assertIn("not engine choosers", text)
+        self.assertNotIn("choose and shape", text)
+
+    def test_sector_tables_do_not_promote_price_as_value(self):
+        reit = _read("harness/modules/sector_reit.md")
+        self.assertNotIn("**NAV Model + FFO/AFFO Multiple**", reit)
+        self.assertIn("NAV/FFO/AFFO as **price**", reit)
+        growth = _read("harness/modules/sector_growth.md")
+        self.assertNotIn("The most practical valuation method for SaaS companies.", growth)
+        self.assertIn("ARR multiple as **price**", growth)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "library_bind.schema.json",
+  "title": "Session library bind record",
+  "description": "Required-set copy from archive/library into an in-progress session. Written by bind_library.py. Freshness belongs on data_fetch_log, not here.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "ticker", "session_key", "bound"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "ticker": { "type": "string" },
+    "session_key": { "type": "string" },
+    "library_empty": { "type": "boolean" },
+    "required_set": { "type": "object" },
+    "bound": { "type": "array" },
+    "skipped_older": { "type": "array" },
+    "unlabeled_count": { "type": "integer", "minimum": 0 }
+  }
+}

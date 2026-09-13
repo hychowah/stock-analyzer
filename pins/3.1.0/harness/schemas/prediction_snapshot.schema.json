@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "prediction_snapshot.schema.json",
+  "title": "Prediction Snapshot (frozen claims for lookback / compare export)",
+  "description": "Projection of key research claims for catalog/outcomes/SQLite. Canonical numbers remain in data/valuation_model.json.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "run_id", "ticker", "session_date", "fair_value", "source_paths"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string" },
+    "ticker": { "type": "string" },
+    "session_date": { "type": "string" },
+    "session_key": { "type": "string", "description": "Folder name; equals session_date for production, or date__slug for experiments" },
+    "built_at": { "type": "string" },
+    "asof_price": { "type": ["number", "null"] },
+    "asof_price_source": { "type": ["string", "null"] },
+    "currency": { "type": "string" },
+    "fair_value": {
+      "type": "object",
+      "required": ["base", "bear", "bull"],
+      "properties": {
+        "base": { "type": ["number", "null"] },
+        "bear": { "type": ["number", "null"] },
+        "bull": { "type": ["number", "null"] },
+        "probability_weighted": { "type": ["number", "null"] },
+        "currency": { "type": "string" }
+      }
+    },
+    "scenario_probabilities": {
+      "type": "object",
+      "description": "Numeric 0-1 bear/base/bull masses (no rationale objects).",
+      "properties": {
+        "bear": { "type": ["number", "null"] },
+        "base": { "type": ["number", "null"] },
+        "bull": { "type": ["number", "null"] }
+      }
+    },
+    "margin_of_safety_pct": { "type": ["number", "null"] },
+    "verdict_line": { "type": "string" },
+    "primary_sector": { "type": "string" },
+    "region": { "type": "string" },
+    "intensity": { "type": "string" },
+    "key_risks": { "type": "array", "items": { "type": "string" } },
+    "peers": { "type": "array", "items": { "type": "string" } },
+    "benchmark": { "type": "string" },
+    "data_quality": { "type": "string" },
+    "audit_verdict": { "type": ["string", "null"] },
+    "priced_for_perfection": { "type": ["boolean", "null", "object"] },
+    "decision_usefulness": { "type": ["string", "null"] },
+    "decision_action": { "type": ["string", "null"] },
+    "kill_triggers": { "type": "array", "items": { "type": "string" } },
+    "model_name": { "type": ["string", "null"] },
+    "roic_identity": {
+      "type": "object",
+      "description": "Optional thin projection of valuation_model.roic_identity (harness >= 2.8.0). Omit the key entirely on legacy sessions. Canonical numbers stay in data/valuation_model.json.",
+      "additionalProperties": true,
+      "properties": {
+        "applies": { "type": "boolean" },
+        "native_analog": { "type": ["string", "null"] },
+        "mid_cycle_roic": { "type": ["number", "null"] },
+        "ttc_roic": { "type": ["number", "null"] },
+        "wacc": { "type": ["number", "null"] },
+        "spread_mid_cycle": { "type": ["number", "null"] },
+        "quality_bucket": { "type": ["string", "null"] },
+        "cheap_claim": { "type": ["string", "null"] },
+        "gate_response": { "type": ["string", "null"] },
+        "g0_equity_fv": { "type": ["number", "null"] },
+        "column_a_ev": { "type": ["number", "null"] },
+        "column_b_ev": { "type": ["number", "null"] },
+        "invested_capital": { "type": ["number", "null"] }
+      }
+    },
+    "tech_signal": { "type": ["string", "null"] },
+    "tech_regime": { "type": ["string", "null"] },
+    "tech_summary": { "type": "object" },
+    "research_depth": { "type": ["string", "null"] },
+    "provenance": {
+      "type": "object",
+      "description": "Harness/model identity stamped at scaffold and refreshed at finalize",
+      "properties": {
+        "harness_version": { "type": ["string", "null"] },
+        "harness_spec": { "type": ["string", "null"] },
+        "harness_git_sha": { "type": ["string", "null"] },
+        "harness_dirty": { "type": ["boolean", "null"] },
+        "agents_md_sha256": { "type": ["string", "null"] },
+        "research_agents_sha256": { "type": ["string", "null"] },
+        "prompts_sha256": { "type": ["string", "null"] },
+        "version_file_sha256": { "type": ["string", "null"] },
+        "orchestrator_model": { "type": ["string", "null"] },
+        "default_subagent_model": { "type": ["string", "null"] },
+        "experiment_id": { "type": ["string", "null"] }
+      }
+    },
+    "gaps": { "type": "array", "items": { "type": "string" } },
+    "source_paths": { "type": "object" }
+  }
+}

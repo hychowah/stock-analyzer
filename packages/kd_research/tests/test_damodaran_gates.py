@@ -1020,5 +1020,259 @@ class ValuationRouterRefRecipeTests(unittest.TestCase):
                     self.assertTrue((ref_root / rel).is_file(), f"{ident}: missing {rel}")
 
 
+class StoryPhase341Tests(unittest.TestCase):
+    def test_3p_pass_without_bind_identity_is_legal(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.4.1")
+            _write(
+                s / "registry/classification.json",
+                {
+                    "ticker": "X",
+                    "job": "first_valuation",
+                    "life_cycle_stage": "mature",
+                    "who_leads": "numbers",
+                    "stage_rationale": "Scaled profitable same-business history is usable for a numbers-led DCF.",
+                    "iv_playbook": "mature_operating",
+                    "overlays": [],
+                    "buyer": {
+                        "class": "public_diversified",
+                        "rationale": "Listed name; marginal investor is diversified.",
+                    },
+                    "market_contest": {
+                        "accept": ["rf", "implied_erp"],
+                        "contest": ["company cash flows"],
+                        "rationale": "Contest earnings path, accept market rates.",
+                    },
+                    "claim": "firm_dcf",
+                    "engine_rationale": "Listed non-financial, EBIT>0, stable leverage → mature_operating.",
+                },
+            )
+            _write(
+                s / "registry/narrative_bind.json",
+                {
+                    "ticker": "X",
+                    "stage_fit": "History-based story for a scaled profitable same-business firm.",
+                    "story": {"paragraph": "A compact going-concern story about this mature firm."},
+                    "map": {
+                        "tam": "core market grows with GDP",
+                        "target_om": "mid-cycle margin holds",
+                        "kc_path": "fade to industry WACC",
+                    },
+                },
+            )
+            _write(
+                s / "registry/narrative_3p.json",
+                {
+                    "ticker": "X",
+                    "verdict": "PASS",
+                    "possible": ["adjacent"],
+                    "plausible": ["share"],
+                    "probable": ["in-line"],
+                },
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "mature operating fcff model"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "assumptions": {"revenue_cagr": 0.04, "wacc": 0.09},
+                    "story_input_bind": {
+                        "tam": "revenue_cagr",
+                        "target_om": "revenue_cagr",
+                        "kc_path": "wacc",
+                    },
+                    "buyer_dials": {"illiquidity_discount": 0},
+                    "terminal_consistency": {
+                        "method": "gordon",
+                        "g_n": 0.03,
+                        "reinvestment_rate": 0.3,
+                        "roc_n": 0.1,
+                    },
+                    "truncation": {"p": 0, "why_not_material": "x" * 40},
+                    "per_share_bridge": {
+                        "shares_used": 1,
+                        "net_debt_subtracted": 0,
+                        "cash_added": 0,
+                        "rationale": "primary shares at session date",
+                    },
+                    "wacc_buildup": {
+                        "applies": True,
+                        "wacc": 0.09,
+                        "erp_method": "implied",
+                        "beta_method": "bottom_up",
+                        "discount_currency": "USD",
+                        "cash_flow_currency": "USD",
+                    },
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertFalse(any(r[0] == "FAIL" for r in rows), rows)
+            self.assertTrue(any(r[0] == "PASS" and r[1] == "damodaran.narrative_locked" for r in rows), rows)
+
+    def test_missing_story_input_bind_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.4.1")
+            _write(
+                s / "registry/classification.json",
+                {
+                    "ticker": "X",
+                    "job": "first_valuation",
+                    "life_cycle_stage": "mature",
+                    "who_leads": "numbers",
+                    "stage_rationale": "Scaled profitable same-business history is usable for a numbers-led DCF.",
+                    "iv_playbook": "mature_operating",
+                    "overlays": [],
+                    "buyer": {
+                        "class": "public_diversified",
+                        "rationale": "Listed name; marginal investor is diversified.",
+                    },
+                    "market_contest": {
+                        "accept": ["rf"],
+                        "contest": ["company cash flows"],
+                        "rationale": "Contest earnings path, accept market rates.",
+                    },
+                    "claim": "firm_dcf",
+                    "engine_rationale": "Listed non-financial, EBIT>0, stable leverage → mature_operating.",
+                },
+            )
+            _write(
+                s / "registry/narrative_bind.json",
+                {
+                    "ticker": "X",
+                    "stage_fit": "x" * 40,
+                    "story": {"paragraph": "A compact going-concern story about this mature firm."},
+                    "map": {"tam": "a", "target_om": "b", "kc_path": "c"},
+                },
+            )
+            _write(
+                s / "registry/narrative_3p.json",
+                {
+                    "ticker": "X",
+                    "verdict": "PASS",
+                    "possible": ["a"],
+                    "plausible": ["b"],
+                    "probable": ["c"],
+                },
+            )
+            _write(
+                s / "data/valuation_model.json",
+                {
+                    "ticker": "X",
+                    "model": {"name": "dcf", "rationale": "mature operating fcff model"},
+                    "fair_value": {"base": 10, "bear": 8, "bull": 12},
+                    "assumptions": {"revenue_cagr": 0.04},
+                    "buyer_dials": {"illiquidity_discount": 0},
+                    "terminal_consistency": {"method": "gordon"},
+                    "truncation": {"p": 0, "why_not_material": "x" * 40},
+                    "per_share_bridge": {
+                        "shares_used": 1,
+                        "net_debt_subtracted": 0,
+                        "cash_added": 0,
+                        "rationale": "primary shares at session date",
+                    },
+                    "wacc_buildup": {
+                        "applies": True,
+                        "wacc": 0.09,
+                        "erp_method": "implied",
+                        "beta_method": "bottom_up",
+                        "discount_currency": "USD",
+                        "cash_flow_currency": "USD",
+                    },
+                },
+            )
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.story_input_bind" for r in rows),
+                rows,
+            )
+
+    def test_contingent_claim_needs_option_screens_on_bind(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.4.1")
+            _write(
+                s / "registry/classification.json",
+                {
+                    "ticker": "X",
+                    "job": "first_valuation",
+                    "life_cycle_stage": "young_growth",
+                    "who_leads": "story",
+                    "stage_rationale": "Pre-profit exclusive asset; story leads a contingent-claim engine.",
+                    "iv_playbook": "contingent_claim",
+                    "overlays": [],
+                    "buyer": {
+                        "class": "public_diversified",
+                        "rationale": "Listed name; marginal investor is diversified.",
+                    },
+                    "market_contest": {
+                        "accept": ["rf"],
+                        "contest": ["company cash flows"],
+                        "rationale": "Contest the hit path, accept market rates.",
+                    },
+                    "claim": "option",
+                    "engine_rationale": "Cash flows only if a contingency hits; DCF would lie.",
+                },
+            )
+            _write(
+                s / "registry/narrative_bind.json",
+                {
+                    "ticker": "X",
+                    "stage_fit": "Young exclusive asset: story leads, option engine.",
+                    "story": {"paragraph": "A compact exclusive-asset story with a hit-or-miss payoff."},
+                    "map": {"tam": "a", "p_fail": "b", "tv_form": "c"},
+                },
+            )
+            _write(
+                s / "registry/narrative_3p.json",
+                {
+                    "ticker": "X",
+                    "verdict": "PASS",
+                    "possible": ["a"],
+                    "plausible": ["b"],
+                    "probable": ["c"],
+                },
+            )
+            vm = {
+                "ticker": "X",
+                "model": {"name": "option", "rationale": "contingent claim on exclusive asset"},
+                "fair_value": {"base": 10, "bear": 1, "bull": 20},
+                "assumptions": {"volatility": 0.4},
+                "story_input_bind": {"tam": "volatility", "p_fail": "volatility", "tv_form": "volatility"},
+                "buyer_dials": {"illiquidity_discount": 0},
+                "terminal_consistency": {"method": "liquidation"},
+                "truncation": {"p": 0, "why_not_material": "x" * 40},
+                "per_share_bridge": {
+                    "applies": False,
+                    "not_applicable_reason": "option model; per-share bridge is not the claim.",
+                },
+                "wacc_buildup": {
+                    "applies": False,
+                    "not_applicable_reason": "contingent-claim engine; no firm WACC.",
+                },
+            }
+            _write(s / "data/valuation_model.json", vm)
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.option_screens" for r in rows),
+                rows,
+            )
+            bind = json.loads((s / "registry/narrative_bind.json").read_text(encoding="utf-8"))
+            bind["option_screens"] = {
+                "exclusivity": True,
+                "materiality": True,
+                "no_double_count": True,
+                "rationale": "Exclusive undeveloped right; not already in DCF growth.",
+            }
+            _write(s / "registry/narrative_bind.json", bind)
+            rows2 = check_damodaran_v3(s)
+            self.assertFalse(
+                any(r[0] == "FAIL" and r[1] == "damodaran.option_screens" for r in rows2),
+                rows2,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

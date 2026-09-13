@@ -1,0 +1,46 @@
+{
+  "features": [
+    {
+      "id": "orient",
+      "description": "Scaffold session, fill issue.json success criteria, baseline eng_verify",
+      "passes": true,
+      "verify": "issue.json has non-empty success_criteria"
+    },
+    {
+      "id": "classification-at-orch",
+      "description": "registry/classification.json: schema, orch writer, Phase 0 entry gate, playbook identity lives here not in sector_config",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_classification.py -q"
+    },
+    {
+      "id": "narrative-phase-1e",
+      "description": "Phase 1e story writer + 3P critic; Agent 5 waits on locked bind; map uses story carriers; evidence_hooks not all noted_only",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_narrative_lock.py packages/kd_research/tests/test_phase_graph.py -q"
+    },
+    {
+      "id": "law-prompts",
+      "description": "RESEARCH_AGENTS, HARNESS_MAP, agent_prompts, runbook, valuation_router, ARCHITECTURE, law_history",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_law_surface_freeze.py -q"
+    },
+    {
+      "id": "version-pin-3.4.0",
+      "description": "Bump harness/VERSION to 3.4.0 and publish pins/3.4.0",
+      "passes": true,
+      "verify": "python3 scripts/eng_verify.py"
+    },
+    {
+      "id": "sdr-identity-home",
+      "description": "SDR reshape: classification.json is the only identity; 3P PASS is the lock; Agent 5 compute-only; evidence_hooks cover each id'd finding",
+      "passes": true,
+      "verify": "pytest packages/kd_research/tests/test_classification.py packages/kd_research/tests/test_narrative_lock.py packages/kd_research/tests/test_damodaran_gates.py -q"
+    },
+    {
+      "id": "verify",
+      "description": "Full pytest + eng_verify green; ship_note written",
+      "passes": true,
+      "verify": "eng_verify PASS"
+    }
+  ]
+}

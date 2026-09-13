@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "classification.schema.json",
+  "title": "Engine classification card",
+  "description": "Written by the orchestrator after library bind and KPI sector/region files, before Phase 0. Harness >= 3.4.0. This is the identity of the run. sector_config is KPI-only.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "ticker",
+    "job",
+    "life_cycle_stage",
+    "who_leads",
+    "stage_rationale",
+    "iv_playbook",
+    "overlays",
+    "buyer",
+    "market_contest",
+    "claim",
+    "engine_rationale"
+  ],
+  "properties": {
+    "ticker": { "type": "string" },
+    "job": {
+      "type": "string",
+      "enum": ["first_valuation", "news", "restory", "pricing_only"]
+    },
+    "life_cycle_stage": {
+      "type": "string",
+      "enum": ["idea", "young_growth", "scaling_growth", "mature", "decline", "not_applicable"]
+    },
+    "who_leads": {
+      "type": "string",
+      "enum": ["story", "numbers", "not_applicable"]
+    },
+    "stage_rationale": { "type": "string", "minLength": 40 },
+    "iv_playbook": {
+      "type": "string",
+      "enum": [
+        "mature_operating",
+        "financial_service",
+        "real_estate",
+        "young_startup",
+        "contingent_claim",
+        "asset_based"
+      ]
+    },
+    "overlays": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "buyer": {
+      "type": "object",
+      "required": ["class", "rationale"],
+      "properties": {
+        "class": {
+          "type": "string",
+          "enum": [
+            "public_diversified",
+            "private_undiversified",
+            "ipo_or_public_buyer",
+            "vc_pe",
+            "not_applicable"
+          ]
+        },
+        "rationale": { "type": "string", "minLength": 20 }
+      }
+    },
+    "market_contest": {
+      "type": "object",
+      "required": ["accept", "contest", "rationale"],
+      "properties": {
+        "accept": { "type": "array", "minItems": 1 },
+        "contest": { "type": "array", "minItems": 1 },
+        "rationale": { "type": "string", "minLength": 20 }
+      }
+    },
+    "claim": {
+      "type": "string",
+      "enum": ["equity_dcf", "firm_dcf", "apv", "option", "pricing_only", "asset_based"]
+    },
+    "engine_rationale": { "type": "string", "minLength": 40 }
+  }
+}

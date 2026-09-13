@@ -1,0 +1,38 @@
+{
+  "goal": "Classify the valuation engine at orch (not inside Agent 5). Lock the story with a writer plus a separate 3P critic before Agent 5 computes.",
+  "non_goals": [
+    "Do not run research Phases 0–5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not flip Street FY+1 default",
+    "Do not drop Agent 4 / Agent 12 / reports from the default graph",
+    "Do not add job-based stage skips"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "New sessions (>= 3.4.0) write registry/classification.json at orch from valuation_router.md",
+    "Phase 1e (story + 3p) exists; Agent 5 cannot start until narrative_bind.status=locked and 3P verdict=PASS",
+    "Agent 5 must not reclassify iv_playbook / life_cycle / buyer (machine FAIL if bind disagrees with classification)",
+    "Legacy stamps < 3.4.0 skip the new phase and keep Agent 5 lock-then-compute",
+    "eng_verify.py passes; harness/VERSION is 3.4.0 with a published pin"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "apps/",
+    "programs/",
+    "scripts/",
+    "harness/",
+    "ARCHITECTURE.md",
+    "AGENTS.md",
+    "pins/",
+    "archive/library/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python3 scripts/eng_verify.py",
+    "python3 -m pytest packages/kd_research/tests/test_phase_graph.py packages/kd_research/tests/test_damodaran_gates.py packages/kd_research/tests/test_classification.py packages/kd_research/tests/test_narrative_lock.py -q"
+  ]
+}

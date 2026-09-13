@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "narrative_3p.schema.json",
+  "title": "3P critic review",
+  "description": "Written by the 1e 3p specialist only. verdict=PASS is the compute-bind gate. Do not write narrative_bind.json. Harness >= 3.4.0.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["ticker", "verdict", "possible", "plausible", "probable"],
+  "properties": {
+    "ticker": { "type": "string" },
+    "verdict": { "type": "string", "enum": ["PASS", "FAIL"] },
+    "possible": { "type": "array", "minItems": 1 },
+    "plausible": { "type": "array", "minItems": 1 },
+    "probable": { "type": "array", "minItems": 1 },
+    "fairy_tale": { "type": "boolean" },
+    "wrong_stage": { "type": "boolean" },
+    "iron_triangle": { "type": "string", "enum": ["pass", "fail"] },
+    "rationale": { "type": "string" },
+    "required_edits": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -87,7 +87,8 @@ class SectorClassificationLawTests(unittest.TestCase):
 
     def test_agent5_constitution_not_sector_engine(self):
         text = _read("harness/agent_prompts.md")
-        self.assertIn("CLASSIFY on ROOT/harness/modules/valuation_router.md", text)
+        self.assertIn("Do **not** reclassify", text)
+        self.assertIn("classification.json", text)
         self.assertNotIn(
             "CHOOSE the valuation model that fits (sector module",
             text,

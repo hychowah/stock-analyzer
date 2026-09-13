@@ -1,0 +1,24 @@
+{
+  "session": "2026-09-13-classify-story-lock",
+  "harness_version": "3.4.1",
+  "summary": "Moved engine classification to orch and added phase 1e (story writer + 3P critic) before Agent 5. SDR reshape: classification.json is the only identity (no stamp copy onto narrative_bind); lock is narrative_3p.verdict=PASS; Agent 5 is compute-only (story_input_bind + buyer_dials, no FDD/oppath re-walk); evidence_hooks must map or reject each id'd finding. Stamps < 3.4.0 skip 1e.",
+  "verify": "eng_verify PASS (1176 tests)",
+  "verify_commands_run": [
+    "python -m pytest packages/kd_research/tests/test_classification.py packages/kd_research/tests/test_narrative_lock.py packages/kd_research/tests/test_phase_graph.py -q",
+    "python scripts/publish_harness_release.py",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Flip Street FY+1 from default Y1 to restory/cross-check (user did not take this in this increment)",
+    "Job-based stage skips (news / restory / pricing-only)",
+    "Take Agent 4 and Agent 12 off the default path",
+    "Typed uncertainty instead of a >=5 stress quota",
+    "Shared compute backends per playbook"
+  ],
+  "risks": [
+    "New 3.4.0 runs fail until the orchestrator writes classification.json and spawns story then 3p; prompts, schemas, and preflight were updated in the same change set",
+    "All new gates are version-gated at >= 3.4.0, so sessions stamped <= 3.3.0 (archived history and fixtures) stay green",
+    "3P FAIL loops are orchestrator-owned (max 2); the machine only blocks Agent 5 until verdict=PASS and status=locked"
+  ],
+  "commit": "not committed - needs user agreement"
+}

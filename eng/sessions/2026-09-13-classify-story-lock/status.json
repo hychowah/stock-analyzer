@@ -1,0 +1,9 @@
+{
+  "slug": "classify-story-lock",
+  "session_key": "2026-09-13-classify-story-lock",
+  "status": "complete",
+  "created_at": "2026-09-13T07:32:35Z",
+  "updated_at": "2026-09-13T12:00:00Z",
+  "work_type": "W1",
+  "resume_hint": "Verified. Ask user before git commit."
+}

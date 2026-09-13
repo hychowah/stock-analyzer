@@ -103,7 +103,8 @@ class GraphBindingTests(unittest.TestCase):
         ids = [p["phase_id"] for p in data["phases"]]
         self.assertIn("1d", ids)
         self.assertEqual(ids[ids.index("1c") + 1], "1d")
-        self.assertEqual(ids[ids.index("1d") + 1], "2_parallel")
+        self.assertEqual(ids[ids.index("1d") + 1], "1e")
+        self.assertEqual(ids[ids.index("1e") + 1], "2_parallel")
         agents = next(p["agents"] for p in data["phases"] if p["phase_id"] == "1d")
         self.assertEqual(
             [a["agent_id"] for a in agents],

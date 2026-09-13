@@ -402,7 +402,7 @@ class ReadySetGraphTests(unittest.TestCase):
     def test_300_agent4_priors_skip_1d(self) -> None:
         node = graph_for_session(None)["2_parallel"]
         self.assertEqual(node.priors_for("4"), ("orch",))
-        self.assertEqual(node.priors_for("5"), ("1d",))
+        self.assertEqual(node.priors_for("5"), ("1e",))
         self.assertEqual(node.priors_for("12"), ("orch",))
 
     def test_300_agent4_can_enter_before_1d(self) -> None:
@@ -421,6 +421,23 @@ class ReadySetGraphTests(unittest.TestCase):
                 any(r[0] == "FAIL" and "prereq.1d" in r[1] for r in rows5),
                 rows5,
             )
+
+    def test_340_agent5_waits_on_1e(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            self._stamp(s, "3.4.0")
+            data = build_phase_status_skeleton("X", "2026-01-01")
+            _set_phase(data, "orch", "complete")
+            data["current_phase"] = "2_parallel"
+            _write_status(s, data)
+            rows5 = check_phase_graph_entry(s, "2_parallel", subagent_id="5")
+            self.assertTrue(
+                any(r[0] == "FAIL" and "prereq.1e" in r[1] for r in rows5),
+                rows5,
+            )
+            rows4 = check_phase_graph_entry(s, "2_parallel", subagent_id="4")
+            fails = [r for r in rows4 if r[0] == "FAIL" and "prereq" in r[1]]
+            self.assertEqual(fails, [], rows4)
 
     def test_300_charts_wait_on_1d_not_2_5(self) -> None:
         g = graph_for_session(None)

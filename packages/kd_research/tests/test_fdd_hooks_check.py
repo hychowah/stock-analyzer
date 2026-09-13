@@ -71,6 +71,17 @@ class FddHooksTests(unittest.TestCase):
         out = check_filing_deep_dive_hooks(session)
         self.assertEqual(out[0][0], "PASS")
 
+    def test_skipped_on_341_even_without_vm_hooks(self):
+        session = self._session(fdd=True, vm=_vm_with_hooks())
+        (session / "meta").mkdir(parents=True, exist_ok=True)
+        (session / "meta" / "run_manifest.json").write_text(
+            json.dumps({"harness_version": "3.4.1", "ticker": "TEST"}),
+            encoding="utf-8",
+        )
+        out = check_filing_deep_dive_hooks(session)
+        self.assertEqual(out[0][0], "SKIPPED")
+        self.assertIn("1e evidence_hooks", out[0][2])
+
     def test_validate_hooks_reason_too_short(self):
         out = validate_hooks_list(
             [{"from": "x", "action": "use", "reason": "short"}],

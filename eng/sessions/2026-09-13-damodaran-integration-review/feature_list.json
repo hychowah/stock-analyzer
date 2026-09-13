@@ -1,0 +1,52 @@
+{
+  "features": [
+    {
+      "id": "review-artifact",
+      "description": "Write review.md with scorecard, tiered findings, ranked gaps, fix plan",
+      "passes": true,
+      "verify": "review.md present and non-empty"
+    },
+    {
+      "id": "narrative-substance-gate",
+      "description": "harness >= 3.2.0 requires narrative_bind story.paragraph + map bound to real model inputs + non-empty 3p buckets",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -k narrative"
+    },
+    {
+      "id": "truncation-derived-gate",
+      "description": "harness >= 3.2.0: truncation p>0 must write (1-p)*GC + p*fail; no material bypass",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -k truncation"
+    },
+    {
+      "id": "price-role-closed-set",
+      "description": "harness >= 3.2.0: pricing.used_as is a closed price-only role set, not a denylist",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -k pricing"
+    },
+    {
+      "id": "version-root-of-trust",
+      "description": "v3 session with valuation_model and no parseable harness_version FAILs (legacy/v2 still SKIPs)",
+      "passes": true,
+      "verify": "pytest test_damodaran_gates.py -k version"
+    },
+    {
+      "id": "law-schema-sector-defects",
+      "description": "Fix RESEARCH_AGENTS.md 2.28 trigger, risk_bridge region enum, sector_utility/sector_growth/sector_insurance engine leaks",
+      "passes": true,
+      "verify": "python -m pytest packages/kd_research/tests -q"
+    },
+    {
+      "id": "version-pin",
+      "description": "Bump harness/VERSION to 3.2.0 and publish pins/3.2.0",
+      "passes": true,
+      "verify": "python scripts/eng_verify.py"
+    },
+    {
+      "id": "design-review-reshape",
+      "description": "Resolve the strategic-design-review reshape candidates before commit",
+      "passes": true,
+      "verify": "eng_verify PASS (1138 tests)"
+    }
+  ]
+}

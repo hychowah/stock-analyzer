@@ -1,0 +1,31 @@
+{
+  "goal": "Write the Damodaran integration review and ship harness 3.2.0 narrative-substance + defect fixes",
+  "non_goals": [
+    "Do not run research Phases 0-5",
+    "Do not mutate archive/research or archive/outcomes history",
+    "Do not implement the deferred gaps (risk ledger, option family, identity suite, bias artifact)"
+  ],
+  "work_type": "W1",
+  "success_criteria": [
+    "eng_verify.py passes (pytest green)",
+    "harness/VERSION bumped to 3.2.0 with pins/3.2.0 published",
+    "narrative substance + 3P + truncation materiality gates fire only at >= 3.2.0",
+    "Feature list items verified before passes=true"
+  ],
+  "write_allowlist": [
+    "eng/",
+    "packages/",
+    "harness/",
+    "scripts/",
+    "ARCHITECTURE.md",
+    "pins/"
+  ],
+  "write_denylist": [
+    "archive/research/**",
+    "archive/outcomes/**"
+  ],
+  "verify_commands": [
+    "python scripts/eng_verify.py",
+    "python -m pytest packages/kd_research/tests/test_damodaran_gates.py -q"
+  ]
+}

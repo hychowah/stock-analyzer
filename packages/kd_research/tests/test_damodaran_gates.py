@@ -428,6 +428,254 @@ class DamodaranGateTests(unittest.TestCase):
                 rows,
             )
 
+    def _full_narrative(self) -> dict:
+        return {
+            "ticker": "X",
+            "status": "locked",
+            "iv_playbook": "mature_operating",
+            "story": {"paragraph": "Scale advantage in a stable market drives steady cash flows."},
+            "map": {"revenue_growth": "share gains", "operating_margin": "mix and pricing"},
+            "3p": {
+                "possible": [{"strand": "adjacent entry", "revenue_in_dcf": 0}],
+                "plausible": [{"strand": "share gains continue"}],
+                "probable": [{"strand": "current mix holds"}],
+            },
+        }
+
+    def _legal_vm(self) -> dict:
+        return {
+            "ticker": "X",
+            "model": {"name": "dcf", "rationale": "operating fcff"},
+            "fair_value": {"base": 10, "bear": 8, "bull": 12},
+            "assumptions": {
+                "revenue_growth": {"value": 0.04, "rationale": "history", "basis": "10-K"},
+                "operating_margin": {"value": 0.22, "rationale": "mix", "basis": "history"},
+            },
+            "terminal_consistency": {
+                "method": "gordon",
+                "g_n": 0.03,
+                "reinvestment_rate": 0.5,
+                "roc_n": 0.06,
+            },
+        }
+
+    def test_32_blank_narrative_substance_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            ids = {r[1] for r in rows if r[0] == "FAIL"}
+            self.assertIn("damodaran.narrative_story", ids, rows)
+            self.assertIn("damodaran.narrative_map", ids, rows)
+            self.assertIn("damodaran.narrative_3p", ids, rows)
+
+    def test_32_full_narrative_substance_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            self.assertFalse(any(r[0] == "FAIL" for r in rows), rows)
+
+    def test_32_map_key_must_name_a_model_input(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            bind = self._full_narrative()
+            bind["map"] = {"synergy_unicorn": "a story with no input behind it"}
+            _write(s / "registry/narrative_bind.json", bind)
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.narrative_map" for r in rows),
+                rows,
+            )
+
+    def test_32_empty_3p_bucket_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            bind = self._full_narrative()
+            bind["3p"] = {"possible": [], "plausible": [], "probable": []}
+            _write(s / "registry/narrative_bind.json", bind)
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.narrative_3p" for r in rows),
+                rows,
+            )
+
+    def test_32_possible_not_list_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            bind = self._full_narrative()
+            bind["3p"] = {"possible": "n/a", "plausible": [], "probable": []}
+            _write(s / "registry/narrative_bind.json", bind)
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            ids = {r[1] for r in rows if r[0] == "FAIL"}
+            self.assertIn("damodaran.narrative_3p", ids, rows)
+            self.assertIn("damodaran.possible_in_base", ids, rows)
+
+    def test_32_truncation_p_requires_weighted_base(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            vm = self._legal_vm()
+            vm["truncation"] = {
+                "p": 0.3,
+                "going_concern_upper_bound": 10,
+                "failure_payoff": 1,
+            }
+            _write(s / "data/valuation_model.json", vm)
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.truncation_base" for r in rows),
+                rows,
+            )
+
+    def test_32_truncation_weighted_base_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            vm = self._legal_vm()
+            vm["fair_value"] = {"base": 7.3, "bear": 4, "bull": 12}
+            vm["truncation"] = {
+                "p": 0.3,
+                "going_concern_upper_bound": 10,
+                "failure_payoff": 1,
+            }
+            _write(s / "data/valuation_model.json", vm)
+            rows = check_damodaran_v3(s)
+            self.assertFalse(
+                any(r[0] == "FAIL" and r[1] == "damodaran.truncation_base" for r in rows),
+                rows,
+            )
+
+    def test_32_truncation_material_false_cannot_bypass(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            vm = self._legal_vm()
+            vm["truncation"] = {
+                "material": False,
+                "p": 0.3,
+                "going_concern_upper_bound": 10,
+                "failure_payoff": 1,
+                "why_not_material": "p is already inside the cash-flow path",
+            }
+            _write(s / "data/valuation_model.json", vm)
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.truncation_base" for r in rows),
+                rows,
+            )
+
+    def test_32_truncation_non_numeric_p_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            vm = self._legal_vm()
+            vm["truncation"] = {
+                "p": "30%",
+                "going_concern_upper_bound": 10,
+                "failure_payoff": 1,
+            }
+            _write(s / "data/valuation_model.json", vm)
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.truncation_base" for r in rows),
+                rows,
+            )
+
+    def test_32_pricing_used_as_variants_fail(self) -> None:
+        for variant in ("Fair Value", "fv", "base", "decision_value"):
+            with self.subTest(variant=variant):
+                with tempfile.TemporaryDirectory() as td:
+                    s = Path(td)
+                    _stamp(s, "3.2.0")
+                    _write(s / "registry/narrative_bind.json", self._full_narrative())
+                    vm = self._legal_vm()
+                    vm["pricing"] = {"used_as": variant, "method": "nav"}
+                    _write(s / "data/valuation_model.json", vm)
+                    rows = check_damodaran_v3(s)
+                    self.assertTrue(
+                        any(
+                            r[0] == "FAIL" and r[1] == "damodaran.price_as_value"
+                            for r in rows
+                        ),
+                        (variant, rows),
+                    )
+
+    def test_32_pricing_role_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.2.0")
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            vm = self._legal_vm()
+            vm["pricing"] = {"used_as": "cross_check", "method": "nav"}
+            _write(s / "data/valuation_model.json", vm)
+            rows = check_damodaran_v3(s)
+            self.assertFalse(
+                any(r[0] == "FAIL" and r[1] == "damodaran.price_as_value" for r in rows),
+                rows,
+            )
+
+    def test_32_v3_model_without_version_is_root_of_trust_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            (s / "meta").mkdir(parents=True, exist_ok=True)
+            (s / "meta" / "run_manifest.json").write_text(
+                json.dumps({"harness_spec": "v3", "ticker": "X"}) + "\n",
+                encoding="utf-8",
+            )
+            _write(s / "registry/narrative_bind.json", self._full_narrative())
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            self.assertTrue(
+                any(r[0] == "FAIL" and r[1] == "damodaran.version_root" for r in rows),
+                rows,
+            )
+
+    def test_legacy_v2_without_version_skips(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            (s / "meta").mkdir(parents=True, exist_ok=True)
+            (s / "meta" / "run_manifest.json").write_text(
+                json.dumps({"harness_spec": "v2", "ticker": "X"}) + "\n",
+                encoding="utf-8",
+            )
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            self.assertTrue(any(r[0] == "SKIPPED" for r in rows), rows)
+            self.assertFalse(any(r[0] == "FAIL" for r in rows), rows)
+
+    def test_31_blank_narrative_substance_skips(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            s = Path(td)
+            _stamp(s, "3.1.0")
+            _write(
+                s / "registry/narrative_bind.json",
+                {"ticker": "X", "status": "locked", "iv_playbook": "mature_operating"},
+            )
+            _write(s / "data/valuation_model.json", self._legal_vm())
+            rows = check_damodaran_v3(s)
+            ids = {r[1] for r in rows if r[0] == "FAIL"}
+            self.assertNotIn("damodaran.narrative_story", ids, rows)
+            self.assertNotIn("damodaran.narrative_map", ids, rows)
+            self.assertNotIn("damodaran.narrative_3p", ids, rows)
+
 
 if __name__ == "__main__":
     unittest.main()

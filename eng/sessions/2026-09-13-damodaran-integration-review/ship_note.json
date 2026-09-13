@@ -1,0 +1,24 @@
+{
+  "session": "2026-09-13-damodaran-integration-review",
+  "harness_version": "3.2.0",
+  "summary": "Damodaran integration review plus harness 3.2.0, then a strategic-design-review reshape of the same uncommitted version. 3.2.0 gates: narrative_bind must carry a real story + a map whose keys name actual model inputs + non-empty 3p buckets; truncation with p>0 must write the probability-weighted base (no material bypass); pricing.used_as is a closed price-only role set; a v3 session with a valuation model and no parseable harness_version FAILs (root of trust). Defects fixed: RESEARCH_AGENTS.md 2.28->3.0.1 trigger, risk_bridge region scenarios, sector module engine leaks. Version-gated at 3.2.0 so history stays green.",
+  "verify": "eng_verify PASS (1138 tests)",
+  "verify_commands_run": [
+    "python -m pytest packages/kd_research/tests/test_damodaran_gates.py -q",
+    "python -m pytest packages -q",
+    "python scripts/eng_verify.py"
+  ],
+  "follow_ups": [
+    "Whole-firm risk ledger: detect one risk across cash flows, discount rate, scenario masses, and the 2.5 stress book",
+    "Contingent-claim/option engine family; private-buyer and other-assets router branches",
+    "Consistency-identity suite (FCFE<->FCFF, WACC<->APV, total-CF<->EVA, per-share, tax, terminal reset)",
+    "Life-cycle EBIT<=0 / never-ROC-from-a-loss gate; bias declaration artifact",
+    "Financials sector-enum coverage for brokers/AM/payments"
+  ],
+  "risks": [
+    "3.2.0 narrative gates will FAIL new runs until Agent 5 writes story/map/3p bound to model inputs; prompt + schema updated in the same change set",
+    "Root-of-trust FAIL applies only to harness_spec v3 sessions, so v2/slim fixtures and immutable history stay SKIPPED",
+    "Deferred items are recorded in review.md section 8 and were not attempted"
+  ],
+  "commit": "not committed - needs user agreement"
+}
